@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
+import Chat from '../pages/Chat';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -28,6 +29,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <PrivateRoute>
+            <Chat />
           </PrivateRoute>
         }
       />

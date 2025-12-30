@@ -1,5 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -72,10 +72,10 @@ const Dashboard = () => {
               <p className="text-gray-600 mb-4">
                 Czat, wiadomości multimedialne, statusy użytkowników
               </p>
-              <button className="btn btn-primary">
+              <Link to="/chat" className="btn btn-primary inline-block">
                 Przejdź do czatu
-              </button>
-              <p className="mt-2 text-xs text-gray-500">Wkrótce dostępne</p>
+              </Link>
+              <p className="mt-2 text-xs text-green-600 font-medium">✓ Dostępne teraz</p>
             </div>
 
             {/* Time Management Module Card */}
