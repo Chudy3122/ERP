@@ -206,4 +206,33 @@ export class ChatService {
       await this.channelMemberRepository.remove(membershipToRemove);
     }
   }
+
+  /**
+   * Create a new message
+   */
+  async createMessage(
+    channelId: string,
+    senderId: string,
+    content: string,
+    messageType: MessageType = MessageType.TEXT
+  ): Promise<Message> {
+    const message = this.messageRepository.create({
+      channel_id: channelId,
+      sender_id: senderId,
+      content,
+      message_type: messageType,
+    });
+
+    return await this.messageRepository.save(message);
+  }
+
+  /**
+   * Get message by ID with all relations
+   */
+  async getMessageById(messageId: string): Promise<Message | null> {
+    return await this.messageRepository.findOne({
+      where: { id: messageId },
+      relations: ['sender', 'attachments', 'attachments.uploader'],
+    });
+  }
 }

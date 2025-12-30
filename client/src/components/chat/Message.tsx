@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Message as MessageType } from '../../types/chat.types';
+import type { Message as MessageType, Attachment } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface MessageProps {
@@ -11,6 +11,7 @@ interface MessageProps {
 const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
   const { user } = useAuth();
   const isOwnMessage = message.sender_id === user?.id;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -38,6 +39,30 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const isImage = (fileType: string): boolean => {
+    return fileType.startsWith('image/');
+  };
+
+  const getFileIcon = (fileType: string): string => {
+    if (fileType.startsWith('image/')) return '🖼️';
+    if (fileType.startsWith('video/')) return '🎥';
+    if (fileType.startsWith('audio/')) return '🎵';
+    if (fileType.includes('pdf')) return '📄';
+    if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('7z')) return '📦';
+    if (fileType.includes('word') || fileType.includes('document')) return '📝';
+    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return '📊';
+    if (fileType.includes('powerpoint') || fileType.includes('presentation')) return '📽️';
+    return '📎';
   };
 
   if (message.message_type === 'system') {
@@ -71,22 +96,82 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
         )}
 
         {/* Message bubble */}
-        <div
-          className={`relative px-4 py-2 rounded-lg ${
-            isOwnMessage
-              ? 'bg-indigo-600 text-white'
-              : message.is_deleted
-              ? 'bg-gray-200 text-gray-500 italic'
-              : 'bg-gray-200 text-gray-900'
-          }`}
-        >
-          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+        {message.content && (
+          <div
+            className={`relative px-4 py-2 rounded-lg ${
+              isOwnMessage
+                ? 'bg-indigo-600 text-white'
+                : message.is_deleted
+                ? 'bg-gray-200 text-gray-500 italic'
+                : 'bg-gray-200 text-gray-900'
+            }`}
+          >
+            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
 
-          {/* Edited indicator */}
-          {message.is_edited && !message.is_deleted && (
-            <span className="text-xs opacity-70 ml-2">(edytowano)</span>
-          )}
-        </div>
+            {/* Edited indicator */}
+            {message.is_edited && !message.is_deleted && (
+              <span className="text-xs opacity-70 ml-2">(edytowano)</span>
+            )}
+          </div>
+        )}
+
+        {/* Attachments */}
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {message.attachments.map((attachment) => (
+              <div key={attachment.id}>
+                {isImage(attachment.file_type) ? (
+                  // Image preview
+                  <a
+                    href={`${API_BASE_URL}${attachment.file_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block max-w-sm"
+                  >
+                    <img
+                      src={`${API_BASE_URL}${attachment.file_url}`}
+                      alt={attachment.file_name}
+                      className="rounded-lg max-h-64 object-contain border border-gray-300"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{attachment.file_name}</p>
+                  </a>
+                ) : (
+                  // File download card
+                  <a
+                    href={`${API_BASE_URL}${attachment.file_url}`}
+                    download={attachment.file_name}
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      isOwnMessage
+                        ? 'bg-indigo-500 border-indigo-400 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } hover:opacity-80 transition-opacity`}
+                  >
+                    <span className="text-2xl">{getFileIcon(attachment.file_type)}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                      <p className={`text-xs ${isOwnMessage ? 'text-indigo-100' : 'text-gray-500'}`}>
+                        {formatFileSize(attachment.file_size)}
+                      </p>
+                    </div>
+                    <svg
+                      className="w-5 h-5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Timestamp */}
         <p className="text-xs text-gray-500 mt-1">{formatTime(message.created_at)}</p>
