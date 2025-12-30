@@ -137,27 +137,98 @@ npm run dev:server  # Backend na http://localhost:5000
 - `GET /api/users/:id` - Szczegóły użytkownika
 - `PUT /api/users/:id` - Aktualizacja profilu
 
-### Chat (nadchodzące)
-- `GET /api/channels` - Lista kanałów
-- `POST /api/channels` - Tworzenie kanału
-- `GET /api/channels/:id/messages` - Wiadomości
-- `POST /api/channels/:id/messages` - Wysyłanie wiadomości
+### Chat
+- `GET /api/chat/channels` - Lista kanałów użytkownika
+- `POST /api/chat/channels` - Tworzenie kanału (group/public/private)
+- `POST /api/chat/channels/direct` - Tworzenie/pobieranie direct message
+- `GET /api/chat/channels/:id` - Szczegóły kanału
+- `GET /api/chat/channels/:id/messages` - Wiadomości (z paginacją)
+- `POST /api/chat/channels/:id/members` - Dodawanie członków
+- `DELETE /api/chat/channels/:id/members/:userId` - Usuwanie członka
 
 ### Time Management (nadchodzące)
 - `GET /api/time-entries` - Lista wpisów czasu
 - `POST /api/time-entries` - Clock in
 - `PUT /api/time-entries/:id` - Clock out
 
+## WebSocket Events (Chat)
+
+### Client → Server (Emit)
+- `chat:join_channels` - Auto-join wszystkich kanałów użytkownika
+- `chat:join_channel` - Dołącz do konkretnego kanału
+- `chat:leave_channel` - Opuść kanał
+- `chat:send_message` - Wyślij wiadomość
+- `chat:edit_message` - Edytuj wiadomość
+- `chat:delete_message` - Usuń wiadomość
+- `chat:typing` - Wyślij wskaźnik pisania
+- `chat:mark_read` - Oznacz kanał jako przeczytany
+
+### Server → Client (Listen)
+- `chat:channels_joined` - Potwierdzenie dołączenia do kanałów
+- `chat:channel_joined` - Dołączono do kanału
+- `chat:new_message` - Nowa wiadomość w kanale
+- `chat:message_edited` - Wiadomość została edytowana
+- `chat:message_deleted` - Wiadomość została usunięta
+- `chat:user_typing` - Użytkownik pisze
+- `chat:error` - Błąd WebSocket
+
+## Testowanie Aplikacji
+
+### 1. Testowanie Autentykacji
+
+1. Uruchom aplikację: `npm run dev`
+2. Otwórz http://localhost:5173
+3. Zarejestruj nowego użytkownika
+4. Zaloguj się używając utworzonych danych
+5. Zostaniesz przekierowany na Dashboard
+
+### 2. Testowanie Czatu
+
+1. Zaloguj się jako użytkownik
+2. Kliknij "Przejdź do czatu" na Dashboard
+3. Czat otworzy się z połączeniem WebSocket
+4. Konsola przeglądarki pokaże: "✅ Socket connected: <socket-id>"
+5. Utwórz nowy kanał lub rozpocznij direct message
+6. Wyślij wiadomości i obserwuj real-time updates
+
+**Testowanie z wieloma użytkownikami:**
+1. Otwórz aplikację w trybie incognito jako drugi użytkownik
+2. Utwórz direct message między użytkownikami
+3. Wyślij wiadomości i obserwuj real-time synchronizację
+4. Testuj typing indicators i read receipts
+
+### 3. Testowanie REST API
+
+```bash
+# Zaloguj się i pobierz token
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test1234!"}'
+
+# Pobierz kanały użytkownika
+curl http://localhost:5000/api/chat/channels \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Utwórz nowy kanał
+curl -X POST http://localhost:5000/api/chat/channels \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Team Chat","type":"group","description":"Main team channel"}'
+```
+
 ## Baza Danych
 
 ### Główne tabele:
 - `users` - Użytkownicy systemu
-- `user_statuses` - Statusy użytkowników
-- `channels` - Kanały czatu
-- `messages` - Wiadomości
-- `time_entries` - Ewidencja czasu pracy
-- `leave_requests` - Wnioski urlopowe
-- `notifications` - Powiadomienia
+- `refresh_tokens` - Refresh tokens JWT
+- `channels` - Kanały czatu (direct, group, public, private)
+- `channel_members` - Członkowie kanałów (z rolami)
+- `messages` - Wiadomości czatu
+- `attachments` - Załączniki do wiadomości
+- `user_statuses` - Statusy użytkowników (nadchodzące)
+- `time_entries` - Ewidencja czasu pracy (nadchodzące)
+- `leave_requests` - Wnioski urlopowe (nadchodzące)
+- `notifications` - Powiadomienia (nadchodzące)
 
 ### Migracje
 
@@ -176,21 +247,31 @@ npm run migration:revert
 - TypeScript configuration
 - Basic server & client
 
-### Faza 2: 🔄 System Autentykacji (W TRAKCIE)
-- Model User
-- JWT authentication
+### Faza 2: ✅ System Autentykacji
+- Model User + RefreshToken
+- JWT authentication (access + refresh tokens)
+- Bcrypt password hashing
 - Login/Register pages
 - Protected routes
+- Automatic token refresh
 
 ### Faza 3: Zarządzanie Użytkownikami
 - CRUD użytkowników
 - Statusy użytkowników
 - Panel administracyjny
 
-### Faza 4: Moduł Czatu
-- WebSocket setup
-- Chat UI
-- Real-time messaging
+### Faza 4: ✅ Moduł Czatu
+- **Backend**:
+  * Database models (Channel, Message, ChannelMember, Attachment)
+  * WebSocket (Socket.io) z JWT authentication
+  * REST API (channels, messages, members)
+- **Frontend**:
+  * Socket.io client service
+  * ChatContext dla state management
+  * UI components (ChatList, ChatWindow, Message, MessageInput)
+  * Real-time messaging (send, edit, delete)
+  * Typing indicators
+  * Read receipts
 
 ### Faza 5: Upload Plików
 - Lokalny storage
