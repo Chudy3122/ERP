@@ -1,6 +1,9 @@
 import 'reflect-metadata';
+import { createServer } from 'http';
 import app from './app';
 import { initializeDatabase, closeDatabase } from './config/database';
+import { initializeSocketIO } from './config/socket';
+import { setupChatHandlers } from './sockets/chat.socket';
 
 const PORT = process.env.PORT || 5000;
 
@@ -10,8 +13,17 @@ const startServer = async () => {
     // Connect to database
     await initializeDatabase();
 
-    // Start Express server
-    const server = app.listen(PORT, () => {
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize Socket.IO
+    const io = initializeSocketIO(httpServer);
+
+    // Setup chat handlers
+    setupChatHandlers(io);
+
+    // Start HTTP server
+    httpServer.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════╗
 ║   ERP Server Started Successfully!       ║
@@ -21,6 +33,7 @@ const startServer = async () => {
 ║   URL: http://localhost:${PORT}
 ║   Health Check: http://localhost:${PORT}/health
 ║   API Documentation: http://localhost:${PORT}/api
+║   WebSocket: ws://localhost:${PORT}
 ╚═══════════════════════════════════════════╝
       `);
     });
@@ -28,7 +41,13 @@ const startServer = async () => {
     // Graceful shutdown handlers
     const gracefulShutdown = async (signal: string) => {
       console.log(`\n${signal} signal received: closing HTTP server`);
-      server.close(async () => {
+
+      // Close Socket.IO connections
+      io.close(() => {
+        console.log('Socket.IO server closed');
+      });
+
+      httpServer.close(async () => {
         console.log('HTTP server closed');
         await closeDatabase();
         process.exit(0);
@@ -38,7 +57,7 @@ const startServer = async () => {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-    return server;
+    return httpServer;
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
