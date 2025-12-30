@@ -2,6 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import apiRoutes from './routes';
 
 dotenv.config();
 
@@ -32,14 +33,8 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes placeholder
-app.get('/api', (req: Request, res: Response) => {
-  res.status(200).json({
-    message: 'ERP API Server',
-    version: '1.0.0',
-    status: 'running',
-  });
-});
+// API routes
+app.use('/api', apiRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
