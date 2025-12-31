@@ -5,6 +5,7 @@ import fileRoutes from './file.routes';
 import timeRoutes from './time.routes';
 import userStatusRoutes from './userStatus.routes';
 import notificationRoutes from './notification.routes';
+import adminRoutes from './admin.routes';
 
 const router = Router();
 
@@ -25,6 +26,9 @@ router.use('/status', userStatusRoutes);
 
 // Notification routes
 router.use('/notifications', notificationRoutes);
+
+// Admin routes
+router.use('/admin', adminRoutes);
 
 // Health check for API
 router.get('/health', (req, res) => {

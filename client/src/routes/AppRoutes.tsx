@@ -8,6 +8,8 @@ import Dashboard from '../pages/Dashboard';
 import Chat from '../pages/Chat';
 import TimeTracking from '../pages/TimeTracking';
 import LeaveManagement from '../pages/LeaveManagement';
+import Admin from '../pages/Admin';
+import AdminUsers from '../pages/AdminUsers';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -55,6 +57,22 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <LeaveManagement />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <PrivateRoute>
+            <Admin />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <PrivateRoute>
+            <AdminUsers />
           </PrivateRoute>
         }
       />

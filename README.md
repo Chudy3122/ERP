@@ -181,6 +181,20 @@ npm run dev:server  # Backend na http://localhost:5000
 - `DELETE /api/notifications/all` - Usuń wszystkie powiadomienia
 - `POST /api/notifications/announcement` - Wyślij ogłoszenie systemowe (admin)
 
+### Admin Panel (requires admin role)
+- `GET /api/admin/users` - Lista użytkowników (z paginacją, filtrowaniem)
+- `GET /api/admin/users/:id` - Szczegóły użytkownika
+- `POST /api/admin/users` - Utworzenie nowego użytkownika
+- `PUT /api/admin/users/:id` - Aktualizacja użytkownika
+- `DELETE /api/admin/users/:id` - Usunięcie użytkownika
+- `POST /api/admin/users/:id/activate` - Aktywacja użytkownika
+- `POST /api/admin/users/:id/deactivate` - Dezaktywacja użytkownika
+- `POST /api/admin/users/:id/reset-password` - Reset hasła użytkownika
+- `GET /api/admin/stats` - Statystyki systemowe
+- `GET /api/admin/users/:id/activity` - Aktywność użytkownika
+- `GET /api/admin/recent-registrations` - Ostatnie rejestracje
+- `GET /api/admin/online-count` - Liczba użytkowników online
+
 ## WebSocket Events
 
 ### Chat Events
@@ -398,11 +412,24 @@ npm run migration:revert
   * Leave request statuses
   * System announcements
 
-### Faza 10: 🔜 Admin Panel (nadchodzące)
-- User management CRUD
-- Role & permissions management
-- System statistics
-- Audit logs
+### Faza 10: ✅ Admin Panel
+- **Backend**:
+  * Admin service z user management i statistics
+  * REST API endpoints (/api/admin/*)
+  * Role-based access control (tylko admin)
+  * System statistics (users, time entries, leave requests, messages)
+  * User activity tracking
+  * Password reset functionality
+- **Frontend**:
+  * Admin Dashboard z kartami statystyk
+  * Users by role distribution chart
+  * Recent registrations list
+  * AdminUsers page z pełnym CRUD
+  * User management table (search, filter, pagination)
+  * Create/Edit user modal
+  * Activate/deactivate users
+  * Reset password functionality
+  * Modern gradient design (red-orange dla admin)
 
 ## Licencja
 

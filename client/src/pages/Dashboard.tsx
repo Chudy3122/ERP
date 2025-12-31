@@ -208,6 +208,35 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+
+            {/* Admin Panel Card - Only for admins */}
+            {user?.role === 'admin' && (
+              <div className="bg-white rounded-2xl shadow-xl p-6 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border border-gray-100">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-100 to-orange-100 rounded-full -mr-12 -mt-12 opacity-50"></div>
+
+                <div className="relative z-10">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-2xl mb-4 shadow-lg">
+                    ⚙️
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    Panel Administracyjny
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Zarządzanie użytkownikami i statystyki systemu
+                  </p>
+                  <Link
+                    to="/admin"
+                    className="inline-block px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  >
+                    Przejdź do panelu →
+                  </Link>
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <p className="text-sm text-red-600 font-medium">Tylko dla adminów</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
