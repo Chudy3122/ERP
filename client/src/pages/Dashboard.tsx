@@ -86,10 +86,10 @@ const Dashboard = () => {
               <p className="text-gray-600 mb-4">
                 Ewidencja godzin, urlopy, raporty
               </p>
-              <button className="btn btn-primary">
+              <Link to="/time-tracking" className="btn btn-primary inline-block">
                 Otwórz kartę czasu
-              </button>
-              <p className="mt-2 text-xs text-gray-500">Wkrótce dostępne</p>
+              </Link>
+              <p className="mt-2 text-xs text-green-600 font-medium">✓ Dostępne teraz</p>
             </div>
 
             {/* Status Card */}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes';
 import chatRoutes from './chat.routes';
 import fileRoutes from './file.routes';
+import timeRoutes from './time.routes';
 
 const router = Router();
 
@@ -13,6 +14,9 @@ router.use('/chat', chatRoutes);
 
 // File routes
 router.use('/files', fileRoutes);
+
+// Time management routes
+router.use('/time', timeRoutes);
 
 // Health check for API
 router.get('/health', (req, res) => {
