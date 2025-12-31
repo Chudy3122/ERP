@@ -79,18 +79,30 @@ const TimeTracking: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <nav className="bg-indigo-600 text-white p-4 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold">⏰ Ewidencja Czasu Pracy</h1>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/dashboard"
-              className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded-lg transition-colors"
-            >
-              ← Panel główny
-            </Link>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-cyan-50/30">
+      {/* Header - Modern gradient */}
+      <nav className="bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+        <div className="container mx-auto p-4 relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl shadow-lg ring-2 ring-white/30">
+                ⏰
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold drop-shadow-sm">Ewidencja Czasu Pracy</h1>
+                <p className="text-sm text-blue-100">Zarządzaj swoim czasem</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link
+                to="/dashboard"
+                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 border border-white/20"
+              >
+                ← Panel główny
+              </Link>
+            </div>
           </div>
         </div>
       </nav>

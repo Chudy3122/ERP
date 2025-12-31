@@ -112,23 +112,26 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 p-4 bg-white">
+    <div className="border-t border-gray-200 bg-gradient-to-b from-white to-gray-50 p-4 shadow-lg">
       {/* Selected files preview */}
       {selectedFiles.length > 0 && (
         <div className="mb-3 space-y-2">
           {selectedFiles.map((file, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 bg-gray-100 p-2 rounded-lg"
+              className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-shadow"
             >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg shadow-md flex-shrink-0">
+                📎
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">{file.name}</p>
+                <p className="text-xs text-gray-600">{formatFileSize(file.size)}</p>
               </div>
               <button
                 type="button"
                 onClick={() => handleRemoveFile(index)}
-                className="p-1 text-red-600 hover:bg-red-100 rounded"
+                className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                 title="Usuń"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -144,35 +147,39 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-3">
         {/* File Upload Button */}
-        <FileUpload
-          onFilesSelected={handleFilesSelected}
-          disabled={disabled || isUploading}
-        />
+        <div className="flex-shrink-0">
+          <FileUpload
+            onFilesSelected={handleFilesSelected}
+            disabled={disabled || isUploading}
+          />
+        </div>
 
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled || isUploading}
-          rows={1}
-          className="flex-1 resize-none border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed max-h-32 overflow-y-auto"
-          style={{ minHeight: '42px' }}
-        />
+        {/* Textarea with modern styling */}
+        <div className="flex-1 relative">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled || isUploading}
+            rows={1}
+            className="w-full resize-none border-2 border-gray-200 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed max-h-32 overflow-y-auto shadow-sm hover:shadow-md transition-all duration-200"
+            style={{ minHeight: '48px' }}
+          />
+        </div>
 
-        {/* Send Button */}
+        {/* Send Button - Modern gradient */}
         <button
           onClick={handleSend}
           disabled={(!content.trim() && selectedFiles.length === 0) || disabled || isUploading}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium min-w-[80px]"
+          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:shadow-xl disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all duration-200 font-semibold min-w-[100px] shadow-lg hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
         >
           {isUploading ? (
             <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -188,19 +195,28 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Wysyłanie...
+              <span className="hidden sm:inline">Wysyłanie...</span>
             </span>
           ) : (
-            'Wyślij'
+            <span className="flex items-center gap-2">
+              <span>Wyślij</span>
+              <span className="text-lg">→</span>
+            </span>
           )}
         </button>
       </div>
 
-      {/* Helper text */}
-      <p className="text-xs text-gray-500 mt-2">
-        <kbd className="px-1 bg-gray-200 rounded">Enter</kbd> = wyślij,{' '}
-        <kbd className="px-1 bg-gray-200 rounded">Shift+Enter</kbd> = nowa linia
-      </p>
+      {/* Helper text - Modern styling */}
+      <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-1 bg-white rounded-lg border border-gray-300 shadow-sm font-medium">Enter</kbd>
+          <span>wyślij</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <kbd className="px-2 py-1 bg-white rounded-lg border border-gray-300 shadow-sm font-medium">Shift+Enter</kbd>
+          <span>nowa linia</span>
+        </div>
+      </div>
     </div>
   );
 };

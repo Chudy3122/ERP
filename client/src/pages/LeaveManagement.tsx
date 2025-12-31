@@ -75,16 +75,28 @@ const LeaveManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-indigo-600 text-white p-4 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold">📅 Zarządzanie Urlopami</h1>
-          <Link
-            to="/time-tracking"
-            className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded-lg transition-colors"
-          >
-            ← Ewidencja czasu
-          </Link>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-emerald-50/30">
+      <nav className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+        <div className="container mx-auto p-4 relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl shadow-lg ring-2 ring-white/30">
+                📅
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold drop-shadow-sm">Zarządzanie Urlopami</h1>
+                <p className="text-sm text-green-100">Wnioski i bilans urlopowy</p>
+              </div>
+            </div>
+            <Link
+              to="/time-tracking"
+              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 border border-white/20"
+            >
+              ← Ewidencja czasu
+            </Link>
+          </div>
         </div>
       </nav>
 
