@@ -4,6 +4,7 @@ import app from './app';
 import { initializeDatabase, closeDatabase } from './config/database';
 import { initializeSocketIO } from './config/socket';
 import { setupChatHandlers } from './sockets/chat.socket';
+import { setupStatusHandlers } from './sockets/status.socket';
 
 const PORT = process.env.PORT || 5000;
 
@@ -21,6 +22,9 @@ const startServer = async () => {
 
     // Setup chat handlers
     setupChatHandlers(io);
+
+    // Setup status handlers
+    setupStatusHandlers(io);
 
     // Start HTTP server
     httpServer.listen(PORT, () => {

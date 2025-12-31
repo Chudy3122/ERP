@@ -146,14 +146,35 @@ npm run dev:server  # Backend na http://localhost:5000
 - `POST /api/chat/channels/:id/members` - Dodawanie członków
 - `DELETE /api/chat/channels/:id/members/:userId` - Usuwanie członka
 
-### Time Management (nadchodzące)
-- `GET /api/time-entries` - Lista wpisów czasu
-- `POST /api/time-entries` - Clock in
-- `PUT /api/time-entries/:id` - Clock out
+### Time Management
+- `POST /api/time/clock-in` - Clock in (rozpoczęcie pracy)
+- `POST /api/time/clock-out` - Clock out (zakończenie pracy)
+- `GET /api/time/entries` - Lista wpisów czasu użytkownika
+- `GET /api/time/current` - Aktualny wpis (jeśli zalogowany)
+- `GET /api/time/stats` - Statystyki czasu pracy
+- `POST /api/time/leave-requests` - Nowy wniosek urlopowy
+- `GET /api/time/leave-requests` - Lista wniosków urlopowych
+- `PUT /api/time/leave-requests/:id/cancel` - Anulowanie wniosku
+- `GET /api/time/leave-balance` - Bilans urlopowy
 
-## WebSocket Events (Chat)
+### User Status
+- `GET /api/status/me` - Status aktualnego użytkownika
+- `PUT /api/status/me` - Aktualizacja statusu
+- `POST /api/status/online` - Ustaw status: online
+- `POST /api/status/offline` - Ustaw status: offline
+- `POST /api/status/away` - Ustaw status: away
+- `POST /api/status/busy` - Ustaw status: busy
+- `POST /api/status/in-meeting` - Ustaw status: in meeting
+- `GET /api/status/user/:userId` - Status konkretnego użytkownika
+- `POST /api/status/batch` - Statusy wielu użytkowników
+- `GET /api/status/online` - Lista użytkowników online
+- `GET /api/status/stats` - Statystyki statusów
 
-### Client → Server (Emit)
+## WebSocket Events
+
+### Chat Events
+
+**Client → Server (Emit)**
 - `chat:join_channels` - Auto-join wszystkich kanałów użytkownika
 - `chat:join_channel` - Dołącz do konkretnego kanału
 - `chat:leave_channel` - Opuść kanał
@@ -163,7 +184,7 @@ npm run dev:server  # Backend na http://localhost:5000
 - `chat:typing` - Wyślij wskaźnik pisania
 - `chat:mark_read` - Oznacz kanał jako przeczytany
 
-### Server → Client (Listen)
+**Server → Client (Listen)**
 - `chat:channels_joined` - Potwierdzenie dołączenia do kanałów
 - `chat:channel_joined` - Dołączono do kanału
 - `chat:new_message` - Nowa wiadomość w kanale
@@ -171,6 +192,27 @@ npm run dev:server  # Backend na http://localhost:5000
 - `chat:message_deleted` - Wiadomość została usunięta
 - `chat:user_typing` - Użytkownik pisze
 - `chat:error` - Błąd WebSocket
+
+### User Status Events
+
+**Client → Server (Emit)**
+- `status:update` - Aktualizacja statusu użytkownika
+- `status:get_my_status` - Pobierz własny status
+- `status:get_batch` - Pobierz statusy wielu użytkowników
+- `status:get_online_users` - Pobierz listę użytkowników online
+- `status:heartbeat` - Aktualizacja last_seen
+
+**Server → Client (Listen)**
+- `status:user_status_changed` - Status użytkownika się zmienił (broadcast)
+- `status:updated` - Potwierdzenie aktualizacji statusu
+- `status:my_status` - Aktualny status użytkownika
+- `status:batch_statuses` - Statusy wielu użytkowników
+- `status:online_users` - Lista użytkowników online
+- `status:error` - Błąd WebSocket
+
+**Automatic Events**
+- User automatically set to `online` on WebSocket connection
+- User automatically set to `offline` on WebSocket disconnection
 
 ## Testowanie Aplikacji
 
@@ -255,10 +297,9 @@ npm run migration:revert
 - Protected routes
 - Automatic token refresh
 
-### Faza 3: Zarządzanie Użytkownikami
+### Faza 3: ⏳ Zarządzanie Użytkownikami
 - CRUD użytkowników
-- Statusy użytkowników
-- Panel administracyjny
+- Panel administracyjny (nadchodzące)
 
 ### Faza 4: ✅ Moduł Czatu
 - **Backend**:
@@ -273,14 +314,49 @@ npm run migration:revert
   * Typing indicators
   * Read receipts
 
-### Faza 5: Upload Plików
-- Lokalny storage
-- Walidacja plików
+### Faza 5: ✅ Upload Plików
+- Lokalny storage dla załączników
+- Walidacja typów i rozmiarów plików
+- Integracja z modułem czatu
+- Preview plików (obrazy)
 
-### Faza 6: Moduł Czasu Pracy
-- Time tracking
-- Leave management
-- Raporty
+### Faza 6: ✅ Moduł Czasu Pracy
+- Time tracking (clock in/out)
+- Leave management (wnioski urlopowe)
+- Statystyki czasu pracy
+- Raporty i historia
+
+### Faza 7: ✅ Modern UI/UX Redesign
+- Messenger-like interface design
+- Gradient backgrounds and glassmorphism
+- Smooth animations and transitions
+- Hover effects and scale transforms
+- Modern card layouts
+- Responsive mobile-first design
+
+### Faza 8: ✅ System Statusów Użytkowników
+- **Backend**:
+  * UserStatus model i migracja bazy danych
+  * Service layer (CRUD operations)
+  * REST API endpoints (/api/status/*)
+  * WebSocket events dla real-time updates
+- **Frontend**:
+  * StatusSelector component
+  * TypeScript types i API client
+  * Integracja w Dashboard
+  * Real-time status synchronization
+
+### Faza 9: 🔜 Notifications System (nadchodzące)
+- Push notifications
+- Email notifications
+- In-app notification center
+- Notification preferences
+
+### Faza 10: 🔜 Admin Panel (nadchodzące)
+- User management CRUD
+- Role & permissions management
+- System statistics
+- Audit logs
 
 ## Licencja
 

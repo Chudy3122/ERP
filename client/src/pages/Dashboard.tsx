@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import StatusSelector from '../components/status/StatusSelector';
+import { StatusType } from '../types/status.types';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [userStatus, setUserStatus] = useState<StatusType>(StatusType.ONLINE);
 
   const handleLogout = async () => {
     await logout();
@@ -25,6 +29,10 @@ const Dashboard = () => {
               <h1 className="text-2xl font-bold text-white drop-shadow-sm">ERP System</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <StatusSelector
+                currentStatus={userStatus}
+                onStatusChange={(status) => setUserStatus(status)}
+              />
               <div className="text-right mr-2">
                 <p className="text-white font-semibold drop-shadow-sm">
                   {user?.first_name} {user?.last_name}
