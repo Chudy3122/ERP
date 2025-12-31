@@ -76,13 +76,17 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
   }
 
   return (
-    <div className={`flex gap-3 mb-4 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 mb-3 px-4 group hover:bg-gray-50 -mx-4 px-4 py-2 rounded-lg transition-all duration-200 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       {!isOwnMessage && (
-        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-          {message.sender?.first_name && message.sender?.last_name
-            ? getInitials(`${message.sender.first_name} ${message.sender.last_name}`)
-            : '?'}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-md ring-2 ring-white">
+          {message.sender?.avatar_url ? (
+            <img src={message.sender.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+          ) : message.sender?.first_name && message.sender?.last_name ? (
+            getInitials(`${message.sender.first_name} ${message.sender.last_name}`)
+          ) : (
+            '?'
+          )}
         </div>
       )}
 
@@ -90,7 +94,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
       <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
         {/* Sender name (only for others' messages) */}
         {!isOwnMessage && message.sender && (
-          <p className="text-sm font-medium text-gray-700 mb-1">
+          <p className="text-xs font-semibold text-gray-600 mb-1 px-1">
             {message.sender.first_name} {message.sender.last_name}
           </p>
         )}
@@ -98,19 +102,19 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
         {/* Message bubble */}
         {message.content && (
           <div
-            className={`relative px-4 py-2 rounded-lg ${
+            className={`relative px-4 py-2.5 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
               isOwnMessage
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-sm'
                 : message.is_deleted
-                ? 'bg-gray-200 text-gray-500 italic'
-                : 'bg-gray-200 text-gray-900'
+                ? 'bg-gray-100 text-gray-400 italic border border-gray-200'
+                : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
             }`}
           >
-            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
 
             {/* Edited indicator */}
             {message.is_edited && !message.is_deleted && (
-              <span className="text-xs opacity-70 ml-2">(edytowano)</span>
+              <span className={`text-[10px] ml-2 ${isOwnMessage ? 'text-indigo-100' : 'text-gray-400'}`}>(edytowano)</span>
             )}
           </div>
         )}
@@ -173,45 +177,53 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
           </div>
         )}
 
-        {/* Timestamp */}
-        <p className="text-xs text-gray-500 mt-1">{formatTime(message.created_at)}</p>
+        {/* Timestamp and Actions */}
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <p className="text-[10px] text-gray-400">{formatTime(message.created_at)}</p>
 
-        {/* Action buttons (only for own messages) */}
-        {isOwnMessage && !message.is_deleted && (
-          <div className="flex gap-2 mt-1">
-            {onEdit && (
-              <button
-                onClick={() => {
-                  const newContent = prompt('Edytuj wiadomość:', message.content);
-                  if (newContent && newContent !== message.content) {
-                    onEdit(message.id, newContent);
-                  }
-                }}
-                className="text-xs text-gray-500 hover:text-indigo-600"
-              >
-                Edytuj
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={() => {
-                  if (confirm('Czy na pewno chcesz usunąć tę wiadomość?')) {
-                    onDelete(message.id);
-                  }
-                }}
-                className="text-xs text-gray-500 hover:text-red-600"
-              >
-                Usuń
-              </button>
-            )}
-          </div>
-        )}
+          {/* Action buttons (only for own messages, shown on hover) */}
+          {isOwnMessage && !message.is_deleted && (
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {onEdit && (
+                <button
+                  onClick={() => {
+                    const newContent = prompt('Edytuj wiadomość:', message.content);
+                    if (newContent && newContent !== message.content) {
+                      onEdit(message.id, newContent);
+                    }
+                  }}
+                  className="text-[10px] text-gray-400 hover:text-indigo-600 font-medium transition-colors"
+                  title="Edytuj"
+                >
+                  Edytuj
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => {
+                    if (confirm('Czy na pewno chcesz usunąć tę wiadomość?')) {
+                      onDelete(message.id);
+                    }
+                  }}
+                  className="text-[10px] text-gray-400 hover:text-red-600 font-medium transition-colors"
+                  title="Usuń"
+                >
+                  Usuń
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Avatar for own messages */}
       {isOwnMessage && user && (
-        <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-          {getInitials(`${user.first_name} ${user.last_name}`)}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-md ring-2 ring-white">
+          {user.avatar_url ? (
+            <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+          ) : (
+            getInitials(`${user.first_name} ${user.last_name}`)
+          )}
         </div>
       )}
     </div>
