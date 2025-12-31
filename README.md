@@ -431,6 +431,22 @@ npm run migration:revert
   * Reset password functionality
   * Modern gradient design (red-orange dla admin)
 
+### Faza 11: ✅ Leave Request Approval System
+- **Backend**:
+  * Integration z notification system
+  * Notifications dla approved/rejected leave requests
+  * Notifications dla team leaders o nowych wnioskach
+  * Existing API endpoints wykorzystane (approve/reject)
+- **Frontend**:
+  * LeaveApprovals page dla team leaders i adminów
+  * Modal z confirmation dla approve/reject z notes
+  * Pending requests dashboard widget
+  * Real-time count of pending requests
+  * TeamLeaveCalendar page - widok kalendarza urlopów zespołu
+  * Month navigation i status filtering
+  * Visible dla admins i team leaders
+  * Modern gradient design (green-teal dla approvals)
+
 ## Licencja
 
 MIT

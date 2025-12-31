@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { TimeService } from '../services/time.service';
 import { LeaveType } from '../models/LeaveRequest.model';
+import notificationService from '../services/notification.service';
 
 const timeService = new TimeService();
 
@@ -229,6 +230,15 @@ export class TimeController {
         reason
       );
 
+      // Send notification to team leaders and admins
+      await notificationService.notifyNewLeaveRequest(
+        userId,
+        leaveType as LeaveType,
+        new Date(startDate),
+        new Date(endDate),
+        reason
+      );
+
       res.status(201).json({
         success: true,
         message: 'Leave request created successfully',
@@ -299,6 +309,17 @@ export class TimeController {
 
       const leaveRequest = await timeService.approveLeaveRequest(id, reviewerId, notes);
 
+      // Send notification to user
+      await notificationService.notifyLeaveRequestStatus(
+        leaveRequest.user_id,
+        'approved',
+        leaveRequest.leave_type,
+        leaveRequest.start_date,
+        leaveRequest.end_date,
+        reviewerId,
+        notes
+      );
+
       res.status(200).json({
         success: true,
         message: 'Leave request approved successfully',
@@ -324,6 +345,17 @@ export class TimeController {
       const { notes } = req.body;
 
       const leaveRequest = await timeService.rejectLeaveRequest(id, reviewerId, notes);
+
+      // Send notification to user
+      await notificationService.notifyLeaveRequestStatus(
+        leaveRequest.user_id,
+        'rejected',
+        leaveRequest.leave_type,
+        leaveRequest.start_date,
+        leaveRequest.end_date,
+        reviewerId,
+        notes
+      );
 
       res.status(200).json({
         success: true,

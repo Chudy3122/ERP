@@ -5,16 +5,21 @@ import StatusSelector from '../components/status/StatusSelector';
 import NotificationCenter from '../components/notifications/NotificationCenter';
 import { StatusType } from '../types/status.types';
 import * as notificationApi from '../api/notification.api';
+import * as timeApi from '../api/time.api';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [userStatus, setUserStatus] = useState<StatusType>(StatusType.ONLINE);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
 
   useEffect(() => {
     loadUnreadCount();
-  }, []);
+    if (user?.role === 'admin' || user?.role === 'team_leader') {
+      loadPendingLeaveCount();
+    }
+  }, [user]);
 
   const loadUnreadCount = async () => {
     try {
@@ -22,6 +27,15 @@ const Dashboard = () => {
       setUnreadCount(count);
     } catch (error) {
       console.error('Failed to load unread count:', error);
+    }
+  };
+
+  const loadPendingLeaveCount = async () => {
+    try {
+      const requests = await timeApi.getPendingLeaveRequests();
+      setPendingLeaveCount(requests.length);
+    } catch (error) {
+      console.error('Failed to load pending leave requests:', error);
     }
   };
 
@@ -208,6 +222,44 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+
+            {/* Leave Approvals Card - Only for admins and team leaders */}
+            {(user?.role === 'admin' || user?.role === 'team_leader') && (
+              <div className="bg-white rounded-2xl shadow-xl p-6 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border border-gray-100">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-100 to-teal-100 rounded-full -mr-12 -mt-12 opacity-50"></div>
+
+                <div className="relative z-10">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-2xl mb-4 shadow-lg">
+                    ✅
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    Zatwierdzanie Urlopów
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Zarządzaj wnioskami urlopowymi pracowników
+                  </p>
+                  <Link
+                    to="/time-tracking/leave/approvals"
+                    className="inline-block px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  >
+                    Przejdź do zatwierdzania →
+                  </Link>
+                  <div className="mt-4 flex items-center gap-2">
+                    {pendingLeaveCount > 0 ? (
+                      <>
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                        <p className="text-sm text-orange-600 font-medium">{pendingLeaveCount} oczekujących wniosków</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <p className="text-sm text-green-600 font-medium">Brak oczekujących wniosków</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Admin Panel Card - Only for admins */}
             {user?.role === 'admin' && (

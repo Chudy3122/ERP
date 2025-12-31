@@ -8,6 +8,8 @@ import Dashboard from '../pages/Dashboard';
 import Chat from '../pages/Chat';
 import TimeTracking from '../pages/TimeTracking';
 import LeaveManagement from '../pages/LeaveManagement';
+import LeaveApprovals from '../pages/LeaveApprovals';
+import TeamLeaveCalendar from '../pages/TeamLeaveCalendar';
 import Admin from '../pages/Admin';
 import AdminUsers from '../pages/AdminUsers';
 import PrivateRoute from './PrivateRoute';
@@ -57,6 +59,22 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <LeaveManagement />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/time-tracking/leave/approvals"
+        element={
+          <PrivateRoute>
+            <LeaveApprovals />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/time-tracking/leave/calendar"
+        element={
+          <PrivateRoute>
+            <TeamLeaveCalendar />
           </PrivateRoute>
         }
       />
