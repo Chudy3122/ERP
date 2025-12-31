@@ -170,6 +170,17 @@ npm run dev:server  # Backend na http://localhost:5000
 - `GET /api/status/online` - Lista użytkowników online
 - `GET /api/status/stats` - Statystyki statusów
 
+### Notifications
+- `GET /api/notifications` - Lista powiadomień (paginacja, filtrowanie)
+- `GET /api/notifications/unread-count` - Liczba nieprzeczytanych
+- `GET /api/notifications/:id` - Szczegóły powiadomienia
+- `PUT /api/notifications/:id/read` - Oznacz jako przeczytane
+- `PUT /api/notifications/read-all` - Oznacz wszystkie jako przeczytane
+- `DELETE /api/notifications/:id` - Usuń powiadomienie
+- `DELETE /api/notifications/read` - Usuń wszystkie przeczytane
+- `DELETE /api/notifications/all` - Usuń wszystkie powiadomienia
+- `POST /api/notifications/announcement` - Wyślij ogłoszenie systemowe (admin)
+
 ## WebSocket Events
 
 ### Chat Events
@@ -213,6 +224,25 @@ npm run dev:server  # Backend na http://localhost:5000
 **Automatic Events**
 - User automatically set to `online` on WebSocket connection
 - User automatically set to `offline` on WebSocket disconnection
+
+### Notification Events
+
+**Client → Server (Emit)**
+- `notifications:get_unread_count` - Pobierz liczbę nieprzeczytanych
+- `notifications:get_recent` - Pobierz ostatnie powiadomienia
+- `notifications:mark_read` - Oznacz jako przeczytane
+- `notifications:mark_all_read` - Oznacz wszystkie jako przeczytane
+- `notifications:delete` - Usuń powiadomienie
+
+**Server → Client (Listen)**
+- `notifications:new` - Nowe powiadomienie (sent to specific user)
+- `notifications:announcement` - Ogłoszenie systemowe (broadcast)
+- `notifications:unread_count` - Aktualna liczba nieprzeczytanych
+- `notifications:recent` - Lista ostatnich powiadomień
+- `notifications:marked_read` - Potwierdzenie przeczytania
+- `notifications:all_marked_read` - Wszystkie oznaczone jako przeczytane
+- `notifications:deleted` - Powiadomienie usunięte
+- `notifications:error` - Błąd WebSocket
 
 ## Testowanie Aplikacji
 
@@ -346,11 +376,27 @@ npm run migration:revert
   * Integracja w Dashboard
   * Real-time status synchronization
 
-### Faza 9: 🔜 Notifications System (nadchodzące)
-- Push notifications
-- Email notifications
-- In-app notification center
-- Notification preferences
+### Faza 9: ✅ Notifications System
+- **Backend**:
+  * Notification model z TypeORM
+  * Service layer (CRUD, helpers for different notification types)
+  * REST API endpoints (/api/notifications/*)
+  * WebSocket events dla real-time notifications
+  * Support dla 10 typów powiadomień
+  * Priority levels (low, normal, high, urgent)
+- **Frontend**:
+  * NotificationCenter component z dzwonkiem
+  * Real-time unread count badge
+  * Modern dropdown UI z gradientami
+  * Mark as read / delete notifications
+  * TypeScript types i API client
+  * Integracja w Dashboard navbar
+- **Typy Powiadomień**:
+  * Chat messages & mentions
+  * Channel invitations
+  * Time entry approvals/rejections
+  * Leave request statuses
+  * System announcements
 
 ### Faza 10: 🔜 Admin Panel (nadchodzące)
 - User management CRUD

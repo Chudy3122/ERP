@@ -4,6 +4,7 @@ import chatRoutes from './chat.routes';
 import fileRoutes from './file.routes';
 import timeRoutes from './time.routes';
 import userStatusRoutes from './userStatus.routes';
+import notificationRoutes from './notification.routes';
 
 const router = Router();
 
@@ -21,6 +22,9 @@ router.use('/time', timeRoutes);
 
 // User status routes
 router.use('/status', userStatusRoutes);
+
+// Notification routes
+router.use('/notifications', notificationRoutes);
 
 // Health check for API
 router.get('/health', (req, res) => {

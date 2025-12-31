@@ -1,13 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import StatusSelector from '../components/status/StatusSelector';
+import NotificationCenter from '../components/notifications/NotificationCenter';
 import { StatusType } from '../types/status.types';
+import * as notificationApi from '../api/notification.api';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [userStatus, setUserStatus] = useState<StatusType>(StatusType.ONLINE);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadUnreadCount();
+  }, []);
+
+  const loadUnreadCount = async () => {
+    try {
+      const count = await notificationApi.getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Failed to load unread count:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -29,6 +45,10 @@ const Dashboard = () => {
               <h1 className="text-2xl font-bold text-white drop-shadow-sm">ERP System</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <NotificationCenter
+                unreadCount={unreadCount}
+                onUnreadCountChange={setUnreadCount}
+              />
               <StatusSelector
                 currentStatus={userStatus}
                 onStatusChange={(status) => setUserStatus(status)}
