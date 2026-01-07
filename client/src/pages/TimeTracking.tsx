@@ -79,26 +79,26 @@ const TimeTracking: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-cyan-50/30">
-      {/* Header - Modern gradient */}
-      <nav className="bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-        <div className="container mx-auto p-4 relative z-10">
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <nav className="bg-slate-900 shadow-lg border-b border-slate-800">
+        <div className="container mx-auto p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl shadow-lg ring-2 ring-white/30">
-                ⏰
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center shadow-md border border-slate-700">
+                <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold drop-shadow-sm">Ewidencja Czasu Pracy</h1>
-                <p className="text-sm text-blue-100">Zarządzaj swoim czasem</p>
+                <h1 className="text-xl font-semibold text-slate-100">Ewidencja Czasu Pracy</h1>
+                <p className="text-sm text-slate-400">Zarządzaj swoim czasem</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <Link
                 to="/dashboard"
-                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 border border-white/20"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md transition-all duration-200 text-sm font-medium text-slate-200 border border-slate-700"
               >
                 ← Panel główny
               </Link>
@@ -117,14 +117,14 @@ const TimeTracking: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Clock In/Out Card */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Status</h2>
+            <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
+              <h2 className="text-lg font-semibold mb-4 text-slate-900">Status</h2>
 
               {currentEntry ? (
                 <div>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-green-700 mb-2">Zalogowano o:</p>
-                    <p className="text-2xl font-bold text-green-800">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-md p-4 mb-4">
+                    <p className="text-sm text-emerald-700 mb-2">Zalogowano o:</p>
+                    <p className="text-2xl font-bold text-emerald-800">
                       {formatTime(currentEntry.clock_in)}
                     </p>
                   </div>
@@ -132,21 +132,21 @@ const TimeTracking: React.FC = () => {
                   <button
                     onClick={handleClockOut}
                     disabled={loading}
-                    className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 font-semibold"
+                    className="w-full py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-500 font-medium text-sm transition-colors duration-200"
                   >
                     Wyloguj się
                   </button>
                 </div>
               ) : (
                 <div>
-                  <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-4">
-                    <p className="text-gray-600 text-center">Nie jesteś zalogowany</p>
+                  <div className="bg-slate-100 border border-slate-200 rounded-md p-4 mb-4">
+                    <p className="text-slate-600 text-center text-sm">Nie jesteś zalogowany</p>
                   </div>
 
                   <button
                     onClick={handleClockIn}
                     disabled={loading}
-                    className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 font-semibold"
+                    className="w-full py-2.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 font-medium text-sm transition-colors duration-200"
                   >
                     Zaloguj się
                   </button>
@@ -156,28 +156,28 @@ const TimeTracking: React.FC = () => {
 
             {/* Stats Card */}
             {stats && (
-              <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-                <h3 className="text-lg font-semibold mb-4">Statystyki (30 dni)</h3>
+              <div className="bg-white rounded-lg shadow-sm p-6 mt-6 border border-slate-200">
+                <h3 className="text-base font-semibold mb-4 text-slate-900">Statystyki (30 dni)</h3>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-600">Łączny czas:</p>
-                    <p className="text-xl font-bold text-gray-900">
+                    <p className="text-sm text-slate-600">Łączny czas:</p>
+                    <p className="text-xl font-bold text-slate-900">
                       {stats.totalHours}h {stats.totalMinutes}m
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Nadgodziny:</p>
-                    <p className="text-xl font-bold text-orange-600">
+                    <p className="text-sm text-slate-600">Nadgodziny:</p>
+                    <p className="text-xl font-bold text-amber-600">
                       {stats.overtimeHours}h {stats.overtimeMinutes}m
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Dni przepracowane:</p>
-                    <p className="text-xl font-bold text-gray-900">{stats.daysWorked}</p>
+                    <p className="text-sm text-slate-600">Dni przepracowane:</p>
+                    <p className="text-xl font-bold text-slate-900">{stats.daysWorked}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Średnio dziennie:</p>
-                    <p className="text-xl font-bold text-gray-900">
+                    <p className="text-sm text-slate-600">Średnio dziennie:</p>
+                    <p className="text-xl font-bold text-slate-900">
                       {stats.averageHoursPerDay.toFixed(1)}h
                     </p>
                   </div>
@@ -188,67 +188,67 @@ const TimeTracking: React.FC = () => {
 
           {/* Recent Entries */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Ostatnie wpisy</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Ostatnie wpisy</h2>
                 <Link
                   to="/time-tracking/leave"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium transition-colors duration-200"
                 >
                   Zarządzaj urlopami →
                 </Link>
               </div>
 
               {loading && recentEntries.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Ładowanie...</p>
+                <p className="text-slate-500 text-center py-8 text-sm">Ładowanie...</p>
               ) : recentEntries.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Brak wpisów</p>
+                <p className="text-slate-500 text-center py-8 text-sm">Brak wpisów</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-slate-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                           Data
                         </th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                           Wejście
                         </th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                           Wyjście
                         </th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                           Czas
                         </th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-slate-200">
                       {recentEntries.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                        <tr key={entry.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 text-sm text-slate-900">
                             {formatDate(entry.clock_in)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          <td className="px-4 py-3 text-sm text-slate-900">
                             {formatTime(entry.clock_in)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          <td className="px-4 py-3 text-sm text-slate-900">
                             {entry.clock_out ? formatTime(entry.clock_out) : '-'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          <td className="px-4 py-3 text-sm text-slate-900">
                             {formatDuration(entry.duration_minutes)}
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                 entry.status === 'in_progress'
-                                  ? 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-amber-100 text-amber-800'
                                   : entry.status === 'completed'
                                   ? 'bg-blue-100 text-blue-800'
                                   : entry.status === 'approved'
-                                  ? 'bg-green-100 text-green-800'
+                                  ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-red-100 text-red-800'
                               }`}
                             >

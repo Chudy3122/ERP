@@ -119,33 +119,33 @@ const TeamLeaveCalendar: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-indigo-50/30 to-purple-50/30 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Ładowanie kalendarza...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-violet-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 text-sm">Ładowanie kalendarza...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-indigo-50/30 to-purple-50/30">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <nav className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <nav className="bg-slate-900 shadow-lg border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl shadow-lg ring-2 ring-white/30">
-                📅
+              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center shadow-md border border-slate-700">
+                <svg className="w-6 h-6 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white drop-shadow-sm">Kalendarz Urlopów Zespołu</h1>
+              <h1 className="text-xl font-semibold text-slate-100">Kalendarz Urlopów Zespołu</h1>
             </div>
             <div className="flex items-center gap-4">
               <Link
                 to="/time-tracking/leave"
-                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-medium text-white shadow-lg hover:shadow-xl hover:scale-105 border border-white/20"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md transition-all duration-200 text-sm font-medium text-slate-200 border border-slate-700"
               >
                 ← Zarządzanie urlopami
               </Link>
@@ -157,22 +157,22 @@ const TeamLeaveCalendar: React.FC = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         {/* Controls */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-slate-200">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             {/* Month Navigation */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigateMonth(-1)}
-                className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-semibold transition-all"
+                className="px-4 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-md font-medium transition-all duration-200 border border-violet-200"
               >
                 ← Poprzedni
               </button>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-xl font-semibold text-slate-900">
                 {getMonthName(selectedMonth)} {selectedYear}
               </h2>
               <button
                 onClick={() => navigateMonth(1)}
-                className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-semibold transition-all"
+                className="px-4 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-md font-medium transition-all duration-200 border border-violet-200"
               >
                 Następny →
               </button>
@@ -180,11 +180,11 @@ const TeamLeaveCalendar: React.FC = () => {
 
             {/* Status Filter */}
             <div className="flex items-center gap-3">
-              <label className="text-sm font-semibold text-gray-700">Status:</label>
+              <label className="text-sm font-medium text-slate-700">Status:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-violet-500 focus:border-transparent text-sm"
               >
                 <option value="">Wszystkie</option>
                 <option value="pending">Oczekujące</option>
@@ -198,61 +198,65 @@ const TeamLeaveCalendar: React.FC = () => {
 
         {/* Leave List */}
         {filteredRequests.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center border border-gray-100">
-            <div className="text-6xl mb-4">📭</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Brak urlopów w tym miesiącu</h3>
-            <p className="text-gray-600">Nie ma zaplanowanych urlopów dla wybranego okresu</p>
+          <div className="bg-white rounded-lg shadow-sm p-12 text-center border border-slate-200">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-50 flex items-center justify-center">
+              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Brak urlopów w tym miesiącu</h3>
+            <p className="text-sm text-slate-600">Nie ma zaplanowanych urlopów dla wybranego okresu</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredRequests.map((request) => (
               <div
                 key={request.id}
-                className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 hover:shadow-2xl transition-all duration-300"
+                className="bg-white rounded-lg shadow-sm p-6 border border-slate-200 hover:shadow-md transition-all duration-200"
               >
                 <div className="flex items-start justify-between">
                   {/* Leave Info */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg">
+                      <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 font-semibold text-base border border-slate-200">
                         {request.user?.first_name?.[0]}{request.user?.last_name?.[0]}
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900">
+                        <h3 className="text-base font-semibold text-slate-900">
                           {request.user?.first_name} {request.user?.last_name}
                         </h3>
-                        <p className="text-sm text-gray-600">{request.user?.email}</p>
+                        <p className="text-sm text-slate-600">{request.user?.email}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Typ urlopu</p>
+                        <p className="text-xs text-slate-500 mb-1">Typ urlopu</p>
                         <div className="flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${getLeaveTypeColor(request.leave_type)}`}></div>
-                          <span className="text-sm font-semibold text-gray-900">
+                          <span className="text-sm font-semibold text-slate-900">
                             {getLeaveTypeLabel(request.leave_type)}
                           </span>
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Data rozpoczęcia</p>
-                        <p className="text-sm font-semibold text-gray-900">{formatDate(request.start_date)}</p>
+                        <p className="text-xs text-slate-500 mb-1">Data rozpoczęcia</p>
+                        <p className="text-sm font-semibold text-slate-900">{formatDate(request.start_date)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Data zakończenia</p>
-                        <p className="text-sm font-semibold text-gray-900">{formatDate(request.end_date)}</p>
+                        <p className="text-xs text-slate-500 mb-1">Data zakończenia</p>
+                        <p className="text-sm font-semibold text-slate-900">{formatDate(request.end_date)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Liczba dni</p>
-                        <p className="text-sm font-semibold text-gray-900">{request.total_days}</p>
+                        <p className="text-xs text-slate-500 mb-1">Liczba dni</p>
+                        <p className="text-sm font-semibold text-slate-900">{request.total_days}</p>
                       </div>
                     </div>
 
                     {request.reason && (
-                      <div className="mt-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
-                        <p className="text-xs text-gray-500 mb-1">Powód:</p>
-                        <p className="text-sm text-gray-900">{request.reason}</p>
+                      <div className="mt-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+                        <p className="text-xs text-slate-500 mb-1">Powód:</p>
+                        <p className="text-sm text-slate-900">{request.reason}</p>
                       </div>
                     )}
                   </div>
