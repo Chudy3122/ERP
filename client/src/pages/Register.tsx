@@ -62,171 +62,180 @@ const Register = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Ładowanie...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 text-sm">Ładowanie...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Utwórz konto w systemie ERP
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Zarządzanie pracą zdalną
-          </p>
-        </div>
-
-        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+          {/* Logo/Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 rounded-lg bg-slate-900 flex items-center justify-center shadow-md">
+              <svg className="w-10 h-10 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
             </div>
-          )}
+          </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+              Utwórz konto w systemie ERP
+            </h2>
+            <p className="text-sm text-slate-600">
+              Zarządzanie pracą zdalną
+            </p>
+          </div>
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="first_name" className="block text-sm font-medium text-slate-700 mb-2">
+                  Imię *
+                </label>
+                <input
+                  id="first_name"
+                  name="first_name"
+                  type="text"
+                  required
+                  value={formData.first_name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                  placeholder="Jan"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="last_name" className="block text-sm font-medium text-slate-700 mb-2">
+                  Nazwisko *
+                </label>
+                <input
+                  id="last_name"
+                  name="last_name"
+                  type="text"
+                  required
+                  value={formData.last_name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                  placeholder="Kowalski"
+                />
+              </div>
+            </div>
+
             <div>
-              <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
-                Imię *
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                Adres email *
               </label>
               <input
-                id="first_name"
-                name="first_name"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
                 required
-                value={formData.first_name}
+                value={formData.email}
                 onChange={handleChange}
-                className="input mt-1"
-                placeholder="Jan"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="jan.kowalski@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
-                Nazwisko *
+              <label htmlFor="department" className="block text-sm font-medium text-slate-700 mb-2">
+                Dział
               </label>
               <input
-                id="last_name"
-                name="last_name"
+                id="department"
+                name="department"
                 type="text"
-                required
-                value={formData.last_name}
+                value={formData.department}
                 onChange={handleChange}
-                className="input mt-1"
-                placeholder="Kowalski"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="IT"
               />
             </div>
-          </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Adres email *
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={formData.email}
-              onChange={handleChange}
-              className="input mt-1"
-              placeholder="jan.kowalski@example.com"
-            />
-          </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
+                Telefon
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="+48 123 456 789"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-              Dział
-            </label>
-            <input
-              id="department"
-              name="department"
-              type="text"
-              value={formData.department}
-              onChange={handleChange}
-              className="input mt-1"
-              placeholder="IT"
-            />
-          </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                Hasło *
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="Min. 8 znaków"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-              Telefon
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              className="input mt-1"
-              placeholder="+48 123 456 789"
-            />
-          </div>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
+                Potwierdź hasło *
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="Wpisz hasło ponownie"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Hasło *
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={formData.password}
-              onChange={handleChange}
-              className="input mt-1"
-              placeholder="Min. 8 znaków"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-              Potwierdź hasło *
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="input mt-1"
-              placeholder="Wpisz hasło ponownie"
-            />
-          </div>
-
-          <div>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Rejestracja...' : 'Zarejestruj się'}
             </button>
-          </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Masz już konto?{' '}
-              <Link
-                to="/login"
-                className="font-medium text-primary-600 hover:text-primary-500"
-              >
-                Zaloguj się
-              </Link>
-            </p>
-          </div>
-        </form>
+            <div className="text-center pt-2">
+              <p className="text-sm text-slate-600">
+                Masz już konto?{' '}
+                <Link
+                  to="/login"
+                  className="font-medium text-indigo-600 hover:text-indigo-700 transition-colors duration-200"
+                >
+                  Zaloguj się
+                </Link>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
