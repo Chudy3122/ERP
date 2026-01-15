@@ -2,6 +2,7 @@ import { Router } from 'express';
 import timeController from '../controllers/time.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { roleMiddleware } from '../middleware/role.middleware';
+import { UserRole } from '../models/User.model';
 
 const router = Router();
 
@@ -26,19 +27,19 @@ router.get('/stats', timeController.getUserTimeStats);
 // Get all entries (admin/team_leader only)
 router.get(
   '/entries/all',
-  roleMiddleware(['admin', 'team_leader']),
+  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
   timeController.getAllTimeEntries
 );
 
 // Approve/reject time entries (admin/team_leader only)
 router.put(
   '/entries/:id/approve',
-  roleMiddleware(['admin', 'team_leader']),
+  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
   timeController.approveTimeEntry
 );
 router.put(
   '/entries/:id/reject',
-  roleMiddleware(['admin', 'team_leader']),
+  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
   timeController.rejectTimeEntry
 );
 
@@ -59,19 +60,19 @@ router.delete('/leave/:id', timeController.cancelLeaveRequest);
 // Get pending leave requests (admin/team_leader only)
 router.get(
   '/leave/pending',
-  roleMiddleware(['admin', 'team_leader']),
+  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
   timeController.getPendingLeaveRequests
 );
 
 // Approve/reject leave requests (admin/team_leader only)
 router.put(
   '/leave/:id/approve',
-  roleMiddleware(['admin', 'team_leader']),
+  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
   timeController.approveLeaveRequest
 );
 router.put(
   '/leave/:id/reject',
-  roleMiddleware(['admin', 'team_leader']),
+  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
   timeController.rejectLeaveRequest
 );
 

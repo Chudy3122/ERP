@@ -42,6 +42,15 @@ export class TimeEntry {
   @Column({ type: 'integer', default: 0 })
   overtime_minutes: number;
 
+  @Column({ type: 'boolean', default: false })
+  is_late: boolean;
+
+  @Column({ type: 'integer', default: 0 })
+  late_minutes: number;
+
+  @Column({ type: 'time', nullable: true })
+  expected_clock_in: string | null; // Expected start time (e.g., '09:00:00')
+
   @Column({
     type: 'enum',
     enum: TimeEntryStatus,
@@ -85,12 +94,29 @@ export class TimeEntry {
     return overtime > 0 ? overtime : 0;
   }
 
+  calculateLateArrival(): number {
+    if (!this.expected_clock_in) return 0;
+
+    const clockInTime = new Date(this.clock_in);
+    const [hours, minutes, seconds] = this.expected_clock_in.split(':').map(Number);
+
+    const expectedTime = new Date(clockInTime);
+    expectedTime.setHours(hours, minutes, seconds || 0, 0);
+
+    const diff = clockInTime.getTime() - expectedTime.getTime();
+    const lateMinutes = Math.floor(diff / (1000 * 60));
+
+    return lateMinutes > 0 ? lateMinutes : 0;
+  }
+
   clockOut(notes?: string): void {
     this.clock_out = new Date();
     this.notes = notes || this.notes;
     this.duration_minutes = this.calculateDuration();
     this.overtime_minutes = this.calculateOvertime();
     this.is_overtime = this.overtime_minutes > 0;
+    this.late_minutes = this.calculateLateArrival();
+    this.is_late = this.late_minutes > 0;
     this.status = TimeEntryStatus.COMPLETED;
   }
 

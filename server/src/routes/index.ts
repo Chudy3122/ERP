@@ -5,7 +5,16 @@ import fileRoutes from './file.routes';
 import timeRoutes from './time.routes';
 import userStatusRoutes from './userStatus.routes';
 import notificationRoutes from './notification.routes';
+import notificationPreferenceRoutes from './notificationPreference.routes';
 import adminRoutes from './admin.routes';
+import reportRoutes from './report.routes';
+import calendarRoutes from './calendar.routes';
+import meetingRoutes from './meeting.routes';
+import projectRoutes from './project.routes';
+import taskRoutes from './task.routes';
+import ticketRoutes from './ticket.routes';
+import activityRoutes from './activity.routes';
+// import employeeRoutes from './employee.routes';
 
 const router = Router();
 
@@ -27,8 +36,35 @@ router.use('/status', userStatusRoutes);
 // Notification routes
 router.use('/notifications', notificationRoutes);
 
+// Notification preference routes
+router.use('/notification-preferences', notificationPreferenceRoutes);
+
 // Admin routes
 router.use('/admin', adminRoutes);
+
+// Report routes
+router.use('/reports', reportRoutes);
+
+// Calendar routes
+router.use('/calendar', calendarRoutes);
+
+// Meeting routes
+router.use('/meetings', meetingRoutes);
+
+// Project management routes
+router.use('/projects', projectRoutes);
+
+// Task routes
+router.use('/tasks', taskRoutes);
+
+// Ticket routes
+router.use('/tickets', ticketRoutes);
+
+// Activity routes
+router.use('/activities', activityRoutes);
+
+// Employee routes (temporarily disabled - needs model updates)
+// router.use('/employees', employeeRoutes);
 
 // Health check for API
 router.get('/health', (req, res) => {

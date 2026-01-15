@@ -1,4 +1,4 @@
-import React, { useState, useRef, KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import FileUpload from './FileUpload';
 import * as fileApi from '../../api/file.api';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -8,6 +8,7 @@ interface MessageInputProps {
   onTyping?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  onFileUploaded?: () => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -15,13 +16,25 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onTyping,
   placeholder = 'Napisz wiadomość...',
   disabled = false,
+  onFileUploaded,
 }) => {
-  const { activeChannel } = useChatContext();
+  const { activeChannel, loadMessages } = useChatContext();
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup image preview URLs when files are removed
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(file => {
+        if (isImage(file)) {
+          URL.revokeObjectURL(getImagePreviewUrl(file));
+        }
+      });
+    };
+  }, [selectedFiles]);
 
   // Auto-resize textarea
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -71,6 +84,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Check if file is an image
+  const isImage = (file: File): boolean => {
+    return file.type.startsWith('image/');
+  };
+
+  // Create image preview URL
+  const getImagePreviewUrl = (file: File): string => {
+    return URL.createObjectURL(file);
+  };
+
+
   // Send message or upload files
   const handleSend = async () => {
     if (disabled || isUploading) return;
@@ -83,13 +107,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       try {
         setIsUploading(true);
-        await fileApi.uploadFiles(activeChannel.id, selectedFiles, trimmedContent);
+        const result = await fileApi.uploadFiles(activeChannel.id, selectedFiles, trimmedContent);
         setContent('');
         setSelectedFiles([]);
 
         // Reset textarea height
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
+        }
+
+        // Reload messages to show the uploaded file immediately
+        await loadMessages(activeChannel.id);
+
+        // Notify parent if callback provided
+        if (onFileUploaded) {
+          onFileUploaded();
         }
       } catch (error) {
         console.error('Failed to upload files:', error);
@@ -112,38 +144,75 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 bg-gradient-to-b from-white to-gray-50 p-4 shadow-lg">
+    <div className="border-t border-gray-200 bg-white p-4">
       {/* Selected files preview */}
       {selectedFiles.length > 0 && (
         <div className="mb-3 space-y-2">
-          {selectedFiles.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg shadow-md flex-shrink-0">
-                📎
+          {selectedFiles.map((file, index) => {
+            const isImageFile = isImage(file);
+
+            return (
+              <div key={index}>
+                {isImageFile ? (
+                  // Image preview with thumbnail
+                  <div className="relative rounded-md overflow-hidden border border-gray-200 bg-gray-50 shadow-sm">
+                    <img
+                      src={getImagePreviewUrl(file)}
+                      alt={file.name}
+                      className="w-full max-h-64 object-contain"
+                    />
+                    <div className="absolute top-2 right-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(index)}
+                        className="w-8 h-8 flex items-center justify-center bg-red-600 text-white hover:bg-red-700 rounded-full shadow-lg transition-colors"
+                        title="Usuń"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm p-3">
+                      <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                      <p className="text-xs text-gray-200">{formatFileSize(file.size)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  // Regular file preview
+                  <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-md border border-blue-200">
+                    <div className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center text-white text-lg flex-shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{file.name}</p>
+                      <p className="text-xs text-gray-600">{formatFileSize(file.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(index)}
+                      className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                      title="Usuń"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{file.name}</p>
-                <p className="text-xs text-gray-600">{formatFileSize(file.size)}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveFile(index)}
-                className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                title="Usuń"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -156,7 +225,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
         </div>
 
-        {/* Textarea with modern styling */}
+        {/* Textarea */}
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
@@ -166,16 +235,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
             placeholder={placeholder}
             disabled={disabled || isUploading}
             rows={1}
-            className="w-full resize-none border-2 border-gray-200 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed max-h-32 overflow-y-auto shadow-sm hover:shadow-md transition-all duration-200"
+            className="w-full resize-none border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed max-h-32 overflow-y-auto"
             style={{ minHeight: '48px' }}
           />
         </div>
 
-        {/* Send Button - Modern gradient */}
+        {/* Send Button */}
         <button
           onClick={handleSend}
           disabled={(!content.trim() && selectedFiles.length === 0) || disabled || isUploading}
-          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:shadow-xl disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all duration-200 font-semibold min-w-[100px] shadow-lg hover:scale-105 disabled:hover:scale-100 flex items-center justify-center"
+          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold min-w-[100px] flex items-center justify-center"
         >
           {isUploading ? (
             <span className="flex items-center gap-2">

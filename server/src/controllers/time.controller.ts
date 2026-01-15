@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { TimeService } from '../services/time.service';
 import { LeaveType } from '../models/LeaveRequest.model';
 import notificationService from '../services/notification.service';
+import adminService from '../services/admin.service';
+import { AppDataSource } from '../config/database';
+import { User, UserRole } from '../models/User.model';
 
 const timeService = new TimeService();
 
@@ -14,10 +17,10 @@ export class TimeController {
    */
   async clockIn(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
-      const { notes } = req.body;
+      const userId = req.user!.userId;
+      const { notes, expectedClockIn } = req.body;
 
-      const timeEntry = await timeService.clockIn(userId, notes);
+      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn);
 
       res.status(201).json({
         success: true,
@@ -39,7 +42,7 @@ export class TimeController {
    */
   async clockOut(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { notes } = req.body;
 
       const timeEntry = await timeService.clockOut(userId, notes);
@@ -64,7 +67,7 @@ export class TimeController {
    */
   async getCurrentEntry(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       const timeEntry = await timeService.getCurrentEntry(userId);
 
@@ -87,7 +90,7 @@ export class TimeController {
    */
   async getUserTimeEntries(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { startDate, endDate } = req.query;
 
       const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -140,7 +143,7 @@ export class TimeController {
    */
   async getUserTimeStats(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { startDate, endDate } = req.query;
 
       const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -168,7 +171,7 @@ export class TimeController {
   async approveTimeEntry(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const approverId = req.user!.id;
+      const approverId = req.user!.userId;
 
       const timeEntry = await timeService.approveTimeEntry(id, approverId);
 
@@ -193,7 +196,7 @@ export class TimeController {
   async rejectTimeEntry(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const approverId = req.user!.id;
+      const approverId = req.user!.userId;
 
       const timeEntry = await timeService.rejectTimeEntry(id, approverId);
 
@@ -219,7 +222,7 @@ export class TimeController {
    */
   async createLeaveRequest(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { leaveType, startDate, endDate, reason } = req.body;
 
       const leaveRequest = await timeService.createLeaveRequest(
@@ -231,13 +234,30 @@ export class TimeController {
       );
 
       // Send notification to team leaders and admins
-      await notificationService.notifyNewLeaveRequest(
-        userId,
-        leaveType as LeaveType,
-        new Date(startDate),
-        new Date(endDate),
-        reason
-      );
+      // Get user info for notification
+      const user = await adminService.getUserById(userId);
+      const employeeName = user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+
+      // Get all admins and team leaders to notify
+      const userRepository = AppDataSource.getRepository(User);
+      const managers = await userRepository.find({
+        where: [
+          { role: UserRole.ADMIN },
+          { role: UserRole.TEAM_LEADER }
+        ]
+      });
+
+      for (const manager of managers) {
+        await notificationService.notifyNewLeaveRequest(
+          manager.id,
+          employeeName,
+          leaveType as LeaveType,
+          startDate,
+          endDate,
+          leaveRequest.id,
+          userId
+        );
+      }
 
       res.status(201).json({
         success: true,
@@ -259,7 +279,7 @@ export class TimeController {
    */
   async getUserLeaveRequests(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       const requests = await timeService.getUserLeaveRequests(userId);
 
@@ -304,20 +324,26 @@ export class TimeController {
   async approveLeaveRequest(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const reviewerId = req.user!.id;
+      const reviewerId = req.user!.userId;
       const { notes } = req.body;
 
       const leaveRequest = await timeService.approveLeaveRequest(id, reviewerId, notes);
 
       // Send notification to user
+      const startDate = leaveRequest.start_date instanceof Date
+        ? leaveRequest.start_date.toISOString()
+        : String(leaveRequest.start_date);
+      const endDate = leaveRequest.end_date instanceof Date
+        ? leaveRequest.end_date.toISOString()
+        : String(leaveRequest.end_date);
+
       await notificationService.notifyLeaveRequestStatus(
         leaveRequest.user_id,
         'approved',
         leaveRequest.leave_type,
-        leaveRequest.start_date,
-        leaveRequest.end_date,
-        reviewerId,
-        notes
+        startDate,
+        endDate,
+        leaveRequest.id
       );
 
       res.status(200).json({
@@ -341,20 +367,26 @@ export class TimeController {
   async rejectLeaveRequest(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const reviewerId = req.user!.id;
+      const reviewerId = req.user!.userId;
       const { notes } = req.body;
 
       const leaveRequest = await timeService.rejectLeaveRequest(id, reviewerId, notes);
 
       // Send notification to user
+      const startDate = leaveRequest.start_date instanceof Date
+        ? leaveRequest.start_date.toISOString()
+        : String(leaveRequest.start_date);
+      const endDate = leaveRequest.end_date instanceof Date
+        ? leaveRequest.end_date.toISOString()
+        : String(leaveRequest.end_date);
+
       await notificationService.notifyLeaveRequestStatus(
         leaveRequest.user_id,
         'rejected',
         leaveRequest.leave_type,
-        leaveRequest.start_date,
-        leaveRequest.end_date,
-        reviewerId,
-        notes
+        startDate,
+        endDate,
+        leaveRequest.id
       );
 
       res.status(200).json({
@@ -378,7 +410,7 @@ export class TimeController {
   async cancelLeaveRequest(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       const leaveRequest = await timeService.cancelLeaveRequest(id, userId);
 
@@ -402,7 +434,7 @@ export class TimeController {
    */
   async getUserLeaveBalance(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
 
       const balance = await timeService.getUserLeaveBalance(userId, year);

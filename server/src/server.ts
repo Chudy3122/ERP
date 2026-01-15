@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import './types/index';
 import { createServer } from 'http';
 import app from './app';
 import { initializeDatabase, closeDatabase } from './config/database';
@@ -6,6 +7,7 @@ import { initializeSocketIO } from './config/socket';
 import { setupChatHandlers } from './sockets/chat.socket';
 import { setupStatusHandlers } from './sockets/status.socket';
 import { setupNotificationHandlers } from './sockets/notification.socket';
+import { setupMeetingHandlers } from './sockets/meeting.socket';
 
 const PORT = process.env.PORT || 5000;
 
@@ -29,6 +31,9 @@ const startServer = async () => {
 
     // Setup notification handlers
     setupNotificationHandlers(io);
+
+    // Setup meeting handlers
+    setupMeetingHandlers(io);
 
     // Start HTTP server
     httpServer.listen(PORT, () => {
@@ -74,5 +79,3 @@ const startServer = async () => {
 
 // Start the server
 startServer();
-
-export default server;

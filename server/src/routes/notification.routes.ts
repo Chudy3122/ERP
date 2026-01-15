@@ -2,6 +2,7 @@ import { Router } from 'express';
 import notificationController from '../controllers/notification.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { roleMiddleware } from '../middleware/role.middleware';
+import { UserRole } from '../models/User.model';
 
 const router = Router();
 
@@ -26,7 +27,7 @@ router.delete('/all', notificationController.deleteAll);
 // Send system announcement (admin only)
 router.post(
   '/announcement',
-  roleMiddleware(['admin']),
+  roleMiddleware([UserRole.ADMIN]),
   notificationController.sendAnnouncement
 );
 

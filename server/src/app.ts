@@ -9,13 +9,38 @@ dotenv.config();
 
 const app: Application = express();
 
-// Security middleware
-app.use(helmet());
+// Security middleware with relaxed CSP for images
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'blob:', '*'],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  })
+);
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean) as string[];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );
@@ -24,8 +49,12 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (uploads)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve static files (uploads) with CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_URL || 'http://localhost:5173');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -58,3 +87,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 export default app;
+

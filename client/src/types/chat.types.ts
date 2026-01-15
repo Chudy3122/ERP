@@ -15,13 +15,14 @@ export enum MessageType {
 
 export interface Channel {
   id: string;
-  name: string;
+  name: string | null;
   type: ChannelType;
   description: string | null;
   created_by: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  last_message_at?: string | null;
   creator?: User;
   members?: ChannelMember[];
   lastMessage?: Message;
@@ -77,4 +78,28 @@ export interface TypingData {
   userId: string;
   userName: string;
   isTyping: boolean;
+}
+
+export interface EditMessageData {
+  messageId: string;
+  content: string;
+}
+
+export interface DeleteMessageData {
+  messageId: string;
+}
+
+export interface CreateChannelRequest {
+  name: string;
+  type: ChannelType;
+  description?: string;
+  memberIds?: string[];
+}
+
+export interface CreateDirectChannelRequest {
+  userId: string;
+}
+
+export interface AddChannelMembersRequest {
+  memberIds: string[];
 }

@@ -32,6 +32,9 @@ export interface TimeEntry {
   notes: string | null;
   is_overtime: boolean;
   overtime_minutes: number;
+  is_late: boolean;
+  late_minutes: number;
+  expected_clock_in: string | null;
   status: TimeEntryStatus;
   approved_by: string | null;
   approved_at: string | null;
@@ -78,6 +81,7 @@ export interface LeaveBalance {
 
 export interface ClockInRequest {
   notes?: string;
+  expectedClockIn?: string;
 }
 
 export interface ClockOutRequest {

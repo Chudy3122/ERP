@@ -4,6 +4,7 @@ import socketService from '../services/socket.service';
 import * as chatApi from '../api/chat.api';
 import { useAuth } from './AuthContext';
 import type { Channel, Message, SendMessageData, EditMessageData, DeleteMessageData } from '../types/chat.types';
+import { MessageType } from '../types/chat.types';
 
 interface TypingUser {
   userId: string;
@@ -26,6 +27,9 @@ interface ChatContextType {
   loadMessages: (channelId: string) => Promise<void>;
   createChannel: (data: any) => Promise<Channel | null>;
   createDirectChannel: (userId: string) => Promise<Channel | null>;
+  addChannelMembers: (channelId: string, userIds: string[]) => Promise<void>;
+  removeChannelMember: (channelId: string, userId: string) => Promise<void>;
+  deleteChannelById: (channelId: string) => Promise<void>;
 
   // Message operations
   sendMessage: (content: string, channelId?: string) => void;
@@ -195,7 +199,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const data = await chatApi.getChannelMessages(channelId, 50, 0);
-      setMessages(data.messages.reverse()); // Reverse to show oldest first
+      setMessages(data.messages); // Already in chronological order from API
       setError(null);
     } catch (err: any) {
       console.error('Failed to load messages:', err);
@@ -209,6 +213,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const setActiveChannel = useCallback(
     async (channel: Channel | null) => {
       if (channel) {
+        // Clear messages FIRST to prevent showing old messages
+        setMessages([]);
         setActiveChannelState(channel);
         await loadMessages(channel.id);
         joinChannel(channel.id);
@@ -264,7 +270,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const messageData: SendMessageData = {
         channelId: targetChannelId,
         content,
-        message_type: 'text',
+        messageType: MessageType.TEXT,
       };
 
       socket.emit('chat:send_message', messageData);
@@ -339,6 +345,55 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     [socket]
   );
 
+  // Add members to channel
+  const addChannelMembers = useCallback(async (channelId: string, userIds: string[]) => {
+    try {
+      const updatedChannel = await chatApi.addChannelMembers(channelId, { memberIds: userIds });
+      // Update channels list with new member data
+      setChannels((prev) => prev.map((ch) => (ch.id === channelId ? updatedChannel : ch)));
+      if (activeChannel?.id === channelId) {
+        setActiveChannelState(updatedChannel);
+      }
+    } catch (err: any) {
+      console.error('Failed to add members:', err);
+      throw new Error(err.response?.data?.message || 'Failed to add members');
+    }
+  }, [activeChannel]);
+
+  // Remove member from channel
+  const removeChannelMember = useCallback(async (channelId: string, userId: string) => {
+    try {
+      const result = await chatApi.removeChannelMember(channelId, userId);
+      // Update channels list with new member data
+      if (result.data) {
+        setChannels((prev) => prev.map((ch) => (ch.id === channelId ? result.data : ch)));
+        if (activeChannel?.id === channelId) {
+          setActiveChannelState(result.data);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to remove member:', err);
+      throw new Error(err.response?.data?.message || 'Failed to remove member');
+    }
+  }, [activeChannel]);
+
+  // Delete channel
+  const deleteChannelById = useCallback(async (channelId: string) => {
+    try {
+      await chatApi.deleteChannel(channelId);
+      // Remove from channels list
+      setChannels((prev) => prev.filter((ch) => ch.id !== channelId));
+      // Clear active channel if it was deleted
+      if (activeChannel?.id === channelId) {
+        setActiveChannelState(null);
+        setMessages([]);
+      }
+    } catch (err: any) {
+      console.error('Failed to delete channel:', err);
+      throw new Error(err.response?.data?.message || 'Failed to delete channel');
+    }
+  }, [activeChannel]);
+
   const value: ChatContextType = {
     channels,
     activeChannel,
@@ -352,6 +407,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     loadMessages,
     createChannel,
     createDirectChannel,
+    addChannelMembers,
+    removeChannelMember,
+    deleteChannelById,
     sendMessage,
     editMessage,
     deleteMessage,

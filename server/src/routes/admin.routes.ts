@@ -2,12 +2,13 @@ import { Router } from 'express';
 import adminController from '../controllers/admin.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { roleMiddleware } from '../middleware/role.middleware';
+import { UserRole } from '../models/User.model';
 
 const router = Router();
 
 // All routes require authentication and admin role
 router.use(authMiddleware);
-router.use(roleMiddleware(['admin']));
+router.use(roleMiddleware([UserRole.ADMIN]));
 
 // System statistics
 router.get('/stats', adminController.getSystemStats);

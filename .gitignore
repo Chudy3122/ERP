@@ -68,3 +68,17 @@ uploads/
 
 # Claude
 .claude/
+tmpclaude-*
+**/tmpclaude-*
+
+# Null files (Windows)
+nul
+**/nul
+
+# Dist folders
+dist/
+**/dist/
+
+# Build outputs
+client/dist/
+server/dist/

@@ -7,10 +7,25 @@ export interface AuthenticatedSocket extends Socket {
   user?: JWTPayload;
 }
 
+let ioInstance: SocketIOServer | null = null;
+
+export const getIO = (): SocketIOServer => {
+  if (!ioInstance) {
+    throw new Error('Socket.IO not initialized');
+  }
+  return ioInstance;
+};
+
 export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
+  const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ].filter(Boolean) as string[];
+
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:5173',
+      origin: allowedOrigins,
       credentials: true,
     },
     pingTimeout: 60000,
@@ -62,6 +77,7 @@ export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
   });
 
   console.log('✅ Socket.IO initialized');
+  ioInstance = io;
   return io;
 };
 

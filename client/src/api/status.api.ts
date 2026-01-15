@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { UserStatus, StatusUpdateData, StatusStats, StatusType } from '../types/status.types';
+import { UserStatus, StatusUpdateData, StatusStats } from '../types/status.types';
 
 /**
  * Get current user's status

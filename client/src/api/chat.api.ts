@@ -6,6 +6,7 @@ import type {
   CreateDirectChannelRequest,
   AddChannelMembersRequest,
 } from '../types/chat.types';
+import type { User } from '../types/auth.types';
 
 /**
  * Get all channels for the current user
@@ -82,14 +83,33 @@ export const addChannelMembers = async (
  * Remove a member from a channel
  * @param channelId - Channel ID
  * @param userId - User ID to remove
- * @returns Success message
+ * @returns Updated channel with message
  */
 export const removeChannelMember = async (
   channelId: string,
   userId: string
-): Promise<{ message: string }> => {
+): Promise<{ message: string; data: Channel }> => {
   const response = await apiClient.delete(`/chat/channels/${channelId}/members/${userId}`);
   return response.data;
+};
+
+/**
+ * Delete a channel
+ * @param channelId - Channel ID
+ * @returns Success message
+ */
+export const deleteChannel = async (channelId: string): Promise<{ message: string }> => {
+  const response = await apiClient.delete(`/chat/channels/${channelId}`);
+  return response.data;
+};
+
+/**
+ * Get all users available for adding to channels
+ * @returns Array of users
+ */
+export const getChatUsers = async (): Promise<User[]> => {
+  const response = await apiClient.get('/chat/users');
+  return response.data.data;
 };
 
 export default {
@@ -100,4 +120,6 @@ export default {
   createDirectChannel,
   addChannelMembers,
   removeChannelMember,
+  deleteChannel,
+  getChatUsers,
 };

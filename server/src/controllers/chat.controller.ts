@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { ChatService } from '../services/chat.service';
 import { ChannelType } from '../models/Channel.model';
+import { AppDataSource } from '../config/database';
+import { User } from '../models/User.model';
 
 const chatService = new ChatService();
 
@@ -166,9 +168,12 @@ export const addChannelMembers = async (req: Request, res: Response) => {
       });
     }
 
-    await chatService.addChannelMembers(id, req.user.userId, memberIds);
+    const updatedChannel = await chatService.addChannelMembers(id, req.user.userId, memberIds);
 
-    return res.status(200).json({ message: 'Members added successfully' });
+    return res.status(200).json({
+      message: 'Members added successfully',
+      data: updatedChannel,
+    });
   } catch (error) {
     console.error('Add members error:', error);
     return res.status(500).json({
@@ -190,14 +195,68 @@ export const removeChannelMember = async (req: Request, res: Response) => {
 
     const { id, userId } = req.params;
 
-    await chatService.removeChannelMember(id, req.user.userId, userId);
+    const updatedChannel = await chatService.removeChannelMember(id, req.user.userId, userId);
 
-    return res.status(200).json({ message: 'Member removed successfully' });
+    return res.status(200).json({
+      message: 'Member removed successfully',
+      data: updatedChannel,
+    });
   } catch (error) {
     console.error('Remove member error:', error);
     return res.status(500).json({
       error: 'Server Error',
       message: error instanceof Error ? error.message : 'Failed to remove member',
+    });
+  }
+};
+
+/**
+ * Delete channel
+ * DELETE /api/chat/channels/:id
+ */
+export const deleteChannel = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+
+    const result = await chatService.deleteChannel(id, req.user.userId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Delete channel error:', error);
+    return res.status(500).json({
+      error: 'Server Error',
+      message: error instanceof Error ? error.message : 'Failed to delete channel',
+    });
+  }
+};
+
+/**
+ * Get all users for adding to channels
+ * GET /api/chat/users
+ */
+export const getChatUsers = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const users = await userRepository.find({
+      where: { is_active: true },
+      select: ['id', 'email', 'first_name', 'last_name', 'role', 'department', 'avatar_url'],
+      order: { first_name: 'ASC' },
+    });
+
+    return res.status(200).json({ data: users });
+  } catch (error) {
+    console.error('Get chat users error:', error);
+    return res.status(500).json({
+      error: 'Server Error',
+      message: error instanceof Error ? error.message : 'Failed to get users',
     });
   }
 };

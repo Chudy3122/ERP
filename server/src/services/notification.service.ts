@@ -1,4 +1,4 @@
-import { AppDataSource } from '../database/data-source';
+import { AppDataSource } from '../config/database';
 import { Notification, NotificationType, NotificationPriority } from '../models/Notification.model';
 import { User } from '../models/User.model';
 
@@ -40,10 +40,16 @@ class NotificationService {
     await this.notificationRepository.save(notification);
 
     // Load relations
-    return this.notificationRepository.findOne({
+    const result = await this.notificationRepository.findOne({
       where: { id: notification.id },
       relations: ['user', 'related_user'],
-    })!;
+    });
+
+    if (!result) {
+      throw new Error('Failed to load notification after creation');
+    }
+
+    return result;
   }
 
   /**

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Message as MessageType, Attachment } from '../../types/chat.types';
+import type { Message as MessageType } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface MessageProps {
@@ -53,16 +53,88 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
     return fileType.startsWith('image/');
   };
 
-  const getFileIcon = (fileType: string): string => {
-    if (fileType.startsWith('image/')) return '🖼️';
-    if (fileType.startsWith('video/')) return '🎥';
-    if (fileType.startsWith('audio/')) return '🎵';
-    if (fileType.includes('pdf')) return '📄';
-    if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('7z')) return '📦';
-    if (fileType.includes('word') || fileType.includes('document')) return '📝';
-    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return '📊';
-    if (fileType.includes('powerpoint') || fileType.includes('presentation')) return '📽️';
-    return '📎';
+  const getFileIcon = (fileType: string): JSX.Element => {
+    if (fileType.startsWith('image/')) {
+      return (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    if (fileType.startsWith('video/')) {
+      return (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    if (fileType.includes('pdf')) {
+      return (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    // Default file icon
+    return (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+  };
+
+  const detectMeetingLink = (content: string): { isMeeting: boolean; url?: string; platform?: string } => {
+    // Detect /meeting/ links (Jitsi)
+    const jitsiPattern = /\/meeting\/([^\s]+)/i;
+
+    if (jitsiPattern.test(content)) {
+      const match = content.match(jitsiPattern);
+      return { isMeeting: true, url: match?.[0], platform: 'Jitsi Meet' };
+    }
+
+    return { isMeeting: false };
+  };
+
+  const renderMessageContent = (content: string) => {
+    const meetingInfo = detectMeetingLink(content);
+
+    if (meetingInfo.isMeeting && meetingInfo.url) {
+      // Split content by the URL to handle formatted meeting messages
+      const lines = content.split('\n');
+
+      return (
+        <div className="space-y-2">
+          {lines.map((line, idx) => {
+            if (line.includes(meetingInfo.url!)) {
+              return (
+                <a
+                  key={idx}
+                  href={meetingInfo.url}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 ${
+                    isOwnMessage
+                      ? 'bg-white/20 text-white hover:bg-white/30'
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Dołącz do spotkania →
+                </a>
+              );
+            }
+            return <p key={idx} className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{line}</p>;
+          })}
+        </div>
+      );
+    }
+
+    return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{content}</p>;
   };
 
   if (message.message_type === 'system') {
@@ -76,10 +148,10 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
   }
 
   return (
-    <div className={`flex gap-3 mb-3 px-4 group hover:bg-gray-50 -mx-4 px-4 py-2 rounded-lg transition-all duration-200 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 mb-3 group hover:bg-white py-2 px-3 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       {!isOwnMessage && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-md ring-2 ring-white">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold flex-shrink-0">
           {message.sender?.avatar_url ? (
             <img src={message.sender.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
           ) : message.sender?.first_name && message.sender?.last_name ? (
@@ -102,19 +174,19 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
         {/* Message bubble */}
         {message.content && (
           <div
-            className={`relative px-4 py-2.5 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
+            className={`relative px-4 py-2.5 rounded-md shadow-sm transition-colors ${
               isOwnMessage
-                ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-sm'
+                ? 'bg-blue-600 text-white'
                 : message.is_deleted
                 ? 'bg-gray-100 text-gray-400 italic border border-gray-200'
-                : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
+                : 'bg-white text-gray-900 border border-gray-200'
             }`}
           >
-            <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+            {renderMessageContent(message.content)}
 
             {/* Edited indicator */}
             {message.is_edited && !message.is_deleted && (
-              <span className={`text-[10px] ml-2 ${isOwnMessage ? 'text-indigo-100' : 'text-gray-400'}`}>(edytowano)</span>
+              <span className={`text-[10px] ml-2 ${isOwnMessage ? 'text-blue-100' : 'text-gray-400'}`}>(edytowano)</span>
             )}
           </div>
         )}
@@ -130,30 +202,33 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
                     href={`${API_BASE_URL}${attachment.file_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block max-w-sm"
+                    className="block hover:opacity-90 transition-opacity"
                   >
-                    <img
-                      src={`${API_BASE_URL}${attachment.file_url}`}
-                      alt={attachment.file_name}
-                      className="rounded-lg max-h-64 object-contain border border-gray-300"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">{attachment.file_name}</p>
+                    <div className="relative rounded-md overflow-hidden border border-gray-200 shadow-md bg-gray-50">
+                      <img
+                        src={`${API_BASE_URL}${attachment.file_url}`}
+                        alt={attachment.file_name}
+                        className="w-full max-h-96 object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1.5 px-1">{attachment.file_name}</p>
                   </a>
                 ) : (
                   // File download card
                   <a
                     href={`${API_BASE_URL}${attachment.file_url}`}
                     download={attachment.file_name}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    className={`flex items-center gap-3 p-3 rounded-md border ${
                       isOwnMessage
-                        ? 'bg-indigo-500 border-indigo-400 text-white'
+                        ? 'bg-blue-500 border-blue-400 text-white'
                         : 'bg-white border-gray-300 text-gray-900'
                     } hover:opacity-80 transition-opacity`}
                   >
-                    <span className="text-2xl">{getFileIcon(attachment.file_type)}</span>
+                    <div className="flex-shrink-0">{getFileIcon(attachment.file_type)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                      <p className={`text-xs ${isOwnMessage ? 'text-indigo-100' : 'text-gray-500'}`}>
+                      <p className={`text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
                         {formatFileSize(attachment.file_size)}
                       </p>
                     </div>
@@ -192,7 +267,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
                       onEdit(message.id, newContent);
                     }
                   }}
-                  className="text-[10px] text-gray-400 hover:text-indigo-600 font-medium transition-colors"
+                  className="text-[10px] text-gray-400 hover:text-blue-600 font-medium transition-colors"
                   title="Edytuj"
                 >
                   Edytuj
@@ -218,7 +293,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
 
       {/* Avatar for own messages */}
       {isOwnMessage && user && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-md ring-2 ring-white">
+        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
           {user.avatar_url ? (
             <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
           ) : (

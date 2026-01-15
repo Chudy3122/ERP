@@ -9,7 +9,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Upload files (supports multiple files)
-router.post('/upload', upload.array('files', 5), fileController.uploadFiles);
+router.post('/upload', upload.array('files', 5) as any, fileController.uploadFiles);
 
 // Get attachment by ID
 router.get('/:id', fileController.getAttachment);

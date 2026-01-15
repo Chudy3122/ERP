@@ -66,3 +66,6 @@ export const requireResourceOwnerOrAdmin = (resourceUserIdParam: string = 'userI
     next();
   };
 };
+
+// Alias for backward compatibility
+export const roleMiddleware = requireRole;

@@ -24,8 +24,8 @@ export class Channel {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  name: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  name: string | null;
 
   @Column({
     type: 'enum',

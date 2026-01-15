@@ -14,8 +14,8 @@ const AdminUsers: React.FC = () => {
   const [formData, setFormData] = useState<CreateUserData>({
     email: '',
     password: '',
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     role: 'employee',
     department: '',
     phone: '',
@@ -57,8 +57,8 @@ const AdminUsers: React.FC = () => {
 
     try {
       await adminApi.updateUser(editingUser.id, {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
         role: formData.role,
         department: formData.department,
@@ -116,8 +116,8 @@ const AdminUsers: React.FC = () => {
     setFormData({
       email: '',
       password: '',
-      first_name: '',
-      last_name: '',
+      firstName: '',
+      lastName: '',
       role: 'employee',
       department: '',
       phone: '',
@@ -129,8 +129,8 @@ const AdminUsers: React.FC = () => {
     setFormData({
       email: user.email,
       password: '',
-      first_name: user.first_name,
-      last_name: user.last_name,
+      firstName: user.first_name,
+      lastName: user.last_name,
       role: user.role,
       department: user.department || '',
       phone: user.phone || '',
@@ -158,9 +158,9 @@ const AdminUsers: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-indigo-50/30 to-purple-50/30 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Ładowanie użytkowników...</p>
         </div>
       </div>
@@ -168,23 +168,23 @@ const AdminUsers: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-indigo-50/30 to-purple-50/30">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <nav className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <nav className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl shadow-lg ring-2 ring-white/30">
-                👥
+              <div className="w-10 h-10 rounded-md bg-violet-600 flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white drop-shadow-sm">Zarządzanie Użytkownikami</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Zarządzanie Użytkownikami</h1>
             </div>
             <div className="flex items-center gap-4">
               <Link
                 to="/admin"
-                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all duration-200 font-medium text-white shadow-lg hover:shadow-xl hover:scale-105 border border-white/20"
+                className="px-4 py-2 bg-white hover:bg-gray-50 rounded-md transition-colors text-sm font-medium text-gray-700 border border-gray-300"
               >
                 ← Panel admina
               </Link>
@@ -196,7 +196,7 @@ const AdminUsers: React.FC = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         {/* Filters and Actions */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+        <div className="bg-white rounded-md p-6 mb-4 border border-gray-200">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             <div className="flex flex-col md:flex-row gap-4 flex-1">
               <input
@@ -204,12 +204,12 @@ const AdminUsers: React.FC = () => {
                 placeholder="Szukaj użytkownika..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Wszystkie role</option>
                 <option value="admin">Admin</option>
@@ -219,7 +219,7 @@ const AdminUsers: React.FC = () => {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+              className="px-6 py-2.5 bg-violet-600 text-white rounded-md font-semibold hover:bg-violet-700 transition-colors"
             >
               + Dodaj użytkownika
             </button>
@@ -227,10 +227,10 @@ const AdminUsers: React.FC = () => {
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+        <div className="bg-white rounded-md overflow-hidden border border-gray-200">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+              <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Użytkownik
@@ -254,10 +254,10 @@ const AdminUsers: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all">
+                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                        <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-semibold">
                           {user.first_name[0]}{user.last_name[0]}
                         </div>
                         <div className="ml-4">
@@ -335,9 +335,9 @@ const AdminUsers: React.FC = () => {
       {/* Create/Edit User Modal */}
       {(showCreateModal || editingUser) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-2xl">
-              <h2 className="text-2xl font-bold text-white">
+          <div className="bg-white rounded-md shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-violet-600 p-6 rounded-t-md">
+              <h2 className="text-xl font-semibold text-white">
                 {editingUser ? 'Edytuj użytkownika' : 'Nowy użytkownik'}
               </h2>
             </div>
@@ -348,9 +348,9 @@ const AdminUsers: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -359,9 +359,9 @@ const AdminUsers: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
@@ -372,7 +372,7 @@ const AdminUsers: React.FC = () => {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
@@ -384,7 +384,7 @@ const AdminUsers: React.FC = () => {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
               )}
@@ -394,7 +394,7 @@ const AdminUsers: React.FC = () => {
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="employee">Employee</option>
                   <option value="team_leader">Team Leader</option>
@@ -408,7 +408,7 @@ const AdminUsers: React.FC = () => {
                   type="text"
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
@@ -418,14 +418,14 @@ const AdminUsers: React.FC = () => {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  className="flex-1 px-6 py-3 bg-violet-600 text-white rounded-md font-semibold hover:bg-violet-700 transition-colors"
                 >
                   {editingUser ? 'Zapisz zmiany' : 'Utwórz użytkownika'}
                 </button>
@@ -436,7 +436,7 @@ const AdminUsers: React.FC = () => {
                     setEditingUser(null);
                     resetForm();
                   }}
-                  className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-semibold transition-all duration-200"
+                  className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md font-semibold transition-colors"
                 >
                   Anuluj
                 </button>

@@ -8,14 +8,18 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "migration:create": "typeorm migration:create",
-    "migration:run": "typeorm migration:run -d src/config/database.ts",
+    "migration:run": "ts-node ./node_modules/typeorm/cli.js migration:run -d src/config/database.ts",
     "migration:revert": "typeorm migration:revert -d src/config/database.ts",
     "seed": "ts-node src/database/seeders/index.ts",
+    "seed:users": "ts-node src/database/seeds/seedUsers.ts",
+    "seed:channels": "ts-node src/database/seeds/seedChannels.ts",
+    "seed:projects": "ts-node src/database/seeds/seedProjects.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
     "@types/mime-types": "^3.0.1",
+    "@types/pdfkit": "^0.17.4",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "date-fns": "^3.0.6",
@@ -28,13 +32,15 @@
     "jsonwebtoken": "^9.0.2",
     "mime-types": "^3.0.2",
     "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.17.2",
     "pg": "^8.11.3",
     "redis": "^4.6.12",
     "reflect-metadata": "^0.2.1",
     "socket.io": "^4.6.1",
     "typeorm": "^0.3.19",
     "uuid": "^9.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

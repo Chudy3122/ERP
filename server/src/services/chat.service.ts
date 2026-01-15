@@ -16,7 +16,7 @@ export class ChatService {
   async getUserChannels(userId: string) {
     const memberships = await this.channelMemberRepository.find({
       where: { user_id: userId },
-      relations: ['channel', 'channel.creator'],
+      relations: ['channel', 'channel.creator', 'channel.members', 'channel.members.user'],
       order: { joined_at: 'DESC' },
     });
 
@@ -143,7 +143,7 @@ export class ChatService {
       throw new Error('Not a member of this channel');
     }
 
-    const messages = await this.messageRepository.find({
+    const [messages, total] = await this.messageRepository.findAndCount({
       where: { channel_id: channelId },
       relations: ['sender', 'attachments'],
       order: { created_at: 'DESC' },
@@ -151,7 +151,12 @@ export class ChatService {
       skip: offset,
     });
 
-    return messages.reverse(); // Return in chronological order
+    return {
+      messages: messages.reverse(), // Return in chronological order
+      total,
+      limit,
+      offset,
+    };
   }
 
   /**
@@ -178,7 +183,13 @@ export class ChatService {
 
     await this.channelMemberRepository.save(memberships);
 
-    return memberships;
+    // Return updated channel with members
+    const updatedChannel = await this.channelRepository.findOne({
+      where: { id: channelId },
+      relations: ['members', 'members.user', 'creator'],
+    });
+
+    return updatedChannel;
   }
 
   /**
@@ -205,6 +216,48 @@ export class ChatService {
     if (membershipToRemove) {
       await this.channelMemberRepository.remove(membershipToRemove);
     }
+
+    // Return updated channel with members
+    const updatedChannel = await this.channelRepository.findOne({
+      where: { id: channelId },
+      relations: ['members', 'members.user', 'creator'],
+    });
+
+    return updatedChannel;
+  }
+
+  /**
+   * Delete a channel
+   */
+  async deleteChannel(channelId: string, userId: string) {
+    // Verify user is admin of channel
+    const membership = await this.channelMemberRepository.findOne({
+      where: { channel_id: channelId, user_id: userId },
+    });
+
+    if (!membership || membership.role !== ChannelMemberRole.ADMIN) {
+      throw new Error('Only channel admins can delete channels');
+    }
+
+    // Get channel to check type
+    const channel = await this.channelRepository.findOne({
+      where: { id: channelId },
+    });
+
+    if (!channel) {
+      throw new Error('Channel not found');
+    }
+
+    // Don't allow deleting direct channels
+    if (channel.type === ChannelType.DIRECT) {
+      throw new Error('Cannot delete direct message channels');
+    }
+
+    // Soft delete the channel
+    channel.is_active = false;
+    await this.channelRepository.save(channel);
+
+    return { message: 'Channel deleted successfully' };
   }
 
   /**

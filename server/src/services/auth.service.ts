@@ -2,7 +2,7 @@ import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
 import { RefreshToken } from '../models/RefreshToken.model';
 import { generateTokenPair, verifyRefreshToken, getTokenExpiration } from '../utils/jwt.utils';
-import { validatePasswordStrength } from '../utils/password.utils';
+import { validatePasswordStrength, hashPassword } from '../utils/password.utils';
 
 export interface RegisterDTO {
   email: string;
@@ -47,10 +47,13 @@ export class AuthService {
       throw new Error(passwordValidation.errors.join(', '));
     }
 
+    // Hash password
+    const password_hash = await hashPassword(data.password);
+
     // Create new user
     const user = this.userRepository.create({
       email: data.email.toLowerCase(),
-      password: data.password, // Will be hashed by @BeforeInsert hook
+      password_hash: password_hash,
       first_name: data.first_name,
       last_name: data.last_name,
       department: data.department,
@@ -67,7 +70,7 @@ export class AuthService {
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
     // Return user without sensitive data
-    const { password_hash, password, ...userWithoutPassword } = user;
+    const { password_hash: _, password: __, ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,
@@ -113,7 +116,7 @@ export class AuthService {
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
     // Return user without sensitive data
-    const { password_hash, password, ...userWithoutPassword } = user;
+    const { password_hash: _, password: __, ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,
@@ -159,7 +162,7 @@ export class AuthService {
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
     // Return user without sensitive data
-    const { password_hash, password, ...userWithoutPassword } = user;
+    const { password_hash: _, password: __, ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,

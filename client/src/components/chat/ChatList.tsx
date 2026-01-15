@@ -1,16 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useChatContext } from '../../contexts/ChatContext';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Channel } from '../../types/chat.types';
+import type { User } from '../../types/auth.types';
+import CreateChannelModal from './CreateChannelModal';
+import ChannelSettingsModal from './ChannelSettingsModal';
+import * as chatApi from '../../api/chat.api';
 
 interface ChatListProps {
   onSelectChannel?: (channel: Channel) => void;
 }
 
 const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
-  const { channels, activeChannel, loadChannels, setActiveChannel, loading } = useChatContext();
+  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById } = useChatContext();
+  const { user } = useAuth();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
 
   useEffect(() => {
     loadChannels();
+    // Load available users for adding to channels
+    const loadUsers = async () => {
+      try {
+        const users = await chatApi.getChatUsers();
+        setAvailableUsers(users);
+      } catch (error) {
+        console.error('Failed to load users:', error);
+      }
+    };
+    loadUsers();
   }, [loadChannels]);
 
   const handleChannelClick = (channel: Channel) => {
@@ -29,21 +48,6 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
         : 'Nieznany użytkownik';
     }
     return 'Bez nazwy';
-  };
-
-  const getChannelIcon = (channel: Channel): string => {
-    switch (channel.type) {
-      case 'direct':
-        return '👤';
-      case 'group':
-        return '👥';
-      case 'public':
-        return '📢';
-      case 'private':
-        return '🔒';
-      default:
-        return '💬';
-    }
   };
 
   const formatLastMessageTime = (dateString: string | null): string => {
@@ -65,12 +69,22 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
     }
   };
 
+  const handleCreateChannel = async (data: any) => {
+    await createChannel(data);
+    await loadChannels();
+  };
+
+  const handleChannelSettings = (channel: Channel) => {
+    setActiveChannel(channel);
+    setShowSettingsModal(true);
+  };
+
   if (loading && channels.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full bg-gradient-to-br from-indigo-50 to-purple-50">
+      <div className="flex items-center justify-center h-full bg-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Ładowanie...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-3 border-gray-200 border-t-blue-600 mx-auto"></div>
+          <p className="mt-3 text-gray-500 text-sm">Ładowanie...</p>
         </div>
       </div>
     );
@@ -78,47 +92,62 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
 
   if (channels.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full p-6 bg-gradient-to-br from-indigo-50 to-purple-50">
-        <div className="text-center">
-          <div className="text-5xl mb-3">💬</div>
-          <p className="text-gray-700 font-semibold mb-2">Brak kanałów</p>
-          <p className="text-sm text-gray-500">Utwórz nowy kanał lub czekaj na zaproszenie</p>
+      <div className="flex items-center justify-center h-full p-6 bg-white">
+        <div className="text-center max-w-xs">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <p className="text-gray-900 font-medium mb-1">Brak konwersacji</p>
+          <p className="text-sm text-gray-500">Utwórz nowy kanał aby rozpocząć</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gradient-to-b from-white to-gray-50">
-      {/* Header - Modern gradient */}
-      <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 sticky top-0 z-10 shadow-lg">
-        <h2 className="text-xl font-bold text-white drop-shadow-sm">Czaty</h2>
-        <p className="text-sm text-indigo-100">{channels.length} {channels.length === 1 ? 'kanał' : 'kanały'}</p>
-      </div>
+    <>
+      <div className="h-full flex flex-col bg-white">
+        {/* Header - Clean & Minimal */}
+        <div className="px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-gray-900">Czaty</h2>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
+              title="Nowa konwersacja"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
       {/* Channel List */}
-      <div className="p-2">
+      <div className="flex-1 overflow-y-auto">
         {channels.map((channel) => {
           const isActive = activeChannel?.id === channel.id;
-          const otherMember = channel.type === 'direct' && channel.members?.[0];
+          const otherMember = channel.type === 'direct' ? channel.members?.[0] : undefined;
 
           return (
-            <button
-              key={channel.id}
-              onClick={() => handleChannelClick(channel)}
-              className={`w-full p-3 mb-1 flex items-center gap-3 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg scale-[1.02]'
-                  : 'hover:bg-white hover:shadow-md'
-              }`}
-            >
+            <div key={channel.id} className="relative group">
+              <button
+                onClick={() => handleChannelClick(channel)}
+                className={`w-full px-4 py-3 flex items-center gap-3 transition-colors border-l-4 ${
+                  isActive
+                    ? 'bg-blue-50 border-blue-600'
+                    : 'hover:bg-gray-50 border-transparent'
+                }`}
+              >
               {/* Avatar */}
               <div className="relative flex-shrink-0">
                 <div
-                  className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-semibold shadow-md ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-medium ${
                     isActive
-                      ? 'bg-white/20 text-white ring-2 ring-white/30'
-                      : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700'
                   }`}
                 >
                   {channel.type === 'direct' && otherMember?.user?.avatar_url ? (
@@ -130,69 +159,97 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
                   ) : channel.type === 'direct' && otherMember?.user ? (
                     `${otherMember.user.first_name[0]}${otherMember.user.last_name[0]}`
                   ) : (
-                    getChannelIcon(channel)
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {channel.type === 'private' ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      )}
+                    </svg>
                   )}
                 </div>
-                {/* Online indicator - placeholder */}
+                {/* Online indicator */}
                 {channel.type === 'direct' && (
-                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                 )}
               </div>
 
               {/* Channel Info */}
               <div className="flex-1 min-w-0 text-left">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between gap-2">
                   <h3
-                    className={`font-semibold truncate ${
-                      isActive ? 'text-white' : 'text-gray-900'
+                    className={`font-medium truncate text-sm ${
+                      isActive ? 'text-gray-900' : 'text-gray-900'
                     }`}
                   >
                     {getChannelName(channel)}
                   </h3>
                   {channel.last_message_at && (
-                    <span className={`text-xs ml-2 flex-shrink-0 ${
-                      isActive ? 'text-white/80' : 'text-gray-500'
-                    }`}>
+                    <span className="text-xs text-gray-500 flex-shrink-0">
                       {formatLastMessageTime(channel.last_message_at)}
                     </span>
                   )}
                 </div>
 
-                {/* Channel description or type */}
-                {channel.description ? (
-                  <p className={`text-sm truncate ${
-                    isActive ? 'text-white/90' : 'text-gray-600'
-                  }`}>
-                    {channel.description}
-                  </p>
-                ) : (
-                  <p className={`text-xs capitalize ${
-                    isActive ? 'text-white/70' : 'text-gray-400'
-                  }`}>
-                    {channel.type}
-                  </p>
-                )}
-
-                {/* Member count for group channels */}
-                {channel.type !== 'direct' && channel.members && (
-                  <p className={`text-xs mt-1 ${
-                    isActive ? 'text-white/70' : 'text-gray-500'
-                  }`}>
-                    {channel.members.length} członków
-                  </p>
-                )}
+                {/* Channel description or member count */}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {channel.description ? (
+                    <p className="text-sm text-gray-600 truncate">
+                      {channel.description}
+                    </p>
+                  ) : channel.type !== 'direct' && channel.members ? (
+                    <p className="text-xs text-gray-500">
+                      {channel.members.length} członków
+                    </p>
+                  ) : null}
+                </div>
               </div>
 
-            {/* Unread badge (placeholder for future implementation) */}
-            {/* {channel.unread_count > 0 && (
-              <div className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-semibold">
-                {channel.unread_count > 99 ? '99+' : channel.unread_count}
-              </div>
-            )} */}
-          </button>
-        ))}
+              {/* Unread badge (placeholder for future implementation) */}
+              {/* {channel.unreadCount && channel.unreadCount > 0 && (
+                <div className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium">
+                  {channel.unreadCount > 9 ? '9+' : channel.unreadCount}
+                </div>
+              )} */}
+            </button>
+            {/* Settings button - only for non-direct channels */}
+            {channel.type !== 'direct' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleChannelSettings(channel);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 bg-gray-100 hover:bg-gray-200 text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+          </div>
+          );
+        })}
       </div>
     </div>
+
+    {/* Modals */}
+    <CreateChannelModal
+      isOpen={showCreateModal}
+      onClose={() => setShowCreateModal(false)}
+      onCreate={handleCreateChannel}
+    />
+    <ChannelSettingsModal
+      isOpen={showSettingsModal}
+      onClose={() => setShowSettingsModal(false)}
+      channel={activeChannel}
+      currentUserId={user?.id || ''}
+      onAddMembers={addChannelMembers}
+      onRemoveMember={removeChannelMember}
+      onDeleteChannel={deleteChannelById}
+      availableUsers={availableUsers}
+    />
+  </>
   );
 };
 

@@ -17,7 +17,7 @@ export class FileController {
     try {
       const files = req.files as Express.Multer.File[];
       const { channelId, content } = req.body;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       if (!files || files.length === 0) {
         res.status(400).json({
@@ -150,7 +150,7 @@ export class FileController {
   async deleteAttachment(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       await fileService.deleteAttachment(id, userId);
 
@@ -190,7 +190,7 @@ export class FileController {
    */
   async getUserStats(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       const stats = await fileService.getUserStorageStats(userId);
 

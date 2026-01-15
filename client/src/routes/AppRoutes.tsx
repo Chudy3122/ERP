@@ -6,12 +6,25 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import Chat from '../pages/Chat';
+import VideoMeeting from '../pages/VideoMeeting';
+import Meetings from '../pages/Meetings';
 import TimeTracking from '../pages/TimeTracking';
 import LeaveManagement from '../pages/LeaveManagement';
 import LeaveApprovals from '../pages/LeaveApprovals';
 import TeamLeaveCalendar from '../pages/TeamLeaveCalendar';
+import TeamCalendar from '../pages/TeamCalendar';
 import Admin from '../pages/Admin';
 import AdminUsers from '../pages/AdminUsers';
+import Reports from '../pages/Reports';
+import NotificationSettings from '../pages/NotificationSettings';
+import Projects from '../pages/Projects';
+import ProjectForm from '../pages/ProjectForm';
+import Tasks from '../pages/Tasks';
+import TaskForm from '../pages/TaskForm';
+import Tickets from '../pages/Tickets';
+import TicketForm from '../pages/TicketForm';
+import Absences from '../pages/Absences';
+import Employees from '../pages/Employees';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -47,6 +60,22 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/meeting"
+        element={
+          <PrivateRoute>
+            <Meetings />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/meeting/:roomName"
+        element={
+          <PrivateRoute>
+            <VideoMeeting />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/time-tracking"
         element={
           <PrivateRoute>
@@ -55,26 +84,90 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/time-tracking/leave"
+        path="/absences"
         element={
           <PrivateRoute>
-            <LeaveManagement />
+            <Absences />
           </PrivateRoute>
         }
       />
       <Route
-        path="/time-tracking/leave/approvals"
+        path="/projects"
         element={
           <PrivateRoute>
-            <LeaveApprovals />
+            <Projects />
           </PrivateRoute>
         }
       />
       <Route
-        path="/time-tracking/leave/calendar"
+        path="/projects/new"
         element={
           <PrivateRoute>
-            <TeamLeaveCalendar />
+            <ProjectForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/projects/:id/edit"
+        element={
+          <PrivateRoute>
+            <ProjectForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tasks"
+        element={
+          <PrivateRoute>
+            <Tasks />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tasks/new"
+        element={
+          <PrivateRoute>
+            <TaskForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tasks/:id/edit"
+        element={
+          <PrivateRoute>
+            <TaskForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tickets"
+        element={
+          <PrivateRoute>
+            <Tickets />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tickets/new"
+        element={
+          <PrivateRoute>
+            <TicketForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tickets/:id/edit"
+        element={
+          <PrivateRoute>
+            <TicketForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/employees"
+        element={
+          <PrivateRoute>
+            <Employees />
           </PrivateRoute>
         }
       />
@@ -91,6 +184,30 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <AdminUsers />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <PrivateRoute>
+            <Reports />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/team-calendar"
+        element={
+          <PrivateRoute>
+            <TeamCalendar />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/notification-settings"
+        element={
+          <PrivateRoute>
+            <NotificationSettings />
           </PrivateRoute>
         }
       />

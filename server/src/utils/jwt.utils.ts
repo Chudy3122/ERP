@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { User, UserRole } from '../models/User.model';
 
 export interface JWTPayload {
@@ -28,10 +28,10 @@ export const generateAccessToken = (user: User): string => {
   };
 
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
+    expiresIn: JWT_EXPIRES_IN as string | number,
     issuer: 'erp-server',
     audience: 'erp-client',
-  });
+  } as jwt.SignOptions);
 };
 
 /**
@@ -45,10 +45,10 @@ export const generateRefreshToken = (user: User): string => {
   };
 
   return jwt.sign(payload, JWT_REFRESH_SECRET, {
-    expiresIn: JWT_REFRESH_EXPIRES_IN,
+    expiresIn: JWT_REFRESH_EXPIRES_IN as string | number,
     issuer: 'erp-server',
     audience: 'erp-client',
-  });
+  } as jwt.SignOptions);
 };
 
 /**

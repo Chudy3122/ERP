@@ -20,7 +20,7 @@ export class TimeService {
   /**
    * Clock in - Start a new time entry
    */
-  async clockIn(userId: string, notes?: string): Promise<TimeEntry> {
+  async clockIn(userId: string, notes?: string, expectedClockIn?: string): Promise<TimeEntry> {
     // Check if user already has an in-progress entry
     const existingEntry = await this.timeEntryRepository.findOne({
       where: {
@@ -37,8 +37,14 @@ export class TimeService {
       user_id: userId,
       clock_in: new Date(),
       notes,
+      expected_clock_in: expectedClockIn || '09:00:00', // Default 9 AM
       status: TimeEntryStatus.IN_PROGRESS,
     });
+
+    // Calculate if user is late
+    const lateMinutes = timeEntry.calculateLateArrival();
+    timeEntry.is_late = lateMinutes > 0;
+    timeEntry.late_minutes = lateMinutes;
 
     return await this.timeEntryRepository.save(timeEntry);
   }

@@ -1,4 +1,4 @@
-import { AppDataSource } from '../database/data-source';
+import { AppDataSource } from '../config/database';
 import { UserStatus, StatusType } from '../models/UserStatus.model';
 import { User } from '../models/User.model';
 
@@ -53,10 +53,16 @@ class UserStatusService {
 
     await this.userStatusRepository.save(status);
 
-    return this.userStatusRepository.findOne({
+    const result = await this.userStatusRepository.findOne({
       where: { user_id: userId },
       relations: ['user'],
-    })!;
+    });
+
+    if (!result) {
+      throw new Error('Failed to load user status after update');
+    }
+
+    return result;
   }
 
   /**

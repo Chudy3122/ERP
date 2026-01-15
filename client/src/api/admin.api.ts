@@ -110,3 +110,11 @@ export const getOnlineCount = async (): Promise<number> => {
   const response = await apiClient.get('/admin/online-count');
   return response.data.data.count;
 };
+
+/**
+ * Get users (simple list without pagination)
+ */
+export const getUsers = async (): Promise<AdminUser[]> => {
+  const response = await getAllUsers(1, 1000); // Get up to 1000 users
+  return response.users;
+};

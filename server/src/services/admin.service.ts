@@ -1,12 +1,12 @@
-import { AppDataSource } from '../database/data-source';
+import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
 import { TimeEntry } from '../models/TimeEntry.model';
-import { LeaveRequest } from '../models/LeaveRequest.model';
+import { LeaveRequest, LeaveStatus } from '../models/LeaveRequest.model';
 import { Channel } from '../models/Channel.model';
 import { Message } from '../models/Message.model';
 import { Notification } from '../models/Notification.model';
-import { UserStatus } from '../models/UserStatus.model';
-import bcrypt from 'bcryptjs';
+import { UserStatus, StatusType } from '../models/UserStatus.model';
+import * as bcrypt from 'bcrypt';
 
 interface CreateUserData {
   email: string;
@@ -141,7 +141,11 @@ class AdminService {
     await this.userRepository.save(user);
 
     // Return user without password
-    return this.getUserById(user.id)!;
+    const result = await this.getUserById(user.id);
+    if (!result) {
+      throw new Error('Failed to load user after creation');
+    }
+    return result;
   }
 
   /**
@@ -265,13 +269,13 @@ class AdminService {
     // Leave request stats
     const totalLeaveRequests = await this.leaveRequestRepository.count();
     const pendingLeaveRequests = await this.leaveRequestRepository.count({
-      where: { status: 'pending' },
+      where: { status: LeaveStatus.PENDING },
     });
     const approvedLeaveRequests = await this.leaveRequestRepository.count({
-      where: { status: 'approved' },
+      where: { status: LeaveStatus.APPROVED },
     });
     const rejectedLeaveRequests = await this.leaveRequestRepository.count({
-      where: { status: 'rejected' },
+      where: { status: LeaveStatus.REJECTED },
     });
 
     // Channel stats
@@ -393,7 +397,7 @@ class AdminService {
    */
   async getOnlineUsersCount(): Promise<number> {
     return this.userStatusRepository.count({
-      where: { status: 'online' },
+      where: { status: StatusType.ONLINE },
     });
   }
 }

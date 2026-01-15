@@ -66,7 +66,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         type="button"
         onClick={handleButtonClick}
         disabled={disabled}
-        className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Dodaj załączniki"
       >
         <svg
