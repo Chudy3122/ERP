@@ -220,7 +220,7 @@ export class EmployeeService {
 
     const approvedLeaves = leaveRequests.filter(l => l.status === 'approved');
     const pendingLeaves = leaveRequests.filter(l => l.status === 'pending');
-    const totalLeaveDays = approvedLeaves.reduce((sum, leave) => sum + leave.days_count, 0);
+    const totalLeaveDays = approvedLeaves.reduce((sum, leave) => sum + leave.total_days, 0);
 
     return {
       timeTracking: {

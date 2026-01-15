@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
   BeforeInsert,
   BeforeUpdate,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
@@ -53,6 +55,32 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   last_login: Date | null;
+
+  // Employee fields
+  @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
+  employee_id: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  position: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  hire_date: Date | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  contract_type: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  manager_id: string | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'manager_id' })
+  manager: User | null;
+
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 8.0 })
+  working_hours_per_day: number;
+
+  @Column({ type: 'integer', default: 20 })
+  annual_leave_days: number;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
