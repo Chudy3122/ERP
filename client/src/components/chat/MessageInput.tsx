@@ -107,7 +107,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       try {
         setIsUploading(true);
-        const result = await fileApi.uploadFiles(activeChannel.id, selectedFiles, trimmedContent);
+        await fileApi.uploadFiles(activeChannel.id, selectedFiles, trimmedContent);
         setContent('');
         setSelectedFiles([]);
 

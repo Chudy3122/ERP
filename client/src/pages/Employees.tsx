@@ -9,11 +9,11 @@ interface Employee {
   first_name: string;
   last_name: string;
   email: string;
-  phone?: string;
-  department?: string;
-  position?: string;
-  employee_id?: string;
-  hire_date?: string;
+  phone?: string | null;
+  department?: string | null;
+  position?: string | null;
+  employee_id?: string | null;
+  hire_date?: string | null;
   role: string;
   is_active: boolean;
 }

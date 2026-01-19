@@ -44,6 +44,7 @@ export interface CreateTaskRequest {
   project_id: string;
   title: string;
   description?: string;
+  status?: TaskStatus;
   priority: TaskPriority;
   assigned_to?: string;
   estimated_hours?: number;

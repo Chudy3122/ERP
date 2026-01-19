@@ -60,6 +60,7 @@ export interface CreateTicketRequest {
   title: string;
   description: string;
   type: TicketType;
+  status?: TicketStatus;
   priority: TicketPriority;
   category?: string;
   project_id?: string;

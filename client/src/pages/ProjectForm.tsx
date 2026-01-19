@@ -21,7 +21,7 @@ const ProjectForm = () => {
     start_date: '',
     target_end_date: '',
     budget: undefined,
-    manager_id: user?.userId,
+    manager_id: user?.id,
   });
 
   const [isLoading, setIsLoading] = useState(false);

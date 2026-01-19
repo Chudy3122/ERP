@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WidgetCard from '../widgets/WidgetCard';
-import { getUserTimeStats } from '../../api/time.api';
+import { getUserTimeEntries } from '../../api/time.api';
 
 interface TimeData {
   date: string;
@@ -58,12 +58,12 @@ const TimeChartWidget = () => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 6);
 
-      const stats = await getUserTimeStats(
+      const entries = await getUserTimeEntries(
         startDate.toISOString().split('T')[0],
         endDate.toISOString().split('T')[0]
       );
 
-      // Transform data for chart
+      // Transform data for chart - group by day
       const chartData: TimeData[] = [];
       const dates: Date[] = [];
 
@@ -72,18 +72,22 @@ const TimeChartWidget = () => {
         dates.push(new Date(d));
       }
 
+      // Group entries by date
+      const entriesByDate: Record<string, number> = {};
+      entries.forEach(entry => {
+        const entryDate = new Date(entry.clock_in).toISOString().split('T')[0];
+        const minutes = entry.duration_minutes || 0;
+        entriesByDate[entryDate] = (entriesByDate[entryDate] || 0) + minutes;
+      });
+
       dates.forEach(date => {
         const dateStr = date.toISOString().split('T')[0];
-        const stat = stats.daily_stats?.find((s: any) => s.date === dateStr);
-
-        const hours = stat ? Math.floor(stat.total_minutes / 60) : 0;
-        const minutes = stat ? stat.total_minutes % 60 : 0;
-        const totalMinutes = stat ? stat.total_minutes : 0;
+        const totalMinutes = entriesByDate[dateStr] || 0;
 
         chartData.push({
           date: dateStr,
           hours: parseFloat((totalMinutes / 60).toFixed(2)), // Decimal hours for chart
-          minutes: minutes,
+          minutes: totalMinutes % 60,
           displayDate: date.toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' }),
           isOvertime: totalMinutes > 480, // 8 hours = 480 minutes
         });
