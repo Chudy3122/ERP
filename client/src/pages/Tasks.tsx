@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
-import { CheckSquare, Plus, Search, Calendar, User } from 'lucide-react';
+import { CheckSquare, Plus, Calendar, User } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import { Task, TaskStatus, TaskPriority } from '../types/task.types';
 

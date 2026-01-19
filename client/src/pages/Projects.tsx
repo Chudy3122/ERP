@@ -227,7 +227,7 @@ const Projects = () => {
               <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-2">
-                    {project.members?.slice(0, 3).map((member, idx) => (
+                    {project.members?.slice(0, 3).map((member) => (
                       <div
                         key={member.id}
                         className="w-8 h-8 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs font-semibold border-2 border-white"
