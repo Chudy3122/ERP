@@ -134,27 +134,19 @@ const DeadlineCounterWidget = () => {
           <button
             key={counter.label}
             onClick={() => handleCounterClick(counter.filter)}
-            className={`${counter.bgColor} ${counter.borderColor} border rounded-md p-2 text-center hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-gray-400`}
+            className={`${counter.bgColor} ${counter.borderColor} border rounded-md p-1.5 text-center hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-gray-400`}
           >
-            <div className={`text-2xl font-bold ${counter.textColor}`}>
+            <div className={`text-xl font-bold ${counter.textColor}`}>
               {counter.value}
             </div>
             <div className="text-xs text-gray-600 font-medium">
               {counter.label}
             </div>
-            {counter.urgent && counter.value > 0 && (
-              <div className="mt-1">
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 text-xs font-semibold">
-                  <AlertCircle className="w-2.5 h-2.5" />
-                  Pilne
-                </span>
-              </div>
-            )}
           </button>
         ))}
       </div>
 
-      <div className="mt-2 pt-2 border-t border-gray-200">
+      <div className="mt-1 pt-1 border-t border-gray-200">
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-500">Wszystkich zadań:</span>
           <span className="font-semibold text-gray-900">{counts.twoWeeks}</span>

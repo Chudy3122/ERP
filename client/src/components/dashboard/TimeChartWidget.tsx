@@ -111,7 +111,7 @@ const TimeChartWidget = () => {
         title="Mój zaraportowany czas"
         icon={<Clock className="w-5 h-5 text-gray-600" />}
       >
-        <div className="h-[200px] flex items-center justify-center">
+        <div className="h-[140px] flex items-center justify-center">
           <div className="animate-pulse space-y-4 w-full">
             <div className="h-48 bg-gray-200 rounded"></div>
             <div className="flex justify-between">
@@ -146,7 +146,7 @@ const TimeChartWidget = () => {
         </div>
       }
     >
-      <div className="h-[200px] cursor-pointer" onClick={handleChartClick}>
+      <div className="h-[140px] cursor-pointer" onClick={handleChartClick}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={timeData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />

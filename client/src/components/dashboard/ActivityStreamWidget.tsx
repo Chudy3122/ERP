@@ -143,7 +143,7 @@ const ActivityStreamWidget = () => {
         </span>
       }
     >
-      <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="space-y-1 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {activities.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
             <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
@@ -154,21 +154,21 @@ const ActivityStreamWidget = () => {
             <div
               key={activity.id}
               onClick={() => handleActivityClick(activity)}
-              className={`flex gap-2 p-2 rounded-md transition-colors ${
+              className={`flex gap-2 p-1.5 rounded-md transition-colors ${
                 activity.entity_id ? 'hover:bg-gray-50 cursor-pointer' : ''
               }`}
             >
               {/* Avatar */}
-              <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-700 flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-700 flex-shrink-0">
                 {getInitials(activity.user)}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-900 leading-relaxed">
+                <p className="text-xs text-gray-900 leading-tight">
                   {activity.description}
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500">
                   {formatRelativeTime(activity.created_at)}
                 </p>
               </div>
@@ -183,7 +183,7 @@ const ActivityStreamWidget = () => {
       </div>
 
       {activities.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200 text-center">
+        <div className="mt-1 pt-1 border-t border-gray-200 text-center">
           <button
             onClick={() => navigate('/activities')}
             className="text-xs text-gray-700 hover:text-gray-900 font-medium"

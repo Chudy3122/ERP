@@ -12,7 +12,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({ title, icon, actions, children,
   return (
     <div className={`bg-white border border-gray-200 rounded-md shadow-sm ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200">
         <div className="flex items-center gap-2">
           {icon && <div className="text-gray-600">{icon}</div>}
           <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
@@ -21,7 +21,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({ title, icon, actions, children,
       </div>
 
       {/* Content */}
-      <div className="p-3">{children}</div>
+      <div className="p-2">{children}</div>
     </div>
   );
 };

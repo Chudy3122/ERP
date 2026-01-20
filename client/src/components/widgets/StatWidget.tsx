@@ -32,21 +32,21 @@ const StatWidget: React.FC<StatWidgetProps> = ({ label, value, icon, trend, colo
   return (
     <div
       onClick={onClick}
-      className={`p-3 rounded-md border border-gray-200 ${colorClasses[color]} ${
+      className={`p-2 rounded-md border border-gray-200 ${colorClasses[color]} ${
         onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
       }`}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1">
         <div className="text-xs font-medium text-gray-600">{label}</div>
         {icon && (
-          <div className={`w-8 h-8 rounded-md ${iconBgClasses[color]} flex items-center justify-center`}>
+          <div className={`w-7 h-7 rounded-md ${iconBgClasses[color]} flex items-center justify-center`}>
             {icon}
           </div>
         )}
       </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="text-xl font-bold text-gray-900">{value}</div>
       {trend && (
-        <div className={`text-xs mt-1 ${trend.isPositive ? 'text-gray-600' : 'text-gray-600'}`}>
+        <div className={`text-xs mt-0.5 ${trend.isPositive ? 'text-gray-600' : 'text-gray-600'}`}>
           {trend.isPositive ? '↑' : '↓'} {trend.value}
         </div>
       )}

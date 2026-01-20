@@ -38,17 +38,17 @@ const Dashboard = () => {
   return (
     <MainLayout title="Panel główny">
       {/* Welcome Header */}
-      <div className="mb-3">
-        <h1 className="text-xl font-bold text-gray-900">
+      <div className="mb-2">
+        <h1 className="text-lg font-bold text-gray-900">
           Witaj, {user?.first_name}
         </h1>
-        <p className="text-gray-600 mt-0.5 text-sm">
+        <p className="text-gray-600 text-sm">
           Sprawdź swoje ostatnie aktywności i nadchodzące zadania
         </p>
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
         <StatWidget
           label="Profil"
           value={user?.role === 'admin' ? 'Administrator' : user?.role === 'team_leader' ? 'Team Leader' : 'Pracownik'}
@@ -85,9 +85,9 @@ const Dashboard = () => {
       </div>
 
       {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Left Column - Full width on mobile, 2 cols on desktop */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="lg:col-span-2 space-y-2">
           {/* Time Chart Widget */}
           <TimeChartWidget />
 
@@ -96,16 +96,16 @@ const Dashboard = () => {
         </div>
 
         {/* Right Column - Full width on mobile, 1 col on desktop */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {/* Deadline Counter Widget */}
           <DeadlineCounterWidget />
 
           {/* User Info Widget */}
           <WidgetCard
             title="Informacje o koncie"
-            icon={<User className="w-5 h-5 text-gray-600" />}
+            icon={<User className="w-4 h-4 text-gray-600" />}
           >
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
                 <p className="text-xs text-gray-500">Imię i nazwisko</p>
                 <p className="text-xs font-medium text-gray-900">
@@ -120,27 +120,9 @@ const Dashboard = () => {
                 </p>
               </div>
 
-              {user?.department && (
-                <div>
-                  <p className="text-xs text-gray-500">Dział</p>
-                  <p className="text-xs font-medium text-gray-900">
-                    {user.department}
-                  </p>
-                </div>
-              )}
-
-              {user?.phone && (
-                <div>
-                  <p className="text-xs text-gray-500">Telefon</p>
-                  <p className="text-xs font-medium text-gray-900">
-                    {user.phone}
-                  </p>
-                </div>
-              )}
-
-              <div className="pt-2 border-t border-gray-200">
+              <div className="pt-1 border-t border-gray-200">
                 <p className="text-xs text-gray-500">Rola w systemie</p>
-                <div className="mt-1">
+                <div className="mt-0.5">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                     user?.role === 'admin'
                       ? 'bg-gray-200 text-gray-800'
