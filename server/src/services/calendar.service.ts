@@ -70,11 +70,11 @@ export class CalendarService {
       }
     });
 
-    // Get time entries (work sessions)
+    // Get time entries (work sessions) - include IN_PROGRESS to show active sessions
     const timeEntries = await this.timeEntryRepository.find({
       where: {
         clock_in: Between(startDate, endDate),
-        status: In([TimeEntryStatus.COMPLETED, TimeEntryStatus.APPROVED]),
+        status: In([TimeEntryStatus.IN_PROGRESS, TimeEntryStatus.COMPLETED, TimeEntryStatus.APPROVED]),
       },
       relations: ['user'],
       order: {
@@ -85,12 +85,13 @@ export class CalendarService {
     // Add work events
     timeEntries.forEach((entry) => {
       if (entry.user) {
+        const isActive = entry.status === TimeEntryStatus.IN_PROGRESS;
         events.push({
           id: entry.id,
           userId: entry.user_id,
           userName: `${entry.user.first_name} ${entry.user.last_name}`,
           type: 'work',
-          title: `${entry.user.first_name} ${entry.user.last_name} - Praca`,
+          title: `${entry.user.first_name} ${entry.user.last_name} - ${isActive ? 'W pracy' : 'Praca'}`,
           start: new Date(entry.clock_in),
           end: entry.clock_out ? new Date(entry.clock_out) : null,
           status: entry.status,
@@ -99,6 +100,7 @@ export class CalendarService {
             overtime: entry.overtime_minutes,
             isLate: entry.is_late,
             lateMinutes: entry.late_minutes,
+            isActive: isActive,
           },
         });
       }
@@ -161,13 +163,16 @@ export class CalendarService {
         });
 
         if (workEntry) {
+          const isActive = workEntry.status === TimeEntryStatus.IN_PROGRESS;
           dayAvailability.users.push({
             id: user.id,
             name: `${user.first_name} ${user.last_name}`,
             status: 'working',
             details: workEntry.clock_out
               ? `${this.formatTime(workEntry.clock_in)} - ${this.formatTime(workEntry.clock_out)}`
-              : `Od ${this.formatTime(workEntry.clock_in)}`,
+              : isActive
+                ? `W pracy od ${this.formatTime(workEntry.clock_in)}`
+                : `Od ${this.formatTime(workEntry.clock_in)}`,
           });
         } else {
           dayAvailability.users.push({
