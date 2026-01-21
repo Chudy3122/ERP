@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import StatusSelector from '../status/StatusSelector';
+import AIAssistant from '../helpdesk/AIAssistant';
 import * as notificationApi from '../../api/notification.api';
 import {
   Home,
@@ -490,6 +491,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
           {children}
         </main>
       </div>
+
+      {/* AI Helpdesk Assistant */}
+      <AIAssistant />
     </div>
   );
 };
