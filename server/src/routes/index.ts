@@ -14,6 +14,7 @@ import projectRoutes from './project.routes';
 import taskRoutes from './task.routes';
 import ticketRoutes from './ticket.routes';
 import activityRoutes from './activity.routes';
+import aiRoutes from './ai.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -62,6 +63,9 @@ router.use('/tickets', ticketRoutes);
 
 // Activity routes
 router.use('/activities', activityRoutes);
+
+// AI Assistant routes
+router.use('/ai', aiRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

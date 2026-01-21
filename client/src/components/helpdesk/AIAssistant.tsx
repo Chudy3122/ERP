@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Loader2, AlertCircle } from 'lucide-react';
+import * as aiApi from '../../api/ai.api';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isError?: boolean;
 }
 
 const AIAssistant: React.FC = () => {
@@ -37,39 +39,6 @@ const AIAssistant: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const generateResponse = async (userMessage: string): Promise<string> => {
-    // Symulacja odpowiedzi AI - w przyszłości można podłączyć do OpenAI API
-    const lowerMessage = userMessage.toLowerCase();
-
-    // Proste odpowiedzi kontekstowe
-    if (lowerMessage.includes('urlop') || lowerMessage.includes('wolne')) {
-      return 'Aby złożyć wniosek o urlop:\n\n1. Przejdź do sekcji "Nieobecności" w menu bocznym\n2. Kliknij przycisk "Nowy wniosek"\n3. Wybierz typ urlopu i daty\n4. Dodaj opcjonalny komentarz\n5. Zatwierdź wniosek\n\nTwój przełożony otrzyma powiadomienie i rozpatrzy wniosek.';
-    }
-
-    if (lowerMessage.includes('czas') || lowerMessage.includes('godzin') || lowerMessage.includes('praca')) {
-      return 'Ewidencja czasu pracy:\n\n• **Rozpoczęcie pracy** - kliknij "Rozpocznij pracę" w sekcji Ewidencja czasu\n• **Zakończenie pracy** - kliknij "Zakończ pracę"\n• **Historia** - przeglądaj swoje wpisy w tabeli poniżej\n\nSystem automatycznie oblicza przepracowane godziny i ewentualne nadgodziny.';
-    }
-
-    if (lowerMessage.includes('projekt') || lowerMessage.includes('zadani')) {
-      return 'Zarządzanie projektami i zadaniami:\n\n• **Lista projektów** - znajdziesz w menu "Projekty"\n• **Moje zadania** - wszystkie przypisane do Ciebie zadania\n• **Tworzenie zadania** - wejdź w projekt i kliknij "Nowe zadanie"\n\nMożesz filtrować zadania po statusie, priorytecie i terminie.';
-    }
-
-    if (lowerMessage.includes('czat') || lowerMessage.includes('wiadomo')) {
-      return 'Komunikacja w systemie:\n\n• **Czat** - sekcja do rozmów z innymi użytkownikami\n• **Nowa konwersacja** - kliknij "+" aby rozpocząć nowy czat\n• **Powiadomienia** - dzwonek w prawym górnym rogu\n\nMożesz tworzyć czaty indywidualne lub grupowe.';
-    }
-
-    if (lowerMessage.includes('pomoc') || lowerMessage.includes('help')) {
-      return 'Chętnie pomogę! Oto główne sekcje systemu:\n\n• **Dashboard** - przegląd aktywności\n• **Ewidencja czasu** - rejestracja godzin pracy\n• **Projekty** - zarządzanie projektami\n• **Czat** - komunikacja zespołowa\n• **Nieobecności** - wnioski urlopowe\n\nO czym chciałbyś dowiedzieć się więcej?';
-    }
-
-    if (lowerMessage.includes('dzień dobry') || lowerMessage.includes('cześć') || lowerMessage.includes('hej') || lowerMessage.includes('witam')) {
-      return 'Cześć! Miło Cię widzieć 👋\n\nW czym mogę Ci dzisiaj pomóc? Możesz zapytać o dowolną funkcję systemu ERP.';
-    }
-
-    // Domyślna odpowiedź
-    return 'Dziękuję za pytanie! Mogę pomóc Ci z:\n\n• Ewidencją czasu pracy\n• Zarządzaniem projektami i zadaniami\n• Wnioskami urlopowymi\n• Komunikacją w systemie\n• Nawigacją po aplikacji\n\nSpróbuj zadać bardziej szczegółowe pytanie, a postaram się pomóc!';
-  };
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -80,14 +49,22 @@ const AIAssistant: React.FC = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
     try {
-      // Symulacja opóźnienia API
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const response = await generateResponse(userMessage.content);
+      // Prepare messages for API (exclude initial greeting and only send last 10 messages for context)
+      const apiMessages = newMessages
+        .slice(-10)
+        .filter(m => !m.isError)
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+      const response = await aiApi.sendMessage(apiMessages);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -97,12 +74,13 @@ const AIAssistant: React.FC = () => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.',
+        content: error?.response?.data?.message || 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.',
         timestamp: new Date(),
+        isError: true,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -153,7 +131,7 @@ const AIAssistant: React.FC = () => {
             </div>
             <div className="flex-1">
               <h3 className="text-white font-semibold">Asystent AI</h3>
-              <p className="text-blue-100 text-xs">System ERP • Online</p>
+              <p className="text-blue-100 text-xs">System ERP • Powered by GPT</p>
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -176,11 +154,15 @@ const AIAssistant: React.FC = () => {
                   className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     message.role === 'user'
                       ? 'bg-blue-600 text-white'
+                      : message.isError
+                      ? 'bg-red-100 text-red-600'
                       : 'bg-gray-200 text-gray-600'
                   }`}
                 >
                   {message.role === 'user' ? (
                     <User className="w-4 h-4" />
+                  ) : message.isError ? (
+                    <AlertCircle className="w-4 h-4" />
                   ) : (
                     <Bot className="w-4 h-4" />
                   )}
@@ -189,13 +171,19 @@ const AIAssistant: React.FC = () => {
                   className={`max-w-[75%] rounded-lg px-3 py-2 ${
                     message.role === 'user'
                       ? 'bg-blue-600 text-white'
+                      : message.isError
+                      ? 'bg-red-50 border border-red-200 text-red-800'
                       : 'bg-white border border-gray-200 text-gray-800'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-line">{message.content}</p>
                   <p
                     className={`text-xs mt-1 ${
-                      message.role === 'user' ? 'text-blue-200' : 'text-gray-400'
+                      message.role === 'user'
+                        ? 'text-blue-200'
+                        : message.isError
+                        ? 'text-red-400'
+                        : 'text-gray-400'
                     }`}
                   >
                     {formatTime(message.timestamp)}
@@ -238,7 +226,7 @@ const AIAssistant: React.FC = () => {
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-2 text-center">
-              Asystent AI pomoże Ci z obsługą systemu ERP
+              Powered by OpenAI GPT • Asystent systemu ERP
             </p>
           </div>
         </div>
