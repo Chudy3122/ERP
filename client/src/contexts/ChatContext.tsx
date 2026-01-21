@@ -12,14 +12,25 @@ interface TypingUser {
   timestamp: number;
 }
 
+interface UserStatus {
+  userId: string;
+  status: 'online' | 'offline' | 'away' | 'busy' | 'in_meeting';
+  custom_message?: string;
+}
+
 interface ChatContextType {
   channels: Channel[];
   activeChannel: Channel | null;
   messages: Message[];
   typingUsers: TypingUser[];
+  userStatuses: Map<string, UserStatus>;
   isConnected: boolean;
   loading: boolean;
   error: string | null;
+
+  // Status helpers
+  isUserOnline: (userId: string) => boolean;
+  getUserStatus: (userId: string) => UserStatus | undefined;
 
   // Channel operations
   setActiveChannel: (channel: Channel | null) => void;
@@ -64,6 +75,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [activeChannel, setActiveChannelState] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [userStatuses, setUserStatuses] = useState<Map<string, UserStatus>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +91,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
         // Join all user's channels automatically
         newSocket.emit('chat:join_channels');
+
+        // Request online users status
+        newSocket.emit('status:get_online_users');
 
         return () => {
           socketService.disconnect();
@@ -168,6 +183,37 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setTimeout(() => setError(null), 5000);
     });
 
+    // Status events
+    socket.on('status:online_users', (data: { users: Array<{ userId: string; status: string; custom_message?: string }> }) => {
+      console.log('📊 Online users received:', data.users.length);
+      const newStatuses = new Map<string, UserStatus>();
+      data.users.forEach((u) => {
+        newStatuses.set(u.userId, {
+          userId: u.userId,
+          status: u.status as UserStatus['status'],
+          custom_message: u.custom_message,
+        });
+      });
+      setUserStatuses(newStatuses);
+    });
+
+    socket.on('status:user_status_changed', (data: { userId: string; status: string; custom_message?: string }) => {
+      console.log('🔄 User status changed:', data.userId, data.status);
+      setUserStatuses((prev) => {
+        const newMap = new Map(prev);
+        if (data.status === 'offline') {
+          newMap.delete(data.userId);
+        } else {
+          newMap.set(data.userId, {
+            userId: data.userId,
+            status: data.status as UserStatus['status'],
+            custom_message: data.custom_message,
+          });
+        }
+        return newMap;
+      });
+    });
+
     return () => {
       socket.off('chat:channels_joined');
       socket.off('chat:channel_joined');
@@ -176,6 +222,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       socket.off('chat:message_deleted');
       socket.off('chat:user_typing');
       socket.off('chat:error');
+      socket.off('status:online_users');
+      socket.off('status:user_status_changed');
     };
   }, [socket, activeChannel, user]);
 
@@ -394,14 +442,27 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [activeChannel]);
 
+  // Status helper functions
+  const isUserOnline = useCallback((userId: string): boolean => {
+    const status = userStatuses.get(userId);
+    return status?.status === 'online' || status?.status === 'away' || status?.status === 'busy' || status?.status === 'in_meeting';
+  }, [userStatuses]);
+
+  const getUserStatus = useCallback((userId: string): UserStatus | undefined => {
+    return userStatuses.get(userId);
+  }, [userStatuses]);
+
   const value: ChatContextType = {
     channels,
     activeChannel,
     messages,
     typingUsers,
+    userStatuses,
     isConnected,
     loading,
     error,
+    isUserOnline,
+    getUserStatus,
     setActiveChannel,
     loadChannels,
     loadMessages,

@@ -12,7 +12,7 @@ interface ChatListProps {
 }
 
 const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
-  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById } = useChatContext();
+  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById, isUserOnline, getUserStatus } = useChatContext();
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -193,9 +193,15 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
                     </svg>
                   )}
                 </div>
-                {/* Online indicator */}
-                {channel.type === 'direct' && (
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                {/* Online indicator - only show if user is actually online */}
+                {channel.type === 'direct' && otherMember?.user && isUserOnline(otherMember.user.id) && (
+                  <div className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full ${
+                    getUserStatus(otherMember.user.id)?.status === 'online' ? 'bg-green-500' :
+                    getUserStatus(otherMember.user.id)?.status === 'away' ? 'bg-yellow-500' :
+                    getUserStatus(otherMember.user.id)?.status === 'busy' ? 'bg-red-500' :
+                    getUserStatus(otherMember.user.id)?.status === 'in_meeting' ? 'bg-purple-500' :
+                    'bg-gray-400'
+                  }`}></div>
                 )}
               </div>
 
