@@ -193,14 +193,14 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
                     </svg>
                   )}
                 </div>
-                {/* Online indicator - only show if user is actually online */}
-                {channel.type === 'direct' && otherMember?.user && isUserOnline(otherMember.user.id) && (
-                  <div className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full ${
+                {/* Status indicator - always visible for direct chats */}
+                {channel.type === 'direct' && otherMember?.user && (
+                  <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
                     getUserStatus(otherMember.user.id)?.status === 'online' ? 'bg-green-500' :
                     getUserStatus(otherMember.user.id)?.status === 'away' ? 'bg-yellow-500' :
                     getUserStatus(otherMember.user.id)?.status === 'busy' ? 'bg-red-500' :
                     getUserStatus(otherMember.user.id)?.status === 'in_meeting' ? 'bg-purple-500' :
-                    'bg-gray-400'
+                    'bg-gray-300 border-gray-400'
                   }`}></div>
                 )}
               </div>
