@@ -157,6 +157,74 @@ export class ProjectController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  /**
+   * Upload project attachments
+   * POST /api/projects/:id/attachments
+   */
+  async uploadAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        res.status(400).json({ message: 'No files uploaded' });
+        return;
+      }
+
+      const attachments = await projectService.uploadAttachments(id, files, userId);
+      res.status(201).json({ success: true, data: attachments });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get project attachments
+   * GET /api/projects/:id/attachments
+   */
+  async getAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const attachments = await projectService.getProjectAttachments(id);
+      res.json({ success: true, data: attachments });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Delete project attachment
+   * DELETE /api/projects/:id/attachments/:attachmentId
+   */
+  async deleteAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { attachmentId } = req.params;
+      const userId = req.user!.userId;
+
+      await projectService.deleteAttachment(attachmentId, userId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get project activity stream
+   * GET /api/projects/:id/activity
+   */
+  async getProjectActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const activities = await projectService.getProjectActivity(id, limit);
+      res.json({ success: true, data: activities });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 
 export default new ProjectController();

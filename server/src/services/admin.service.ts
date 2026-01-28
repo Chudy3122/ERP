@@ -25,6 +25,13 @@ interface UpdateUserData {
   role?: UserRole;
   department?: string;
   phone?: string;
+  position?: string;
+  employee_id?: string;
+  hire_date?: string;
+  contract_type?: string;
+  manager_id?: string;
+  working_hours_per_day?: number;
+  annual_leave_days?: number;
   isActive?: boolean;
 }
 
@@ -101,6 +108,13 @@ class AdminService {
         'role',
         'department',
         'phone',
+        'position',
+        'employee_id',
+        'hire_date',
+        'contract_type',
+        'manager_id',
+        'working_hours_per_day',
+        'annual_leave_days',
         'avatar_url',
         'is_active',
         'last_login',
@@ -174,8 +188,15 @@ class AdminService {
     if (data.firstName) user.first_name = data.firstName;
     if (data.lastName) user.last_name = data.lastName;
     if (data.role) user.role = data.role;
-    if (data.department !== undefined) user.department = data.department;
-    if (data.phone !== undefined) user.phone = data.phone;
+    if (data.department !== undefined) user.department = data.department || null;
+    if (data.phone !== undefined) user.phone = data.phone || null;
+    if (data.position !== undefined) user.position = data.position || null;
+    if (data.employee_id !== undefined) user.employee_id = data.employee_id || null;
+    if (data.hire_date !== undefined) user.hire_date = data.hire_date ? new Date(data.hire_date) : null;
+    if (data.contract_type !== undefined) user.contract_type = data.contract_type || null;
+    if (data.manager_id !== undefined) user.manager_id = data.manager_id || null;
+    if (data.working_hours_per_day !== undefined) user.working_hours_per_day = data.working_hours_per_day;
+    if (data.annual_leave_days !== undefined) user.annual_leave_days = data.annual_leave_days;
     if (data.isActive !== undefined) user.is_active = data.isActive;
 
     await this.userRepository.save(user);

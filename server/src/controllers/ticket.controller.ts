@@ -192,6 +192,58 @@ export class TicketController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  /**
+   * Upload attachments to ticket
+   * POST /api/tickets/:id/attachments
+   */
+  async uploadAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        res.status(400).json({ message: 'No files uploaded' });
+        return;
+      }
+
+      const attachments = await ticketService.uploadAttachments(id, files, userId);
+      res.status(201).json(attachments);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get ticket attachments
+   * GET /api/tickets/:id/attachments
+   */
+  async getAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const attachments = await ticketService.getTicketAttachments(id);
+      res.json(attachments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Delete ticket attachment
+   * DELETE /api/tickets/:id/attachments/:attachmentId
+   */
+  async deleteAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, attachmentId } = req.params;
+      const userId = req.user!.userId;
+
+      await ticketService.deleteAttachment(id, attachmentId, userId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 export default new TicketController();

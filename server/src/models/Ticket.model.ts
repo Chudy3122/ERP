@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   BaseEntity,
 } from 'typeorm';
 import { User } from './User.model';
 import { Project } from './Project.model';
+import { TicketAttachment } from './TicketAttachment.model';
 
 export enum TicketType {
   BUG = 'bug',
@@ -24,6 +26,7 @@ export enum TicketStatus {
   IN_PROGRESS = 'in_progress',
   WAITING_RESPONSE = 'waiting_response',
   RESOLVED = 'resolved',
+  REJECTED = 'rejected',
   CLOSED = 'closed',
 }
 
@@ -98,6 +101,9 @@ export class Ticket extends BaseEntity {
   @ManyToOne(() => Project)
   @JoinColumn({ name: 'project_id' })
   project: Project;
+
+  @OneToMany(() => TicketAttachment, attachment => attachment.ticket, { eager: true })
+  attachments: TicketAttachment[];
 
   @CreateDateColumn()
   created_at: Date;

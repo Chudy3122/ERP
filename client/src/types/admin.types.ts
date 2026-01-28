@@ -6,9 +6,18 @@ export interface AdminUser {
   role: string;
   department: string | null;
   phone: string | null;
+  position: string | null;
+  employee_id: string | null;
+  hire_date: string | null;
+  contract_type: string | null;
+  manager_id: string | null;
+  working_hours_per_day: number;
+  annual_leave_days: number;
+  avatar_url: string | null;
   is_active: boolean;
   last_login: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface UserListResponse {
@@ -75,5 +84,12 @@ export interface UpdateUserData {
   role?: string;
   department?: string;
   phone?: string;
+  position?: string;
+  employee_id?: string;
+  hire_date?: string;
+  contract_type?: string;
+  manager_id?: string;
+  working_hours_per_day?: number;
+  annual_leave_days?: number;
   isActive?: boolean;
 }

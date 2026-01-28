@@ -14,6 +14,7 @@ export enum TicketStatus {
   IN_PROGRESS = 'in_progress',
   WAITING_RESPONSE = 'waiting_response',
   RESOLVED = 'resolved',
+  REJECTED = 'rejected',
   CLOSED = 'closed',
 }
 
@@ -22,6 +23,19 @@ export enum TicketPriority {
   NORMAL = 'normal',
   HIGH = 'high',
   URGENT = 'urgent',
+}
+
+export interface TicketAttachment {
+  id: string;
+  ticket_id: string;
+  file_name: string;
+  original_name: string;
+  file_type: string;
+  file_size: number;
+  file_url: string;
+  uploaded_by?: string;
+  uploader?: User;
+  created_at: string;
 }
 
 export interface Ticket {
@@ -41,6 +55,7 @@ export interface Ticket {
   creator?: User;
   assignee?: User;
   project?: Project;
+  attachments?: TicketAttachment[];
   created_at: string;
   updated_at: string;
 }

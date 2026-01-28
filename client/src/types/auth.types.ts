@@ -15,6 +15,14 @@ export interface User {
   phone: string | null;
   is_active: boolean;
   last_login: string | null;
+  // Employee fields
+  employee_id: string | null;
+  position: string | null;
+  hire_date: string | null;
+  contract_type: string | null;
+  manager_id: string | null;
+  working_hours_per_day: number;
+  annual_leave_days: number;
   created_at: string;
   updated_at: string;
 }

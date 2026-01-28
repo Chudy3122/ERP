@@ -125,6 +125,55 @@ export class ActivityService {
 
     return result.affected || 0;
   }
+
+  /**
+   * Get activities with filters
+   */
+  async getActivities(filters: {
+    entityType?: string;
+    entityId?: string;
+    userId?: string;
+    limit?: number;
+  }): Promise<ActivityLog[]> {
+    const queryBuilder = this.activityLogRepository
+      .createQueryBuilder('activity')
+      .leftJoinAndSelect('activity.user', 'user')
+      .orderBy('activity.created_at', 'DESC');
+
+    if (filters.entityType) {
+      queryBuilder.andWhere('activity.entity_type = :entityType', { entityType: filters.entityType });
+    }
+
+    if (filters.entityId) {
+      queryBuilder.andWhere('activity.entity_id = :entityId', { entityId: filters.entityId });
+    }
+
+    if (filters.userId) {
+      queryBuilder.andWhere('activity.user_id = :userId', { userId: filters.userId });
+    }
+
+    if (filters.limit) {
+      queryBuilder.take(filters.limit);
+    }
+
+    return await queryBuilder.getMany();
+  }
+
+  /**
+   * Get activities for multiple entities
+   */
+  async getActivitiesForEntities(entityType: string, entityIds: string[], limit: number = 50): Promise<ActivityLog[]> {
+    if (entityIds.length === 0) return [];
+
+    return await this.activityLogRepository
+      .createQueryBuilder('activity')
+      .leftJoinAndSelect('activity.user', 'user')
+      .where('activity.entity_type = :entityType', { entityType })
+      .andWhere('activity.entity_id IN (:...entityIds)', { entityIds })
+      .orderBy('activity.created_at', 'DESC')
+      .take(limit)
+      .getMany();
+  }
 }
 
 export default new ActivityService();

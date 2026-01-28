@@ -1,6 +1,19 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const SERVER_BASE_URL = API_BASE_URL.replace('/api', '');
+
+/**
+ * Get full URL for static files (uploads, avatars, etc.)
+ * Converts relative paths like /uploads/avatars/file.jpg to full URLs
+ */
+export const getFileUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  return `${SERVER_BASE_URL}${path}`;
+};
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({

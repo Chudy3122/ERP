@@ -211,6 +211,58 @@ export class TaskController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  /**
+   * Upload attachments to task
+   * POST /api/tasks/:id/attachments
+   */
+  async uploadAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        res.status(400).json({ message: 'No files uploaded' });
+        return;
+      }
+
+      const attachments = await taskService.uploadAttachments(id, files, userId);
+      res.status(201).json(attachments);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get task attachments
+   * GET /api/tasks/:id/attachments
+   */
+  async getAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const attachments = await taskService.getTaskAttachments(id);
+      res.json(attachments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Delete task attachment
+   * DELETE /api/tasks/:id/attachments/:attachmentId
+   */
+  async deleteAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, attachmentId } = req.params;
+      const userId = req.user!.userId;
+
+      await taskService.deleteAttachment(id, attachmentId, userId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 export default new TaskController();

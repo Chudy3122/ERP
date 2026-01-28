@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import taskController from '../controllers/task.controller';
+import { workLogController } from '../controllers/worklog.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
+import { upload } from '../config/multer';
 
 const router = Router();
 
@@ -31,5 +33,13 @@ router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), taskC
 // Task actions
 router.put('/:id/assign', taskController.assignTask.bind(taskController));
 router.put('/:id/status', taskController.updateTaskStatus.bind(taskController));
+
+// Task attachments
+router.post('/:id/attachments', upload.array('files', 10), taskController.uploadAttachments.bind(taskController));
+router.get('/:id/attachments', taskController.getAttachments.bind(taskController));
+router.delete('/:id/attachments/:attachmentId', taskController.deleteAttachment.bind(taskController));
+
+// Task work logs
+router.get('/:taskId/work-logs', workLogController.getTaskWorkLogs.bind(workLogController));
 
 export default router;

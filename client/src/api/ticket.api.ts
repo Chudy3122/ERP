@@ -2,6 +2,7 @@ import { client } from './client';
 import {
   Ticket,
   TicketComment,
+  TicketAttachment,
   CreateTicketRequest,
   UpdateTicketRequest,
   TicketStatus,
@@ -71,4 +72,34 @@ export const getTicketComments = async (ticketId: string, includeInternal: boole
 export const getTicketStatistics = async (): Promise<TicketStatistics> => {
   const response = await client.get('/tickets/statistics');
   return response.data;
+};
+
+// Attachment API
+export const uploadTicketAttachments = async (
+  ticketId: string,
+  files: File[]
+): Promise<TicketAttachment[]> => {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  const response = await client.post(`/tickets/${ticketId}/attachments`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const getTicketAttachments = async (ticketId: string): Promise<TicketAttachment[]> => {
+  const response = await client.get(`/tickets/${ticketId}/attachments`);
+  return response.data;
+};
+
+export const deleteTicketAttachment = async (
+  ticketId: string,
+  attachmentId: string
+): Promise<void> => {
+  await client.delete(`/tickets/${ticketId}/attachments/${attachmentId}`);
 };

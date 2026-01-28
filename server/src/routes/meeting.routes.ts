@@ -1,11 +1,20 @@
 import { Router } from 'express';
 import meetingController from '../controllers/meeting.controller';
+import scheduledMeetingController from '../controllers/scheduledMeeting.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
 // All meeting routes require authentication
 router.use(authenticate);
+
+// Scheduled meetings routes (must be before /:id routes)
+router.get('/scheduled', scheduledMeetingController.getScheduledMeetings.bind(scheduledMeetingController));
+router.post('/scheduled', scheduledMeetingController.createScheduledMeeting.bind(scheduledMeetingController));
+router.get('/scheduled/upcoming', scheduledMeetingController.getUpcomingMeetings.bind(scheduledMeetingController));
+router.get('/scheduled/:id', scheduledMeetingController.getScheduledMeetingById.bind(scheduledMeetingController));
+router.put('/scheduled/:id', scheduledMeetingController.updateScheduledMeeting.bind(scheduledMeetingController));
+router.delete('/scheduled/:id', scheduledMeetingController.deleteScheduledMeeting.bind(scheduledMeetingController));
 
 // Create meeting
 router.post('/', meetingController.createMeeting.bind(meetingController));

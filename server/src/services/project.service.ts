@@ -1,9 +1,13 @@
 import { AppDataSource } from '../config/database';
 import { Project, ProjectStatus, ProjectPriority } from '../models/Project.model';
 import { ProjectMember, ProjectMemberRole } from '../models/ProjectMember.model';
+import { ProjectAttachment } from '../models/ProjectAttachment.model';
+import { Task } from '../models/Task.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
 import { IsNull } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface CreateProjectDto {
   name: string;
@@ -33,6 +37,8 @@ interface UpdateProjectDto {
 export class ProjectService {
   private projectRepository = AppDataSource.getRepository(Project);
   private projectMemberRepository = AppDataSource.getRepository(ProjectMember);
+  private projectAttachmentRepository = AppDataSource.getRepository(ProjectAttachment);
+  private taskRepository = AppDataSource.getRepository(Task);
   private userRepository = AppDataSource.getRepository(User);
 
   /**
@@ -118,15 +124,52 @@ export class ProjectService {
   }
 
   /**
-   * Get user's projects (where user is member or manager)
+   * Get user's projects (where user is member, manager, or creator)
+   * Admins and team leaders see all non-archived projects
    */
   async getUserProjects(userId: string): Promise<Project[]> {
+    // Check if user is admin or team leader
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (user && (user.role === 'admin' || user.role === 'team_leader')) {
+      // Admins and team leaders see all non-archived projects
+      return this.projectRepository.find({
+        where: { is_archived: false },
+        relations: ['creator', 'manager'],
+        order: { name: 'ASC' },
+      });
+    }
+
+    // For regular users, get projects where they are:
+    // 1. A member
+    // 2. The creator
+    // 3. The manager
     const projectMembers = await this.projectMemberRepository.find({
       where: { user_id: userId, left_at: IsNull() },
       relations: ['project', 'project.creator', 'project.manager'],
     });
 
-    return projectMembers.map((pm) => pm.project);
+    const memberProjectIds = new Set(projectMembers.map((pm) => pm.project.id));
+
+    // Also get projects where user is creator or manager
+    const ownedProjects = await this.projectRepository.find({
+      where: [
+        { created_by: userId },
+        { manager_id: userId },
+      ],
+      relations: ['creator', 'manager'],
+    });
+
+    // Merge and deduplicate
+    const allProjects = [...projectMembers.map((pm) => pm.project)];
+    for (const project of ownedProjects) {
+      if (!memberProjectIds.has(project.id)) {
+        allProjects.push(project);
+      }
+    }
+
+    // Sort by name
+    return allProjects.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**
@@ -301,13 +344,143 @@ export class ProjectService {
     const project = await this.getProjectById(projectId);
     const members = await this.getProjectMembers(projectId);
 
-    // TODO: Add task statistics when task service is ready
+    // Get task statistics
+    const tasks = await this.taskRepository.find({
+      where: { project_id: projectId },
+    });
+
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'done').length;
+    const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
+    const todoTasks = tasks.filter(t => t.status === 'todo').length;
+    const blockedTasks = tasks.filter(t => t.status === 'blocked').length;
+    const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     return {
-      project,
-      memberCount: members.length,
-      members,
+      total_tasks: totalTasks,
+      completed_tasks: completedTasks,
+      in_progress_tasks: inProgressTasks,
+      todo_tasks: todoTasks,
+      blocked_tasks: blockedTasks,
+      total_members: members.length,
+      completion_percentage: completionPercentage,
     };
+  }
+
+  /**
+   * Upload project attachments
+   */
+  async uploadAttachments(
+    projectId: string,
+    files: Express.Multer.File[],
+    userId: string
+  ): Promise<ProjectAttachment[]> {
+    const attachments: ProjectAttachment[] = [];
+
+    for (const file of files) {
+      const attachment = this.projectAttachmentRepository.create({
+        project_id: projectId,
+        file_name: file.filename,
+        original_name: file.originalname,
+        file_type: file.mimetype,
+        file_size: file.size,
+        file_url: `/uploads/${file.filename}`,
+        uploaded_by: userId,
+      });
+
+      attachments.push(await this.projectAttachmentRepository.save(attachment));
+    }
+
+    // Log activity
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const project = await this.getProjectById(projectId);
+    if (user) {
+      await activityService.logActivity(
+        userId,
+        'uploaded_project_files',
+        'project',
+        projectId,
+        `${user.first_name} ${user.last_name} dodał ${files.length} plik(ów) do projektu "${project.name}"`,
+        { file_count: files.length }
+      );
+    }
+
+    return attachments;
+  }
+
+  /**
+   * Get project attachments
+   */
+  async getProjectAttachments(projectId: string): Promise<ProjectAttachment[]> {
+    return await this.projectAttachmentRepository.find({
+      where: { project_id: projectId },
+      relations: ['uploader'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  /**
+   * Delete project attachment
+   */
+  async deleteAttachment(attachmentId: string, userId: string): Promise<void> {
+    const attachment = await this.projectAttachmentRepository.findOne({
+      where: { id: attachmentId },
+      relations: ['project'],
+    });
+
+    if (!attachment) {
+      throw new Error('Attachment not found');
+    }
+
+    // Delete file from disk
+    const filePath = path.join(process.cwd(), 'uploads', attachment.file_name);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    await this.projectAttachmentRepository.remove(attachment);
+
+    // Log activity
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user && attachment.project) {
+      await activityService.logActivity(
+        userId,
+        'deleted_project_file',
+        'project',
+        attachment.project_id,
+        `${user.first_name} ${user.last_name} usunął plik "${attachment.original_name}" z projektu "${attachment.project.name}"`,
+        { file_name: attachment.original_name }
+      );
+    }
+  }
+
+  /**
+   * Get project activity/history
+   */
+  async getProjectActivity(projectId: string, limit: number = 50): Promise<any[]> {
+    const activities = await activityService.getActivities({
+      entityType: 'project',
+      entityId: projectId,
+      limit,
+    });
+
+    // Also get task activities for this project
+    const tasks = await this.taskRepository.find({
+      where: { project_id: projectId },
+      select: ['id'],
+    });
+
+    const taskIds = tasks.map(t => t.id);
+
+    if (taskIds.length > 0) {
+      const taskActivities = await activityService.getActivitiesForEntities('task', taskIds, limit);
+      activities.push(...taskActivities);
+    }
+
+    // Sort by date and limit
+    return activities
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
   }
 }
 

@@ -6,13 +6,14 @@ import type { User } from '../../types/auth.types';
 import CreateChannelModal from './CreateChannelModal';
 import ChannelSettingsModal from './ChannelSettingsModal';
 import * as chatApi from '../../api/chat.api';
+import { getFileUrl } from '../../api/axios-config';
 
 interface ChatListProps {
   onSelectChannel?: (channel: Channel) => void;
 }
 
 const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
-  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById, isUserOnline, getUserStatus } = useChatContext();
+  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById, getUserStatus } = useChatContext();
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -177,7 +178,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
                 >
                   {channel.type === 'direct' && otherMember?.user?.avatar_url ? (
                     <img
-                      src={otherMember.user.avatar_url}
+                      src={getFileUrl(otherMember.user.avatar_url) || ''}
                       alt=""
                       className="w-full h-full rounded-full object-cover"
                     />

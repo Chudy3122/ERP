@@ -3,6 +3,7 @@ import authRoutes from './auth.routes';
 import chatRoutes from './chat.routes';
 import fileRoutes from './file.routes';
 import timeRoutes from './time.routes';
+import userRoutes from './user.routes';
 import userStatusRoutes from './userStatus.routes';
 import notificationRoutes from './notification.routes';
 import notificationPreferenceRoutes from './notificationPreference.routes';
@@ -11,10 +12,12 @@ import reportRoutes from './report.routes';
 import calendarRoutes from './calendar.routes';
 import meetingRoutes from './meeting.routes';
 import projectRoutes from './project.routes';
+import projectStageRoutes from './projectStage.routes';
 import taskRoutes from './task.routes';
 import ticketRoutes from './ticket.routes';
 import activityRoutes from './activity.routes';
 import aiRoutes from './ai.routes';
+import workLogRoutes from './worklog.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -30,6 +33,9 @@ router.use('/files', fileRoutes);
 
 // Time management routes
 router.use('/time', timeRoutes);
+
+// User routes (profile, avatar)
+router.use('/users', userRoutes);
 
 // User status routes
 router.use('/status', userStatusRoutes);
@@ -55,6 +61,9 @@ router.use('/meetings', meetingRoutes);
 // Project management routes
 router.use('/projects', projectRoutes);
 
+// Project stages routes (mounted at root since routes include /projects/:id/stages)
+router.use('/', projectStageRoutes);
+
 // Task routes
 router.use('/tasks', taskRoutes);
 
@@ -66,6 +75,9 @@ router.use('/activities', activityRoutes);
 
 // AI Assistant routes
 router.use('/ai', aiRoutes);
+
+// Work log routes
+router.use('/work-logs', workLogRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

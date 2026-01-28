@@ -1,7 +1,9 @@
 import { AppDataSource } from '../config/database';
 import { Task, TaskStatus, TaskPriority } from '../models/Task.model';
+import { TaskAttachment } from '../models/TaskAttachment.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
+import { deleteFile } from '../config/multer';
 import { Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 
 interface CreateTaskDto {
@@ -14,6 +16,7 @@ interface CreateTaskDto {
   estimated_hours?: number;
   due_date?: Date;
   parent_task_id?: string;
+  stage_id?: string;
 }
 
 interface UpdateTaskDto {
@@ -27,10 +30,12 @@ interface UpdateTaskDto {
   due_date?: Date;
   completed_at?: Date;
   order_index?: number;
+  stage_id?: string | null;
 }
 
 export class TaskService {
   private taskRepository = AppDataSource.getRepository(Task);
+  private taskAttachmentRepository = AppDataSource.getRepository(TaskAttachment);
   private userRepository = AppDataSource.getRepository(User);
 
   /**
@@ -132,13 +137,29 @@ export class TaskService {
   }
 
   /**
-   * Get user's tasks
+   * Get user's tasks (assigned to them OR created by them)
    */
   async getUserTasks(userId: string, filters?: {
     status?: TaskStatus;
     priority?: TaskPriority;
   }): Promise<Task[]> {
-    return await this.getAllTasks({ assignedTo: userId, ...filters });
+    const queryBuilder = this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.project', 'project')
+      .leftJoinAndSelect('task.assignee', 'assignee')
+      .leftJoinAndSelect('task.creator', 'creator')
+      .where('(task.assigned_to = :userId OR task.created_by = :userId)', { userId })
+      .orderBy('task.created_at', 'DESC');
+
+    if (filters?.status) {
+      queryBuilder.andWhere('task.status = :status', { status: filters.status });
+    }
+
+    if (filters?.priority) {
+      queryBuilder.andWhere('task.priority = :priority', { priority: filters.priority });
+    }
+
+    return queryBuilder.getMany();
   }
 
   /**
@@ -340,6 +361,100 @@ export class TaskService {
     });
 
     return grouped;
+  }
+
+  /**
+   * Upload attachments to task
+   */
+  async uploadAttachments(
+    taskId: string,
+    files: Express.Multer.File[],
+    userId: string
+  ): Promise<TaskAttachment[]> {
+    // Verify task exists
+    await this.getTaskById(taskId);
+
+    const attachments: TaskAttachment[] = [];
+
+    for (const file of files) {
+      const attachment = this.taskAttachmentRepository.create({
+        task_id: taskId,
+        file_name: file.filename,
+        original_name: file.originalname,
+        file_type: file.mimetype,
+        file_size: file.size,
+        file_url: `/uploads/attachments/${file.filename}`,
+        uploaded_by: userId,
+      });
+
+      const savedAttachment = await this.taskAttachmentRepository.save(attachment);
+      attachments.push(savedAttachment);
+    }
+
+    // Log activity
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const task = await this.getTaskById(taskId);
+
+    if (user) {
+      await activityService.logActivity(
+        userId,
+        'uploaded_task_attachment',
+        'task',
+        taskId,
+        `${user.first_name} ${user.last_name} dodał ${files.length} załącznik(ów) do zadania "${task.title}"`,
+        { file_count: files.length }
+      );
+    }
+
+    return attachments;
+  }
+
+  /**
+   * Get task attachments
+   */
+  async getTaskAttachments(taskId: string): Promise<TaskAttachment[]> {
+    return await this.taskAttachmentRepository.find({
+      where: { task_id: taskId },
+      relations: ['uploader'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  /**
+   * Delete task attachment
+   */
+  async deleteAttachment(taskId: string, attachmentId: string, userId: string): Promise<void> {
+    const attachment = await this.taskAttachmentRepository.findOne({
+      where: { id: attachmentId, task_id: taskId },
+    });
+
+    if (!attachment) {
+      throw new Error('Attachment not found');
+    }
+
+    // Delete file from disk
+    try {
+      await deleteFile(attachment.file_name);
+    } catch (error) {
+      console.error('Failed to delete file from disk:', error);
+    }
+
+    await this.taskAttachmentRepository.remove(attachment);
+
+    // Log activity
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const task = await this.getTaskById(taskId);
+
+    if (user) {
+      await activityService.logActivity(
+        userId,
+        'deleted_task_attachment',
+        'task',
+        taskId,
+        `${user.first_name} ${user.last_name} usunął załącznik "${attachment.original_name}" z zadania "${task.title}"`,
+        { file_name: attachment.original_name }
+      );
+    }
   }
 }
 

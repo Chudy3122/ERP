@@ -1,8 +1,10 @@
 import { AppDataSource } from '../config/database';
 import { Ticket, TicketStatus, TicketType, TicketPriority } from '../models/Ticket.model';
 import { TicketComment } from '../models/TicketComment.model';
+import { TicketAttachment } from '../models/TicketAttachment.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
+import { deleteFile } from '../config/multer';
 
 interface CreateTicketDto {
   title: string;
@@ -27,6 +29,7 @@ interface UpdateTicketDto {
 export class TicketService {
   private ticketRepository = AppDataSource.getRepository(Ticket);
   private ticketCommentRepository = AppDataSource.getRepository(TicketComment);
+  private ticketAttachmentRepository = AppDataSource.getRepository(TicketAttachment);
   private userRepository = AppDataSource.getRepository(User);
 
   /**
@@ -350,11 +353,13 @@ export class TicketService {
    * Get ticket statistics
    */
   async getTicketStatistics(): Promise<any> {
-    const [total, open, inProgress, resolved, closed] = await Promise.all([
+    const [total, open, inProgress, waitingResponse, resolved, rejected, closed] = await Promise.all([
       this.ticketRepository.count(),
       this.ticketRepository.count({ where: { status: TicketStatus.OPEN } }),
       this.ticketRepository.count({ where: { status: TicketStatus.IN_PROGRESS } }),
+      this.ticketRepository.count({ where: { status: TicketStatus.WAITING_RESPONSE } }),
       this.ticketRepository.count({ where: { status: TicketStatus.RESOLVED } }),
+      this.ticketRepository.count({ where: { status: TicketStatus.REJECTED } }),
       this.ticketRepository.count({ where: { status: TicketStatus.CLOSED } }),
     ]);
 
@@ -362,9 +367,105 @@ export class TicketService {
       total,
       open,
       inProgress,
+      waitingResponse,
       resolved,
+      rejected,
       closed,
     };
+  }
+
+  /**
+   * Upload attachments to ticket
+   */
+  async uploadAttachments(
+    ticketId: string,
+    files: Express.Multer.File[],
+    userId: string
+  ): Promise<TicketAttachment[]> {
+    // Verify ticket exists
+    await this.getTicketById(ticketId);
+
+    const attachments: TicketAttachment[] = [];
+
+    for (const file of files) {
+      const attachment = this.ticketAttachmentRepository.create({
+        ticket_id: ticketId,
+        file_name: file.filename,
+        original_name: file.originalname,
+        file_type: file.mimetype,
+        file_size: file.size,
+        file_url: `/uploads/attachments/${file.filename}`,
+        uploaded_by: userId,
+      });
+
+      const savedAttachment = await this.ticketAttachmentRepository.save(attachment);
+      attachments.push(savedAttachment);
+    }
+
+    // Log activity
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const ticket = await this.getTicketById(ticketId);
+
+    if (user) {
+      await activityService.logActivity(
+        userId,
+        'uploaded_ticket_attachment',
+        'ticket',
+        ticketId,
+        `${user.first_name} ${user.last_name} dodał ${files.length} załącznik(ów) do zgłoszenia "${ticket.ticket_number}"`,
+        { file_count: files.length }
+      );
+    }
+
+    return attachments;
+  }
+
+  /**
+   * Get ticket attachments
+   */
+  async getTicketAttachments(ticketId: string): Promise<TicketAttachment[]> {
+    return await this.ticketAttachmentRepository.find({
+      where: { ticket_id: ticketId },
+      relations: ['uploader'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  /**
+   * Delete ticket attachment
+   */
+  async deleteAttachment(ticketId: string, attachmentId: string, userId: string): Promise<void> {
+    const attachment = await this.ticketAttachmentRepository.findOne({
+      where: { id: attachmentId, ticket_id: ticketId },
+    });
+
+    if (!attachment) {
+      throw new Error('Attachment not found');
+    }
+
+    // Delete file from disk
+    try {
+      await deleteFile(attachment.file_name);
+    } catch (error) {
+      console.error('Failed to delete file from disk:', error);
+    }
+
+    await this.ticketAttachmentRepository.remove(attachment);
+
+    // Log activity
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const ticket = await this.getTicketById(ticketId);
+
+    if (user) {
+      await activityService.logActivity(
+        userId,
+        'deleted_ticket_attachment',
+        'ticket',
+        ticketId,
+        `${user.first_name} ${user.last_name} usunął załącznik "${attachment.original_name}" ze zgłoszenia "${ticket.ticket_number}"`,
+        { file_name: attachment.original_name }
+      );
+    }
   }
 }
 

@@ -10,7 +10,9 @@ import {
   BaseEntity,
 } from 'typeorm';
 import { Project } from './Project.model';
+import { ProjectStage } from './ProjectStage.model';
 import { User } from './User.model';
+import { TaskAttachment } from './TaskAttachment.model';
 
 export enum TaskStatus {
   TODO = 'todo',
@@ -34,6 +36,9 @@ export class Task extends BaseEntity {
 
   @Column({ type: 'uuid' })
   project_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  stage_id: string;
 
   @Column({ length: 255 })
   title: string;
@@ -83,6 +88,10 @@ export class Task extends BaseEntity {
   @JoinColumn({ name: 'project_id' })
   project: Project;
 
+  @ManyToOne(() => ProjectStage, stage => stage.tasks, { nullable: true })
+  @JoinColumn({ name: 'stage_id' })
+  stage: ProjectStage;
+
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'assigned_to' })
   assignee: User;
@@ -97,6 +106,9 @@ export class Task extends BaseEntity {
 
   @OneToMany(() => Task, (task) => task.parent)
   subtasks: Task[];
+
+  @OneToMany(() => TaskAttachment, attachment => attachment.task, { eager: true })
+  attachments: TaskAttachment[];
 
   @CreateDateColumn()
   created_at: Date;

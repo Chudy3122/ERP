@@ -16,12 +16,15 @@ import Reports from '../pages/Reports';
 import NotificationSettings from '../pages/NotificationSettings';
 import Projects from '../pages/Projects';
 import ProjectForm from '../pages/ProjectForm';
+import ProjectDetail from '../pages/ProjectDetail';
 import Tasks from '../pages/Tasks';
 import TaskForm from '../pages/TaskForm';
 import Tickets from '../pages/Tickets';
 import TicketForm from '../pages/TicketForm';
 import Absences from '../pages/Absences';
 import Employees from '../pages/Employees';
+import EmployeeDetail from '../pages/EmployeeDetail';
+import Profile from '../pages/Profile';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -113,6 +116,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/projects/:id"
+        element={
+          <PrivateRoute>
+            <ProjectDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/tasks"
         element={
           <PrivateRoute>
@@ -169,6 +180,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/employees/:id"
+        element={
+          <PrivateRoute>
+            <EmployeeDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/admin"
         element={
           <PrivateRoute>
@@ -205,6 +224,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <NotificationSettings />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <Profile />
           </PrivateRoute>
         }
       />

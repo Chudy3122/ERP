@@ -3,6 +3,7 @@ import ticketController from '../controllers/ticket.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
+import { upload } from '../config/multer';
 
 const router = Router();
 
@@ -30,5 +31,10 @@ router.put('/:id/status', ticketController.updateTicketStatus.bind(ticketControl
 // Ticket comments
 router.post('/:id/comments', ticketController.addTicketComment.bind(ticketController));
 router.get('/:id/comments', ticketController.getTicketComments.bind(ticketController));
+
+// Ticket attachments
+router.post('/:id/attachments', upload.array('files', 10) as any, ticketController.uploadAttachments.bind(ticketController));
+router.get('/:id/attachments', ticketController.getAttachments.bind(ticketController));
+router.delete('/:id/attachments/:attachmentId', ticketController.deleteAttachment.bind(ticketController));
 
 export default router;

@@ -107,7 +107,22 @@ class AdminController {
   async updateUser(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { email, firstName, lastName, role, department, phone, isActive } = req.body;
+      const {
+        email,
+        firstName,
+        lastName,
+        role,
+        department,
+        phone,
+        position,
+        employee_id,
+        hire_date,
+        contract_type,
+        manager_id,
+        working_hours_per_day,
+        annual_leave_days,
+        isActive,
+      } = req.body;
 
       const user = await adminService.updateUser(id, {
         email,
@@ -116,6 +131,13 @@ class AdminController {
         role,
         department,
         phone,
+        position,
+        employee_id,
+        hire_date,
+        contract_type,
+        manager_id,
+        working_hours_per_day,
+        annual_leave_days,
         isActive,
       });
 

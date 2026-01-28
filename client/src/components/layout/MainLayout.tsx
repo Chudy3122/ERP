@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import StatusSelector from '../status/StatusSelector';
 import AIAssistant from '../helpdesk/AIAssistant';
 import * as notificationApi from '../../api/notification.api';
+import { getFileUrl } from '../../api/axios-config';
 import {
   Home,
   MessageSquare,
@@ -25,6 +26,7 @@ import {
   Bell,
   ChevronDown,
   Check,
+  User,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -254,7 +256,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                  <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
                 ) : (
                   getInitials(user.first_name, user.last_name)
                 )}
@@ -410,7 +412,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                 >
                   <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
                     {user.avatar_url ? (
-                      <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                      <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
                     ) : (
                       getInitials(user.first_name, user.last_name)
                     )}
@@ -437,7 +439,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-semibold">
                             {user.avatar_url ? (
-                              <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                              <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
                             ) : (
                               getInitials(user.first_name, user.last_name)
                             )}
@@ -459,6 +461,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
                       {/* Menu Items */}
                       <div className="py-2">
+                        <Link
+                          to="/profile"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <User className="w-4 h-4" />
+                          Mój profil
+                        </Link>
                         <Link
                           to="/notification-settings"
                           onClick={() => setUserDropdownOpen(false)}

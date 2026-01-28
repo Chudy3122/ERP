@@ -151,6 +151,66 @@ export const endMeeting = async (meetingId: string): Promise<void> => {
   await apiClient.post(`/meetings/${meetingId}/end`);
 };
 
+// Scheduled meetings types and API
+
+export type ScheduledMeetingPlatform = 'internal' | 'teams' | 'zoom' | 'google_meet';
+
+export interface ScheduledMeeting {
+  id: string;
+  title: string;
+  description?: string;
+  platform: ScheduledMeetingPlatform;
+  meeting_link?: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  duration_minutes: number;
+  participants: { id: string; name: string }[];
+  created_by: string;
+  created_at: string;
+}
+
+export interface ScheduleExternalMeetingRequest {
+  title: string;
+  description?: string;
+  platform: ScheduledMeetingPlatform;
+  meeting_link?: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  duration_minutes: number;
+  participant_ids: string[];
+}
+
+/**
+ * Get all scheduled meetings for the user
+ */
+export const getScheduledMeetings = async (): Promise<ScheduledMeeting[]> => {
+  const response = await apiClient.get('/meetings/scheduled');
+  return response.data;
+};
+
+/**
+ * Schedule an external meeting (Teams, Zoom, Google Meet)
+ */
+export const scheduleExternalMeeting = async (data: ScheduleExternalMeetingRequest): Promise<ScheduledMeeting> => {
+  const response = await apiClient.post('/meetings/scheduled', data);
+  return response.data;
+};
+
+/**
+ * Update a scheduled meeting
+ */
+export const updateScheduledMeeting = async (id: string, data: Partial<ScheduleExternalMeetingRequest>): Promise<ScheduledMeeting> => {
+  const response = await apiClient.put(`/meetings/scheduled/${id}`, data);
+  return response.data;
+};
+
+/**
+ * Delete a scheduled meeting
+ */
+export const deleteScheduledMeeting = async (id: string): Promise<void> => {
+  await apiClient.delete(`/meetings/scheduled/${id}`);
+};
+
 export default {
   generateMeetingLink,
   validateMeetingUrl,
@@ -162,4 +222,8 @@ export default {
   joinMeeting,
   leaveMeeting,
   endMeeting,
+  getScheduledMeetings,
+  scheduleExternalMeeting,
+  updateScheduledMeeting,
+  deleteScheduledMeeting,
 };

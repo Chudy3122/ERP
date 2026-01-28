@@ -1,5 +1,5 @@
 import { client } from './client';
-import { Task, CreateTaskRequest, UpdateTaskRequest, TaskStatus } from '../types/task.types';
+import { Task, TaskAttachment, CreateTaskRequest, UpdateTaskRequest, TaskStatus } from '../types/task.types';
 
 export const getTasks = async (filters?: any): Promise<Task[]> => {
   const response = await client.get('/tasks', { params: filters });
@@ -63,4 +63,23 @@ export const updateTaskStatus = async (taskId: string, status: TaskStatus): Prom
 
 export const deleteTask = async (id: string): Promise<void> => {
   await client.delete(`/tasks/${id}`);
+};
+
+// Task Attachments
+export const uploadTaskAttachments = async (taskId: string, files: File[]): Promise<TaskAttachment[]> => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('files', file));
+  const response = await client.post(`/tasks/${taskId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const getTaskAttachments = async (taskId: string): Promise<TaskAttachment[]> => {
+  const response = await client.get(`/tasks/${taskId}/attachments`);
+  return response.data;
+};
+
+export const deleteTaskAttachment = async (taskId: string, attachmentId: string): Promise<void> => {
+  await client.delete(`/tasks/${taskId}/attachments/${attachmentId}`);
 };
