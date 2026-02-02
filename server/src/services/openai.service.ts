@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 const SYSTEM_PROMPT = `Jesteś pomocnym asystentem AI systemu ERP (Enterprise Resource Planning). Twoja rola to pomaganie użytkownikom w obsłudze systemu.
 
@@ -30,6 +30,9 @@ export interface ChatMessage {
 
 export class OpenAIService {
   async chat(messages: ChatMessage[]): Promise<string> {
+    if (!openai) {
+      throw new Error('OpenAI API key is not configured');
+    }
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
