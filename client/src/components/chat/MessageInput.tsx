@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import FileUpload from './FileUpload';
 import * as fileApi from '../../api/file.api';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -18,6 +19,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   disabled = false,
   onFileUploaded,
 }) => {
+  const { t } = useTranslation();
   const { activeChannel, loadMessages } = useChatContext();
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -125,7 +127,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         }
       } catch (error) {
         console.error('Failed to upload files:', error);
-        alert('Nie udało się przesłać plików');
+        alert(t('chat:uploadError'));
       } finally {
         setIsUploading(false);
       }
@@ -144,7 +146,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
+    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       {/* Selected files preview */}
       {selectedFiles.length > 0 && (
         <div className="mb-3 space-y-2">
@@ -155,7 +157,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <div key={index}>
                 {isImageFile ? (
                   // Image preview with thumbnail
-                  <div className="relative rounded-md overflow-hidden border border-gray-200 bg-gray-50 shadow-sm">
+                  <div className="relative rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shadow-sm">
                     <img
                       src={getImagePreviewUrl(file)}
                       alt={file.name}
@@ -235,7 +237,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             placeholder={placeholder}
             disabled={disabled || isUploading}
             rows={1}
-            className="w-full resize-none border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed max-h-32 overflow-y-auto"
+            className="w-full resize-none border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed max-h-32 overflow-y-auto"
             style={{ minHeight: '48px' }}
           />
         </div>
@@ -244,7 +246,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <button
           onClick={handleSend}
           disabled={(!content.trim() && selectedFiles.length === 0) || disabled || isUploading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold min-w-[100px] flex items-center justify-center"
+          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-semibold min-w-[100px] flex items-center justify-center"
         >
           {isUploading ? (
             <span className="flex items-center gap-2">
@@ -264,11 +266,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <span className="hidden sm:inline">Wysyłanie...</span>
+              <span className="hidden sm:inline">{t('chat:sending')}</span>
             </span>
           ) : (
             <span className="flex items-center gap-2">
-              <span>Wyślij</span>
+              <span>{t('chat:send')}</span>
               <span className="text-lg">→</span>
             </span>
           )}
@@ -276,14 +278,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
       </div>
 
       {/* Helper text - Modern styling */}
-      <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+      <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1.5">
-          <kbd className="px-2 py-1 bg-white rounded-lg border border-gray-300 shadow-sm font-medium">Enter</kbd>
-          <span>wyślij</span>
+          <kbd className="px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 dark:text-gray-300 shadow-sm font-medium">Enter</kbd>
+          <span>{t('chat:enterSend')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <kbd className="px-2 py-1 bg-white rounded-lg border border-gray-300 shadow-sm font-medium">Shift+Enter</kbd>
-          <span>nowa linia</span>
+          <kbd className="px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 dark:text-gray-300 shadow-sm font-medium">Shift+Enter</kbd>
+          <span>{t('chat:shiftEnterNewLine')}</span>
         </div>
       </div>
     </div>

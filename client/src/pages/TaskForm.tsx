@@ -449,18 +449,18 @@ const TaskForm = () => {
       <div className="mb-6 flex items-center gap-4">
         <button
           onClick={() => navigate('/tasks')}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}
           </h1>
           {isEdit && task && (
             <div className="flex items-center gap-2 mt-1">
               {task.project && (
-                <span className="text-sm text-gray-500 flex items-center gap-1">
+                <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <FolderOpen className="w-4 h-4" />
                   {task.project.name}
                 </span>
@@ -472,7 +472,7 @@ const TaskForm = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
@@ -481,15 +481,15 @@ const TaskForm = () => {
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Info Card */}
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Informacje podstawowe</h2>
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Informacje podstawowe</h2>
             </div>
 
             <div className="p-6 space-y-6">
               {/* Task Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Tytuł zadania *
                 </label>
                 <input
@@ -499,14 +499,14 @@ const TaskForm = () => {
                   value={formData.title}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 text-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-lg"
                   placeholder="np. Implementacja modułu logowania"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Opis zadania
                 </label>
                 <textarea
@@ -515,7 +515,7 @@ const TaskForm = () => {
                   value={formData.description}
                   onChange={handleChange}
                   rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   placeholder="Opisz szczegóły zadania..."
                 />
               </div>
@@ -523,7 +523,7 @@ const TaskForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Project */}
                 <div>
-                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Projekt *
                   </label>
                   <select
@@ -532,7 +532,7 @@ const TaskForm = () => {
                     value={formData.project_id}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Wybierz projekt</option>
                     {projects.map((project) => (
@@ -545,7 +545,7 @@ const TaskForm = () => {
 
                 {/* Assignee */}
                 <div>
-                  <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Przypisana osoba
                   </label>
                   <select
@@ -553,7 +553,7 @@ const TaskForm = () => {
                     name="assigned_to"
                     value={formData.assigned_to || ''}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Nieprzypisane</option>
                     {users.map((u) => (
@@ -567,7 +567,7 @@ const TaskForm = () => {
                 {/* Status (only visible when not editing - in edit mode it's in sidebar) */}
                 {!isEdit && (
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Status
                     </label>
                     <select
@@ -575,7 +575,7 @@ const TaskForm = () => {
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                     >
                       {allStatuses.map((status) => (
                         <option key={status} value={status}>
@@ -588,7 +588,7 @@ const TaskForm = () => {
 
                 {/* Priority */}
                 <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Priorytet
                   </label>
                   <select
@@ -596,7 +596,7 @@ const TaskForm = () => {
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="low">Niski</option>
                     <option value="medium">Średni</option>
@@ -607,7 +607,7 @@ const TaskForm = () => {
 
                 {/* Due Date */}
                 <div>
-                  <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Termin realizacji
                   </label>
                   <input
@@ -616,13 +616,13 @@ const TaskForm = () => {
                     name="due_date"
                     value={formData.due_date}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 {/* Estimated Hours */}
                 <div>
-                  <label htmlFor="estimated_hours" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="estimated_hours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Szacowany czas (h)
                   </label>
                   <input
@@ -633,7 +633,7 @@ const TaskForm = () => {
                     onChange={handleChange}
                     step="0.5"
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                     placeholder="np. 8"
                   />
                 </div>
@@ -641,7 +641,7 @@ const TaskForm = () => {
                 {/* Actual Hours (only in edit mode) */}
                 {isEdit && (
                   <div>
-                    <label htmlFor="actual_hours" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="actual_hours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Rzeczywisty czas (h)
                     </label>
                     <input
@@ -652,7 +652,7 @@ const TaskForm = () => {
                       onChange={handleChange}
                       step="0.5"
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                       placeholder="np. 10"
                     />
                   </div>
@@ -661,11 +661,11 @@ const TaskForm = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3 rounded-b-lg">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3 rounded-b-lg">
               <button
                 type="button"
                 onClick={() => navigate('/tasks')}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Anuluj
               </button>
@@ -691,14 +691,14 @@ const TaskForm = () => {
 
           {/* Attachments Section - only in edit mode */}
           {isEdit && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Paperclip className="w-5 h-5" />
                     Załączniki
                     {attachments.length > 0 && (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+                      <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
                         {attachments.length}
                       </span>
                     )}
@@ -722,8 +722,8 @@ const TaskForm = () => {
                   {isUploadingFiles ? (
                     <div className="space-y-3">
                       <Loader2 className="w-8 h-8 mx-auto animate-spin text-gray-400" />
-                      <p className="text-sm text-gray-600">Przesyłanie plików...</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2 max-w-xs mx-auto">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Przesyłanie plików...</p>
+                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 max-w-xs mx-auto">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
@@ -733,14 +733,14 @@ const TaskForm = () => {
                   ) : (
                     <>
                       <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-                      <p className="text-gray-600 mb-1">
+                      <p className="text-gray-600 dark:text-gray-400 mb-1">
                         Przeciągnij i upuść pliki tutaj
                       </p>
                       <p className="text-sm text-gray-400 mb-3">lub</p>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
+                        className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
                       >
                         Wybierz pliki
                       </button>
@@ -765,7 +765,7 @@ const TaskForm = () => {
                       return (
                         <div
                           key={attachment.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors"
+                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                           {isImage ? (
                             <img
@@ -774,15 +774,15 @@ const TaskForm = () => {
                               className="w-10 h-10 object-cover rounded"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
                               <FileIcon className="w-5 h-5 text-gray-500" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {attachment.original_name}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {formatFileSize(Number(attachment.file_size))}
                               {attachment.uploader && (
                                 <> • {attachment.uploader.first_name} {attachment.uploader.last_name}</>
@@ -793,7 +793,7 @@ const TaskForm = () => {
                             <a
                               href={getFileUrl(attachment.file_url) || ''}
                               download={attachment.original_name}
-                              className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                              className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                               title="Pobierz"
                             >
                               <Download className="w-4 h-4 text-gray-500" />
@@ -817,14 +817,14 @@ const TaskForm = () => {
 
           {/* Work Logs Section - only in edit mode */}
           {isEdit && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Timer className="w-5 h-5" />
                     Czas pracy
                     {workLogs.length > 0 && (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+                      <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
                         {workLogs.reduce((sum, log) => sum + Number(log.hours), 0).toFixed(1)}h łącznie
                       </span>
                     )}
@@ -838,7 +838,7 @@ const TaskForm = () => {
                         setWorkLogFormData({ ...workLogFormData, work_date: today });
                         setShowWorkLogForm(true);
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       title="Dodaj godziny za dzisiaj"
                     >
                       <Plus className="w-4 h-4" />
@@ -852,7 +852,7 @@ const TaskForm = () => {
                         setWorkLogFormData({ ...workLogFormData, work_date: yesterday.toISOString().split('T')[0] });
                         setShowWorkLogForm(true);
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       title="Dodaj godziny za wczoraj"
                     >
                       <Plus className="w-4 h-4" />
@@ -875,8 +875,8 @@ const TaskForm = () => {
                 {workLogs.length === 0 ? (
                   <div className="text-center py-8">
                     <Timer className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 mb-1">Brak wpisów czasu pracy</p>
-                    <p className="text-xs text-gray-400">Kliknij "Raportuj czas" lub użyj przycisków "Dzisiaj" / "Wczoraj"</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Brak wpisów czasu pracy</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Kliknij "Raportuj czas" lub użyj przycisków "Dzisiaj" / "Wczoraj"</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -898,13 +898,13 @@ const TaskForm = () => {
                         const dayName = isToday ? 'Dzisiaj' : isYesterday ? 'Wczoraj' : dateObj.toLocaleDateString('pl-PL', { weekday: 'long' });
 
                         return (
-                          <div key={date} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div key={date} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                             {/* Date header */}
-                            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                               <div className="flex items-center gap-2">
                                 <Calendar className="w-4 h-4 text-gray-400" />
-                                <span className="font-medium text-gray-900 capitalize">{dayName}</span>
-                                <span className="text-sm text-gray-500">
+                                <span className="font-medium text-gray-900 dark:text-white capitalize">{dayName}</span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
                                   {dateObj.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
                                 </span>
                               </div>
@@ -916,7 +916,7 @@ const TaskForm = () => {
                                     setWorkLogFormData({ ...workLogFormData, work_date: date });
                                     setShowWorkLogForm(true);
                                   }}
-                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                                   title="Dodaj kolejny wpis na ten dzień"
                                 >
                                   <Plus className="w-4 h-4 text-gray-500" />
@@ -925,24 +925,24 @@ const TaskForm = () => {
                             </div>
 
                             {/* Entries for this date */}
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
                               {logs.map((log) => (
                                 <div
                                   key={log.id}
-                                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors group"
+                                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                                 >
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-medium text-gray-900">{log.hours}h</span>
+                                      <span className="font-medium text-gray-900 dark:text-white">{log.hours}h</span>
                                       <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
                                         {WorkLogTypeLabels[log.work_type] || 'Płatny'}
                                       </span>
                                     </div>
                                     {log.description && (
-                                      <p className="text-sm text-gray-600 mt-1">{log.description}</p>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{log.description}</p>
                                     )}
                                     {log.user && (
-                                      <p className="text-xs text-gray-400 mt-1">
+                                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                         {log.user.first_name} {log.user.last_name}
                                       </p>
                                     )}
@@ -951,7 +951,7 @@ const TaskForm = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleEditWorkLog(log)}
-                                      className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                                      className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                                       title="Edytuj"
                                     >
                                       <Edit2 className="w-4 h-4 text-gray-500" />
@@ -982,8 +982,8 @@ const TaskForm = () => {
         {isEdit && task && (
           <div className="space-y-4">
             {/* Status Card with dropdown */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Status zadania</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Status zadania</h3>
               <div className="relative" ref={statusDropdownRef}>
                 <button
                   onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -1011,9 +1011,9 @@ const TaskForm = () => {
 
                 {/* Status Dropdown */}
                 {showStatusDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-3 py-2 border-b border-gray-100">
-                      <p className="text-xs font-medium text-gray-500">Zmień status na:</p>
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Zmień status na:</p>
                     </div>
                     {allStatuses.map((status) => {
                       const config = getStatusConfig(status);
@@ -1027,7 +1027,7 @@ const TaskForm = () => {
                           disabled={isCurrentStatus}
                           className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                             isCurrentStatus
-                              ? 'bg-gray-50 text-gray-400 cursor-default'
+                              ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 cursor-default'
                               : 'hover:bg-gray-50 text-gray-700'
                           }`}
                         >
@@ -1036,7 +1036,7 @@ const TaskForm = () => {
                           </span>
                           {config.label}
                           {isCurrentStatus && (
-                            <span className="ml-auto text-xs text-gray-400">Aktualny</span>
+                            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Aktualny</span>
                           )}
                         </button>
                       );
@@ -1047,8 +1047,8 @@ const TaskForm = () => {
             </div>
 
             {/* Priority Card */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Priorytet</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Priorytet</h3>
               {(() => {
                 const priorityConfig = getPriorityConfig(task.priority);
                 return (
@@ -1061,8 +1061,8 @@ const TaskForm = () => {
             </div>
 
             {/* Details Card */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Szczegóły</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Szczegóły</h3>
 
               {/* Project */}
               {task.project && (
@@ -1071,8 +1071,8 @@ const TaskForm = () => {
                     <FolderOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Projekt</p>
-                    <p className="text-sm font-medium text-gray-900">{task.project.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Projekt</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{task.project.name}</p>
                   </div>
                 </div>
               )}
@@ -1091,13 +1091,13 @@ const TaskForm = () => {
                         className="w-6 h-6 rounded-full"
                       />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                      <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600">
                         {getInitials(task.assignee.first_name, task.assignee.last_name)}
                       </div>
                     )}
                     <div>
-                      <p className="text-xs text-gray-500">Przypisano do</p>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Przypisano do</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {task.assignee.first_name} {task.assignee.last_name}
                       </p>
                     </div>
@@ -1119,13 +1119,13 @@ const TaskForm = () => {
                         className="w-6 h-6 rounded-full"
                       />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                      <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600">
                         {getInitials(task.creator.first_name, task.creator.last_name)}
                       </div>
                     )}
                     <div>
-                      <p className="text-xs text-gray-500">Utworzył</p>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Utworzył</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {task.creator.first_name} {task.creator.last_name}
                       </p>
                     </div>
@@ -1140,8 +1140,8 @@ const TaskForm = () => {
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Termin</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Termin</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {new Date(task.due_date).toLocaleDateString('pl-PL', {
                         year: 'numeric',
                         month: 'long',
@@ -1159,10 +1159,10 @@ const TaskForm = () => {
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Czas</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Czas</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {task.actual_hours ? `${task.actual_hours}h` : '-'} / {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
-                      <span className="text-xs text-gray-500 ml-1">(rzeczywisty / szacowany)</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(rzeczywisty / szacowany)</span>
                     </p>
                   </div>
                 </div>
@@ -1174,8 +1174,8 @@ const TaskForm = () => {
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Utworzono</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Utworzono</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {new Date(task.created_at).toLocaleDateString('pl-PL', {
                       year: 'numeric',
                       month: 'long',
@@ -1190,8 +1190,8 @@ const TaskForm = () => {
 
             {/* Delete Card */}
             {isAdmin && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Strefa niebezpieczeństwa</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Strefa niebezpieczeństwa</h3>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={isDeleting}
@@ -1218,20 +1218,20 @@ const TaskForm = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-full">
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Potwierdź usunięcie</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Potwierdź usunięcie</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Czy na pewno chcesz usunąć to zadanie? Ta akcja jest nieodwracalna i usunie również wszystkie załączniki.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Anuluj
               </button>
@@ -1257,10 +1257,10 @@ const TaskForm = () => {
       {/* Work Log Modal */}
       {showWorkLogForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-lg mx-4">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Timer className="w-5 h-5 text-blue-600" />
                 {editingWorkLog ? 'Edytuj wpis czasu' : 'Raportuj czas'}
               </h3>
@@ -1276,7 +1276,7 @@ const TaskForm = () => {
                     work_type: WorkLogType.REGULAR,
                   });
                 }}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -1287,7 +1287,7 @@ const TaskForm = () => {
               {/* Time and Date row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Czas *
                   </label>
                   <div className="relative">
@@ -1298,7 +1298,7 @@ const TaskForm = () => {
                       max="24"
                       value={workLogFormData.hours}
                       onChange={(e) => setWorkLogFormData({ ...workLogFormData, hours: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                       placeholder="1"
                       required
                     />
@@ -1306,14 +1306,14 @@ const TaskForm = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Data *
                   </label>
                   <input
                     type="date"
                     value={workLogFormData.work_date}
                     onChange={(e) => setWorkLogFormData({ ...workLogFormData, work_date: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                     required
                   />
                 </div>
@@ -1321,13 +1321,13 @@ const TaskForm = () => {
 
               {/* Type dropdown */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Typ *
                 </label>
                 <select
                   value={workLogFormData.work_type}
                   onChange={(e) => setWorkLogFormData({ ...workLogFormData, work_type: e.target.value as WorkLogType })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white"
                   required
                 >
                   {Object.entries(WorkLogTypeLabels).map(([value, label]) => (
@@ -1340,13 +1340,13 @@ const TaskForm = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Opis pracy
                 </label>
                 <textarea
                   value={workLogFormData.description}
                   onChange={(e) => setWorkLogFormData({ ...workLogFormData, description: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   rows={3}
                   placeholder="Co zostało zrobione..."
                 />
@@ -1361,13 +1361,13 @@ const TaskForm = () => {
                   onChange={(e) => setWorkLogFormData({ ...workLogFormData, is_billable: e.target.checked })}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <label htmlFor="work_log_billable_modal" className="text-sm text-gray-700">
+                <label htmlFor="work_log_billable_modal" className="text-sm text-gray-700 dark:text-gray-300">
                   Godziny rozliczeniowe (fakturowane)
                 </label>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="button"
                   onClick={() => {
@@ -1381,7 +1381,7 @@ const TaskForm = () => {
                       work_type: WorkLogType.REGULAR,
                     });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Anuluj
                 </button>

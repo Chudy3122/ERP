@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as adminApi from '../api/admin.api';
 import { SystemStats, AdminUser } from '../types/admin.types';
 
 const Admin: React.FC = () => {
+  const { t } = useTranslation('admin');
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [recentUsers, setRecentUsers] = useState<AdminUser[]>([]);
   const [onlineCount, setOnlineCount] = useState(0);
@@ -45,14 +47,14 @@ const Admin: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-violet-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 text-sm">Ładowanie...</p>
+          <p className="text-slate-600 text-sm">{t('loading', { defaultValue: 'Ładowanie...' })}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-900">
       {/* Header */}
       <nav className="bg-slate-900 shadow-lg border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -64,7 +66,7 @@ const Admin: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h1 className="text-xl font-semibold text-slate-100">Panel Administracyjny</h1>
+              <h1 className="text-xl font-semibold text-slate-100">{t('title')}</h1>
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -83,40 +85,40 @@ const Admin: React.FC = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Users Card */}
-          <div className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-slate-200">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-slate-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center border border-blue-100">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center border border-blue-100 dark:border-blue-800">
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
-              <span className="text-xs font-medium text-slate-500">Użytkownicy</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-gray-400">{t('users')}</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stats?.users.total || 0}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats?.users.total || 0}</p>
               <p className="text-xs text-emerald-600 mt-1">
-                {stats?.users.active || 0} aktywnych
+                {stats?.users.active || 0} {t('active', { defaultValue: 'aktywnych' })}
               </p>
-              <p className="text-xs text-slate-500 mt-1">{onlineCount} online</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">{onlineCount} {t('online', { defaultValue: 'online' })}</p>
             </div>
           </div>
 
           {/* Time Entries Card */}
-          <div className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-slate-200">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-slate-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center border border-indigo-100">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center border border-indigo-100 dark:border-indigo-800">
                 <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <span className="text-xs font-medium text-slate-500">Czas pracy</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-gray-400">{t('workTime', { defaultValue: 'Czas pracy' })}</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stats?.timeEntries.total || 0}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats?.timeEntries.total || 0}</p>
               <p className="text-xs text-indigo-600 mt-1">
-                {stats?.timeEntries.today || 0} dzisiaj
+                {stats?.timeEntries.today || 0} {t('today', { defaultValue: 'dzisiaj' })}
               </p>
-              <p className="text-xs text-slate-500 mt-1">{stats?.timeEntries.thisWeek || 0} ten tydzień</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">{stats?.timeEntries.thisWeek || 0} {t('thisWeek', { defaultValue: 'ten tydzień' })}</p>
             </div>
           </div>
 
@@ -128,14 +130,14 @@ const Admin: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="text-xs font-medium text-slate-500">Wnioski</span>
+              <span className="text-xs font-medium text-slate-500">{t('requests', { defaultValue: 'Wnioski' })}</span>
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900">{stats?.leaveRequests.total || 0}</p>
               <p className="text-xs text-amber-600 mt-1">
-                {stats?.leaveRequests.pending || 0} oczekujących
+                {stats?.leaveRequests.pending || 0} {t('pending', { defaultValue: 'oczekujących' })}
               </p>
-              <p className="text-xs text-slate-500 mt-1">{stats?.leaveRequests.approved || 0} zatwierdzonych</p>
+              <p className="text-xs text-slate-500 mt-1">{stats?.leaveRequests.approved || 0} {t('approved', { defaultValue: 'zatwierdzonych' })}</p>
             </div>
           </div>
 
@@ -147,14 +149,14 @@ const Admin: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <span className="text-xs font-medium text-slate-500">Wiadomości</span>
+              <span className="text-xs font-medium text-slate-500">{t('messages', { defaultValue: 'Wiadomości' })}</span>
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900">{stats?.messages.total || 0}</p>
               <p className="text-xs text-violet-600 mt-1">
-                {stats?.messages.today || 0} dzisiaj
+                {stats?.messages.today || 0} {t('today', { defaultValue: 'dzisiaj' })}
               </p>
-              <p className="text-xs text-slate-500 mt-1">{stats?.channels.active || 0} kanałów</p>
+              <p className="text-xs text-slate-500 mt-1">{stats?.channels.active || 0} {t('channels', { defaultValue: 'kanałów' })}</p>
             </div>
           </div>
         </div>
@@ -164,17 +166,17 @@ const Admin: React.FC = () => {
           {/* Recent Registrations */}
           <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Ostatnie rejestracje</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('recentRegistrations', { defaultValue: 'Ostatnie rejestracje' })}</h2>
               <Link
                 to="/admin/users"
                 className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
               >
-                Zobacz wszystkich →
+                {t('viewAll', { defaultValue: 'Zobacz wszystkich →' })}
               </Link>
             </div>
 
             {recentUsers.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Brak użytkowników</p>
+              <p className="text-gray-500 text-center py-8">{t('noUsers', { defaultValue: 'Brak użytkowników' })}</p>
             ) : (
               <div className="space-y-3">
                 {recentUsers.map((user) => (
@@ -209,7 +211,7 @@ const Admin: React.FC = () => {
 
           {/* Users by Role */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Użytkownicy według ról</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('usersByRole', { defaultValue: 'Użytkownicy według ról' })}</h2>
 
             <div className="space-y-4">
               {stats?.users.byRole &&
@@ -246,7 +248,7 @@ const Admin: React.FC = () => {
 
         {/* Quick Actions */}
         <div className="mt-6 bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Szybkie akcje</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">{t('quickActions', { defaultValue: 'Szybkie akcje' })}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
               to="/admin/users"
@@ -257,8 +259,8 @@ const Admin: React.FC = () => {
                   👥
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Zarządzaj użytkownikami</p>
-                  <p className="text-xs text-gray-600">Dodaj, edytuj lub usuń</p>
+                  <p className="font-semibold text-gray-900">{t('manageUsers', { defaultValue: 'Zarządzaj użytkownikami' })}</p>
+                  <p className="text-xs text-gray-600">{t('addEditDelete', { defaultValue: 'Dodaj, edytuj lub usuń' })}</p>
                 </div>
               </div>
             </Link>
@@ -272,8 +274,8 @@ const Admin: React.FC = () => {
                   🔄
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-gray-900">Odśwież statystyki</p>
-                  <p className="text-xs text-gray-600">Zaktualizuj dane</p>
+                  <p className="font-semibold text-gray-900">{t('refreshStats', { defaultValue: 'Odśwież statystyki' })}</p>
+                  <p className="text-xs text-gray-600">{t('updateData', { defaultValue: 'Zaktualizuj dane' })}</p>
                 </div>
               </div>
             </button>
@@ -287,8 +289,8 @@ const Admin: React.FC = () => {
                   🏠
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Panel główny</p>
-                  <p className="text-xs text-gray-600">Wróć do dashboardu</p>
+                  <p className="font-semibold text-gray-900">{t('mainPanel', { defaultValue: 'Panel główny' })}</p>
+                  <p className="text-xs text-gray-600">{t('backToDashboard', { defaultValue: 'Wróć do dashboardu' })}</p>
                 </div>
               </div>
             </Link>

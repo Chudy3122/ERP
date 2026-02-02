@@ -111,12 +111,12 @@ const ProjectForm = () => {
       <div className="mb-6 flex items-center gap-4">
         <button
           onClick={() => navigate('/projects')}
-          className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {isEdit ? 'Edytuj projekt' : 'Nowy projekt'}
           </h1>
           <p className="text-gray-600 mt-1">
@@ -127,17 +127,17 @@ const ProjectForm = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-md border border-gray-200 p-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Project Name */}
           <div className="md:col-span-2">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Nazwa projektu *
             </label>
             <input
@@ -147,14 +147,14 @@ const ProjectForm = () => {
               value={formData.name}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
               placeholder="np. System ERP"
             />
           </div>
 
           {/* Project Code */}
           <div>
-            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Kod projektu *
             </label>
             <input
@@ -164,14 +164,14 @@ const ProjectForm = () => {
               value={formData.code}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
               placeholder="np. ERP-001"
             />
           </div>
 
           {/* Status */}
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Status
             </label>
             <select
@@ -179,7 +179,7 @@ const ProjectForm = () => {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
             >
               <option value="planning">Planowanie</option>
               <option value="active">Aktywny</option>
@@ -191,7 +191,7 @@ const ProjectForm = () => {
 
           {/* Priority */}
           <div>
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Priorytet
             </label>
             <select
@@ -199,7 +199,7 @@ const ProjectForm = () => {
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
             >
               <option value="low">Niski</option>
               <option value="medium">Średni</option>
@@ -210,7 +210,7 @@ const ProjectForm = () => {
 
           {/* Budget */}
           <div>
-            <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="budget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Budżet (PLN)
             </label>
             <input
@@ -221,14 +221,14 @@ const ProjectForm = () => {
               onChange={handleChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
               placeholder="np. 500000"
             />
           </div>
 
           {/* Start Date */}
           <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Data rozpoczęcia
             </label>
             <input
@@ -237,13 +237,13 @@ const ProjectForm = () => {
               name="start_date"
               value={formData.start_date}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
           {/* Target End Date */}
           <div>
-            <label htmlFor="target_end_date" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="target_end_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Planowana data zakończenia
             </label>
             <input
@@ -252,13 +252,13 @@ const ProjectForm = () => {
               name="target_end_date"
               value={formData.target_end_date}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
           {/* Description */}
           <div className="md:col-span-2">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Opis projektu
             </label>
             <textarea
@@ -267,18 +267,18 @@ const ProjectForm = () => {
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
               placeholder="Opisz cele i zakres projektu..."
             />
           </div>
         </div>
 
         {/* Form Actions */}
-        <div className="mt-6 flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
             onClick={() => navigate('/projects')}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             Anuluj
           </button>

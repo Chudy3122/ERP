@@ -63,7 +63,7 @@ const DeadlineCounterWidget = () => {
         <div className="grid grid-cols-2 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-20 bg-gray-200 rounded-md"></div>
+              <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
             </div>
           ))}
         </div>
@@ -122,7 +122,7 @@ const DeadlineCounterWidget = () => {
       icon={<Calendar className="w-5 h-5 text-gray-600" />}
       actions={
         totalUrgent > 0 && (
-          <div className="flex items-center gap-1 text-xs text-gray-700 font-medium">
+          <div className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300 font-medium">
             <AlertCircle className="w-3 h-3" />
             <span>{totalUrgent} pilnych</span>
           </div>
@@ -134,22 +134,22 @@ const DeadlineCounterWidget = () => {
           <button
             key={counter.label}
             onClick={() => handleCounterClick(counter.filter)}
-            className={`${counter.bgColor} ${counter.borderColor} border rounded-md p-1.5 text-center hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-gray-400`}
+            className={`${counter.bgColor} dark:bg-gray-700 ${counter.borderColor} dark:border-gray-600 border rounded-md p-1.5 text-center hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-gray-400`}
           >
-            <div className={`text-xl font-bold ${counter.textColor}`}>
+            <div className={`text-xl font-bold ${counter.textColor} dark:text-white`}>
               {counter.value}
             </div>
-            <div className="text-xs text-gray-600 font-medium">
+            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
               {counter.label}
             </div>
           </button>
         ))}
       </div>
 
-      <div className="mt-1 pt-1 border-t border-gray-200">
+      <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">Wszystkich zadań:</span>
-          <span className="font-semibold text-gray-900">{counts.twoWeeks}</span>
+          <span className="text-gray-500 dark:text-gray-400">Wszystkich zadań:</span>
+          <span className="font-semibold text-gray-900 dark:text-white">{counts.twoWeeks}</span>
         </div>
       </div>
     </WidgetCard>

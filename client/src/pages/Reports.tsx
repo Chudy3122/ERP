@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as reportApi from '../api/report.api';
 import * as adminApi from '../api/admin.api';
 import type { ReportFilters, TimeReportData } from '../api/report.api';
 import type { AdminUser } from '../types/admin.types';
 
 const Reports: React.FC = () => {
+  const { t } = useTranslation('reports');
   const [reportData, setReportData] = useState<TimeReportData | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ const Reports: React.FC = () => {
       const data = await reportApi.getTimeReport(filters);
       setReportData(data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Nie udało się wygenerować raportu');
+      setError(err.response?.data?.message || t('generateError', { defaultValue: 'Nie udało się wygenerować raportu' }));
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ const Reports: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Nie udało się wyeksportować do Excel');
+      setError(err.response?.data?.message || t('exportExcelError', { defaultValue: 'Nie udało się wyeksportować do Excel' }));
     } finally {
       setExporting(null);
     }
@@ -108,14 +110,14 @@ const Reports: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Nie udało się wyeksportować do PDF');
+      setError(err.response?.data?.message || t('exportPdfError', { defaultValue: 'Nie udało się wyeksportować do PDF' }));
     } finally {
       setExporting(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-900">
       {/* Header */}
       <nav className="bg-slate-900 shadow-lg border-b border-slate-800">
         <div className="container mx-auto p-4">
@@ -127,8 +129,8 @@ const Reports: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-slate-100">Raporty</h1>
-                <p className="text-sm text-slate-400">Generuj i eksportuj raporty</p>
+                <h1 className="text-xl font-semibold text-slate-100">{t('title')}</h1>
+                <p className="text-sm text-slate-400">{t('subtitle', { defaultValue: 'Generuj i eksportuj raporty' })}</p>
               </div>
             </div>
             <Link
@@ -149,13 +151,13 @@ const Reports: React.FC = () => {
         )}
 
         {/* Filters Card */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-slate-200">
-          <h2 className="text-lg font-semibold mb-4 text-slate-900">Filtry raportu</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6 border border-slate-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">{t('filters', { defaultValue: 'Filtry raportu' })}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Data od:
+                {t('dateFrom', { defaultValue: 'Data od:' })}
               </label>
               <input
                 type="date"
@@ -167,7 +169,7 @@ const Reports: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Data do:
+                {t('dateTo', { defaultValue: 'Data do:' })}
               </label>
               <input
                 type="date"
@@ -179,14 +181,14 @@ const Reports: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Pracownik:
+                {t('employee', { defaultValue: 'Pracownik:' })}
               </label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">Wszyscy</option>
+                <option value="">{t('allEmployees', { defaultValue: 'Wszyscy' })}</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.first_name} {u.last_name}
@@ -197,18 +199,18 @@ const Reports: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Status:
+                {t('status', { defaultValue: 'Status:' })}
               </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">Wszystkie</option>
-                <option value="in_progress">W trakcie</option>
-                <option value="completed">Ukończony</option>
-                <option value="approved">Zatwierdzony</option>
-                <option value="rejected">Odrzucony</option>
+                <option value="">{t('allStatuses', { defaultValue: 'Wszystkie' })}</option>
+                <option value="in_progress">{t('statusInProgress', { defaultValue: 'W trakcie' })}</option>
+                <option value="completed">{t('statusCompleted', { defaultValue: 'Ukończony' })}</option>
+                <option value="approved">{t('statusApproved', { defaultValue: 'Zatwierdzony' })}</option>
+                <option value="rejected">{t('statusRejected', { defaultValue: 'Odrzucony' })}</option>
               </select>
             </div>
           </div>
@@ -219,7 +221,7 @@ const Reports: React.FC = () => {
               disabled={loading}
               className="px-6 py-2.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 font-medium text-sm transition-colors duration-200"
             >
-              {loading ? 'Generowanie...' : 'Generuj raport'}
+              {loading ? t('generating', { defaultValue: 'Generowanie...' }) : t('generate')}
             </button>
 
             <button
@@ -233,10 +235,10 @@ const Reports: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Eksportowanie...
+                  {t('exporting', { defaultValue: 'Eksportowanie...' })}
                 </>
               ) : (
-                <>📊 Eksportuj Excel</>
+                <>📊 {t('exportExcel', { defaultValue: 'Eksportuj Excel' })}</>
               )}
             </button>
 
@@ -251,10 +253,10 @@ const Reports: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Eksportowanie...
+                  {t('exporting', { defaultValue: 'Eksportowanie...' })}
                 </>
               ) : (
-                <>📄 Eksportuj PDF</>
+                <>📄 {t('exportPdf', { defaultValue: 'Eksportuj PDF' })}</>
               )}
             </button>
           </div>
@@ -265,28 +267,28 @@ const Reports: React.FC = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-                <p className="text-sm text-slate-600 mb-1">Łączny czas pracy</p>
+                <p className="text-sm text-slate-600 mb-1">{t('totalWorkTime', { defaultValue: 'Łączny czas pracy' })}</p>
                 <p className="text-2xl font-bold text-slate-900">
                   {reportData.summary.totalHours}h {reportData.summary.totalMinutes}m
                 </p>
               </div>
 
               <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-                <p className="text-sm text-slate-600 mb-1">Nadgodziny</p>
+                <p className="text-sm text-slate-600 mb-1">{t('overtime', { defaultValue: 'Nadgodziny' })}</p>
                 <p className="text-2xl font-bold text-amber-600">
                   {reportData.summary.overtimeHours}h {reportData.summary.overtimeMinutes}m
                 </p>
               </div>
 
               <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-                <p className="text-sm text-slate-600 mb-1">Spóźnienia</p>
+                <p className="text-sm text-slate-600 mb-1">{t('lateArrivals', { defaultValue: 'Spóźnienia' })}</p>
                 <p className="text-2xl font-bold text-red-600">
                   {reportData.summary.lateArrivals} ({reportData.summary.totalLateMinutes} min)
                 </p>
               </div>
 
               <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-                <p className="text-sm text-slate-600 mb-1">Dni przepracowane</p>
+                <p className="text-sm text-slate-600 mb-1">{t('daysWorked', { defaultValue: 'Dni przepracowane' })}</p>
                 <p className="text-2xl font-bold text-slate-900">
                   {reportData.summary.daysWorked}
                 </p>
@@ -296,10 +298,10 @@ const Reports: React.FC = () => {
             {/* Entries Count */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
               <h3 className="text-lg font-semibold mb-4 text-slate-900">
-                Znaleziono {reportData.entries.length} wpisów
+                {t('entriesFound', { defaultValue: 'Znaleziono', count: reportData.entries.length })} {reportData.entries.length} {t('entries', { defaultValue: 'wpisów' })}
               </h3>
               <p className="text-sm text-slate-600">
-                Średnia dzienna: {reportData.summary.averageHoursPerDay.toFixed(2)} godzin
+                {t('dailyAverage', { defaultValue: 'Średnia dzienna:' })} {reportData.summary.averageHoursPerDay.toFixed(2)} {t('hours', { defaultValue: 'godzin' })}
               </p>
             </div>
           </>

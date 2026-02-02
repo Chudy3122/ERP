@@ -106,7 +106,7 @@ const NotificationSettings: React.FC = () => {
 
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         {/* Sound Settings */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200 dark:border-gray-600">
           <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="text-2xl">🔊</span>
             Powiadomienia dźwiękowe
@@ -114,7 +114,7 @@ const NotificationSettings: React.FC = () => {
 
           <div className="space-y-4">
             {/* Sound Enabled */}
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Włącz dźwięki</div>
                 <div className="text-sm text-slate-600">Odtwarzaj dźwięk przy nowych powiadomieniach</div>
@@ -130,13 +130,13 @@ const NotificationSettings: React.FC = () => {
 
             {/* Sound Type */}
             {preferences.sound_enabled && (
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600">
                 <label className="block font-semibold text-slate-900 mb-2">Typ dźwięku</label>
                 <select
                   value={preferences.sound_type}
                   onChange={(e) => handleUpdate({ sound_type: e.target.value })}
                   disabled={saving}
-                  className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border-2 border-slate-200 dark:border-gray-600 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="default">Domyślny</option>
                   <option value="chime">Dzwonek</option>
@@ -149,7 +149,7 @@ const NotificationSettings: React.FC = () => {
 
             {/* Sound Volume */}
             {preferences.sound_enabled && (
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600">
                 <label className="block font-semibold text-slate-900 mb-2">
                   Głośność: {preferences.sound_volume}%
                 </label>
@@ -161,7 +161,7 @@ const NotificationSettings: React.FC = () => {
                   value={preferences.sound_volume}
                   onChange={(e) => handleUpdate({ sound_volume: parseInt(e.target.value) })}
                   disabled={saving}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  className="w-full h-2 bg-slate-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                 />
               </div>
             )}
@@ -169,14 +169,14 @@ const NotificationSettings: React.FC = () => {
         </div>
 
         {/* Visual Settings */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200 dark:border-gray-600">
           <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="text-2xl">👁️</span>
             Powiadomienia wizualne
           </h2>
 
           <div className="space-y-4">
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Powiadomienia systemowe</div>
                 <div className="text-sm text-slate-600">Wyświetlaj powiadomienia w systemie operacyjnym</div>
@@ -190,7 +190,7 @@ const NotificationSettings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Podgląd wiadomości</div>
                 <div className="text-sm text-slate-600">Pokaż treść wiadomości w powiadomieniu</div>
@@ -204,7 +204,7 @@ const NotificationSettings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Licznik nieprzeczytanych</div>
                 <div className="text-sm text-slate-600">Wyświetlaj liczbę nieprzeczytanych wiadomości</div>
@@ -221,14 +221,14 @@ const NotificationSettings: React.FC = () => {
         </div>
 
         {/* Notification Types */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200 dark:border-gray-600">
           <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="text-2xl">📬</span>
             Typy powiadomień
           </h2>
 
           <div className="space-y-4">
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Wiadomości</div>
                 <div className="text-sm text-slate-600">Powiadamiaj o nowych wiadomościach</div>
@@ -242,7 +242,7 @@ const NotificationSettings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Wzmianki</div>
                 <div className="text-sm text-slate-600">Powiadamiaj, gdy ktoś Cię oznaczy</div>
@@ -256,7 +256,7 @@ const NotificationSettings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Status urlopu</div>
                 <div className="text-sm text-slate-600">Powiadamiaj o zmianach statusu wniosków urlopowych</div>
@@ -270,7 +270,7 @@ const NotificationSettings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Przypomnienia czasu pracy</div>
                 <div className="text-sm text-slate-600">Powiadamiaj o rozpoczęciu/zakończeniu pracy</div>
@@ -284,7 +284,7 @@ const NotificationSettings: React.FC = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Aktualizacje systemu</div>
                 <div className="text-sm text-slate-600">Powiadamiaj o aktualizacjach i zmianach w systemie</div>
@@ -301,14 +301,14 @@ const NotificationSettings: React.FC = () => {
         </div>
 
         {/* Do Not Disturb */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-slate-200 dark:border-gray-600">
           <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="text-2xl">🌙</span>
             Nie przeszkadzać (DND)
           </h2>
 
           <div className="space-y-4">
-            <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+            <label className="flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex-1">
                 <div className="font-semibold text-slate-900">Włącz tryb DND</div>
                 <div className="text-sm text-slate-600">Wyłącz powiadomienia w określonych godzinach</div>
@@ -324,24 +324,24 @@ const NotificationSettings: React.FC = () => {
 
             {preferences.dnd_enabled && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600">
                   <label className="block font-semibold text-slate-900 mb-2">Od godziny</label>
                   <input
                     type="time"
                     value={preferences.dnd_start_time || ''}
                     onChange={(e) => handleUpdate({ dnd_start_time: e.target.value + ':00' })}
                     disabled={saving}
-                    className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-4 py-2 border-2 border-slate-200 dark:border-gray-600 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600">
                   <label className="block font-semibold text-slate-900 mb-2">Do godziny</label>
                   <input
                     type="time"
                     value={preferences.dnd_end_time || ''}
                     onChange={(e) => handleUpdate({ dnd_end_time: e.target.value + ':00' })}
                     disabled={saving}
-                    className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-4 py-2 border-2 border-slate-200 dark:border-gray-600 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -354,7 +354,7 @@ const NotificationSettings: React.FC = () => {
           <button
             onClick={handleReset}
             disabled={saving}
-            className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-slate-200 dark:bg-gray-600 hover:bg-slate-300 text-slate-800 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             🔄 Przywróć ustawienia domyślne
           </button>

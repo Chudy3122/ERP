@@ -1,4 +1,5 @@
 import { Phone, PhoneOff, Video, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface IncomingCallModalProps {
   callerName: string;
@@ -15,14 +16,16 @@ const IncomingCallModal = ({
   onAccept,
   onReject,
 }: IncomingCallModalProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className="fixed top-4 right-4 z-50 animate-bounce-in">
-      <div className="bg-white rounded-lg shadow-2xl border-2 border-gray-800 w-96 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-gray-800 dark:border-gray-600 w-96 overflow-hidden">
         {/* Header */}
         <div className="bg-gray-800 text-white px-6 py-3">
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5" />
-            <span className="font-semibold">Przychodzące połączenie</span>
+            <span className="font-semibold">{t('common.incomingCall')}</span>
           </div>
         </div>
 
@@ -41,8 +44,8 @@ const IncomingCallModal = ({
                 <User className="w-10 h-10 text-gray-500" />
               </div>
             )}
-            <h3 className="text-xl font-bold text-gray-900 mb-1">{callerName}</h3>
-            <p className="text-sm text-gray-600">{meetingTitle}</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{callerName}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{meetingTitle}</p>
           </div>
 
           {/* Ringing Animation */}
@@ -62,14 +65,14 @@ const IncomingCallModal = ({
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
             >
               <PhoneOff className="w-5 h-5" />
-              Odrzuć
+              {t('common.reject')}
             </button>
             <button
               onClick={onAccept}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
             >
               <Phone className="w-5 h-5" />
-              Odbierz
+              {t('common.answer')}
             </button>
           </div>
         </div>

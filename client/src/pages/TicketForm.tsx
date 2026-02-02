@@ -455,20 +455,20 @@ const TicketForm = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/tickets')}
-            className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <div>
             <div className="flex items-center gap-3">
               {isEdit && ticket && (
-                <span className="text-sm font-mono text-gray-400">{ticket.ticket_number}</span>
+                <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{ticket.ticket_number}</span>
               )}
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 {isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}
               </h1>
             </div>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
               {isEdit ? 'Zaktualizuj informacje o zgłoszeniu' : 'Utwórz nowe zgłoszenie problemu lub prośby'}
             </p>
           </div>
@@ -487,7 +487,7 @@ const TicketForm = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
@@ -495,11 +495,11 @@ const TicketForm = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
             <div className="space-y-6">
               {/* Ticket Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Tytuł zgłoszenia *
                 </label>
                 <input
@@ -509,7 +509,7 @@ const TicketForm = () => {
                   value={formData.title}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   placeholder="np. Błąd przy logowaniu użytkownika"
                 />
               </div>
@@ -517,7 +517,7 @@ const TicketForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Type */}
                 <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Typ zgłoszenia *
                   </label>
                   <select
@@ -526,7 +526,7 @@ const TicketForm = () => {
                     value={formData.type}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="bug">Błąd</option>
                     <option value="feature_request">Nowa funkcja</option>
@@ -538,7 +538,7 @@ const TicketForm = () => {
 
                 {/* Priority */}
                 <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Priorytet
                   </label>
                   <select
@@ -546,7 +546,7 @@ const TicketForm = () => {
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="low">Niski</option>
                     <option value="normal">Normalny</option>
@@ -557,7 +557,7 @@ const TicketForm = () => {
 
                 {/* Category */}
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Kategoria
                   </label>
                   <input
@@ -566,14 +566,14 @@ const TicketForm = () => {
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                     placeholder="np. Logowanie, Płatności"
                   />
                 </div>
 
                 {/* Project */}
                 <div>
-                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Projekt (opcjonalne)
                   </label>
                   <select
@@ -581,7 +581,7 @@ const TicketForm = () => {
                     name="project_id"
                     value={formData.project_id || ''}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Brak projektu</option>
                     {projects.map((project) => (
@@ -597,7 +597,7 @@ const TicketForm = () => {
               {isEdit && isAdmin && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Status
                     </label>
                     <select
@@ -605,7 +605,7 @@ const TicketForm = () => {
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                     >
                       <option value="open">Nowe</option>
                       <option value="in_progress">W trakcie</option>
@@ -617,7 +617,7 @@ const TicketForm = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Przypisane do
                     </label>
                     <select
@@ -625,7 +625,7 @@ const TicketForm = () => {
                       name="assigned_to"
                       value={formData.assigned_to || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                     >
                       <option value="">Nieprzypisane</option>
                       {users.map((u) => (
@@ -640,7 +640,7 @@ const TicketForm = () => {
 
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Opis zgłoszenia *
                 </label>
                 <textarea
@@ -650,7 +650,7 @@ const TicketForm = () => {
                   onChange={handleChange}
                   required
                   rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                   placeholder="Opisz szczegółowo problem lub prośbę..."
                 />
               </div>
@@ -658,7 +658,7 @@ const TicketForm = () => {
               {/* Attachments for new ticket */}
               {!isEdit && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Załączniki (opcjonalne)
                   </label>
 
@@ -670,14 +670,14 @@ const TicketForm = () => {
                         return (
                           <div
                             key={index}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700"
                           >
-                            <div className="p-2 bg-white rounded-lg border border-gray-200">
+                            <div className="p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                               <FileIcon className="w-5 h-5 text-gray-500" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                              <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</p>
                             </div>
                             <button
                               type="button"
@@ -693,13 +693,13 @@ const TicketForm = () => {
                   )}
 
                   {/* Upload area */}
-                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-colors">
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex flex-col items-center justify-center">
                       <Upload className="w-6 h-6 text-gray-400 mb-1" />
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         <span className="font-medium text-gray-700">Kliknij, aby dodać pliki</span>
                       </p>
-                      <p className="text-xs text-gray-400">Maks. 10MB na plik</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Maks. 10MB na plik</p>
                     </div>
                     <input
                       type="file"
@@ -714,11 +714,11 @@ const TicketForm = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="mt-6 flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+            <div className="mt-6 flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
                 onClick={() => navigate('/tickets')}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Anuluj
               </button>
@@ -744,9 +744,9 @@ const TicketForm = () => {
 
           {/* Attachments Section (only for edit) */}
           {isEdit && (
-            <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Paperclip className="w-5 h-5 text-gray-500" />
                   Załączniki ({attachments.length})
                 </h3>
@@ -754,23 +754,23 @@ const TicketForm = () => {
 
               {/* Existing attachments */}
               {attachments.length > 0 && (
-                <div className="p-4 space-y-2 border-b border-gray-100">
+                <div className="p-4 space-y-2 border-b border-gray-100 dark:border-gray-700">
                   {attachments.map((attachment) => {
                     const FileIcon = getFileIcon(attachment.file_type);
                     const isDeleting = isDeletingAttachment === attachment.id;
                     return (
                       <div
                         key={attachment.id}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg group"
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg group"
                       >
-                        <div className="p-2 bg-white rounded-lg border border-gray-200">
+                        <div className="p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                           <FileIcon className="w-5 h-5 text-gray-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {attachment.original_name}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {formatFileSize(Number(attachment.file_size))} • {formatDate(attachment.created_at)}
                           </p>
                         </div>
@@ -779,7 +779,7 @@ const TicketForm = () => {
                             href={getFileUrl(attachment.file_url) || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                             title="Pobierz"
                           >
                             <Download className="w-4 h-4" />
@@ -805,21 +805,21 @@ const TicketForm = () => {
 
               {/* Pending files */}
               {pendingFiles.length > 0 && (
-                <div className="p-4 space-y-2 border-b border-gray-100 bg-blue-50/50">
-                  <p className="text-xs text-gray-500 mb-2">Pliki do przesłania:</p>
+                <div className="p-4 space-y-2 border-b border-gray-100 dark:border-gray-700 bg-blue-50/50 dark:bg-blue-900/20">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Pliki do przesłania:</p>
                   {pendingFiles.map((file, index) => {
                     const FileIcon = getFileIcon(file.type);
                     return (
                       <div
                         key={index}
-                        className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-200"
+                        className="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg border border-blue-200 dark:border-blue-800"
                       >
                         <div className="p-2 bg-blue-50 rounded-lg">
                           <FileIcon className="w-5 h-5 text-blue-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</p>
                         </div>
                         <button
                           onClick={() => handleRemovePendingFile(index)}
@@ -852,13 +852,13 @@ const TicketForm = () => {
 
               {/* Upload area */}
               <div className="p-4">
-                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-colors">
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <div className="flex flex-col items-center justify-center">
                     <Upload className="w-6 h-6 text-gray-400 mb-1" />
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       <span className="font-medium text-gray-700">Kliknij, aby dodać pliki</span>
                     </p>
-                    <p className="text-xs text-gray-400">Maks. 10MB na plik</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Maks. 10MB na plik</p>
                   </div>
                   <input
                     type="file"
@@ -874,18 +874,18 @@ const TicketForm = () => {
 
           {/* Comments Section (only for edit) */}
           {isEdit && (
-            <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-gray-500" />
                   Komentarze ({comments.length})
                 </h3>
               </div>
 
               {/* Comments list */}
-              <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+              <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-96 overflow-y-auto">
                 {comments.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500 text-sm">
+                  <div className="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">
                     Brak komentarzy
                   </div>
                 ) : (
@@ -899,7 +899,7 @@ const TicketForm = () => {
                             className="w-8 h-8 rounded-full"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600">
                             {comment.user ? getInitials(comment.user.first_name, comment.user.last_name) : '?'}
                           </div>
                         )}
@@ -908,7 +908,7 @@ const TicketForm = () => {
                             <span className="font-medium text-gray-900 text-sm">
                               {comment.user ? `${comment.user.first_name} ${comment.user.last_name}` : 'Nieznany'}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
                               {formatDate(comment.created_at)}
                             </span>
                             {comment.is_internal && (
@@ -917,7 +917,7 @@ const TicketForm = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.content}</p>
                         </div>
                       </div>
                     </div>
@@ -926,7 +926,7 @@ const TicketForm = () => {
               </div>
 
               {/* Add comment */}
-              <div className="p-4 border-t border-gray-200">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <textarea
@@ -934,7 +934,7 @@ const TicketForm = () => {
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Napisz komentarz..."
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm"
                     />
                   </div>
                   <button
@@ -958,8 +958,8 @@ const TicketForm = () => {
         {isEdit && ticket && (
           <div className="space-y-4">
             {/* Status Card with dropdown */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Status zgłoszenia</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Status zgłoszenia</h3>
               <div className="relative" ref={statusDropdownRef}>
                 <button
                   onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -987,9 +987,9 @@ const TicketForm = () => {
 
                 {/* Status Dropdown */}
                 {showStatusDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-3 py-2 border-b border-gray-100">
-                      <p className="text-xs font-medium text-gray-500">Zmień status na:</p>
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Zmień status na:</p>
                     </div>
                     {allStatuses.map((status) => {
                       const config = getStatusConfig(status);
@@ -1003,7 +1003,7 @@ const TicketForm = () => {
                           disabled={isCurrentStatus}
                           className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                             isCurrentStatus
-                              ? 'bg-gray-50 text-gray-400 cursor-default'
+                              ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 cursor-default'
                               : 'hover:bg-gray-50 text-gray-700'
                           }`}
                         >
@@ -1012,7 +1012,7 @@ const TicketForm = () => {
                           </span>
                           {config.label}
                           {isCurrentStatus && (
-                            <span className="ml-auto text-xs text-gray-400">Aktualny</span>
+                            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Aktualny</span>
                           )}
                         </button>
                       );
@@ -1023,8 +1023,8 @@ const TicketForm = () => {
             </div>
 
             {/* Quick Actions Card */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Szybkie akcje</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Szybkie akcje</h3>
               <div className="space-y-2">
                 <button
                   onClick={() => setShowCreateTaskModal(true)}
@@ -1036,7 +1036,7 @@ const TicketForm = () => {
                   Utwórz zadanie
                 </button>
                 {!ticket.project_id && (
-                  <p className="text-xs text-gray-500 px-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 px-1">
                     Przypisz zgłoszenie do projektu, aby móc utworzyć zadanie
                   </p>
                 )}
@@ -1044,8 +1044,8 @@ const TicketForm = () => {
             </div>
 
             {/* Details Card */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Szczegóły</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Szczegóły</h3>
 
               {/* Creator */}
               {ticket.creator && (
@@ -1054,8 +1054,8 @@ const TicketForm = () => {
                     <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Utworzone przez</div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Utworzone przez</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {ticket.creator.first_name} {ticket.creator.last_name}
                     </div>
                   </div>
@@ -1068,8 +1068,8 @@ const TicketForm = () => {
                   <User className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Przypisane do</div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Przypisane do</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     {ticket.assignee
                       ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}`
                       : 'Nieprzypisane'}
@@ -1083,8 +1083,8 @@ const TicketForm = () => {
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Utworzono</div>
-                  <div className="text-sm text-gray-900">{formatDate(ticket.created_at)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Utworzono</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">{formatDate(ticket.created_at)}</div>
                 </div>
               </div>
 
@@ -1094,8 +1094,8 @@ const TicketForm = () => {
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Ostatnia aktualizacja</div>
-                  <div className="text-sm text-gray-900">{formatDate(ticket.updated_at)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Ostatnia aktualizacja</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">{formatDate(ticket.updated_at)}</div>
                 </div>
               </div>
 
@@ -1106,8 +1106,8 @@ const TicketForm = () => {
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Rozwiązano</div>
-                    <div className="text-sm text-gray-900">{formatDate(ticket.resolved_at)}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Rozwiązano</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{formatDate(ticket.resolved_at)}</div>
                   </div>
                 </div>
               )}
@@ -1119,17 +1119,17 @@ const TicketForm = () => {
                     <Archive className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Zamknięto</div>
-                    <div className="text-sm text-gray-900">{formatDate(ticket.closed_at)}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Zamknięto</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{formatDate(ticket.closed_at)}</div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Type & Priority Card */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
               <div>
-                <div className="text-xs text-gray-500 mb-1">Typ</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Typ</div>
                 {(() => {
                   const typeConfig = getTypeConfig(ticket.type);
                   const TypeIcon = typeConfig.icon;
@@ -1143,7 +1143,7 @@ const TicketForm = () => {
               </div>
 
               <div>
-                <div className="text-xs text-gray-500 mb-1">Priorytet</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Priorytet</div>
                 <div className={`text-sm font-medium ${getPriorityConfig(ticket.priority).color}`}>
                   {getPriorityConfig(ticket.priority).label}
                 </div>
@@ -1151,15 +1151,15 @@ const TicketForm = () => {
 
               {ticket.category && (
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Kategoria</div>
-                  <div className="text-sm text-gray-900">{ticket.category}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Kategoria</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">{ticket.category}</div>
                 </div>
               )}
 
               {ticket.project && (
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Projekt</div>
-                  <div className="text-sm text-gray-900">{ticket.project.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Projekt</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">{ticket.project.name}</div>
                 </div>
               )}
             </div>
@@ -1170,15 +1170,15 @@ const TicketForm = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Usuń zgłoszenie</h3>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Usuń zgłoszenie</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Czy na pewno chcesz usunąć to zgłoszenie? Ta operacja jest nieodwracalna.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Anuluj
               </button>
@@ -1204,26 +1204,26 @@ const TicketForm = () => {
       {/* Create Task Modal */}
       {showCreateTaskModal && ticket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <ListTodo className="w-5 h-5 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Utwórz zadanie</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Utwórz zadanie</h3>
             </div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               Utworzysz nowe zadanie na podstawie tego zgłoszenia:
             </p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
+                <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{ticket.ticket_number}</span>
               </div>
-              <p className="font-medium text-gray-900">{ticket.title}</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-medium text-gray-900 dark:text-white">{ticket.title}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Projekt: <span className="text-gray-700">{ticket.project?.name || 'Nieznany'}</span>
               </p>
               {ticket.assignee && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Przypisane do: <span className="text-gray-700">{ticket.assignee.first_name} {ticket.assignee.last_name}</span>
                 </p>
               )}
@@ -1231,7 +1231,7 @@ const TicketForm = () => {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowCreateTaskModal(false)}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Anuluj
               </button>

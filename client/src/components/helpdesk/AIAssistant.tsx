@@ -123,7 +123,7 @@ const AIAssistant: React.FC = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-96 h-[500px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 overflow-hidden">
+        <div className="fixed bottom-24 right-6 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col z-50 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -142,7 +142,7 @@ const AIAssistant: React.FC = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -156,7 +156,7 @@ const AIAssistant: React.FC = () => {
                       ? 'bg-blue-600 text-white'
                       : message.isError
                       ? 'bg-red-100 text-red-600'
-                      : 'bg-gray-200 text-gray-600'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                   }`}
                 >
                   {message.role === 'user' ? (
@@ -172,8 +172,8 @@ const AIAssistant: React.FC = () => {
                     message.role === 'user'
                       ? 'bg-blue-600 text-white'
                       : message.isError
-                      ? 'bg-red-50 border border-red-200 text-red-800'
-                      : 'bg-white border border-gray-200 text-gray-800'
+                      ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300'
+                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-line">{message.content}</p>
@@ -193,10 +193,10 @@ const AIAssistant: React.FC = () => {
             ))}
             {isLoading && (
               <div className="flex gap-2">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </div>
-                <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
                   <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                 </div>
               </div>
@@ -205,7 +205,7 @@ const AIAssistant: React.FC = () => {
           </div>
 
           {/* Input */}
-          <div className="p-3 border-t border-gray-200 bg-white">
+          <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -214,7 +214,7 @@ const AIAssistant: React.FC = () => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Napisz wiadomość..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isLoading}
               />
               <button
@@ -225,7 +225,7 @@ const AIAssistant: React.FC = () => {
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-2 text-center">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
               Powered by OpenAI GPT • Asystent systemu ERP
             </p>
           </div>

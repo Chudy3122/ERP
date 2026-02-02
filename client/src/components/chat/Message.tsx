@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Message as MessageType } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -9,6 +10,7 @@ interface MessageProps {
 }
 
 const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isOwnMessage = message.sender_id === user?.id;
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -124,7 +126,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
                       d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  Dołącz do spotkania →
+                  {t('chat:joinMeeting')} →
                 </a>
               );
             }
@@ -140,7 +142,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
   if (message.message_type === 'system') {
     return (
       <div className="flex justify-center my-4">
-        <p className="text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-full">
+        <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full">
           {message.content}
         </p>
       </div>
@@ -148,7 +150,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
   }
 
   return (
-    <div className={`flex gap-3 mb-3 group hover:bg-white py-2 px-3 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 mb-3 group hover:bg-white dark:hover:bg-gray-800 py-2 px-3 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       {!isOwnMessage && (
         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold flex-shrink-0">
@@ -166,7 +168,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
       <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
         {/* Sender name (only for others' messages) */}
         {!isOwnMessage && message.sender && (
-          <p className="text-xs font-semibold text-gray-600 mb-1 px-1">
+          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 px-1">
             {message.sender.first_name} {message.sender.last_name}
           </p>
         )}
@@ -178,15 +180,15 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
               isOwnMessage
                 ? 'bg-blue-600 text-white'
                 : message.is_deleted
-                ? 'bg-gray-100 text-gray-400 italic border border-gray-200'
-                : 'bg-white text-gray-900 border border-gray-200'
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 italic border border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-600'
             }`}
           >
             {renderMessageContent(message.content)}
 
             {/* Edited indicator */}
             {message.is_edited && !message.is_deleted && (
-              <span className={`text-[10px] ml-2 ${isOwnMessage ? 'text-blue-100' : 'text-gray-400'}`}>(edytowano)</span>
+              <span className={`text-[10px] ml-2 ${isOwnMessage ? 'text-blue-100' : 'text-gray-400'}`}>({t('chat:edited')})</span>
             )}
           </div>
         )}
@@ -204,7 +206,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
                     rel="noopener noreferrer"
                     className="block hover:opacity-90 transition-opacity"
                   >
-                    <div className="relative rounded-md overflow-hidden border border-gray-200 shadow-md bg-gray-50">
+                    <div className="relative rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md bg-gray-50 dark:bg-gray-800">
                       <img
                         src={`${API_BASE_URL}${attachment.file_url}`}
                         alt={attachment.file_name}
@@ -222,7 +224,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
                     className={`flex items-center gap-3 p-3 rounded-md border ${
                       isOwnMessage
                         ? 'bg-blue-500 border-blue-400 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
                     } hover:opacity-80 transition-opacity`}
                   >
                     <div className="flex-shrink-0">{getFileIcon(attachment.file_type)}</div>
@@ -262,28 +264,28 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
               {onEdit && (
                 <button
                   onClick={() => {
-                    const newContent = prompt('Edytuj wiadomość:', message.content);
+                    const newContent = prompt(t('chat:editMessage'), message.content);
                     if (newContent && newContent !== message.content) {
                       onEdit(message.id, newContent);
                     }
                   }}
                   className="text-[10px] text-gray-400 hover:text-blue-600 font-medium transition-colors"
-                  title="Edytuj"
+                  title={t('chat:edit')}
                 >
-                  Edytuj
+                  {t('chat:edit')}
                 </button>
               )}
               {onDelete && (
                 <button
                   onClick={() => {
-                    if (confirm('Czy na pewno chcesz usunąć tę wiadomość?')) {
+                    if (confirm(t('chat:deleteConfirm'))) {
                       onDelete(message.id);
                     }
                   }}
                   className="text-[10px] text-gray-400 hover:text-red-600 font-medium transition-colors"
-                  title="Usuń"
+                  title={t('chat:delete')}
                 >
-                  Usuń
+                  {t('chat:delete')}
                 </button>
               )}
             </div>

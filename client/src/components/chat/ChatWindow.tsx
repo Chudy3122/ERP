@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
 import Message from './Message';
 import MessageInput from './MessageInput';
 
 const ChatWindow: React.FC = () => {
+  const { t } = useTranslation();
   const {
     activeChannel,
     messages,
@@ -31,39 +33,39 @@ const ChatWindow: React.FC = () => {
       const otherMember = activeChannel.members[0];
       return otherMember.user
         ? `${otherMember.user.first_name} ${otherMember.user.last_name}`
-        : 'Nieznany użytkownik';
+        : t('chat:unnamed');
     }
-    return 'Bez nazwy';
+    return t('chat:unnamed');
   };
 
   const getChannelDescription = (): string => {
     if (!activeChannel) return '';
     if (activeChannel.description) return activeChannel.description;
-    if (activeChannel.type === 'direct') return 'Wiadomość bezpośrednia';
-    return `Kanał ${activeChannel.type}`;
+    if (activeChannel.type === 'direct') return t('chat:directMessage');
+    return t('chat:channelType', { type: activeChannel.type });
   };
 
   // No channel selected
   if (!activeChannel) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-50">
+      <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-md bg-gray-100 flex items-center justify-center">
-            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-            Witaj w czacie!
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+            {t('chat:welcome')}
           </h2>
-          <p className="text-gray-600">Wybierz kanał z listy po lewej stronie, aby rozpocząć rozmowę</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('chat:selectChannel')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="bg-blue-600 px-6 py-4 border-b border-blue-700">
         <div className="flex items-center justify-between">
@@ -106,13 +108,13 @@ const ChatWindow: React.FC = () => {
       {/* Messages Container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50"
+        className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50 dark:bg-gray-900"
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <p className="text-gray-500">Brak wiadomości</p>
-              <p className="text-sm text-gray-400 mt-2">Rozpocznij rozmowę poniżej</p>
+              <p className="text-gray-500 dark:text-gray-400">{t('chat:noMessages')}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">{t('chat:startConversation')}</p>
             </div>
           </div>
         ) : (
@@ -128,13 +130,13 @@ const ChatWindow: React.FC = () => {
 
             {/* Typing Indicator */}
             {typingUsers.length > 0 && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 ml-3">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 ml-3">
                 <div className="flex gap-1">
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
                 </div>
-                <span>Ktoś pisze...</span>
+                <span>{t('chat:typing')}</span>
               </div>
             )}
 
@@ -148,7 +150,7 @@ const ChatWindow: React.FC = () => {
       <MessageInput
         onSendMessage={sendMessage}
         onTyping={sendTypingIndicator}
-        placeholder={`Wiadomość do ${getChannelName()}...`}
+        placeholder={t('chat:messageTo', { name: getChannelName() })}
       />
     </div>
   );

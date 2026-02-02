@@ -115,7 +115,7 @@ const Profile: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Alerts */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 text-sm">
             {error}
           </div>
         )}
@@ -126,7 +126,7 @@ const Profile: React.FC = () => {
         )}
 
         {/* Profile Header Card */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
           {/* Cover / Header */}
           <div className="h-32 bg-gradient-to-r from-blue-600 to-blue-700"></div>
 
@@ -137,7 +137,7 @@ const Profile: React.FC = () => {
               <div className="relative">
                 <div
                   onClick={handlePhotoClick}
-                  className="w-32 h-32 rounded-full border-4 border-white bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer group shadow-lg"
+                  className="w-32 h-32 rounded-full border-4 border-white bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden cursor-pointer group shadow-lg"
                 >
                   {isUploadingPhoto ? (
                     <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
@@ -165,7 +165,7 @@ const Profile: React.FC = () => {
 
               {/* Name & Role */}
               <div className="flex-1 sm:pb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {user?.first_name} {user?.last_name}
                 </h1>
                 <p className="text-gray-600">{user?.position || 'Brak stanowiska'}</p>
@@ -221,15 +221,15 @@ const Profile: React.FC = () => {
         {/* Profile Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Personal Information */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <User className="w-5 h-5 text-gray-500" />
               Dane osobowe
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Imię</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imię</label>
                 {isEditing ? (
                   <input
                     type="text"
@@ -244,7 +244,7 @@ const Profile: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nazwisko</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nazwisko</label>
                 {isEditing ? (
                   <input
                     type="text"
@@ -259,16 +259,16 @@ const Profile: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
                   <Mail className="w-4 h-4" />
                   Email
                 </label>
                 <p className="text-gray-900">{user?.email}</p>
-                <p className="text-xs text-gray-500 mt-1">Email nie może być zmieniony</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Email nie może być zmieniony</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
                   <Phone className="w-4 h-4" />
                   Telefon
                 </label>
@@ -289,15 +289,15 @@ const Profile: React.FC = () => {
           </div>
 
           {/* Work Information */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-gray-500" />
               Informacje służbowe
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stanowisko</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stanowisko</label>
                 {isEditing ? (
                   <input
                     type="text"
@@ -313,7 +313,7 @@ const Profile: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
                   <Building className="w-4 h-4" />
                   Dział
                 </label>
@@ -332,19 +332,19 @@ const Profile: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rola w systemie</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rola w systemie</label>
                 <p className="text-gray-900">{getRoleName()}</p>
-                <p className="text-xs text-gray-500 mt-1">Rola może być zmieniona tylko przez administratora</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Rola może być zmieniona tylko przez administratora</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ID pracownika</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID pracownika</label>
                 <p className="text-gray-900">{user?.employee_id || <span className="text-gray-400">Nie przypisano</span>}</p>
               </div>
 
               {user?.hire_date && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data zatrudnienia</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data zatrudnienia</label>
                   <p className="text-gray-900">
                     {new Date(user.hire_date).toLocaleDateString('pl-PL', {
                       day: 'numeric',
@@ -359,26 +359,26 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Account Stats */}
-        <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Statystyki konta</h2>
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Statystyki konta</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-gray-900">{user?.annual_leave_days || 20}</p>
-              <p className="text-sm text-gray-600">Dni urlopu</p>
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{user?.annual_leave_days || 20}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Dni urlopu</p>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-gray-900">{user?.working_hours_per_day || 8}h</p>
-              <p className="text-sm text-gray-600">Godzin dziennie</p>
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{user?.working_hours_per_day || 8}h</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Godzin dziennie</p>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {user?.created_at ? new Date(user.created_at).toLocaleDateString('pl-PL', { month: 'short', year: 'numeric' }) : '-'}
               </p>
-              <p className="text-sm text-gray-600">W systemie od</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">W systemie od</p>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <p className="text-2xl font-bold text-green-600">Aktywne</p>
-              <p className="text-sm text-gray-600">Status konta</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Status konta</p>
             </div>
           </div>
         </div>

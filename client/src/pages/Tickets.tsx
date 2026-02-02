@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import {
   AlertCircle,
@@ -31,6 +32,7 @@ type StatusFilter = 'all' | 'open' | 'in_progress' | 'waiting_response' | 'resol
 type ViewTab = 'my' | 'assigned' | 'all';
 
 const Tickets = () => {
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -162,37 +164,37 @@ const Tickets = () => {
   const getStatusConfig = (status: TicketStatus) => {
     const configs: Record<TicketStatus, { label: string; color: string; icon: typeof Inbox; dotColor: string }> = {
       open: {
-        label: 'Nowe',
+        label: t('tickets:statusOpen'),
         color: 'bg-blue-100 text-blue-700',
         icon: Inbox,
         dotColor: 'bg-blue-500',
       },
       in_progress: {
-        label: 'W trakcie',
+        label: t('tickets:statusInProgress'),
         color: 'bg-yellow-100 text-yellow-700',
         icon: PlayCircle,
         dotColor: 'bg-yellow-500',
       },
       waiting_response: {
-        label: 'Oczekuje',
+        label: t('tickets:statusWaiting'),
         color: 'bg-purple-100 text-purple-700',
         icon: PauseCircle,
         dotColor: 'bg-purple-500',
       },
       resolved: {
-        label: 'Rozwiązane',
+        label: t('tickets:statusResolved'),
         color: 'bg-green-100 text-green-700',
         icon: CheckCircle2,
         dotColor: 'bg-green-500',
       },
       rejected: {
-        label: 'Odrzucone',
+        label: t('tickets:statusRejected'),
         color: 'bg-red-100 text-red-700',
         icon: XCircle,
         dotColor: 'bg-red-500',
       },
       closed: {
-        label: 'Zamknięte',
+        label: t('tickets:statusClosed'),
         color: 'bg-gray-100 text-gray-600',
         icon: Archive,
         dotColor: 'bg-gray-400',
@@ -203,21 +205,21 @@ const Tickets = () => {
 
   const getPriorityConfig = (priority: TicketPriority) => {
     const configs = {
-      low: { label: 'Niski', color: 'text-gray-500', bgColor: 'bg-gray-100' },
-      normal: { label: 'Normalny', color: 'text-blue-600', bgColor: 'bg-blue-50' },
-      high: { label: 'Wysoki', color: 'text-orange-600', bgColor: 'bg-orange-50' },
-      urgent: { label: 'Pilne', color: 'text-red-600', bgColor: 'bg-red-50' },
+      low: { label: t('tickets:priorityLow'), color: 'text-gray-500', bgColor: 'bg-gray-100' },
+      normal: { label: t('tickets:priorityNormal'), color: 'text-blue-600', bgColor: 'bg-blue-50' },
+      high: { label: t('tickets:priorityHigh'), color: 'text-orange-600', bgColor: 'bg-orange-50' },
+      urgent: { label: t('tickets:priorityUrgent'), color: 'text-red-600', bgColor: 'bg-red-50' },
     };
     return configs[priority];
   };
 
   const getTypeConfig = (type: TicketType) => {
     const configs = {
-      bug: { label: 'Błąd', icon: Bug, color: 'text-red-500' },
-      feature_request: { label: 'Nowa funkcja', icon: Lightbulb, color: 'text-yellow-500' },
-      support: { label: 'Wsparcie', icon: LifeBuoy, color: 'text-blue-500' },
-      question: { label: 'Pytanie', icon: HelpCircle, color: 'text-purple-500' },
-      other: { label: 'Inne', icon: MoreHorizontal, color: 'text-gray-500' },
+      bug: { label: t('tickets:typeBug'), icon: Bug, color: 'text-red-500' },
+      feature_request: { label: t('tickets:typeFeature'), icon: Lightbulb, color: 'text-yellow-500' },
+      support: { label: t('tickets:typeSupport'), icon: LifeBuoy, color: 'text-blue-500' },
+      question: { label: t('tickets:typeQuestion'), icon: HelpCircle, color: 'text-purple-500' },
+      other: { label: t('tickets:typeOther'), icon: MoreHorizontal, color: 'text-gray-500' },
     };
     return configs[type];
   };
@@ -229,9 +231,9 @@ const Tickets = () => {
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return 'Dzisiaj, ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      return t('tickets:current') + ', ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
     } else if (diffDays === 1) {
-      return 'Wczoraj, ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      return t('tickets:total') + ', ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
     } else if (diffDays < 7) {
       return `${diffDays} dni temu`;
     } else {
@@ -262,20 +264,20 @@ const Tickets = () => {
   ];
 
   return (
-    <MainLayout title="Zgłoszenia">
+    <MainLayout title={t('tickets:title')}>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Zgłoszenia</h1>
-            <p className="text-gray-500 mt-1 text-sm">Zarządzaj zgłoszeniami i problemami</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('tickets:title')}</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{t('tickets:subtitle')}</p>
           </div>
           <button
             onClick={() => navigate('/tickets/new')}
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium text-sm"
           >
             <Plus className="w-4 h-4" />
-            Nowe zgłoszenie
+            {t('tickets:newTicket')}
           </button>
         </div>
 
@@ -284,84 +286,84 @@ const Tickets = () => {
           <button
             onClick={() => setStatusFilter('all')}
             className={`p-3 rounded-lg border transition-all ${
-              statusFilter === 'all' ? 'border-gray-800 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300'
+              statusFilter === 'all' ? 'border-gray-800 bg-gray-50 dark:bg-gray-700 dark:border-gray-600' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
-            <div className="text-2xl font-bold text-gray-900">{ticketStats.total}</div>
-            <div className="text-xs text-gray-500">Wszystkie</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{ticketStats.total}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('tickets:all')}</div>
           </button>
           <button
             onClick={() => setStatusFilter('open')}
             className={`p-3 rounded-lg border transition-all ${
-              statusFilter === 'open' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+              statusFilter === 'open' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className="text-2xl font-bold text-blue-600">{ticketStats.open}</div>
-            <div className="text-xs text-gray-500">Nowe</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('tickets:statusOpen')}</div>
           </button>
           <button
             onClick={() => setStatusFilter('in_progress')}
             className={`p-3 rounded-lg border transition-all ${
-              statusFilter === 'in_progress' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-white hover:border-gray-300'
+              statusFilter === 'in_progress' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className="text-2xl font-bold text-yellow-600">{ticketStats.in_progress}</div>
-            <div className="text-xs text-gray-500">W trakcie</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('tickets:statusInProgress')}</div>
           </button>
           <button
             onClick={() => setStatusFilter('resolved')}
             className={`p-3 rounded-lg border transition-all ${
-              statusFilter === 'resolved' ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'
+              statusFilter === 'resolved' ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             <div className="text-2xl font-bold text-green-600">{ticketStats.resolved}</div>
-            <div className="text-xs text-gray-500">Rozwiązane</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('tickets:statusResolved')}</div>
           </button>
           <button
             onClick={() => setStatusFilter('rejected')}
             className={`p-3 rounded-lg border transition-all ${
-              statusFilter === 'rejected' ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'
+              statusFilter === 'rejected' ? 'border-red-500 bg-red-50 dark:bg-red-900/30' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
             }`}
           >
             <div className="text-2xl font-bold text-red-600">{ticketStats.rejected}</div>
-            <div className="text-xs text-gray-500">Odrzucone</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('tickets:statusRejected')}</div>
           </button>
           <button
             onClick={() => setStatusFilter('closed')}
             className={`p-3 rounded-lg border transition-all ${
-              statusFilter === 'closed' ? 'border-gray-500 bg-gray-100' : 'border-gray-200 bg-white hover:border-gray-300'
+              statusFilter === 'closed' ? 'border-gray-500 bg-gray-100 dark:bg-gray-700' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
             }`}
           >
             <div className="text-2xl font-bold text-gray-600">{ticketStats.closed}</div>
-            <div className="text-xs text-gray-500">Zamknięte</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('tickets:statusClosed')}</div>
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="border-b border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-4">
             <nav className="flex -mb-px">
               <button
                 onClick={() => setActiveTab('my')}
                 className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'my'
-                    ? 'border-gray-800 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-gray-800 text-gray-900 dark:border-white dark:text-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                 }`}
               >
-                Moje zgłoszenia
+                {t('tickets:myTickets')}
               </button>
               <button
                 onClick={() => setActiveTab('assigned')}
                 className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'assigned'
-                    ? 'border-gray-800 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-gray-800 text-gray-900 dark:border-white dark:text-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                 }`}
               >
-                Przypisane do mnie
+                {t('tickets:assigned')}
               </button>
               {isAdmin && (
                 <button
@@ -372,7 +374,7 @@ const Tickets = () => {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  Wszystkie
+                  {t('tickets:all')}
                 </button>
               )}
             </nav>
@@ -383,10 +385,10 @@ const Tickets = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Szukaj zgłoszeń..."
+                  placeholder={t('tickets:search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-1.5 w-64 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                  className="pl-9 pr-3 py-1.5 w-64 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                 />
               </div>
               <button
@@ -394,11 +396,11 @@ const Tickets = () => {
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
                   hasActiveFilters
                     ? 'border-gray-800 bg-gray-800 text-white'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
                 }`}
               >
                 <Filter className="w-4 h-4" />
-                Filtry
+                {t('tickets:filters')}
                 {hasActiveFilters && (
                   <span className="ml-1 w-5 h-5 bg-white text-gray-800 rounded-full text-xs flex items-center justify-center font-medium">
                     {[statusFilter !== 'all', priorityFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length}
@@ -410,42 +412,42 @@ const Tickets = () => {
 
           {/* Expanded Filters */}
           {showFilters && (
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-wrap items-center gap-4">
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-wrap items-center gap-4 dark:bg-gray-700 dark:border-gray-600">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Priorytet:</label>
+                <label className="text-sm text-gray-600 dark:text-gray-300">{t('tickets:priority')}:</label>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value as TicketPriority | 'all')}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-gray-400"
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="all">Wszystkie</option>
-                  <option value="low">Niski</option>
-                  <option value="normal">Normalny</option>
-                  <option value="high">Wysoki</option>
-                  <option value="urgent">Pilne</option>
+                  <option value="all">{t('tickets:all')}</option>
+                  <option value="low">{t('tickets:priorityLow')}</option>
+                  <option value="normal">{t('tickets:priorityNormal')}</option>
+                  <option value="high">{t('tickets:priorityHigh')}</option>
+                  <option value="urgent">{t('tickets:priorityUrgent')}</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Typ:</label>
+                <label className="text-sm text-gray-600 dark:text-gray-300">{t('tickets:type')}:</label>
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value as TicketType | 'all')}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-gray-400"
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="all">Wszystkie</option>
-                  <option value="bug">Błąd</option>
-                  <option value="feature_request">Nowa funkcja</option>
-                  <option value="support">Wsparcie</option>
-                  <option value="question">Pytanie</option>
-                  <option value="other">Inne</option>
+                  <option value="all">{t('tickets:all')}</option>
+                  <option value="bug">{t('tickets:typeBug')}</option>
+                  <option value="feature_request">{t('tickets:typeFeature')}</option>
+                  <option value="support">{t('tickets:typeSupport')}</option>
+                  <option value="question">{t('tickets:typeQuestion')}</option>
+                  <option value="other">{t('tickets:typeOther')}</option>
                 </select>
               </div>
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-gray-600 hover:text-gray-900 underline"
+                  className="text-sm text-gray-600 hover:text-gray-900 underline dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  Wyczyść filtry
+                  {t('tickets:clearFilters')}
                 </button>
               )}
             </div>
@@ -456,25 +458,25 @@ const Tickets = () => {
         {isLoading ? (
           <div className="p-8 flex flex-col items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-3" />
-            <p className="text-sm text-gray-500">Ładowanie zgłoszeń...</p>
+            <p className="text-sm text-gray-500">{t('tickets:loading')}</p>
           </div>
         ) : filteredTickets.length === 0 ? (
           <div className="text-center py-12">
             <AlertCircle className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {hasActiveFilters ? 'Brak wyników' : 'Brak zgłoszeń'}
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {hasActiveFilters ? t('tickets:noResults') : t('tickets:noTickets')}
             </h3>
-            <p className="text-gray-500 mb-6 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">
               {hasActiveFilters
-                ? 'Nie znaleziono zgłoszeń pasujących do wybranych filtrów'
-                : 'Nie masz żadnych zgłoszeń w tej kategorii'}
+                ? t('tickets:noTicketsFiltered')
+                : t('tickets:noTicketsCategory')}
             </p>
             {hasActiveFilters ? (
               <button
                 onClick={clearFilters}
-                className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
               >
-                Wyczyść filtry
+                {t('tickets:clearFilters')}
               </button>
             ) : (
               <button
@@ -482,12 +484,12 @@ const Tickets = () => {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Utwórz zgłoszenie
+                {t('tickets:createTicket')}
               </button>
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {filteredTickets.map((ticket) => {
               const statusConfig = getStatusConfig(ticket.status);
               const priorityConfig = getPriorityConfig(ticket.priority);
@@ -498,12 +500,12 @@ const Tickets = () => {
               return (
                 <div
                   key={ticket.id}
-                  className="p-4 hover:bg-gray-50 transition-colors group"
+                  className="p-4 hover:bg-gray-50 transition-colors group dark:hover:bg-gray-700"
                 >
                   <div className="flex items-start gap-4">
                     {/* Type Icon */}
                     <div
-                      className={`mt-0.5 p-2 rounded-lg bg-gray-100 ${typeConfig.color} cursor-pointer`}
+                      className={`mt-0.5 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 ${typeConfig.color} cursor-pointer`}
                       onClick={() => navigate(`/tickets/${ticket.id}/edit`)}
                     >
                       <TypeIcon className="w-5 h-5" />
@@ -517,7 +519,7 @@ const Tickets = () => {
                           onClick={() => navigate(`/tickets/${ticket.id}/edit`)}
                         >
                           <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
-                          <h3 className="font-semibold text-gray-900 group-hover:text-gray-700">
+                          <h3 className="font-semibold text-gray-900 group-hover:text-gray-700 dark:text-white dark:group-hover:text-gray-300">
                             {ticket.title}
                           </h3>
                         </div>
@@ -543,9 +545,9 @@ const Tickets = () => {
 
                             {/* Dropdown menu */}
                             {openStatusDropdown === ticket.id && (
-                              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                                <div className="px-3 py-2 border-b border-gray-100">
-                                  <p className="text-xs font-medium text-gray-500">Zmień status na:</p>
+                              <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('tickets:changeStatus')}</p>
                                 </div>
                                 {allStatuses.map((status) => {
                                   const config = getStatusConfig(status);
@@ -564,8 +566,8 @@ const Tickets = () => {
                                       disabled={isCurrentStatus}
                                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                                         isCurrentStatus
-                                          ? 'bg-gray-50 text-gray-400 cursor-default'
-                                          : 'hover:bg-gray-50 text-gray-700'
+                                          ? 'bg-gray-50 text-gray-400 cursor-default dark:bg-gray-700 dark:text-gray-500'
+                                          : 'hover:bg-gray-50 text-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                                       }`}
                                     >
                                       <span className={`p-1 rounded ${config.color}`}>
@@ -573,7 +575,7 @@ const Tickets = () => {
                                       </span>
                                       {config.label}
                                       {isCurrentStatus && (
-                                        <span className="ml-auto text-xs text-gray-400">Aktualny</span>
+                                        <span className="ml-auto text-xs text-gray-400">{t('tickets:current')}</span>
                                       )}
                                     </button>
                                   );
@@ -589,7 +591,7 @@ const Tickets = () => {
                       </div>
 
                       <p
-                        className="text-sm text-gray-500 mb-3 line-clamp-1 cursor-pointer"
+                        className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-1 cursor-pointer"
                         onClick={() => navigate(`/tickets/${ticket.id}/edit`)}
                       >
                         {ticket.description}
@@ -671,8 +673,8 @@ const Tickets = () => {
 
         {/* Footer with count */}
         {!isLoading && filteredTickets.length > 0 && (
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
-            Wyświetlono {filteredTickets.length} z {tickets.length} zgłoszeń
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
+            {t('tickets:shown', { shown: filteredTickets.length, total: tickets.length })}
           </div>
         )}
       </div>

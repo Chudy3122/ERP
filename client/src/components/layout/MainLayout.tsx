@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import StatusSelector from '../status/StatusSelector';
 import AIAssistant from '../helpdesk/AIAssistant';
@@ -63,6 +64,7 @@ interface NotificationItem {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -123,46 +125,46 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'przed chwilą';
-    if (diffMins < 60) return `${diffMins} min temu`;
-    if (diffHours < 24) return `${diffHours} godz. temu`;
-    if (diffDays < 7) return `${diffDays} dni temu`;
-    return date.toLocaleDateString('pl-PL');
+    if (diffMins < 1) return t('common.justNow');
+    if (diffMins < 60) return t('common.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('common.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('common.daysAgo', { count: diffDays });
+    return date.toLocaleDateString();
   };
 
   const navigation: NavigationItem[] = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: Home },
 
     { type: 'divider' },
-    { type: 'header', name: 'Komunikacja' },
-    { name: 'Czat', href: '/chat', icon: MessageSquare },
-    { name: 'Spotkania', href: '/meeting', icon: Video },
+    { type: 'header', name: t('nav.communication') },
+    { name: t('nav.chat'), href: '/chat', icon: MessageSquare },
+    { name: t('nav.meetings'), href: '/meeting', icon: Video },
 
     { type: 'divider' },
-    { type: 'header', name: 'Czas pracy' },
-    { name: 'Ewidencja czasu', href: '/time-tracking', icon: Clock },
-    { name: 'Nieobecności', href: '/absences', icon: CalendarDays },
-    { name: 'Kalendarz zespołu', href: '/team-calendar', icon: Calendar },
+    { type: 'header', name: t('nav.workTime') },
+    { name: t('nav.timeTracking'), href: '/time-tracking', icon: Clock },
+    { name: t('nav.absences'), href: '/absences', icon: CalendarDays },
+    { name: t('nav.teamCalendar'), href: '/team-calendar', icon: Calendar },
 
     { type: 'divider' },
-    { type: 'header', name: 'Projekty' },
-    { name: 'Lista projektów', href: '/projects', icon: Folder },
-    { name: 'Moje zadania', href: '/tasks', icon: CheckSquare },
+    { type: 'header', name: t('nav.projects') },
+    { name: t('nav.projectList'), href: '/projects', icon: Folder },
+    { name: t('nav.myTasks'), href: '/tasks', icon: CheckSquare },
 
     { type: 'divider' },
-    { type: 'header', name: 'Pracownicy' },
-    { name: 'Lista pracowników', href: '/employees', icon: Users },
+    { type: 'header', name: t('nav.employees') },
+    { name: t('nav.employeeList'), href: '/employees', icon: Users },
 
     { type: 'divider' },
-    { type: 'header', name: 'Zgłoszenia' },
-    { name: 'Moje zgłoszenia', href: '/tickets?filter=my', icon: AlertCircle },
-    { name: 'Wszystkie zgłoszenia', href: '/tickets', icon: List, roles: ['ADMIN', 'TEAM_LEADER'] },
+    { type: 'header', name: t('nav.tickets') },
+    { name: t('nav.myTickets'), href: '/tickets?filter=my', icon: AlertCircle },
+    { name: t('nav.allTickets'), href: '/tickets', icon: List, roles: ['ADMIN', 'TEAM_LEADER'] },
 
     { type: 'divider' },
-    { type: 'header', name: 'Administracja', roles: ['ADMIN'] },
-    { name: 'Użytkownicy', href: '/admin/users', icon: UserCog, roles: ['ADMIN'] },
-    { name: 'Raporty', href: '/reports', icon: FileText, roles: ['ADMIN', 'TEAM_LEADER'] },
-    { name: 'Ustawienia', href: '/notification-settings', icon: Settings },
+    { type: 'header', name: t('nav.administration'), roles: ['ADMIN'] },
+    { name: t('nav.users'), href: '/admin/users', icon: UserCog, roles: ['ADMIN'] },
+    { name: t('nav.reports'), href: '/reports', icon: FileText, roles: ['ADMIN', 'TEAM_LEADER'] },
+    { name: t('nav.settings'), href: '/settings', icon: Settings },
   ];
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -177,13 +179,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const renderNavigationItem = (item: NavigationItem, idx: number) => {
     if ('type' in item) {
       if (item.type === 'divider') {
-        return <div key={`divider-${idx}`} className="my-1 border-t border-gray-200" />;
+        return <div key={`divider-${idx}`} className="my-1 border-t border-gray-200 dark:border-gray-700" />;
       }
 
       if (item.type === 'header') {
         if (item.roles && !item.roles.includes(user?.role || '')) return null;
         return (
-          <div key={`header-${idx}`} className="px-6 py-1 text-xs uppercase text-gray-400 font-semibold tracking-wider">
+          <div key={`header-${idx}`} className="px-6 py-1 text-xs uppercase text-gray-400 dark:text-gray-500 font-semibold tracking-wider">
             {item.name}
           </div>
         );
@@ -203,8 +205,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         onClick={() => setSidebarOpen(false)}
         className={`flex items-center gap-3 px-6 py-2 text-sm transition-colors ${
           isActive
-            ? 'bg-gray-100 text-gray-900 border-l-4 border-gray-800 font-medium'
-            : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent'
+            ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-l-4 border-gray-800 dark:border-blue-500 font-medium'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-4 border-transparent'
         }`}
       >
         <Icon className="w-4 h-4 flex-shrink-0" />
@@ -214,7 +216,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* Sidebar Overlay (mobile) */}
       {sidebarOpen && (
         <div
@@ -225,21 +227,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 w-64 bg-white border-r border-gray-200 transform ${
+        className={`fixed lg:static inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 transition-transform duration-200 ease-in-out z-50 flex flex-col`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-800 rounded-md flex items-center justify-center">
+            <div className="w-8 h-8 bg-gray-800 dark:bg-gray-600 rounded-md flex items-center justify-center">
               <span className="text-white font-bold text-sm">ERP</span>
             </div>
-            <span className="font-bold text-gray-900">System ERP</span>
+            <span className="font-bold text-gray-900 dark:text-white">System ERP</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-500 hover:text-gray-700"
+            className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400"
           >
             <X className="w-6 h-6" />
           </button>
@@ -252,7 +254,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
         {/* User Profile */}
         {user && (
-          <div className="border-t border-gray-200 p-3">
+          <div className="border-t border-gray-200 dark:border-gray-700 p-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
                 {user.avatar_url ? (
@@ -262,18 +264,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {user.first_name} {user.last_name}
                 </p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span>Wyloguj</span>
+              <span>{t('nav.logout')}</span>
             </button>
           </div>
         )}
@@ -282,15 +284,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6">
+        <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-500 hover:text-gray-700"
+              className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400"
             >
               <Menu className="w-6 h-6" />
             </button>
-            {title && <h1 className="text-xl font-semibold text-gray-900">{title}</h1>}
+            {title && <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>}
           </div>
 
           <div className="flex items-center gap-4">
@@ -298,7 +300,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             <div className="relative">
               <button
                 onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
-                className="relative p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
@@ -315,17 +317,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     className="fixed inset-0 z-10"
                     onClick={() => setNotificationDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-[500px] flex flex-col">
+                  <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 max-h-[500px] flex flex-col">
                     {/* Header */}
-                    <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Powiadomienia</h3>
+                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t('common.notifications')}</h3>
                       {unreadCount > 0 && (
                         <button
                           onClick={handleMarkAllAsRead}
                           className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
                         >
                           <Check className="w-3 h-3" />
-                          Oznacz wszystkie
+                          {t('common.markAllRead')}
                         </button>
                       )}
                     </div>
@@ -335,14 +337,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                       {notifications.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
                           <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                          <p className="text-sm">Brak powiadomień</p>
+                          <p className="text-sm">{t('common.noNotifications')}</p>
                         </div>
                       ) : (
                         notifications.map((notification) => (
                           <div
                             key={notification.id}
-                            className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                              !notification.is_read ? 'bg-blue-50' : ''
+                            className={`px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                              !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                             }`}
                             onClick={() => {
                               if (!notification.is_read) {
@@ -359,13 +361,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                                 notification.is_read ? 'bg-gray-300' : 'bg-blue-500'
                               }`} />
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm ${notification.is_read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
+                                <p className={`text-sm ${notification.is_read ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'}`}>
                                   {notification.title}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
                                   {notification.message}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                   {formatTimeAgo(notification.created_at)}
                                 </p>
                               </div>
@@ -376,7 +378,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                                     handleMarkAsRead(notification.id);
                                   }}
                                   className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                                  title="Oznacz jako przeczytane"
+                                  title={t('common.markAllRead')}
                                 >
                                   <Check className="w-4 h-4" />
                                 </button>
@@ -388,14 +390,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     </div>
 
                     {/* Footer */}
-                    <div className="px-4 py-3 border-t border-gray-200">
+                    <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
                       <Link
                         to="/notification-settings"
                         onClick={() => setNotificationDropdownOpen(false)}
-                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center justify-center gap-1"
+                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-1"
                       >
                         <Settings className="w-4 h-4" />
-                        Ustawienia powiadomień
+                        {t('common.notificationSettings')}
                       </Link>
                     </div>
                   </div>
@@ -408,7 +410,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
                     {user.avatar_url ? (
@@ -418,12 +420,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     )}
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {user.first_name} {user.last_name}
                     </p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -433,9 +435,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                       className="fixed inset-0 z-10"
                       onClick={() => setUserDropdownOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
                       {/* User Info Header */}
-                      <div className="px-4 py-3 border-b border-gray-200">
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-semibold">
                             {user.avatar_url ? (
@@ -445,17 +447,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
                               {user.first_name} {user.last_name}
                             </p>
-                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Status Selector */}
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-xs font-medium text-gray-700 mb-2">Zmień status</p>
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.changeStatus', 'Zmień status')}</p>
                         <StatusSelector />
                       </div>
 
@@ -464,28 +466,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                         <Link
                           to="/profile"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           <User className="w-4 h-4" />
-                          Mój profil
+                          {t('common.myProfile', 'Mój profil')}
                         </Link>
                         <Link
-                          to="/notification-settings"
+                          to="/settings"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           <Settings className="w-4 h-4" />
-                          Ustawienia
+                          {t('nav.settings')}
                         </Link>
                         <button
                           onClick={() => {
                             setUserDropdownOpen(false);
                             handleLogout();
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
-                          Wyloguj
+                          {t('nav.logout')}
                         </button>
                       </div>
                     </div>

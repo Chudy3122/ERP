@@ -76,7 +76,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, onClose
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
@@ -92,7 +92,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, onClose
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="np. Marketing, Projekty, Ogłoszenia"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               disabled={loading}
               required
             />
@@ -163,7 +163,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, onClose
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Krótki opis celu kanału..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
               disabled={loading}
             />
           </div>
@@ -174,7 +174,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, onClose
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               Anuluj
             </button>

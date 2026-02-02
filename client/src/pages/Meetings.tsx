@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import {
   Video,
@@ -49,6 +50,7 @@ const platformConfig: Record<MeetingPlatform, { name: string; color: string; bgC
 
 const Meetings = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('meetings');
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
 
   // Internal meeting modal state
@@ -265,7 +267,7 @@ const Meetings = () => {
   };
 
   return (
-    <MainLayout title="Spotkania">
+    <MainLayout title={t('title')}>
       {/* Incoming Call Modal */}
       {incomingCall && (
         <IncomingCallModal
@@ -279,36 +281,36 @@ const Meetings = () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Spotkania</h1>
-          <p className="text-gray-500">Organizuj spotkania wideo z zespołem lub korzystaj z zewnętrznych platform</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400">Organizuj spotkania wideo z zespołem lub korzystaj z zewnętrznych platform</p>
         </div>
 
         {/* Two main options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Internal Meeting Card */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-14 h-14 bg-gray-800 rounded-xl flex items-center justify-center">
                 <MonitorPlay className="w-7 h-7 text-white" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold text-gray-900 mb-1">Spotkanie wewnętrzne</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('joinMeeting')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Rozpocznij natychmiastowe połączenie wideo w oknie aplikacji
                 </p>
               </div>
             </div>
 
             <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-green-500" />
                 <span>HD wideo i audio</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-green-500" />
                 <span>Udostępnianie ekranu</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-green-500" />
                 <span>Powiadomienia w czasie rzeczywistym</span>
               </div>
@@ -322,19 +324,19 @@ const Meetings = () => {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium transition-colors"
             >
               <Video className="w-5 h-5" />
-              Rozpocznij spotkanie
+              {t('joinMeeting')}
             </button>
           </div>
 
           {/* External Meeting Card */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center">
                 <Globe className="w-7 h-7 text-white" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold text-gray-900 mb-1">Spotkanie zewnętrzne</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('newMeeting')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Zaplanuj spotkanie w Teams, Zoom lub Google Meet
                 </p>
               </div>
@@ -363,35 +365,35 @@ const Meetings = () => {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
             >
               <CalendarPlus className="w-5 h-5" />
-              Zaplanuj spotkanie
+              {t('newMeeting')}
             </button>
           </div>
         </div>
 
         {/* Scheduled Meetings Section */}
-        <div className="bg-white border border-gray-200 rounded-xl">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Zaplanowane spotkania</h3>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('scheduled')}</h3>
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveTab('upcoming')}
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                   activeTab === 'upcoming'
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                Nadchodzące ({upcomingMeetings.length})
+                {t('inProgress')} ({upcomingMeetings.length})
               </button>
               <button
                 onClick={() => setActiveTab('past')}
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                   activeTab === 'past'
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                Zakończone ({pastMeetings.length})
+                {t('past')} ({pastMeetings.length})
               </button>
             </div>
           </div>
@@ -403,12 +405,12 @@ const Meetings = () => {
           ) : displayedMeetings.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {activeTab === 'upcoming' ? 'Brak nadchodzących spotkań' : 'Brak zakończonych spotkań'}
               </h4>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
                 {activeTab === 'upcoming'
-                  ? 'Zaplanuj nowe spotkanie klikając powyżej'
+                  ? t('newMeeting')
                   : 'Historia spotkań pojawi się tutaj'}
               </p>
             </div>
@@ -472,7 +474,7 @@ const Meetings = () => {
                                 onClick={() => navigate(`/meeting/${meeting.id}`)}
                                 className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white text-sm rounded-lg font-medium"
                               >
-                                Dołącz
+                                {t('joinMeeting')}
                               </button>
                             )}
                             <button
@@ -534,7 +536,7 @@ const Meetings = () => {
                   <Video className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Nowe spotkanie wewnętrzne</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t('joinMeeting')}</h2>
                   <p className="text-sm text-gray-500">Rozpocznij natychmiastowe połączenie wideo</p>
                 </div>
               </div>
@@ -637,7 +639,7 @@ const Meetings = () => {
                 ) : (
                   <>
                     <Video className="w-4 h-4" />
-                    Rozpocznij spotkanie
+                    {t('joinMeeting')}
                   </>
                 )}
               </button>
@@ -657,7 +659,7 @@ const Meetings = () => {
                   <CalendarPlus className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Zaplanuj spotkanie zewnętrzne</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t('newMeeting')}</h2>
                   <p className="text-sm text-gray-500">Wybierz platformę i zaplanuj spotkanie</p>
                 </div>
               </div>
@@ -842,7 +844,7 @@ const Meetings = () => {
                 ) : (
                   <>
                     <CalendarPlus className="w-4 h-4" />
-                    Zaplanuj spotkanie
+                    {t('newMeeting')}
                   </>
                 )}
               </button>

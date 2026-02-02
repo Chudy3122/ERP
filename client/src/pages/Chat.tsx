@@ -1,14 +1,17 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChatProvider } from '../contexts/ChatContext';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
 
 const Chat: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <ChatProvider>
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -18,16 +21,16 @@ const Chat: React.FC = () => {
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">Komunikator</h1>
-                  <p className="text-sm text-gray-600">Wiadomości i rozmowy</p>
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t('chat:welcome')}</h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('chat:selectChannel')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <a
                   href="/dashboard"
-                  className="px-4 py-2 bg-white hover:bg-gray-50 rounded-md transition-colors text-sm font-medium text-gray-700 border border-gray-300"
+                  className="px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
                 >
-                  ← Panel główny
+                  ← {t('common:back')}
                 </a>
               </div>
             </div>
@@ -37,7 +40,7 @@ const Chat: React.FC = () => {
         {/* Main Chat Area */}
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar - Channel List */}
-          <aside className="w-80 border-r border-gray-200 bg-white overflow-hidden">
+          <aside className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
             <ChatList />
           </aside>
 

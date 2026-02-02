@@ -24,9 +24,9 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
     const overtimeMins = overtime % 60;
 
     return (
-      <div className="bg-white border border-gray-200 rounded-md shadow-lg p-3">
-        <p className="font-semibold text-gray-900 mb-2">{data.displayDate}</p>
-        <p className="text-sm text-gray-700">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3">
+        <p className="font-semibold text-gray-900 dark:text-white mb-2">{data.displayDate}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300">
           Czas pracy: <span className="font-medium">{hours}h {mins}m</span>
         </p>
         {overtime > 0 && (
@@ -113,10 +113,10 @@ const TimeChartWidget = () => {
       >
         <div className="h-[140px] flex items-center justify-center">
           <div className="animate-pulse space-y-4 w-full">
-            <div className="h-48 bg-gray-200 rounded"></div>
+            <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
             <div className="flex justify-between">
               {[...Array(7)].map((_, i) => (
-                <div key={i} className="h-4 w-12 bg-gray-200 rounded"></div>
+                <div key={i} className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
               ))}
             </div>
           </div>
@@ -136,12 +136,12 @@ const TimeChartWidget = () => {
       actions={
         <div className="flex items-center gap-4 text-xs">
           <div>
-            <span className="text-gray-500">Dni: </span>
-            <span className="font-semibold text-gray-900">{daysWorked}/7</span>
+            <span className="text-gray-500 dark:text-gray-400">Dni: </span>
+            <span className="font-semibold text-gray-900 dark:text-white">{daysWorked}/7</span>
           </div>
           <div>
-            <span className="text-gray-500">Średnia: </span>
-            <span className="font-semibold text-gray-900">{avgHours}h</span>
+            <span className="text-gray-500 dark:text-gray-400">Średnia: </span>
+            <span className="font-semibold text-gray-900 dark:text-white">{avgHours}h</span>
           </div>
         </div>
       }
@@ -171,11 +171,11 @@ const TimeChartWidget = () => {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+      <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>Ostatnie 7 dni</span>
         <button
           onClick={handleChartClick}
-          className="text-gray-700 hover:text-gray-900 font-medium"
+          className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
         >
           Zobacz szczegóły →
         </button>

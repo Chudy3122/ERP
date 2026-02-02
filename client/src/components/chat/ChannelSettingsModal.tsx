@@ -115,7 +115,7 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50">
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50">
           <div className="flex">
             <button
               onClick={() => setActiveTab('members')}
@@ -150,7 +150,7 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mx-6 mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 text-sm">
             {error}
           </div>
         )}
@@ -181,10 +181,10 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                             {user.first_name[0]}{user.last_name[0]}
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
                               {user.first_name} {user.last_name}
                             </div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{user.email}</div>
                           </div>
                         </div>
                       </label>
@@ -207,20 +207,20 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                   {currentMembers.map(member => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
                           {member.user?.first_name[0]}{member.user?.last_name[0]}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {member.user?.first_name} {member.user?.last_name}
                             {member.user_id === currentUserId && (
                               <span className="ml-2 text-xs text-indigo-600">(Ty)</span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500">{member.user?.email}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{member.user?.email}</div>
                         </div>
                         {member.role === 'admin' && (
                           <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
@@ -249,16 +249,16 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
           {activeTab === 'settings' && isAdmin && (
             <div className="space-y-6">
               {/* Channel Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Informacje o kanale</h3>
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-gray-600">Typ:</span>
-                    <span className="ml-2 font-medium text-gray-900 capitalize">{channel.type}</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-white capitalize">{channel.type}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Utworzono:</span>
-                    <span className="ml-2 font-medium text-gray-900">
+                    <span className="ml-2 font-medium text-gray-900 dark:text-white">
                       {new Date(channel.created_at).toLocaleDateString('pl-PL')}
                     </span>
                   </div>

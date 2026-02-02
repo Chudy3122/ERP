@@ -170,7 +170,7 @@ const AdminUsers: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-white shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-3">
@@ -179,12 +179,12 @@ const AdminUsers: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">Zarządzanie Użytkownikami</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Zarządzanie Użytkownikami</h1>
             </div>
             <div className="flex items-center gap-4">
               <Link
                 to="/admin"
-                className="px-4 py-2 bg-white hover:bg-gray-50 rounded-md transition-colors text-sm font-medium text-gray-700 border border-gray-300"
+                className="px-4 py-2 bg-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300"
               >
                 ← Panel admina
               </Link>
@@ -196,7 +196,7 @@ const AdminUsers: React.FC = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         {/* Filters and Actions */}
-        <div className="bg-white rounded-md p-6 mb-4 border border-gray-200">
+        <div className="bg-white rounded-md p-6 mb-4 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             <div className="flex flex-col md:flex-row gap-4 flex-1">
               <input
@@ -227,7 +227,7 @@ const AdminUsers: React.FC = () => {
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-md overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-md overflow-hidden border border-gray-200 dark:border-gray-700">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -254,17 +254,17 @@ const AdminUsers: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-semibold">
                           {user.first_name[0]}{user.last_name[0]}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-semibold text-gray-900">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
                             {user.first_name} {user.last_name}
                           </div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                         </div>
                       </div>
                     </td>
@@ -273,7 +273,7 @@ const AdminUsers: React.FC = () => {
                         {user.role.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {user.department || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -283,7 +283,7 @@ const AdminUsers: React.FC = () => {
                         {user.is_active ? 'Aktywny' : 'Nieaktywny'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {formatDate(user.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

@@ -38,6 +38,14 @@ export const STATUS_LABELS: Record<StatusType, string> = {
   [StatusType.IN_MEETING]: 'In Meeting',
 };
 
+export const STATUS_TRANSLATION_KEYS: Record<StatusType, string> = {
+  [StatusType.ONLINE]: 'common.statusOnline',
+  [StatusType.OFFLINE]: 'common.statusOffline',
+  [StatusType.AWAY]: 'common.statusAway',
+  [StatusType.BUSY]: 'common.statusBusy',
+  [StatusType.IN_MEETING]: 'common.statusInMeeting',
+};
+
 export const STATUS_COLORS: Record<StatusType, string> = {
   [StatusType.ONLINE]: 'bg-green-500',
   [StatusType.OFFLINE]: 'bg-gray-400',

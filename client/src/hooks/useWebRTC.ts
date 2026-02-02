@@ -12,6 +12,7 @@ interface UseWebRTCOptions {
   roomId: string;
   userId: string;
   userName: string;
+  observerMode?: boolean; // Join without camera/microphone
   onParticipantJoined?: (peerId: string, peerName: string) => void;
   onParticipantLeft?: (peerId: string) => void;
 }
@@ -22,6 +23,7 @@ interface UseWebRTCReturn {
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
   isScreenSharing: boolean;
+  isObserver: boolean;
   participants: { id: string; name: string }[];
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   error: string | null;
@@ -47,14 +49,16 @@ export const useWebRTC = ({
   roomId,
   userId,
   userName,
+  observerMode = false,
   onParticipantJoined,
   onParticipantLeft,
 }: UseWebRTCOptions): UseWebRTCReturn => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, { stream: MediaStream; name: string }>>(new Map());
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(!observerMode);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(!observerMode);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isObserver] = useState(observerMode);
   const [participants, setParticipants] = useState<{ id: string; name: string }[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +69,12 @@ export const useWebRTC = ({
 
   // Initialize local media stream
   const initializeLocalStream = useCallback(async () => {
+    // Skip media access in observer mode
+    if (observerMode) {
+      console.log('Observer mode - skipping media access');
+      return null;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -87,7 +97,7 @@ export const useWebRTC = ({
       setConnectionStatus('error');
       throw err;
     }
-  }, []);
+  }, [observerMode]);
 
   // Create peer connection for a specific peer
   const createPeerConnection = useCallback((peerId: string, peerName: string): RTCPeerConnection => {
@@ -247,8 +257,14 @@ export const useWebRTC = ({
 
   // Initialize WebRTC
   useEffect(() => {
+    // Don't connect if roomId is empty
+    if (!roomId) {
+      return;
+    }
+
     const init = async () => {
       try {
+        // Initialize local stream (will be null in observer mode)
         await initializeLocalStream();
 
         // Setup socket listeners
@@ -265,7 +281,21 @@ export const useWebRTC = ({
           setConnectionStatus('connected');
         }
       } catch (err) {
-        console.error('Failed to initialize WebRTC:', err);
+        // In observer mode, we still want to connect even without media
+        if (observerMode) {
+          const socket = socketService.getSocket();
+          if (socket) {
+            socket.on('webrtc:user-joined', handleUserJoined);
+            socket.on('webrtc:user-left', handleUserLeft);
+            socket.on('webrtc:offer', handleOffer);
+            socket.on('webrtc:answer', handleAnswer);
+            socket.on('webrtc:ice-candidate', handleIceCandidate);
+            socket.emit('webrtc:join-room', { roomId, userId, userName });
+            setConnectionStatus('connected');
+          }
+        } else {
+          console.error('Failed to initialize WebRTC:', err);
+        }
       }
     };
 
@@ -273,6 +303,8 @@ export const useWebRTC = ({
 
     // Cleanup on unmount
     return () => {
+      if (!roomId) return;
+
       const socket = socketService.getSocket();
       if (socket) {
         socket.emit('webrtc:leave-room', { roomId, userId });
@@ -297,7 +329,7 @@ export const useWebRTC = ({
         screenStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [roomId, userId, userName, initializeLocalStream, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate]);
+  }, [roomId, userId, userName, observerMode, initializeLocalStream, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate]);
 
   // Toggle audio
   const toggleAudio = useCallback(() => {
@@ -438,6 +470,7 @@ export const useWebRTC = ({
     isAudioEnabled,
     isVideoEnabled,
     isScreenSharing,
+    isObserver,
     participants,
     connectionStatus,
     error,
