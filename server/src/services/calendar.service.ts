@@ -113,12 +113,31 @@ export class CalendarService {
    * Get team availability for a specific date range
    */
   async getTeamAvailability(startDate: Date, endDate: Date): Promise<TeamAvailability[]> {
+    // Fetch all data in 3 queries instead of N*days queries
     const users = await this.userRepository.find({
-      order: {
-        first_name: 'ASC',
-        last_name: 'ASC',
-      },
+      order: { first_name: 'ASC', last_name: 'ASC' },
     });
+
+    const leaves = await this.leaveRepository.find({
+      where: { status: LeaveStatus.APPROVED },
+    });
+
+    const timeEntries = await this.timeEntryRepository.find({
+      where: { clock_in: Between(startDate, endDate) },
+    });
+
+    // Index leaves and time entries by user_id for fast lookup
+    const leavesByUser = new Map<string, typeof leaves>();
+    for (const leave of leaves) {
+      if (!leavesByUser.has(leave.user_id)) leavesByUser.set(leave.user_id, []);
+      leavesByUser.get(leave.user_id)!.push(leave);
+    }
+
+    const entriesByUserAndDate = new Map<string, typeof timeEntries[0]>();
+    for (const entry of timeEntries) {
+      const dateKey = `${entry.user_id}_${new Date(entry.clock_in).toISOString().split('T')[0]}`;
+      entriesByUserAndDate.set(dateKey, entry);
+    }
 
     const availability: TeamAvailability[] = [];
     const currentDate = new Date(startDate);
@@ -127,41 +146,26 @@ export class CalendarService {
       const dateStr = currentDate.toISOString().split('T')[0];
       const dayStart = new Date(currentDate);
       dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(currentDate);
-      dayEnd.setHours(23, 59, 59, 999);
 
-      const dayAvailability: TeamAvailability = {
-        date: dateStr,
-        users: [],
-      };
+      const dayAvailability: TeamAvailability = { date: dateStr, users: [] };
 
       for (const user of users) {
-        // Check if user has approved leave
-        const leave = await this.leaveRepository.findOne({
-          where: {
-            user_id: user.id,
-            status: LeaveStatus.APPROVED,
-          },
-        });
+        const userLeaves = leavesByUser.get(user.id) || [];
+        const onLeave = userLeaves.find(
+          l => dayStart >= new Date(l.start_date) && dayStart <= new Date(l.end_date)
+        );
 
-        if (leave && dayStart >= new Date(leave.start_date) && dayStart <= new Date(leave.end_date)) {
+        if (onLeave) {
           dayAvailability.users.push({
             id: user.id,
             name: `${user.first_name} ${user.last_name}`,
             status: 'on_leave',
-            details: this.translateLeaveType(leave.leave_type),
+            details: this.translateLeaveType(onLeave.leave_type),
           });
           continue;
         }
 
-        // Check if user has work entries for this day
-        const workEntry = await this.timeEntryRepository.findOne({
-          where: {
-            user_id: user.id,
-            clock_in: Between(dayStart, dayEnd),
-          },
-        });
-
+        const workEntry = entriesByUserAndDate.get(`${user.id}_${dateStr}`);
         if (workEntry) {
           const isActive = workEntry.status === TimeEntryStatus.IN_PROGRESS;
           dayAvailability.users.push({
