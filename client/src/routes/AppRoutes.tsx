@@ -13,7 +13,6 @@ import TeamCalendar from '../pages/TeamCalendar';
 import Admin from '../pages/Admin';
 import AdminUsers from '../pages/AdminUsers';
 import Reports from '../pages/Reports';
-import NotificationSettings from '../pages/NotificationSettings';
 import Settings from '../pages/Settings';
 import Projects from '../pages/Projects';
 import ProjectForm from '../pages/ProjectForm';
@@ -228,15 +227,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
-      <Route
-        path="/notification-settings"
-        element={
-          <PrivateRoute>
-            <NotificationSettings />
-          </PrivateRoute>
-        }
-      />
-      <Route
+<Route
         path="/profile"
         element={
           <PrivateRoute>

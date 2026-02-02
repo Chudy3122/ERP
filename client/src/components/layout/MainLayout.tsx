@@ -392,7 +392,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     {/* Footer */}
                     <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
                       <Link
-                        to="/notification-settings"
+                        to="/settings"
                         onClick={() => setNotificationDropdownOpen(false)}
                         className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-1"
                       >

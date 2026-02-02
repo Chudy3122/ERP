@@ -86,7 +86,7 @@ const Dashboard = () => {
             value={unreadNotifications}
             icon={<AlertCircle className="w-5 h-5" />}
             color="gray"
-            onClick={() => window.location.href = '/notification-settings'}
+            onClick={() => window.location.href = '/settings'}
           />
         )}
 
