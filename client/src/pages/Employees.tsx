@@ -122,7 +122,7 @@ const Employees = () => {
   const getStatusLabel = (status: StatusType): string => {
     const key = STATUS_TRANSLATION_KEYS[status];
     if (key) {
-      const [ns, k] = key.split('.');
+      const [, k] = key.split('.');
       return tCommon(k);
     }
     return status;

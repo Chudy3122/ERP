@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Clock, LogIn, LogOut, Timer, AlertTriangle } from 'lucide-react';
 import * as timeApi from '../../api/time.api';
 import { TimeEntry, TimeEntryStatus } from '../../types/time.types';
 
 const ClockInWidget = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentEntry, setCurrentEntry] = useState<TimeEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);

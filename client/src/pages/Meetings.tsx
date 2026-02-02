@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import {
   Video,
-  Plus,
   Users,
   X,
   Calendar,
@@ -495,7 +494,7 @@ const Meetings = () => {
                           <div className="flex items-center gap-2 mt-3">
                             <Users className="w-4 h-4 text-gray-400" />
                             <div className="flex -space-x-2">
-                              {meeting.participants.slice(0, 5).map((p, i) => (
+                              {meeting.participants.slice(0, 5).map((p) => (
                                 <div
                                   key={p.id}
                                   className="w-7 h-7 bg-gray-200 border-2 border-white rounded-full flex items-center justify-center text-xs font-medium text-gray-600"
