@@ -62,7 +62,7 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get(['/health', '/api/health'], (req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
