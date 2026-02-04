@@ -28,6 +28,11 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
   const [contextMenu, setContextMenu] = useState<{ channelId: string; x: number; y: number } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ type: 'leave' | 'delete'; channel: Channel } | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
+  const [avatarErrors, setAvatarErrors] = useState<Set<string>>(new Set());
+
+  const handleAvatarError = (channelId: string) => {
+    setAvatarErrors(prev => new Set(prev).add(channelId));
+  };
 
   useEffect(() => {
     loadChannels();
@@ -186,11 +191,12 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
                           : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 text-gray-700 dark:text-gray-200'
                       }`}
                     >
-                      {channel.type === 'direct' && otherMember?.user?.avatar_url ? (
+                      {channel.type === 'direct' && otherMember?.user?.avatar_url && !avatarErrors.has(channel.id) ? (
                         <img
                           src={getFileUrl(otherMember.user.avatar_url) || ''}
                           alt=""
                           className="w-full h-full rounded-full object-cover"
+                          onError={() => handleAvatarError(channel.id)}
                         />
                       ) : channel.type === 'direct' && otherMember?.user ? (
                         `${otherMember.user.first_name[0]}${otherMember.user.last_name[0]}`

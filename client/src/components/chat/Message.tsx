@@ -20,6 +20,8 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editContent, setEditContent] = useState('');
+  const [senderAvatarError, setSenderAvatarError] = useState(false);
+  const [ownAvatarError, setOwnAvatarError] = useState(false);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -160,8 +162,13 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
       {/* Avatar */}
       {!isOwnMessage && (
         <div className={`rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold flex-shrink-0 overflow-hidden ${compact ? 'w-8 h-8 text-xs' : 'w-10 h-10'}`}>
-          {message.sender?.avatar_url ? (
-            <img src={getFileUrl(message.sender.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
+          {message.sender?.avatar_url && !senderAvatarError ? (
+            <img
+              src={getFileUrl(message.sender.avatar_url) || ''}
+              alt=""
+              className="w-full h-full rounded-full object-cover"
+              onError={() => setSenderAvatarError(true)}
+            />
           ) : message.sender?.first_name && message.sender?.last_name ? (
             getInitials(`${message.sender.first_name} ${message.sender.last_name}`)
           ) : (
@@ -296,8 +303,13 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
       {/* Avatar for own messages */}
       {isOwnMessage && user && (
         <div className={`rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden ${compact ? 'w-8 h-8 text-xs' : 'w-10 h-10'}`}>
-          {user.avatar_url ? (
-            <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
+          {user.avatar_url && !ownAvatarError ? (
+            <img
+              src={getFileUrl(user.avatar_url) || ''}
+              alt=""
+              className="w-full h-full rounded-full object-cover"
+              onError={() => setOwnAvatarError(true)}
+            />
           ) : (
             getInitials(`${user.first_name} ${user.last_name}`)
           )}

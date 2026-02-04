@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
 import Message from './Message';
@@ -25,6 +25,12 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
   } = useChatContext();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  // Reset avatar error when channel changes
+  useEffect(() => {
+    setAvatarError(false);
+  }, [activeChannel?.id]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -98,11 +104,12 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
         {/* Avatar */}
         <div className="relative flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-            {otherUser?.avatar_url ? (
+            {otherUser?.avatar_url && !avatarError ? (
               <img
                 src={getFileUrl(otherUser.avatar_url) || ''}
                 alt=""
                 className="w-full h-full rounded-full object-cover"
+                onError={() => setAvatarError(true)}
               />
             ) : otherUser ? (
               `${otherUser.first_name[0]}${otherUser.last_name[0]}`

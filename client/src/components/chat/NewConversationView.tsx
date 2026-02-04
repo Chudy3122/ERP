@@ -28,6 +28,11 @@ const NewConversationView: React.FC<NewConversationViewProps> = ({ onClose, onCo
   const [groupName, setGroupName] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [avatarErrors, setAvatarErrors] = useState<Set<string>>(new Set());
+
+  const handleAvatarError = (userId: string) => {
+    setAvatarErrors(prev => new Set(prev).add(userId));
+  };
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -233,11 +238,12 @@ const NewConversationView: React.FC<NewConversationViewProps> = ({ onClose, onCo
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <div className="w-11 h-11 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      {user.avatar_url ? (
+                      {user.avatar_url && !avatarErrors.has(user.id) ? (
                         <img
                           src={getFileUrl(user.avatar_url) || ''}
                           alt=""
                           className="w-full h-full rounded-full object-cover"
+                          onError={() => handleAvatarError(user.id)}
                         />
                       ) : (
                         `${user.first_name[0]}${user.last_name[0]}`
