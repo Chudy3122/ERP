@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Save,
   Trash2,
-  User,
   Calendar,
   Clock,
   FolderOpen,

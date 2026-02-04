@@ -286,10 +286,6 @@ const Tasks = () => {
     }
   };
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  };
-
   return (
     <MainLayout title={t('title')}>
       {/* Header */}
