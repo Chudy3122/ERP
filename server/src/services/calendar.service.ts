@@ -135,7 +135,8 @@ export class CalendarService {
 
     const entriesByUserAndDate = new Map<string, typeof timeEntries[0]>();
     for (const entry of timeEntries) {
-      const dateKey = `${entry.user_id}_${new Date(entry.clock_in).toISOString().split('T')[0]}`;
+      const d = new Date(entry.clock_in);
+      const dateKey = `${entry.user_id}_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       entriesByUserAndDate.set(dateKey, entry);
     }
 
@@ -143,7 +144,7 @@ export class CalendarService {
     const currentDate = new Date(startDate);
 
     while (currentDate <= endDate) {
-      const dateStr = currentDate.toISOString().split('T')[0];
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const dayStart = new Date(currentDate);
       dayStart.setHours(0, 0, 0, 0);
 

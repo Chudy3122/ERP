@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { Socket } from 'socket.io-client';
 import socketService from '../services/socket.service';
 import * as chatApi from '../api/chat.api';
@@ -27,6 +27,13 @@ interface ChatContextType {
   isConnected: boolean;
   loading: boolean;
   error: string | null;
+
+  // Unread messages tracking
+  unreadMessages: Map<string, number>;
+  totalUnreadCount: number;
+  isPanelOpen: boolean;
+  setIsPanelOpen: (open: boolean) => void;
+  clearUnreadForChannel: (channelId: string) => void;
 
   // Status helpers
   isUserOnline: (userId: string) => boolean;
@@ -79,6 +86,34 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState<Map<string, number>>(new Map());
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // Refs to avoid stale closures in socket handlers
+  const activeChannelRef = useRef<Channel | null>(null);
+  const isPanelOpenRef = useRef(false);
+  const userRef = useRef(user);
+
+  // Keep refs in sync with state
+  useEffect(() => { activeChannelRef.current = activeChannel; }, [activeChannel]);
+  useEffect(() => { isPanelOpenRef.current = isPanelOpen; }, [isPanelOpen]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // Computed total unread count
+  const totalUnreadCount = useMemo(() => {
+    let total = 0;
+    unreadMessages.forEach(count => total += count);
+    return total;
+  }, [unreadMessages]);
+
+  // Clear unread for a specific channel
+  const clearUnreadForChannel = useCallback((channelId: string) => {
+    setUnreadMessages(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(channelId);
+      return newMap;
+    });
+  }, []);
 
   // Initialize Socket.io connection when user is authenticated
   useEffect(() => {
@@ -120,9 +155,23 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socket.on('chat:new_message', (data: { message: Message; channelId: string }) => {
       console.log('📨 New message:', data);
 
-      // Add message to state if it's for the active channel
-      if (data.channelId === activeChannel?.id) {
+      // Add message to state if it's for the active channel (use ref to avoid stale closure)
+      if (data.channelId === activeChannelRef.current?.id) {
         setMessages((prev) => [...prev, data.message]);
+      }
+
+      // Track unread messages if:
+      // - message is not from current user
+      // - panel is closed OR different channel is active
+      if (data.message.sender_id !== userRef.current?.id) {
+        const isCurrentChannelActive = data.channelId === activeChannelRef.current?.id && isPanelOpenRef.current;
+        if (!isCurrentChannelActive) {
+          setUnreadMessages(prev => {
+            const newMap = new Map(prev);
+            newMap.set(data.channelId, (newMap.get(data.channelId) || 0) + 1);
+            return newMap;
+          });
+        }
       }
 
       // Update channel's last message
@@ -138,7 +187,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socket.on('chat:message_edited', (data: { message: Message; channelId: string }) => {
       console.log('✏️ Message edited:', data);
 
-      if (data.channelId === activeChannel?.id) {
+      if (data.channelId === activeChannelRef.current?.id) {
         setMessages((prev) =>
           prev.map((msg) => (msg.id === data.message.id ? data.message : msg))
         );
@@ -148,7 +197,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socket.on('chat:message_deleted', (data: { messageId: string; channelId: string }) => {
       console.log('🗑️ Message deleted:', data);
 
-      if (data.channelId === activeChannel?.id) {
+      if (data.channelId === activeChannelRef.current?.id) {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === data.messageId
@@ -163,7 +212,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socket.on('chat:user_typing', (data: { userId: string; channelId: string; username: string }) => {
       console.log('⌨️ User typing:', data);
 
-      if (data.channelId === activeChannel?.id && data.userId !== user?.id) {
+      if (data.channelId === activeChannelRef.current?.id && data.userId !== userRef.current?.id) {
         setTypingUsers((prev) => [
           ...prev.filter((u) => u.userId !== data.userId),
           { userId: data.userId, channelId: data.channelId, timestamp: Date.now() },
@@ -225,7 +274,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       socket.off('status:online_users');
       socket.off('status:user_status_changed');
     };
-  }, [socket, activeChannel, user]);
+  }, [socket]); // Using refs instead of state, so only socket matters
 
   // Load channels from REST API
   const loadChannels = useCallback(async () => {
@@ -267,6 +316,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         await loadMessages(channel.id);
         joinChannel(channel.id);
         markAsRead(channel.id);
+        // Clear unread count for this channel
+        clearUnreadForChannel(channel.id);
       } else {
         setActiveChannelState(null);
         setMessages([]);
@@ -461,6 +512,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     isConnected,
     loading,
     error,
+    unreadMessages,
+    totalUnreadCount,
+    isPanelOpen,
+    setIsPanelOpen,
+    clearUnreadForChannel,
     isUserOnline,
     getUserStatus,
     setActiveChannel,

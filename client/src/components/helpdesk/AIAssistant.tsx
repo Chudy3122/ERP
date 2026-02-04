@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Loader2, AlertCircle } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, AlertCircle } from 'lucide-react';
 import * as aiApi from '../../api/ai.api';
 
 interface Message {
@@ -110,14 +110,14 @@ const AIAssistant: React.FC = () => {
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${
           isOpen
             ? 'bg-gray-600 hover:bg-gray-700'
-            : 'bg-blue-600 hover:bg-blue-700 hover:scale-110'
+            : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-110'
         }`}
         title={isOpen ? 'Zamknij asystenta' : 'Otwórz asystenta AI'}
       >
         {isOpen ? (
           <X className="w-6 h-6 text-white" />
         ) : (
-          <MessageCircle className="w-6 h-6 text-white" />
+          <span className="text-white font-bold text-lg">AI</span>
         )}
       </button>
 

@@ -10,6 +10,7 @@ interface MessageInputProps {
   placeholder?: string;
   disabled?: boolean;
   onFileUploaded?: () => void;
+  compact?: boolean;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -18,6 +19,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   placeholder = 'Napisz wiadomość...',
   disabled = false,
   onFileUploaded,
+  compact = false,
 }) => {
   const { t } = useTranslation();
   const { activeChannel, loadMessages } = useChatContext();
@@ -146,7 +148,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+    <div className={`border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${compact ? 'p-2' : 'p-4'}`}>
       {/* Selected files preview */}
       {selectedFiles.length > 0 && (
         <div className="mb-3 space-y-2">
@@ -246,7 +248,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <button
           onClick={handleSend}
           disabled={(!content.trim() && selectedFiles.length === 0) || disabled || isUploading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-semibold min-w-[100px] flex items-center justify-center"
+          className={`bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center ${
+            compact ? 'px-3 py-2 min-w-[60px]' : 'px-6 py-3 min-w-[100px]'
+          }`}
         >
           {isUploading ? (
             <span className="flex items-center gap-2">
@@ -277,17 +281,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </button>
       </div>
 
-      {/* Helper text - Modern styling */}
-      <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-1.5">
-          <kbd className="px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 dark:text-gray-300 shadow-sm font-medium">Enter</kbd>
-          <span>{t('chat:enterSend')}</span>
+      {/* Helper text - Modern styling (hidden in compact mode) */}
+      {!compact && (
+        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-1.5">
+            <kbd className="px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 dark:text-gray-300 shadow-sm font-medium">Enter</kbd>
+            <span>{t('chat:enterSend')}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <kbd className="px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 dark:text-gray-300 shadow-sm font-medium">Shift+Enter</kbd>
+            <span>{t('chat:shiftEnterNewLine')}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <kbd className="px-2 py-1 bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 dark:text-gray-300 shadow-sm font-medium">Shift+Enter</kbd>
-          <span>{t('chat:shiftEnterNewLine')}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import StatusSelector from '../status/StatusSelector';
 import AIAssistant from '../helpdesk/AIAssistant';
+import FloatingChatPanel from '../chat/FloatingChatPanel';
 import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
 import {
   Home,
-  MessageSquare,
   Video,
   Clock,
   CalendarDays,
@@ -137,7 +137,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.communication') },
-    { name: t('nav.chat'), href: '/chat', icon: MessageSquare },
     { name: t('nav.meetings'), href: '/meeting', icon: Video },
 
     { type: 'divider' },
@@ -389,17 +388,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                       )}
                     </div>
 
-                    {/* Footer */}
-                    <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                      <Link
-                        to="/settings"
-                        onClick={() => setNotificationDropdownOpen(false)}
-                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-1"
-                      >
-                        <Settings className="w-4 h-4" />
-                        {t('common.notificationSettings')}
-                      </Link>
-                    </div>
                   </div>
                 </>
               )}
@@ -503,6 +491,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
           {children}
         </main>
       </div>
+
+      {/* Floating Chat Panel */}
+      <FloatingChatPanel />
 
       {/* AI Helpdesk Assistant */}
       <AIAssistant />

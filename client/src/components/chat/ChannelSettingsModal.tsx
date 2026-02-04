@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Channel } from '../../types/chat.types';
 import type { User } from '../../types/auth.types';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 interface ChannelSettingsModalProps {
   isOpen: boolean;
@@ -23,11 +25,13 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
   onDeleteChannel,
   availableUsers,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'members' | 'settings'>('members');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{ userId: string; name: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -60,15 +64,16 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
-    if (!window.confirm('Czy na pewno chcesz usunąć tego użytkownika z kanału?')) return;
+  const handleRemoveMember = async () => {
+    if (!removeMemberConfirm) return;
 
     try {
       setLoading(true);
       setError(null);
-      await onRemoveMember(channel.id, userId);
+      await onRemoveMember(channel.id, removeMemberConfirm.userId);
+      setRemoveMemberConfirm(null);
     } catch (err: any) {
-      setError(err.message || 'Nie udało się usunąć członka');
+      setError(err.message || t('chat.removeMemberError'));
     } finally {
       setLoading(false);
     }
@@ -230,7 +235,10 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                       </div>
                       {isAdmin && member.user_id !== currentUserId && (
                         <button
-                          onClick={() => handleRemoveMember(member.user_id)}
+                          onClick={() => setRemoveMemberConfirm({
+                            userId: member.user_id,
+                            name: `${member.user?.first_name} ${member.user?.last_name}`
+                          })}
                           disabled={loading}
                           className="text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
                         >
@@ -315,6 +323,20 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Remove Member Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={removeMemberConfirm !== null}
+        onClose={() => setRemoveMemberConfirm(null)}
+        onConfirm={handleRemoveMember}
+        title={t('chat.removeMember')}
+        message={t('chat.removeMemberConfirm', { name: removeMemberConfirm?.name })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+        loading={loading}
+      />
     </div>
   );
 };

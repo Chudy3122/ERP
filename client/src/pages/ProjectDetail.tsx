@@ -36,6 +36,8 @@ import type { ProjectTimeStats } from '../types/worklog.types';
 import { Task, TaskPriority } from '../types/task.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import { useTranslation } from 'react-i18next';
 
 type TabType = 'dashboard' | 'tasks' | 'members' | 'files' | 'activity' | 'settings';
 
@@ -88,6 +90,11 @@ const ProjectDetail = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeletingFile, setIsDeletingFile] = useState<string | null>(null);
 
+  // Confirm dialogs
+  const [showDeleteStageConfirm, setShowDeleteStageConfirm] = useState(false);
+  const [showDeleteFileConfirm, setShowDeleteFileConfirm] = useState<string | null>(null);
+
+  const { t } = useTranslation();
   const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
 
   useEffect(() => {
@@ -330,14 +337,11 @@ const ProjectDetail = () => {
   const handleDeleteStage = async () => {
     if (!editingStage) return;
 
-    if (!confirm(`Czy na pewno chcesz usunąć etap "${editingStage.name}"? Zadania zostaną przeniesione do "Bez etapu".`)) {
-      return;
-    }
-
     try {
       setIsDeletingStage(true);
       await projectApi.deleteProjectStage(editingStage.id);
       setShowEditStageModal(false);
+      setShowDeleteStageConfirm(false);
       setEditingStage(null);
       loadProject();
       loadTasksByStages();
@@ -407,17 +411,18 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleDeleteFile = async (attachmentId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć ten plik?')) return;
+  const handleConfirmDeleteFile = async () => {
+    if (!showDeleteFileConfirm) return;
 
     try {
-      setIsDeletingFile(attachmentId);
-      await projectApi.deleteProjectAttachment(id!, attachmentId);
+      setIsDeletingFile(showDeleteFileConfirm);
+      await projectApi.deleteProjectAttachment(id!, showDeleteFileConfirm);
       loadAttachments();
     } catch (error) {
       console.error('Failed to delete file:', error);
     } finally {
       setIsDeletingFile(null);
+      setShowDeleteFileConfirm(null);
     }
   };
 
@@ -493,12 +498,12 @@ const ProjectDetail = () => {
   };
 
   const tabs = [
-    { key: 'dashboard', label: 'Pulpit', icon: LayoutDashboard },
-    { key: 'tasks', label: 'Zadania', icon: CheckSquare },
-    { key: 'members', label: 'Zespół', icon: Users },
-    { key: 'files', label: 'Pliki', icon: FileText },
-    { key: 'activity', label: 'Aktywność', icon: Activity },
-    { key: 'settings', label: 'Ustawienia', icon: Settings },
+    { key: 'dashboard', label: t('dashboard.title'), icon: LayoutDashboard },
+    { key: 'tasks', label: t('tasks.title'), icon: CheckSquare },
+    { key: 'members', label: t('projects.team') || 'Zespół', icon: Users },
+    { key: 'files', label: t('projects.files') || 'Pliki', icon: FileText },
+    { key: 'activity', label: t('projects.activity') || 'Aktywność', icon: Activity },
+    { key: 'settings', label: t('settings.title'), icon: Settings },
   ];
 
   const stageColors = [
@@ -538,70 +543,78 @@ const ProjectDetail = () => {
   return (
     <MainLayout title={project.name}>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-          <button onClick={() => navigate('/projects')} className="hover:text-gray-700">
-            Projekty
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <button onClick={() => navigate('/projects')} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            {t('projects.title')}
           </button>
-          <span>/</span>
-          <span className="text-gray-900">{project.name}</span>
+          <span className="text-gray-300 dark:text-gray-600">/</span>
+          <span className="text-gray-900 dark:text-white font-medium">{project.name}</span>
         </div>
 
         {/* Project header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{project.name}</h1>
+              <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                 {project.code}
               </span>
             </div>
             {project.description && (
-              <p className="text-gray-500 mt-1 text-sm">{project.description}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-2xl">{project.description}</p>
             )}
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+            <div className="flex items-center gap-5 mt-3 text-sm text-gray-500 dark:text-gray-400">
               {project.start_date && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {formatDate(project.start_date)}
-                  {project.target_end_date && ` → ${formatDate(project.target_end_date)}`}
+                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-lg">
+                  <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{formatDate(project.start_date)}</span>
+                  {project.target_end_date && (
+                    <>
+                      <span className="text-gray-300 dark:text-gray-600 mx-1">→</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{formatDate(project.target_end_date)}</span>
+                    </>
+                  )}
                 </span>
               )}
               {project.manager && (
-                <span className="flex items-center gap-1">
-                  <Users className="w-4 h-4" />
-                  {project.manager.first_name} {project.manager.last_name}
+                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-lg">
+                  <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                    {project.manager.first_name} {project.manager.last_name}
+                  </span>
                 </span>
               )}
             </div>
           </div>
           <button
             onClick={() => navigate(`/tasks/new?project=${id}`)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium text-sm"
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all font-semibold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5"
           >
             <Plus className="w-4 h-4" />
-            Nowe zadanie
+            {t('tasks.newTask')}
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex gap-1">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <nav className="flex gap-1 -mb-px">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as TabType)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-gray-900 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+                  isActive
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${isActive ? '' : 'opacity-70'}`} />
                 {tab.label}
               </button>
             );
@@ -615,39 +628,39 @@ const ProjectDetail = () => {
           {/* Stats */}
           {statistics && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">Wszystkie zadania</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics.total_tasks}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.total')}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{statistics.total_tasks}</p>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">Ukończone</p>
-                <p className="text-2xl font-bold text-green-600">{statistics.completed_tasks}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.done')}</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{statistics.completed_tasks}</p>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">W trakcie</p>
-                <p className="text-2xl font-bold text-blue-600">{statistics.in_progress_tasks}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.inProgress')}</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{statistics.in_progress_tasks}</p>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">Do zrobienia</p>
-                <p className="text-2xl font-bold text-gray-600">{statistics.todo_tasks}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.statusTodo')}</p>
+                <p className="text-3xl font-bold text-gray-600 dark:text-gray-300">{statistics.todo_tasks}</p>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">Zablokowane</p>
-                <p className="text-2xl font-bold text-red-600">{statistics.blocked_tasks}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.statusBlocked')}</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-400">{statistics.blocked_tasks}</p>
               </div>
             </div>
           )}
 
           {/* Progress bar */}
           {statistics && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Postęp projektu</span>
-                <span className="text-sm text-gray-500">{statistics.completion_percentage}%</span>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('projects.progress')}</span>
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{statistics.completion_percentage}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div
-                  className="bg-green-500 h-3 rounded-full transition-all"
+                  className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
                   style={{ width: `${statistics.completion_percentage}%` }}
                 />
               </div>
@@ -656,39 +669,39 @@ const ProjectDetail = () => {
 
           {/* Time stats */}
           {timeStats && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Czas pracy w projekcie
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-500" />
+                  {t('timeTracking.title')}
                 </h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-gray-500">Łącznie</p>
-                  <p className="text-xl font-bold text-gray-900">{timeStats.totalHours.toFixed(1)}h</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('timeTracking.totalHours')}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{timeStats.totalHours.toFixed(1)}h</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Płatne godziny</p>
-                  <p className="text-xl font-bold text-green-600">{timeStats.billableHours.toFixed(1)}h</p>
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide mb-1">Płatne</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{timeStats.billableHours.toFixed(1)}h</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Niepłatne</p>
-                  <p className="text-xl font-bold text-gray-600">{timeStats.nonBillableHours.toFixed(1)}h</p>
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Niepłatne</p>
+                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{timeStats.nonBillableHours.toFixed(1)}h</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Wpisów</p>
-                  <p className="text-xl font-bold text-gray-900">{timeStats.logsCount}</p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">Wpisów</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{timeStats.logsCount}</p>
                 </div>
               </div>
               {timeStats.byUser.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Czas wg osób:</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Czas wg osób:</p>
                   <div className="space-y-2">
                     {timeStats.byUser.slice(0, 5).map((item) => (
-                      <div key={item.user_id} className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">{item.user_name}</span>
-                        <span className="font-medium text-gray-900">{item.hours.toFixed(1)}h</span>
+                      <div key={item.user_id} className="flex justify-between items-center text-sm bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2">
+                        <span className="text-gray-600 dark:text-gray-300 font-medium">{item.user_name}</span>
+                        <span className="font-bold text-gray-900 dark:text-white">{item.hours.toFixed(1)}h</span>
                       </div>
                     ))}
                   </div>
@@ -698,33 +711,36 @@ const ProjectDetail = () => {
           )}
 
           {/* Recent activity preview */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-900">Ostatnia aktywność</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('dashboard.recentActivity')}</h3>
               <button
                 onClick={() => setActiveTab('activity')}
-                className="text-sm text-blue-600 hover:text-blue-700"
+                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
               >
-                Zobacz wszystko
+                {t('common.all') || 'Zobacz wszystko'} →
               </button>
             </div>
             <div className="space-y-3">
               {activities.slice(0, 5).map((activity) => {
                 const Icon = getActivityIcon(activity.action);
                 return (
-                  <div key={activity.id} className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-4 h-4 text-gray-500" />
+                  <div key={activity.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">{activity.description}</p>
-                      <p className="text-xs text-gray-500">{formatRelativeTime(activity.created_at)}</p>
+                      <p className="text-sm text-gray-900 dark:text-white font-medium">{activity.description}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatRelativeTime(activity.created_at)}</p>
                     </div>
                   </div>
                 );
               })}
               {activities.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">Brak aktywności</p>
+                <div className="text-center py-8">
+                  <Activity className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.noData')}</p>
+                </div>
               )}
             </div>
           </div>
@@ -735,41 +751,65 @@ const ProjectDetail = () => {
         <div>
           {/* Search and controls */}
           <div className="flex items-center justify-between mb-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
-                placeholder="Szukaj zadań..."
+                placeholder={t('tasks.searchTasks')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400"
+                className="w-full pl-8 pr-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
               />
             </div>
             <button
               onClick={() => setShowNewStageModal(true)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all shadow-sm hover:shadow"
             >
-              <Plus className="w-4 h-4" />
-              Nowy etap
+              <Plus className="w-3.5 h-3.5" />
+              {t('projects.newStage') || 'Nowy etap'}
             </button>
           </div>
 
           {/* Kanban Board */}
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <style>{`
+            .kanban-scrollbar::-webkit-scrollbar {
+              height: 8px;
+            }
+            .kanban-scrollbar::-webkit-scrollbar-track {
+              background: rgba(156, 163, 175, 0.2);
+              border-radius: 4px;
+            }
+            .kanban-scrollbar::-webkit-scrollbar-thumb {
+              background: rgba(107, 114, 128, 0.5);
+              border-radius: 4px;
+            }
+            .kanban-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: rgba(107, 114, 128, 0.7);
+            }
+            .dark .kanban-scrollbar::-webkit-scrollbar-track {
+              background: rgba(55, 65, 81, 0.5);
+            }
+            .dark .kanban-scrollbar::-webkit-scrollbar-thumb {
+              background: rgba(75, 85, 99, 0.8);
+            }
+            .dark .kanban-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: rgba(107, 114, 128, 1);
+            }
+          `}</style>
+          <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-2 px-2 kanban-scrollbar">
             {tasksByStages.map(({ stage, tasks }) => {
               const filteredTasks = filterTasks(tasks);
               const stageId = stage?.id || null;
               const isOver = dragOverStage === stageId;
+              const stageColor = stage?.color || '#6B7280';
 
               return (
                 <div
                   key={stageId || 'unassigned'}
-                  className={`flex-shrink-0 w-80 bg-gray-50 rounded-lg border-2 transition-all ${
+                  className={`flex-shrink-0 w-[270px] rounded-xl transition-all duration-200 ${
                     isOver
-                      ? 'border-blue-400 bg-blue-50'
-                      : draggedTask && draggedTask.stage_id !== stageId
-                      ? 'border-dashed border-gray-300'
-                      : 'border-transparent'
+                      ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
+                      : ''
                   }`}
                   onDragOver={handleStageDragOver}
                   onDragEnter={(e) => handleStageDragEnter(e, stageId)}
@@ -778,35 +818,47 @@ const ProjectDetail = () => {
                 >
                   {/* Column header */}
                   <div
-                    className="px-3 py-2 rounded-t-lg flex items-center justify-between"
-                    style={{ backgroundColor: stage?.color ? `${stage.color}20` : '#f3f4f6' }}
+                    className="px-3 py-2 rounded-t-xl flex items-center justify-between"
+                    style={{
+                      background: `linear-gradient(135deg, ${stageColor}25 0%, ${stageColor}15 100%)`,
+                      borderBottom: `2px solid ${stageColor}40`
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: stage?.color || '#6B7280' }}
+                        className="w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-gray-800 shadow-sm"
+                        style={{ backgroundColor: stageColor }}
                       />
-                      <span className="font-medium text-sm text-gray-900">
-                        {stage?.name || 'Bez etapu'}
+                      <span className="font-semibold text-xs text-gray-800 dark:text-gray-100">
+                        {stage?.name || t('projects.noStage') || 'Bez etapu'}
                       </span>
-                      <span className="text-xs text-gray-500 px-1.5 py-0.5 bg-white/50 rounded">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 px-1.5 py-0.5 rounded-full">
                         {filteredTasks.length}
                       </span>
                     </div>
                     {stage && (
                       <button
                         onClick={() => handleOpenEditStage(stage)}
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded transition-all"
                       >
-                        <MoreHorizontal className="w-4 h-4" />
+                        <MoreHorizontal className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
 
-                  {/* Tasks */}
-                  <div className="p-2 space-y-2 min-h-[200px]">
+                  {/* Tasks container */}
+                  <div
+                    className="p-2 space-y-2 min-h-[200px] bg-gray-100/50 dark:bg-gray-800/50 rounded-b-xl"
+                    style={{
+                      background: isOver
+                        ? 'linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)'
+                        : undefined
+                    }}
+                  >
                     {filteredTasks.map((task) => {
                       const priorityConfig = getPriorityConfig(task.priority);
+                      const isDragging = draggedTask?.id === task.id;
+
                       return (
                         <div
                           key={task.id}
@@ -815,69 +867,90 @@ const ProjectDetail = () => {
                           onClick={(e) => handleCardClick(e, task.id)}
                           onDragStart={(e) => handleDragStart(e, task)}
                           onDragEnd={handleDragEnd}
-                          className={`bg-white rounded-lg border border-gray-200 p-3 cursor-grab hover:shadow-md transition-all group select-none ${
-                            isUpdatingTask === task.id ? 'opacity-70' : ''
-                          } ${draggedTask?.id === task.id ? 'opacity-50 ring-2 ring-blue-400' : ''}`}
+                          className={`relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200/80 dark:border-gray-700/80 p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group select-none ${
+                            isUpdatingTask === task.id ? 'opacity-60' : ''
+                          } ${isDragging ? 'opacity-50 scale-[1.02] shadow-lg ring-2 ring-blue-400' : 'hover:-translate-y-0.5'}`}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-2 h-2 rounded-full ${priorityConfig.dotColor}`}
-                                title={priorityConfig.label}
-                              />
+                          {/* Priority indicator bar */}
+                          <div
+                            className="absolute top-0 left-3 right-3 h-0.5 rounded-full"
+                            style={{ backgroundColor: priorityConfig.dotColor.replace('bg-', '').includes('gray') ? '#9CA3AF' :
+                              priorityConfig.dotColor.includes('blue') ? '#3B82F6' :
+                              priorityConfig.dotColor.includes('orange') ? '#F97316' :
+                              priorityConfig.dotColor.includes('red') ? '#EF4444' : '#9CA3AF'
+                            }}
+                          />
+
+                          <div className="flex items-start justify-between gap-1.5 mb-1.5 mt-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[9px] font-semibold uppercase tracking-wide ${priorityConfig.color}`}>
+                                {priorityConfig.label}
+                              </span>
                             </div>
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <GripVertical className="w-4 h-4 text-gray-400" />
+                              <GripVertical className="w-3 h-3 text-gray-300 dark:text-gray-600" />
                             </div>
                           </div>
-                          <h4 className="font-medium text-gray-900 text-sm mb-2 line-clamp-2">
+
+                          <h4 className="font-medium text-gray-900 dark:text-white text-xs mb-1.5 line-clamp-2 leading-snug">
                             {task.title}
                           </h4>
+
                           {task.description && (
-                            <p className="text-xs text-gray-500 mb-3 line-clamp-2">
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2 line-clamp-2 leading-relaxed">
                               {task.description}
                             </p>
                           )}
-                          <div className="flex items-center justify-between">
-                            {task.assignee && (
-                              <div className="flex items-center" title={`${task.assignee.first_name} ${task.assignee.last_name}`}>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                            {task.assignee ? (
+                              <div className="flex items-center gap-1.5" title={`${task.assignee.first_name} ${task.assignee.last_name}`}>
                                 {task.assignee.avatar_url ? (
                                   <img
                                     src={getFileUrl(task.assignee.avatar_url) || ''}
                                     alt=""
-                                    className="w-6 h-6 rounded-full border border-white shadow-sm"
+                                    className="w-5 h-5 rounded-full ring-1 ring-white dark:ring-gray-800"
                                   />
                                 ) : (
-                                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-medium text-gray-600 border border-white shadow-sm">
+                                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-white dark:ring-gray-800">
                                     {getInitials(task.assignee.first_name, task.assignee.last_name)}
                                   </div>
                                 )}
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                  {task.assignee.first_name}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                <Users className="w-2.5 h-2.5 text-gray-400 dark:text-gray-500" />
                               </div>
                             )}
+
                             <div className="flex items-center gap-2">
                               {(task.actual_hours !== undefined || task.estimated_hours !== undefined) && (
                                 <span
-                                  className="text-xs text-gray-500 flex items-center gap-1"
+                                  className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5 font-medium"
                                   title={`${task.actual_hours || 0}h zalogowanych / ${task.estimated_hours || '?'}h szacowanych`}
                                 >
-                                  <Clock className="w-3 h-3" />
+                                  <Clock className="w-2.5 h-2.5" />
                                   {task.actual_hours || 0}h
                                   {task.estimated_hours && (
-                                    <span className="text-gray-400">/ {task.estimated_hours}h</span>
+                                    <span className="text-gray-300 dark:text-gray-600">/{task.estimated_hours}h</span>
                                   )}
                                 </span>
                               )}
                               {task.due_date && (
-                                <span className="text-xs text-gray-500 flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5 font-medium">
+                                  <Calendar className="w-2.5 h-2.5" />
                                   {formatDate(task.due_date)}
                                 </span>
                               )}
                             </div>
                           </div>
+
                           {isUpdatingTask === task.id && (
-                            <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
-                              <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                            <div className="absolute inset-0 bg-white/90 dark:bg-gray-800/90 flex items-center justify-center rounded-lg backdrop-blur-sm">
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                             </div>
                           )}
                         </div>
@@ -885,14 +958,15 @@ const ProjectDetail = () => {
                     })}
 
                     {filteredTasks.length === 0 && quickTaskStageId !== stageId && (
-                      <div className="text-center py-8 text-gray-400 text-sm">
-                        Brak zadań
+                      <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
+                        <CheckSquare className="w-6 h-6 mb-1.5 opacity-50" />
+                        <span className="text-xs font-medium">{t('tasks.noTasks')}</span>
                       </div>
                     )}
 
                     {/* Quick task input */}
                     {quickTaskStageId === stageId ? (
-                      <div className="bg-white rounded-lg border border-gray-300 p-2">
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-400 dark:border-blue-500 p-2 shadow-md">
                         <input
                           ref={quickTaskInputRef}
                           type="text"
@@ -904,22 +978,24 @@ const ProjectDetail = () => {
                               setQuickTaskStageId(null);
                             }
                           }}
-                          placeholder="Wpisz tytuł zadania..."
-                          className="w-full text-sm border-0 focus:ring-0 p-0"
+                          placeholder={t('tasks.enterTitle') || 'Wpisz tytuł zadania...'}
+                          className="w-full text-xs border-0 focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 font-medium"
                           disabled={isCreatingQuickTask}
                         />
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                          <span className="text-xs text-gray-400">Enter - zapisz, Esc - anuluj</span>
-                          {isCreatingQuickTask && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
+                            Enter - {t('common.save')}, Esc - {t('common.cancel')}
+                          </span>
+                          {isCreatingQuickTask && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
                         </div>
                       </div>
                     ) : (
                       <button
                         onClick={() => handleStartQuickTask(stageId)}
-                        className="w-full p-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        className="w-full p-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 rounded-lg transition-all flex items-center justify-center gap-1.5"
                       >
-                        <Plus className="w-4 h-4" />
-                        Nowe zadanie
+                        <Plus className="w-3.5 h-3.5" />
+                        {t('tasks.newTask')}
                       </button>
                     )}
                   </div>
@@ -930,21 +1006,23 @@ const ProjectDetail = () => {
             {/* Add new column button */}
             <button
               onClick={() => setShowNewStageModal(true)}
-              className="flex-shrink-0 w-80 min-h-[200px] bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-all flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-gray-700"
+              className="flex-shrink-0 w-[270px] min-h-[200px] bg-gradient-to-b from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/30 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all duration-200 flex flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 group"
             >
-              <Plus className="w-6 h-6" />
-              <span className="text-sm font-medium">Dodaj etap</span>
+              <div className="w-9 h-9 rounded-full bg-gray-200/50 dark:bg-gray-700/50 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center transition-all">
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-semibold">{t('projects.addStage') || 'Dodaj etap'}</span>
             </button>
           </div>
         </div>
       )}
 
       {activeTab === 'members' && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-medium text-gray-900">Członkowie zespołu</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 className="font-medium text-gray-900 dark:text-white">Członkowie zespołu</h3>
             {isAdmin && (
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <Plus className="w-4 h-4" />
                 Dodaj członka
               </button>
@@ -990,7 +1068,7 @@ const ProjectDetail = () => {
       {activeTab === 'files' && (
         <div className="space-y-4">
           {/* Upload area */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-gray-900">Pliki projektu</h3>
               <label className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium text-sm cursor-pointer">
@@ -1046,9 +1124,9 @@ const ProjectDetail = () => {
                           <Download className="w-4 h-4" />
                         </a>
                         <button
-                          onClick={() => handleDeleteFile(attachment.id)}
+                          onClick={() => setShowDeleteFileConfirm(attachment.id)}
                           disabled={isDeletingFile === attachment.id}
-                          className="p-2 text-gray-400 hover:text-red-600 rounded"
+                          className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
                           title="Usuń"
                         >
                           {isDeletingFile === attachment.id ? (
@@ -1068,7 +1146,7 @@ const ProjectDetail = () => {
       )}
 
       {activeTab === 'activity' && (
-        <div className="bg-white rounded-lg border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="p-4 border-b border-gray-200">
             <h3 className="font-medium text-gray-900">Historia aktywności</h3>
           </div>
@@ -1081,7 +1159,7 @@ const ProjectDetail = () => {
               activities.map((activity) => {
                 const Icon = getActivityIcon(activity.action);
                 return (
-                  <div key={activity.id} className="p-4 flex items-start gap-3 hover:bg-gray-50">
+                  <div key={activity.id} className="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                       <Icon className="w-5 h-5 text-gray-500" />
                     </div>
@@ -1101,7 +1179,7 @@ const ProjectDetail = () => {
       )}
 
       {activeTab === 'settings' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Ustawienia projektu</h3>
           <div className="space-y-4">
             <button
@@ -1156,7 +1234,7 @@ const ProjectDetail = () => {
       {/* New Stage Modal */}
       {showNewStageModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900">Nowy etap</h3>
               <button
@@ -1223,7 +1301,7 @@ const ProjectDetail = () => {
       {/* Edit Stage Modal */}
       {showEditStageModal && editingStage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900">Edytuj etap</h3>
               <button
@@ -1272,9 +1350,9 @@ const ProjectDetail = () => {
 
             <div className="flex justify-between mt-6">
               <button
-                onClick={handleDeleteStage}
+                onClick={() => setShowDeleteStageConfirm(true)}
                 disabled={isDeletingStage}
-                className="px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg flex items-center gap-2"
+                className="px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2"
               >
                 {isDeletingStage ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1306,6 +1384,34 @@ const ProjectDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Stage Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteStageConfirm}
+        onClose={() => setShowDeleteStageConfirm(false)}
+        onConfirm={handleDeleteStage}
+        title={t('projects.deleteStageTitle')}
+        message={t('projects.deleteStageConfirm', { name: editingStage?.name })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+        loading={isDeletingStage}
+      />
+
+      {/* Delete File Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteFileConfirm !== null}
+        onClose={() => setShowDeleteFileConfirm(null)}
+        onConfirm={handleConfirmDeleteFile}
+        title={t('projects.deleteFileTitle')}
+        message={t('projects.deleteFileConfirm')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+        loading={isDeletingFile !== null}
+      />
     </MainLayout>
   );
 };

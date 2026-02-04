@@ -1,19 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Message as MessageType } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
+import { getFileUrl } from '../../api/axios-config';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 interface MessageProps {
   message: MessageType;
   onEdit?: (messageId: string, content: string) => void;
   onDelete?: (messageId: string) => void;
+  compact?: boolean;
 }
 
-const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
+const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = false }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isOwnMessage = message.sender_id === user?.id;
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editContent, setEditContent] = useState('');
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -150,12 +156,12 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
   }
 
   return (
-    <div className={`flex gap-3 mb-3 group hover:bg-white dark:hover:bg-gray-800 py-2 px-3 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex mb-2 group hover:bg-white dark:hover:bg-gray-800 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} ${compact ? 'gap-2 py-1 px-2' : 'gap-3 py-2 px-3'}`}>
       {/* Avatar */}
       {!isOwnMessage && (
-        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold flex-shrink-0">
+        <div className={`rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold flex-shrink-0 overflow-hidden ${compact ? 'w-8 h-8 text-xs' : 'w-10 h-10'}`}>
           {message.sender?.avatar_url ? (
-            <img src={message.sender.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+            <img src={getFileUrl(message.sender.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
           ) : message.sender?.first_name && message.sender?.last_name ? (
             getInitials(`${message.sender.first_name} ${message.sender.last_name}`)
           ) : (
@@ -264,10 +270,8 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
               {onEdit && (
                 <button
                   onClick={() => {
-                    const newContent = prompt(t('chat:editMessage'), message.content);
-                    if (newContent && newContent !== message.content) {
-                      onEdit(message.id, newContent);
-                    }
+                    setEditContent(message.content);
+                    setShowEditModal(true);
                   }}
                   className="text-[10px] text-gray-400 hover:text-blue-600 font-medium transition-colors"
                   title={t('chat:edit')}
@@ -277,11 +281,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
               )}
               {onDelete && (
                 <button
-                  onClick={() => {
-                    if (confirm(t('chat:deleteConfirm'))) {
-                      onDelete(message.id);
-                    }
-                  }}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="text-[10px] text-gray-400 hover:text-red-600 font-medium transition-colors"
                   title={t('chat:delete')}
                 >
@@ -295,12 +295,68 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) => {
 
       {/* Avatar for own messages */}
       {isOwnMessage && user && (
-        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+        <div className={`rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden ${compact ? 'w-8 h-8 text-xs' : 'w-10 h-10'}`}>
           {user.avatar_url ? (
-            <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+            <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
           ) : (
             getInitials(`${user.first_name} ${user.last_name}`)
           )}
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          onDelete?.(message.id);
+          setShowDeleteConfirm(false);
+        }}
+        title={t('chat.deleteMessageTitle')}
+        message={t('chat.deleteMessageConfirm')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+      />
+
+      {/* Edit Message Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full">
+            <div className="bg-blue-600 p-4 rounded-t-lg">
+              <h2 className="text-lg font-semibold text-white">{t('chat.editMessage')}</h2>
+            </div>
+            <div className="p-4">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                rows={4}
+                autoFocus
+              />
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    if (editContent && editContent !== message.content) {
+                      onEdit?.(message.id, editContent);
+                    }
+                    setShowEditModal(false);
+                  }}
+                  disabled={!editContent || editContent === message.content}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t('common.save')}
+                </button>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

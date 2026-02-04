@@ -268,46 +268,40 @@ const TeamCalendar: React.FC = () => {
           </div>
         )}
 
-        {/* Summary */}
-        {!loading && availability.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-slate-200 dark:border-gray-700">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('totalAvailability')}</h3>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                {Math.round(
-                  (availability.reduce(
-                    (acc, day) => acc + day.users.filter((u) => u.status === 'working').length,
-                    0
-                  ) /
-                    (availability.length * (availability[0]?.users.length || 1))) *
-                    100
-                )}
-                %
-              </p>
-            </div>
+        {/* Summary - today's data */}
+        {!loading && availability.length > 0 && (() => {
+          const now = new Date();
+          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const todayData = availability.find((day) => day.date === todayStr) || availability[0];
+          const totalUsers = todayData.users.length || 1;
+          const workingCount = todayData.users.filter((u) => u.status === 'working').length;
+          const onLeaveCount = todayData.users.filter((u) => u.status === 'on_leave').length;
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-slate-200 dark:border-gray-700">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('avgWorking')}</h3>
-              <p className="text-3xl font-bold text-emerald-600">
-                {Math.round(
-                  availability.reduce((acc, day) => acc + day.users.filter((u) => u.status === 'working').length, 0) /
-                    availability.length
-                )}
-                /{availability[0]?.users.length || 0}
-              </p>
-            </div>
+          return (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-slate-200 dark:border-gray-700">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('totalAvailability')}</h3>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  {Math.round((workingCount / totalUsers) * 100)}%
+                </p>
+              </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-slate-200 dark:border-gray-700">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('onLeaveAvg')}</h3>
-              <p className="text-3xl font-bold text-amber-600">
-                {Math.round(
-                  availability.reduce((acc, day) => acc + day.users.filter((u) => u.status === 'on_leave').length, 0) /
-                    availability.length
-                )}
-              </p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-slate-200 dark:border-gray-700">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('avgWorking')}</h3>
+                <p className="text-3xl font-bold text-emerald-600">
+                  {workingCount}/{totalUsers}
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-slate-200 dark:border-gray-700">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">{t('onLeaveAvg')}</h3>
+                <p className="text-3xl font-bold text-amber-600">
+                  {onLeaveCount}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

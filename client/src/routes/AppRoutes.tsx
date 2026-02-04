@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
-import Chat from '../pages/Chat';
 import VideoMeeting from '../pages/VideoMeeting';
 import Meetings from '../pages/Meetings';
 import TimeTracking from '../pages/TimeTracking';
@@ -51,15 +50,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
-      <Route
-        path="/chat"
-        element={
-          <PrivateRoute>
-            <Chat />
-          </PrivateRoute>
-        }
-      />
-      <Route
+            <Route
         path="/meeting"
         element={
           <PrivateRoute>

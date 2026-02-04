@@ -20,7 +20,10 @@ export class ChatService {
       order: { joined_at: 'DESC' },
     });
 
-    return memberships.map(m => m.channel);
+    // Filter out inactive (deleted) channels
+    return memberships
+      .map(m => m.channel)
+      .filter(channel => channel && channel.is_active !== false);
   }
 
   /**
@@ -230,13 +233,13 @@ export class ChatService {
    * Delete a channel
    */
   async deleteChannel(channelId: string, userId: string) {
-    // Verify user is admin of channel
+    // Verify user is member of channel
     const membership = await this.channelMemberRepository.findOne({
       where: { channel_id: channelId, user_id: userId },
     });
 
-    if (!membership || membership.role !== ChannelMemberRole.ADMIN) {
-      throw new Error('Only channel admins can delete channels');
+    if (!membership) {
+      throw new Error('You are not a member of this channel');
     }
 
     // Get channel to check type
@@ -248,9 +251,9 @@ export class ChatService {
       throw new Error('Channel not found');
     }
 
-    // Don't allow deleting direct channels
-    if (channel.type === ChannelType.DIRECT) {
-      throw new Error('Cannot delete direct message channels');
+    // For group channels, only admins can delete
+    if (channel.type !== ChannelType.DIRECT && membership.role !== ChannelMemberRole.ADMIN) {
+      throw new Error('Only channel admins can delete group channels');
     }
 
     // Soft delete the channel

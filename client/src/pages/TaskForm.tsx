@@ -38,11 +38,14 @@ import { Project } from '../types/project.types';
 import { AdminUser } from '../types/admin.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
+import { useTranslation } from 'react-i18next';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const TaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const isEdit = !!id;
 
   const [task, setTask] = useState<Task | null>(null);
@@ -90,6 +93,7 @@ const TaskForm = () => {
   });
   const [isSavingWorkLog, setIsSavingWorkLog] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
+  const [deleteWorkLogId, setDeleteWorkLogId] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
 
@@ -227,16 +231,18 @@ const TaskForm = () => {
     setShowWorkLogForm(true);
   };
 
-  const handleDeleteWorkLog = async (logId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć ten wpis czasu?')) return;
+  const handleConfirmDeleteWorkLog = async () => {
+    if (!deleteWorkLogId) return;
 
     try {
-      await workLogApi.deleteWorkLog(logId);
+      await workLogApi.deleteWorkLog(deleteWorkLogId);
       await loadWorkLogs();
-      await loadTask(); // Refresh task to get updated actual_hours
+      await loadTask();
     } catch (error: any) {
       console.error('Failed to delete work log:', error);
-      setError(error.response?.data?.message || 'Nie udało się usunąć wpisu czasu');
+      setError(error.response?.data?.message || t('tasks.deleteWorkLogError'));
+    } finally {
+      setDeleteWorkLogId(null);
     }
   };
 
@@ -445,51 +451,54 @@ const TaskForm = () => {
 
   return (
     <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
+      {/* Header - Compact */}
+      <div className="mb-4 flex items-center gap-3">
         <button
           onClick={() => navigate('/tasks')}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <ArrowLeft className="w-4 h-4 text-gray-500" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}
-          </h1>
-          {isEdit && task && (
-            <div className="flex items-center gap-2 mt-1">
-              {task.project && (
-                <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <FolderOpen className="w-4 h-4" />
-                  {task.project.name}
-                </span>
-              )}
-            </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+              {isEdit ? (task?.title || 'Edytuj zadanie') : 'Nowe zadanie'}
+            </h1>
+            {isEdit && task && (
+              <span className="px-2 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full shrink-0">
+                {task.project?.code || 'Zadanie'}
+              </span>
+            )}
+          </div>
+          {isEdit && task?.project && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+              <FolderOpen className="w-3 h-3" />
+              {task.project.name}
+            </p>
           )}
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+          <p className="text-xs text-red-800 dark:text-red-400">{error}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Basic Info Card */}
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Informacje podstawowe</h2>
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Informacje podstawowe</h2>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 space-y-4">
               {/* Task Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="title" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Tytuł zadania *
                 </label>
                 <input
@@ -499,14 +508,14 @@ const TaskForm = () => {
                   value={formData.title}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-lg"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="np. Implementacja modułu logowania"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Opis zadania
                 </label>
                 <textarea
@@ -514,16 +523,16 @@ const TaskForm = () => {
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Opisz szczegóły zadania..."
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {/* Project */}
                 <div>
-                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="project_id" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Projekt *
                   </label>
                   <select
@@ -532,7 +541,7 @@ const TaskForm = () => {
                     value={formData.project_id}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Wybierz projekt</option>
                     {projects.map((project) => (
@@ -545,7 +554,7 @@ const TaskForm = () => {
 
                 {/* Assignee */}
                 <div>
-                  <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="assigned_to" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Przypisana osoba
                   </label>
                   <select
@@ -553,7 +562,7 @@ const TaskForm = () => {
                     name="assigned_to"
                     value={formData.assigned_to || ''}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Nieprzypisane</option>
                     {users.map((u) => (
@@ -564,10 +573,29 @@ const TaskForm = () => {
                   </select>
                 </div>
 
+                {/* Priority */}
+                <div>
+                  <label htmlFor="priority" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Priorytet
+                  </label>
+                  <select
+                    id="priority"
+                    name="priority"
+                    value={formData.priority}
+                    onChange={handleChange}
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="low">Niski</option>
+                    <option value="medium">Średni</option>
+                    <option value="high">Wysoki</option>
+                    <option value="urgent">Pilne</option>
+                  </select>
+                </div>
+
                 {/* Status (only visible when not editing - in edit mode it's in sidebar) */}
                 {!isEdit && (
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="status" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Status
                     </label>
                     <select
@@ -575,7 +603,7 @@ const TaskForm = () => {
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                     >
                       {allStatuses.map((status) => (
                         <option key={status} value={status}>
@@ -586,29 +614,10 @@ const TaskForm = () => {
                   </div>
                 )}
 
-                {/* Priority */}
-                <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Priorytet
-                  </label>
-                  <select
-                    id="priority"
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="low">Niski</option>
-                    <option value="medium">Średni</option>
-                    <option value="high">Wysoki</option>
-                    <option value="urgent">Pilne</option>
-                  </select>
-                </div>
-
                 {/* Due Date */}
                 <div>
-                  <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Termin realizacji
+                  <label htmlFor="due_date" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Termin
                   </label>
                   <input
                     type="date"
@@ -616,14 +625,14 @@ const TaskForm = () => {
                     name="due_date"
                     value={formData.due_date}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 {/* Estimated Hours */}
                 <div>
-                  <label htmlFor="estimated_hours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Szacowany czas (h)
+                  <label htmlFor="estimated_hours" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Szacowany (h)
                   </label>
                   <input
                     type="number"
@@ -633,55 +642,35 @@ const TaskForm = () => {
                     onChange={handleChange}
                     step="0.5"
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-                    placeholder="np. 8"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="8"
                   />
                 </div>
-
-                {/* Actual Hours (only in edit mode) */}
-                {isEdit && (
-                  <div>
-                    <label htmlFor="actual_hours" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Rzeczywisty czas (h)
-                    </label>
-                    <input
-                      type="number"
-                      id="actual_hours"
-                      name="actual_hours"
-                      value={formData.actual_hours || ''}
-                      onChange={handleChange}
-                      step="0.5"
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-                      placeholder="np. 10"
-                    />
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Form Actions */}
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3 rounded-b-lg">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 rounded-b-xl">
               <button
                 type="button"
                 onClick={() => navigate('/tasks')}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               >
                 Anuluj
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     Zapisywanie...
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <Save className="w-3.5 h-3.5" />
                     {isEdit ? 'Zapisz zmiany' : 'Utwórz zadanie'}
                   </>
                 )}
@@ -691,28 +680,41 @@ const TaskForm = () => {
 
           {/* Attachments Section - only in edit mode */}
           {isEdit && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Paperclip className="w-5 h-5" />
-                    Załączniki
-                    {attachments.length > 0 && (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-                        {attachments.length}
-                      </span>
-                    )}
-                  </h2>
-                </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" />
+                  Załączniki
+                  {attachments.length > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+                      {attachments.length}
+                    </span>
+                  )}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors font-medium"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Dodaj
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
               </div>
 
-              <div className="p-6">
-                {/* Upload area */}
+              <div className="p-3">
+                {/* Upload area - compact */}
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  className={`border border-dashed rounded-lg p-3 text-center transition-colors ${
                     dragActive
-                      ? 'border-blue-400 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                   }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
@@ -720,44 +722,27 @@ const TaskForm = () => {
                   onDrop={handleDrop}
                 >
                   {isUploadingFiles ? (
-                    <div className="space-y-3">
-                      <Loader2 className="w-8 h-8 mx-auto animate-spin text-gray-400" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Przesyłanie plików...</p>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 max-w-xs mx-auto">
+                    <div className="space-y-2">
+                      <Loader2 className="w-5 h-5 mx-auto animate-spin text-gray-400" />
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Przesyłanie...</p>
+                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 max-w-[120px] mx-auto">
                         <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-                      <p className="text-gray-600 dark:text-gray-400 mb-1">
-                        Przeciągnij i upuść pliki tutaj
-                      </p>
-                      <p className="text-sm text-gray-400 mb-3">lub</p>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        Wybierz pliki
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </>
+                    <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <Upload className="w-4 h-4" />
+                      <span>Przeciągnij pliki lub kliknij "Dodaj"</span>
+                    </div>
                   )}
                 </div>
 
-                {/* Attachments list */}
+                {/* Attachments list - compact */}
                 {attachments.length > 0 && (
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-2 space-y-1">
                     {attachments.map((attachment) => {
                       const FileIcon = getFileIcon(attachment.file_type);
                       const isImage = attachment.file_type.startsWith('image/');
@@ -765,45 +750,42 @@ const TaskForm = () => {
                       return (
                         <div
                           key={attachment.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                           {isImage ? (
                             <img
                               src={getFileUrl(attachment.file_url) || ''}
                               alt={attachment.original_name}
-                              className="w-10 h-10 object-cover rounded"
+                              className="w-7 h-7 object-cover rounded"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
-                              <FileIcon className="w-5 h-5 text-gray-500" />
+                            <div className="w-7 h-7 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center shrink-0">
+                              <FileIcon className="w-3.5 h-3.5 text-gray-500" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
                               {attachment.original_name}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400">
                               {formatFileSize(Number(attachment.file_size))}
-                              {attachment.uploader && (
-                                <> • {attachment.uploader.first_name} {attachment.uploader.last_name}</>
-                              )}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <a
                               href={getFileUrl(attachment.file_url) || ''}
                               download={attachment.original_name}
-                              className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                               title="Pobierz"
                             >
-                              <Download className="w-4 h-4 text-gray-500" />
+                              <Download className="w-3.5 h-3.5 text-gray-500" />
                             </a>
                             <button
                               onClick={() => handleDeleteAttachment(attachment.id)}
-                              className="p-1.5 hover:bg-red-100 rounded transition-colors"
+                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
                               title="Usuń"
                             >
-                              <X className="w-4 h-4 text-red-500" />
+                              <X className="w-3.5 h-3.5 text-red-500" />
                             </button>
                           </div>
                         </div>
@@ -815,175 +797,14 @@ const TaskForm = () => {
             </div>
           )}
 
-          {/* Work Logs Section - only in edit mode */}
-          {isEdit && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Timer className="w-5 h-5" />
-                    Czas pracy
-                    {workLogs.length > 0 && (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-                        {workLogs.reduce((sum, log) => sum + Number(log.hours), 0).toFixed(1)}h łącznie
-                      </span>
-                    )}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    {/* Quick add buttons */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        setWorkLogFormData({ ...workLogFormData, work_date: today });
-                        setShowWorkLogForm(true);
-                      }}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Dodaj godziny za dzisiaj"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Dzisiaj
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const yesterday = new Date();
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        setWorkLogFormData({ ...workLogFormData, work_date: yesterday.toISOString().split('T')[0] });
-                        setShowWorkLogForm(true);
-                      }}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Dodaj godziny za wczoraj"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Wczoraj
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowWorkLogForm(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm"
-                    >
-                      <Timer className="w-4 h-4" />
-                      Raportuj czas
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6">
-                {/* Work Logs List - grouped by date */}
-                {workLogs.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Timer className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Brak wpisów czasu pracy</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Kliknij "Raportuj czas" lub użyj przycisków "Dzisiaj" / "Wczoraj"</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Group logs by date */}
-                    {Object.entries(
-                      workLogs.reduce((groups, log) => {
-                        const date = log.work_date.split('T')[0];
-                        if (!groups[date]) groups[date] = [];
-                        groups[date].push(log);
-                        return groups;
-                      }, {} as Record<string, WorkLog[]>)
-                    )
-                      .sort(([a], [b]) => b.localeCompare(a)) // Sort by date descending
-                      .map(([date, logs]) => {
-                        const totalHours = logs.reduce((sum, log) => sum + Number(log.hours), 0);
-                        const dateObj = new Date(date);
-                        const isToday = date === new Date().toISOString().split('T')[0];
-                        const isYesterday = date === new Date(Date.now() - 86400000).toISOString().split('T')[0];
-                        const dayName = isToday ? 'Dzisiaj' : isYesterday ? 'Wczoraj' : dateObj.toLocaleDateString('pl-PL', { weekday: 'long' });
-
-                        return (
-                          <div key={date} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                            {/* Date header */}
-                            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-gray-400" />
-                                <span className="font-medium text-gray-900 dark:text-white capitalize">{dayName}</span>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                  {dateObj.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-blue-600">{totalHours}h</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setWorkLogFormData({ ...workLogFormData, work_date: date });
-                                    setShowWorkLogForm(true);
-                                  }}
-                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                                  title="Dodaj kolejny wpis na ten dzień"
-                                >
-                                  <Plus className="w-4 h-4 text-gray-500" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Entries for this date */}
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                              {logs.map((log) => (
-                                <div
-                                  key={log.id}
-                                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-medium text-gray-900 dark:text-white">{log.hours}h</span>
-                                      <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
-                                        {WorkLogTypeLabels[log.work_type] || 'Płatny'}
-                                      </span>
-                                    </div>
-                                    {log.description && (
-                                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{log.description}</p>
-                                    )}
-                                    {log.user && (
-                                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                        {log.user.first_name} {log.user.last_name}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditWorkLog(log)}
-                                      className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                                      title="Edytuj"
-                                    >
-                                      <Edit2 className="w-4 h-4 text-gray-500" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteWorkLog(log.id)}
-                                      className="p-1.5 hover:bg-red-100 rounded transition-colors"
-                                      title="Usuń"
-                                    >
-                                      <Trash2 className="w-4 h-4 text-red-500" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Sidebar */}
         {isEdit && task && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Status Card with dropdown */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Status zadania</h3>
+            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-3">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Status</h3>
               <div className="relative" ref={statusDropdownRef}>
                 <button
                   onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -994,16 +815,16 @@ const TaskForm = () => {
                     const statusConfig = getStatusConfig(task.status);
                     const StatusIcon = statusConfig.icon;
                     return (
-                      <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${statusConfig.bgColor} ${statusConfig.color} hover:opacity-90 transition-opacity cursor-pointer`}>
-                        <div className="flex items-center gap-2">
+                      <div className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg ${statusConfig.bgColor} ${statusConfig.color} hover:opacity-90 transition-opacity cursor-pointer text-sm`}>
+                        <div className="flex items-center gap-1.5">
                           {isChangingStatus ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <StatusIcon className="w-4 h-4" />
+                            <StatusIcon className="w-3.5 h-3.5" />
                           )}
                           <span className="font-medium">{statusConfig.label}</span>
                         </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
                       </div>
                     );
                   })()}
@@ -1011,9 +832,9 @@ const TaskForm = () => {
 
                 {/* Status Dropdown */}
                 {showStatusDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Zmień status na:</p>
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                    <div className="px-2.5 py-1.5 border-b border-gray-100 dark:border-gray-700">
+                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Zmień na:</p>
                     </div>
                     {allStatuses.map((status) => {
                       const config = getStatusConfig(status);
@@ -1025,18 +846,18 @@ const TaskForm = () => {
                           key={status}
                           onClick={() => !isCurrentStatus && handleQuickStatusChange(status)}
                           disabled={isCurrentStatus}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                          className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-left transition-colors ${
                             isCurrentStatus
                               ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 cursor-default'
-                              : 'hover:bg-gray-50 text-gray-700'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                           }`}
                         >
-                          <span className={`p-1 rounded ${config.bgColor} ${config.color}`}>
+                          <span className={`p-0.5 rounded ${config.bgColor} ${config.color}`}>
                             <Icon className="w-3 h-3" />
                           </span>
                           {config.label}
                           {isCurrentStatus && (
-                            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Aktualny</span>
+                            <span className="ml-auto text-[10px] text-gray-400">✓</span>
                           )}
                         </button>
                       );
@@ -1047,12 +868,12 @@ const TaskForm = () => {
             </div>
 
             {/* Priority Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Priorytet</h3>
+            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-3">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Priorytet</h3>
               {(() => {
                 const priorityConfig = getPriorityConfig(task.priority);
                 return (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${priorityConfig.bgColor}`}>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${priorityConfig.bgColor} text-sm`}>
                     <div className={`w-2 h-2 rounded-full ${priorityConfig.dotColor}`} />
                     <span className={`font-medium ${priorityConfig.color}`}>{priorityConfig.label}</span>
                   </div>
@@ -1061,150 +882,213 @@ const TaskForm = () => {
             </div>
 
             {/* Details Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Szczegóły</h3>
+            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-3 space-y-3">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Szczegóły</h3>
 
               {/* Project */}
               {task.project && (
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400">
-                    <FolderOpen className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Projekt</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{task.project.name}</p>
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Projekt</p>
+                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{task.project.name}</p>
                   </div>
                 </div>
               )}
 
               {/* Assignee */}
               {task.assignee && (
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {task.assignee.avatar_url ? (
-                      <img
-                        src={getFileUrl(task.assignee.avatar_url) || ''}
-                        alt=""
-                        className="w-6 h-6 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600">
-                        {getInitials(task.assignee.first_name, task.assignee.last_name)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Przypisano do</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {task.assignee.first_name} {task.assignee.last_name}
-                      </p>
+                <div className="flex items-center gap-2">
+                  {task.assignee.avatar_url ? (
+                    <img
+                      src={getFileUrl(task.assignee.avatar_url) || ''}
+                      alt=""
+                      className="w-5 h-5 rounded-full shrink-0"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[9px] font-medium text-gray-600 shrink-0">
+                      {getInitials(task.assignee.first_name, task.assignee.last_name)}
                     </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Przypisano</p>
+                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                      {task.assignee.first_name} {task.assignee.last_name}
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Creator */}
               {task.creator && (
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {task.creator.avatar_url ? (
-                      <img
-                        src={getFileUrl(task.creator.avatar_url) || ''}
-                        alt=""
-                        className="w-6 h-6 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600">
-                        {getInitials(task.creator.first_name, task.creator.last_name)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Utworzył</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {task.creator.first_name} {task.creator.last_name}
-                      </p>
+                <div className="flex items-center gap-2">
+                  {task.creator.avatar_url ? (
+                    <img
+                      src={getFileUrl(task.creator.avatar_url) || ''}
+                      alt=""
+                      className="w-5 h-5 rounded-full shrink-0"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[9px] font-medium text-gray-600 shrink-0">
+                      {getInitials(task.creator.first_name, task.creator.last_name)}
                     </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Utworzył</p>
+                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                      {task.creator.first_name} {task.creator.last_name}
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Due date */}
               {task.due_date && (
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Termin</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Termin</p>
+                    <p className="text-xs font-medium text-gray-900 dark:text-white">
                       {new Date(task.due_date).toLocaleDateString('pl-PL', {
-                        year: 'numeric',
-                        month: 'long',
                         day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
                       })}
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Time */}
-              {(task.estimated_hours || task.actual_hours) && (
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Czas</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {task.actual_hours ? `${task.actual_hours}h` : '-'} / {task.estimated_hours ? `${task.estimated_hours}h` : '-'}
-                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(rzeczywisty / szacowany)</span>
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {/* Created at */}
-              <div className="flex items-center gap-3">
-                <div className="text-gray-400">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Utworzono</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Utworzono</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
                     {new Date(task.created_at).toLocaleDateString('pl-PL', {
-                      year: 'numeric',
-                      month: 'long',
                       day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
                     })}
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Work Logs Card - Compact */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-blue-200 dark:border-gray-700 shadow-sm p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <Timer className="w-3.5 h-3.5" />
+                  Czas pracy
+                </h3>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  {workLogs.reduce((sum, log) => sum + Number(log.hours), 0).toFixed(1)}h
+                </span>
+              </div>
+
+              {/* Quick add buttons */}
+              <div className="flex gap-1 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    setWorkLogFormData({ ...workLogFormData, work_date: today });
+                    setShowWorkLogForm(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-gray-300"
+                >
+                  <Plus className="w-3 h-3" />
+                  Dzisiaj
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    setWorkLogFormData({ ...workLogFormData, work_date: yesterday.toISOString().split('T')[0] });
+                    setShowWorkLogForm(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-gray-300"
+                >
+                  <Plus className="w-3 h-3" />
+                  Wczoraj
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowWorkLogForm(true)}
+                className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                <Timer className="w-3.5 h-3.5" />
+                Raportuj czas
+              </button>
+
+              {/* Recent logs - compact list */}
+              {workLogs.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-blue-200 dark:border-gray-600 space-y-1 max-h-32 overflow-y-auto">
+                  {workLogs.slice(0, 5).map((log) => {
+                    const dateObj = new Date(log.work_date);
+                    const isToday = log.work_date.split('T')[0] === new Date().toISOString().split('T')[0];
+                    const isYesterday = log.work_date.split('T')[0] === new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                    const dayLabel = isToday ? 'Dziś' : isYesterday ? 'Wcz.' : dateObj.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between px-2 py-1 rounded bg-white/60 dark:bg-gray-700/50 group"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 w-10 shrink-0">{dayLabel}</span>
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">{log.hours}h</span>
+                          {log.description && (
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[80px]">{log.description}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => handleEditWorkLog(log)}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          >
+                            <Edit2 className="w-3 h-3 text-gray-400" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteWorkLogId(log.id)}
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {workLogs.length > 5 && (
+                    <p className="text-[10px] text-center text-gray-500 dark:text-gray-400">+{workLogs.length - 5} więcej wpisów</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Delete Card */}
             {isAdmin && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Strefa niebezpieczeństwa</h3>
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-red-200 dark:border-gray-700 shadow-sm p-3">
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Strefa niebezpieczeństwa</h3>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={isDeleting}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
                 >
                   {isDeleting ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       Usuwanie...
                     </>
                   ) : (
                     <>
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                       Usuń zadanie
                     </>
                   )}
@@ -1407,6 +1291,19 @@ const TaskForm = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Work Log Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={deleteWorkLogId !== null}
+        onClose={() => setDeleteWorkLogId(null)}
+        onConfirm={handleConfirmDeleteWorkLog}
+        title={t('tasks.deleteWorkLogTitle')}
+        message={t('tasks.deleteWorkLogConfirm')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+      />
     </MainLayout>
   );
 };

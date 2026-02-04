@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as adminApi from '../api/admin.api';
 import { AdminUser, CreateUserData } from '../types/admin.types';
 import { toast } from 'react-hot-toast';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const AdminUsers: React.FC = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [deleteUser, setDeleteUser] = useState<{ id: string; email: string } | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<{ id: string; email: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [formData, setFormData] = useState<CreateUserData>({
     email: '',
     password: '',
@@ -73,15 +79,16 @@ const AdminUsers: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string, email: string) => {
-    if (!window.confirm(`Czy na pewno chcesz usunąć użytkownika ${email}?`)) return;
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
 
     try {
-      await adminApi.deleteUser(userId);
-      toast.success('Użytkownik usunięty pomyślnie');
+      await adminApi.deleteUser(deleteUser.id);
+      toast.success(t('admin.userDeleted'));
+      setDeleteUser(null);
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Nie udało się usunąć użytkownika');
+      toast.error(error.response?.data?.message || t('admin.deleteUserError'));
     }
   };
 
@@ -100,15 +107,16 @@ const AdminUsers: React.FC = () => {
     }
   };
 
-  const handleResetPassword = async (userId: string, email: string) => {
-    const newPassword = window.prompt(`Podaj nowe hasło dla użytkownika ${email}:`);
-    if (!newPassword) return;
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !newPassword) return;
 
     try {
-      await adminApi.resetUserPassword(userId, newPassword);
-      toast.success('Hasło zostało zresetowane');
+      await adminApi.resetUserPassword(resetPasswordUser.id, newPassword);
+      toast.success(t('admin.passwordReset'));
+      setResetPasswordUser(null);
+      setNewPassword('');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Nie udało się zresetować hasła');
+      toast.error(error.response?.data?.message || t('admin.resetPasswordError'));
     }
   };
 
@@ -305,13 +313,13 @@ const AdminUsers: React.FC = () => {
                           {user.is_active ? 'Dezaktywuj' : 'Aktywuj'}
                         </button>
                         <button
-                          onClick={() => handleResetPassword(user.id, user.email)}
+                          onClick={() => setResetPasswordUser({ id: user.id, email: user.email })}
                           className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-all"
                         >
                           Reset hasła
                         </button>
                         <button
-                          onClick={() => handleDeleteUser(user.id, user.email)}
+                          onClick={() => setDeleteUser({ id: user.id, email: user.email })}
                           className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-all"
                         >
                           Usuń
@@ -442,6 +450,61 @@ const AdminUsers: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={deleteUser !== null}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={handleDeleteUser}
+        title={t('admin.deleteUserTitle')}
+        message={t('admin.deleteUserConfirm', { email: deleteUser?.email })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+      />
+
+      {/* Reset Password Modal */}
+      {resetPasswordUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full">
+            <div className="bg-purple-600 p-5 rounded-t-lg">
+              <h2 className="text-lg font-semibold text-white">{t('admin.resetPasswordTitle')}</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                {t('admin.resetPasswordFor', { email: resetPasswordUser.email })}
+              </p>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder={t('admin.newPassword')}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                autoFocus
+              />
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleResetPassword}
+                  disabled={!newPassword}
+                  className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t('admin.resetPassword')}
+                </button>
+                <button
+                  onClick={() => {
+                    setResetPasswordUser(null);
+                    setNewPassword('');
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

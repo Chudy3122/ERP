@@ -22,6 +22,7 @@ import {
 import * as meetingApi from '../api/meeting.api';
 import * as adminApi from '../api/admin.api';
 import IncomingCallModal from '../components/meeting/IncomingCallModal';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { AdminUser } from '../types/admin.types';
 
 type MeetingPlatform = 'internal' | 'teams' | 'zoom' | 'google_meet';
@@ -87,6 +88,9 @@ const Meetings = () => {
     meetingTitle: string;
     meetingId: string;
   } | null>(null);
+
+  // Delete confirm state
+  const [deleteMeetingId, setDeleteMeetingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -207,14 +211,16 @@ const Meetings = () => {
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const handleDeleteMeeting = async (meetingId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć to spotkanie?')) return;
+  const handleConfirmDeleteMeeting = async () => {
+    if (!deleteMeetingId) return;
 
     try {
-      await meetingApi.deleteScheduledMeeting(meetingId);
+      await meetingApi.deleteScheduledMeeting(deleteMeetingId);
       loadScheduledMeetings();
     } catch (error) {
       console.error('Failed to delete meeting:', error);
+    } finally {
+      setDeleteMeetingId(null);
     }
   };
 
@@ -477,8 +483,8 @@ const Meetings = () => {
                               </button>
                             )}
                             <button
-                              onClick={() => handleDeleteMeeting(meeting.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              onClick={() => setDeleteMeetingId(meeting.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                               title="Usuń spotkanie"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -851,6 +857,19 @@ const Meetings = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Meeting Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={deleteMeetingId !== null}
+        onClose={() => setDeleteMeetingId(null)}
+        onConfirm={handleConfirmDeleteMeeting}
+        title={t('deleteMeetingTitle')}
+        message={t('deleteMeetingConfirm')}
+        confirmText={t('common:delete')}
+        cancelText={t('common:cancel')}
+        variant="danger"
+        icon="delete"
+      />
     </MainLayout>
   );
 };
