@@ -7,9 +7,11 @@ import {
   BeforeInsert,
   BeforeUpdate,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Department } from './Department.model';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -47,6 +49,13 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: true })
   department: string | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  department_id: string | null;
+
+  @ManyToOne(() => Department, (dept) => dept.employees, { nullable: true })
+  @JoinColumn({ name: 'department_id' })
+  departmentEntity: Department | null;
+
   @Column({ type: 'text', nullable: true })
   avatar_url: string | null;
 
@@ -75,9 +84,12 @@ export class User {
   @Column({ type: 'uuid', nullable: true })
   manager_id: string | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, (user) => user.directReports, { nullable: true })
   @JoinColumn({ name: 'manager_id' })
   manager: User | null;
+
+  @OneToMany(() => User, (user) => user.manager)
+  directReports: User[];
 
   @Column({ type: 'decimal', precision: 4, scale: 2, default: 8.0 })
   working_hours_per_day: number;

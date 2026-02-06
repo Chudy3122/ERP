@@ -18,6 +18,9 @@ import ticketRoutes from './ticket.routes';
 import activityRoutes from './activity.routes';
 import aiRoutes from './ai.routes';
 import workLogRoutes from './worklog.routes';
+import departmentRoutes from './department.routes';
+import clientRoutes from './client.routes';
+import invoiceRoutes from './invoice.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -78,6 +81,15 @@ router.use('/ai', aiRoutes);
 
 // Work log routes
 router.use('/work-logs', workLogRoutes);
+
+// Department routes
+router.use('/departments', departmentRoutes);
+
+// Client routes (Kontrahenci)
+router.use('/clients', clientRoutes);
+
+// Invoice routes (Faktury)
+router.use('/invoices', invoiceRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

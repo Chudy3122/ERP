@@ -28,6 +28,9 @@ import {
   ChevronDown,
   Check,
   User,
+  GitBranch,
+  Building2,
+  Receipt,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -153,6 +156,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.employees') },
     { name: t('nav.employeeList'), href: '/employees', icon: Users },
+    { name: t('nav.organization'), href: '/organization', icon: GitBranch },
+
+    { type: 'divider' },
+    { type: 'header', name: t('nav.invoices') },
+    { name: t('nav.clients'), href: '/clients', icon: Building2 },
+    { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },

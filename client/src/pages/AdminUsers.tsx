@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as adminApi from '../api/admin.api';
+import * as departmentApi from '../api/department.api';
 import { AdminUser, CreateUserData } from '../types/admin.types';
+import type { Department } from '../types/department.types';
 import { toast } from 'react-hot-toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 
@@ -17,6 +19,7 @@ const AdminUsers: React.FC = () => {
   const [deleteUser, setDeleteUser] = useState<{ id: string; email: string } | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<{ id: string; email: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState<CreateUserData>({
     email: '',
     password: '',
@@ -29,7 +32,17 @@ const AdminUsers: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
+    loadDepartments();
   }, [searchTerm, roleFilter]);
+
+  const loadDepartments = async () => {
+    try {
+      const depts = await departmentApi.getAllDepartments();
+      setDepartments(depts);
+    } catch (error) {
+      console.error('Failed to load departments:', error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -412,12 +425,18 @@ const AdminUsers: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Dział</label>
-                <input
-                  type="text"
+                <select
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
+                >
+                  <option value="">Brak</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name} ({dept.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

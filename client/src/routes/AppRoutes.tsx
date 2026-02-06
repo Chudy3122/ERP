@@ -23,7 +23,13 @@ import TicketForm from '../pages/TicketForm';
 import Absences from '../pages/Absences';
 import Employees from '../pages/Employees';
 import EmployeeDetail from '../pages/EmployeeDetail';
+import Organization from '../pages/Organization';
 import Profile from '../pages/Profile';
+import Clients from '../pages/Clients';
+import ClientForm from '../pages/ClientForm';
+import Invoices from '../pages/Invoices';
+import InvoiceForm from '../pages/InvoiceForm';
+import InvoiceDetail from '../pages/InvoiceDetail';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -175,6 +181,78 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <EmployeeDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/organization"
+        element={
+          <PrivateRoute>
+            <Organization />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/clients"
+        element={
+          <PrivateRoute>
+            <Clients />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/clients/new"
+        element={
+          <PrivateRoute>
+            <ClientForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/clients/:id/edit"
+        element={
+          <PrivateRoute>
+            <ClientForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/clients/:id"
+        element={
+          <PrivateRoute>
+            <ClientForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices"
+        element={
+          <PrivateRoute>
+            <Invoices />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices/new"
+        element={
+          <PrivateRoute>
+            <InvoiceForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices/:id/edit"
+        element={
+          <PrivateRoute>
+            <InvoiceForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices/:id"
+        element={
+          <PrivateRoute>
+            <InvoiceDetail />
           </PrivateRoute>
         }
       />

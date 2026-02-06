@@ -5,6 +5,7 @@ export interface AdminUser {
   last_name: string;
   role: string;
   department: string | null;
+  department_id: string | null;
   phone: string | null;
   position: string | null;
   employee_id: string | null;

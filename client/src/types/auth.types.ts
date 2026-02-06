@@ -2,6 +2,9 @@ export enum UserRole {
   ADMIN = 'admin',
   TEAM_LEADER = 'team_leader',
   EMPLOYEE = 'employee',
+  KSIEGOWOSC = 'ksiegowosc',
+  SZEF = 'szef',
+  RECEPCJA = 'recepcja',
 }
 
 export interface User {
@@ -11,6 +14,7 @@ export interface User {
   last_name: string;
   role: UserRole;
   department: string | null;
+  department_id: string | null;
   avatar_url: string | null;
   phone: string | null;
   is_active: boolean;
