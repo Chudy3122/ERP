@@ -73,23 +73,28 @@ const Projects = () => {
 
   const getStatusConfig = (status: ProjectStatus) => {
     const configs = {
-      planning: { label: t('statusPlanning'), color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
-      active: { label: t('statusActive'), color: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
-      on_hold: { label: t('statusOnHold'), color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
-      completed: { label: t('statusCompleted'), color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
-      cancelled: { label: t('statusCancelled'), color: 'bg-red-50 text-red-700', dot: 'bg-red-500' },
+      planning:  { label: t('statusPlanning'),  color: 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300',   dot: 'bg-slate-400' },
+      active:    { label: t('statusActive'),    color: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+      on_hold:   { label: t('statusOnHold'),    color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',   dot: 'bg-amber-500' },
+      completed: { label: t('statusCompleted'), color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',       dot: 'bg-blue-500' },
+      cancelled: { label: t('statusCancelled'), color: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400',           dot: 'bg-red-500' },
     };
     return configs[status];
   };
 
   const getPriorityConfig = (priority: ProjectPriority) => {
     const configs = {
-      low: { label: t('priorityLow'), color: 'text-gray-500', dot: 'bg-gray-400' },
-      medium: { label: t('priorityMedium'), color: 'text-blue-600', dot: 'bg-blue-500' },
-      high: { label: t('priorityHigh'), color: 'text-orange-600', dot: 'bg-orange-500' },
-      critical: { label: t('priorityCritical'), color: 'text-red-600', dot: 'bg-red-500' },
+      low:      { label: t('priorityLow'),      color: 'text-gray-500 dark:text-gray-400',   dot: 'bg-gray-400',   bar: 'bg-gray-400' },
+      medium:   { label: t('priorityMedium'),   color: 'text-blue-600 dark:text-blue-400',   dot: 'bg-blue-500',   bar: 'bg-blue-500' },
+      high:     { label: t('priorityHigh'),     color: 'text-orange-600 dark:text-orange-400', dot: 'bg-orange-500', bar: 'bg-orange-500' },
+      critical: { label: t('priorityCritical'), color: 'text-red-600 dark:text-red-400',     dot: 'bg-red-500',    bar: 'bg-red-500' },
     };
     return configs[priority];
+  };
+
+  const getDaysRemaining = (dateString: string) => {
+    const diff = Math.ceil((new Date(dateString).getTime() - Date.now()) / 86400000);
+    return diff;
   };
 
   const formatDate = (dateString: string) => {
@@ -398,17 +403,32 @@ const Projects = () => {
                   {/* Deadline */}
                   <div className="col-span-2 flex items-center justify-between">
                     {project.target_end_date ? (
-                      <span className={`text-xs ${
-                        isOverdue(project.target_end_date) && project.status !== 'completed'
-                          ? 'text-red-600 font-medium'
-                          : 'text-gray-500'
-                      }`}>
-                        {formatDate(project.target_end_date)}
-                      </span>
+                      <div>
+                        <div className={`text-xs font-medium ${
+                          isOverdue(project.target_end_date) && project.status !== 'completed'
+                            ? 'text-red-500'
+                            : 'text-gray-600 dark:text-gray-300'
+                        }`}>
+                          {formatDate(project.target_end_date)}
+                        </div>
+                        {project.status !== 'completed' && (
+                          <div className={`text-xs mt-0.5 ${
+                            isOverdue(project.target_end_date)
+                              ? 'text-red-400'
+                              : getDaysRemaining(project.target_end_date) <= 7
+                              ? 'text-amber-500'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}>
+                            {isOverdue(project.target_end_date)
+                              ? `${Math.abs(getDaysRemaining(project.target_end_date))}d po terminie`
+                              : `${getDaysRemaining(project.target_end_date)}d pozostało`}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
                   </div>
                 </div>
               );

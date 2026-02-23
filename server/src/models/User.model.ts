@@ -59,6 +59,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   avatar_url: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  cover_url: string | null;
+
   @Column({ type: 'varchar', length: 20, nullable: true })
   phone: string | null;
 

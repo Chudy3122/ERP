@@ -21,6 +21,10 @@ import workLogRoutes from './worklog.routes';
 import departmentRoutes from './department.routes';
 import clientRoutes from './client.routes';
 import invoiceRoutes from './invoice.routes';
+import paymentRoutes from './payment.routes';
+import contractRoutes from './contract.routes';
+import projectTemplateRoutes from './projectTemplate.routes';
+import crmRoutes from './crm.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -90,6 +94,18 @@ router.use('/clients', clientRoutes);
 
 // Invoice routes (Faktury)
 router.use('/invoices', invoiceRoutes);
+
+// Payment routes (Płatności)
+router.use('/payments', paymentRoutes);
+
+// Contract routes (Umowy)
+router.use('/contracts', contractRoutes);
+
+// Project template routes (Szablony projektów)
+router.use('/project-templates', projectTemplateRoutes);
+
+// CRM routes
+router.use('/crm', crmRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

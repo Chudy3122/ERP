@@ -193,7 +193,9 @@ export const projectStageController = {
   async createDefaultStages(req: Request, res: Response): Promise<void> {
     try {
       const { projectId } = req.params;
-      const stages = await projectStageService.createDefaultStages(projectId);
+      const { template_id } = req.body;
+      const userId = req.user!.userId;
+      const stages = await projectStageService.createDefaultStages(projectId, template_id, userId);
 
       res.status(201).json({
         success: true,

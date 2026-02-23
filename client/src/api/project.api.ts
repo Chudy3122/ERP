@@ -91,8 +91,8 @@ export const reorderProjectStages = async (projectId: string, stageIds: string[]
   await client.post(`/projects/${projectId}/stages/reorder`, { stageIds });
 };
 
-export const createDefaultStages = async (projectId: string): Promise<ProjectStage[]> => {
-  const response = await client.post(`/projects/${projectId}/stages/default`);
+export const createDefaultStages = async (projectId: string, templateId?: string): Promise<ProjectStage[]> => {
+  const response = await client.post(`/projects/${projectId}/stages/default`, templateId ? { template_id: templateId } : {});
   return response.data.data;
 };
 

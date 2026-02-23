@@ -2,6 +2,7 @@ import { IsNull } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { ProjectStage } from '../models/ProjectStage.model';
 import { Task } from '../models/Task.model';
+import projectTemplateService from './projectTemplate.service';
 
 const projectStageRepository = AppDataSource.getRepository(ProjectStage);
 const taskRepository = AppDataSource.getRepository(Task);
@@ -121,15 +122,19 @@ export const projectStageService = {
   /**
    * Create default stages for a new project
    */
-  async createDefaultStages(projectId: string): Promise<ProjectStage[]> {
+  async createDefaultStages(projectId: string, templateId?: string, createdBy?: string): Promise<ProjectStage[]> {
     // Check if stages already exist for this project
     const existingStages = await projectStageRepository.find({
       where: { project_id: projectId },
     });
 
     if (existingStages.length > 0) {
-      // Stages already exist, return them
       return existingStages;
+    }
+
+    // If templateId provided, apply template instead of defaults
+    if (templateId && createdBy) {
+      return await projectTemplateService.applyTemplateToProject(templateId, projectId, createdBy);
     }
 
     const defaultStages = [

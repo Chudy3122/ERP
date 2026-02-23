@@ -20,6 +20,7 @@ import * as invoiceApi from '../api/invoice.api';
 import { Invoice, InvoiceStatus } from '../types/invoice.types';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/auth.types';
+import PaymentHistory from '../components/payments/PaymentHistory';
 
 const InvoiceDetail = () => {
   const { t } = useTranslation('invoices');
@@ -356,6 +357,17 @@ const InvoiceDetail = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Payment History */}
+          {invoice.status !== InvoiceStatus.DRAFT && invoice.status !== InvoiceStatus.CANCELLED && (
+            <PaymentHistory
+              invoiceId={invoice.id}
+              grossTotal={Number(invoice.gross_total)}
+              paidAmount={Number(invoice.paid_amount)}
+              currency={invoice.currency}
+              onPaymentChange={loadInvoice}
+            />
           )}
         </div>
 

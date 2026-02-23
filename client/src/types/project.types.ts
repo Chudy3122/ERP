@@ -63,6 +63,7 @@ export interface CreateProjectRequest {
   target_end_date?: string;
   budget?: number;
   manager_id?: string;
+  template_id?: string;
 }
 
 export interface UpdateProjectRequest {

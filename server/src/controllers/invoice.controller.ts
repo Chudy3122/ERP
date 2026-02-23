@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import invoiceService from '../services/invoice.service';
 import invoicePdfService from '../services/invoicePdf.service';
+import invoiceReportService from '../services/invoiceReport.service';
 import { InvoiceStatus } from '../models/Invoice.model';
 
 export class InvoiceController {
@@ -228,6 +229,132 @@ export class InvoiceController {
     } catch (error: any) {
       console.error('[PDF] Error generating PDF:', error);
       res.status(400).json({ message: error.message });
+    }
+  }
+
+  // ==================== REPORTS ====================
+
+  /**
+   * Get revenue over time
+   * GET /api/invoices/reports/revenue-over-time
+   */
+  async getRevenueOverTime(req: Request, res: Response): Promise<void> {
+    try {
+      const filters = {
+        start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
+        end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+        period: (req.query.period as 'daily' | 'weekly' | 'monthly') || 'monthly',
+      };
+
+      const data = await invoiceService.getRevenueOverTime(filters);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get revenue by client
+   * GET /api/invoices/reports/revenue-by-client
+   */
+  async getRevenueByClient(req: Request, res: Response): Promise<void> {
+    try {
+      const filters = {
+        start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
+        end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
+      };
+
+      const data = await invoiceService.getRevenueByClient(filters);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get invoice status distribution
+   * GET /api/invoices/reports/status-distribution
+   */
+  async getStatusDistribution(req: Request, res: Response): Promise<void> {
+    try {
+      const filters = {
+        start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
+        end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+      };
+
+      const data = await invoiceService.getStatusDistribution(filters);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Get payment overview
+   * GET /api/invoices/reports/payment-overview
+   */
+  async getPaymentOverview(req: Request, res: Response): Promise<void> {
+    try {
+      const filters = {
+        start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
+        end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+      };
+
+      const data = await invoiceService.getPaymentOverview(filters);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Export report as Excel
+   * GET /api/invoices/reports/export/excel
+   */
+  async exportExcel(req: Request, res: Response): Promise<void> {
+    try {
+      const filters = {
+        start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
+        end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+      };
+
+      const buffer = await invoiceReportService.generateExcelReport(filters);
+
+      const filename = `raport-finansowy-${new Date().toISOString().split('T')[0]}.xlsx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+
+      res.send(buffer);
+    } catch (error: any) {
+      console.error('[Export Excel] Error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Export report as PDF
+   * GET /api/invoices/reports/export/pdf
+   */
+  async exportPdf(req: Request, res: Response): Promise<void> {
+    try {
+      const filters = {
+        start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
+        end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+      };
+
+      const buffer = await invoiceReportService.generatePdfReport(filters);
+
+      const filename = `raport-finansowy-${new Date().toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+
+      res.send(buffer);
+    } catch (error: any) {
+      console.error('[Export PDF] Error:', error);
+      res.status(500).json({ message: error.message });
     }
   }
 }

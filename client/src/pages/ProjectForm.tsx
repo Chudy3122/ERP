@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, LayoutTemplate } from 'lucide-react';
 import * as projectApi from '../api/project.api';
+import * as templateApi from '../api/projectTemplate.api';
 import { CreateProjectRequest, ProjectStatus, ProjectPriority } from '../types/project.types';
+import { ProjectTemplate } from '../types/projectTemplate.types';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProjectForm = () => {
@@ -24,6 +26,7 @@ const ProjectForm = () => {
     manager_id: user?.id,
   });
 
+  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +34,9 @@ const ProjectForm = () => {
   useEffect(() => {
     if (isEdit && id) {
       loadProject();
+    }
+    if (!isEdit) {
+      templateApi.getAllTemplates().then(setTemplates).catch(console.error);
     }
   }, [id, isEdit]);
 
@@ -76,7 +82,8 @@ const ProjectForm = () => {
       if (isEdit && id) {
         await projectApi.updateProject(id, formData);
       } else {
-        await projectApi.createProject(formData);
+        const newProject = await projectApi.createProject(formData);
+        await projectApi.createDefaultStages(newProject.id, formData.template_id);
       }
       navigate('/projects');
     } catch (error: any) {
@@ -129,6 +136,33 @@ const ProjectForm = () => {
       {error && (
         <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
           <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Template selector (only for new projects) */}
+      {!isEdit && templates.length > 0 && (
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <LayoutTemplate className="w-5 h-5 text-gray-500" />
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Szablon projektu (opcjonalnie)</h3>
+          </div>
+          <select
+            value={formData.template_id || ''}
+            onChange={e => setFormData(prev => ({ ...prev, template_id: e.target.value || undefined }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+          >
+            <option value="">Bez szablonu (domyślne etapy)</option>
+            {templates.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.stages?.length || 0} etapów, {t.tasks?.length || 0} zadań)
+              </option>
+            ))}
+          </select>
+          {formData.template_id && (
+            <p className="mt-2 text-xs text-gray-500">
+              Po utworzeniu projektu zostaną automatycznie utworzone etapy i zadania z wybranego szablonu.
+            </p>
+          )}
         </div>
       )}
 

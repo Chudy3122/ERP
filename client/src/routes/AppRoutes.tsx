@@ -30,6 +30,14 @@ import ClientForm from '../pages/ClientForm';
 import Invoices from '../pages/Invoices';
 import InvoiceForm from '../pages/InvoiceForm';
 import InvoiceDetail from '../pages/InvoiceDetail';
+import FinancialReports from '../pages/FinancialReports';
+import Contracts from '../pages/Contracts';
+import ContractForm from '../pages/ContractForm';
+import ContractDetail from '../pages/ContractDetail';
+import ProjectTemplates from '../pages/ProjectTemplates';
+import CrmBoard from '../pages/CrmBoard';
+import CrmDealDetail from '../pages/CrmDealDetail';
+import CrmDashboard from '../pages/CrmDashboard';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -253,6 +261,78 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <InvoiceDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/financial-reports"
+        element={
+          <PrivateRoute>
+            <FinancialReports />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/contracts"
+        element={
+          <PrivateRoute>
+            <Contracts />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/contracts/new"
+        element={
+          <PrivateRoute>
+            <ContractForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/contracts/:id/edit"
+        element={
+          <PrivateRoute>
+            <ContractForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/contracts/:id"
+        element={
+          <PrivateRoute>
+            <ContractDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/crm"
+        element={
+          <PrivateRoute>
+            <CrmBoard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/crm/dashboard"
+        element={
+          <PrivateRoute>
+            <CrmDashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/crm/deals/:id"
+        element={
+          <PrivateRoute>
+            <CrmDealDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/project-templates"
+        element={
+          <PrivateRoute>
+            <ProjectTemplates />
           </PrivateRoute>
         }
       />

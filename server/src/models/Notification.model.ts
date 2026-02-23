@@ -20,6 +20,17 @@ export enum NotificationType {
   LEAVE_REQUEST_PENDING = 'leave_request_pending',
   SYSTEM_ANNOUNCEMENT = 'system_announcement',
   USER_STATUS_CHANGED = 'user_status_changed',
+  // Invoice & Payment notifications
+  INVOICE_OVERDUE = 'invoice_overdue',
+  PAYMENT_RECEIVED = 'payment_received',
+  // Contract notifications
+  CONTRACT_EXPIRING = 'contract_expiring',
+  CONTRACT_EXPIRED = 'contract_expired',
+  // CRM notifications
+  DEAL_ASSIGNED = 'deal_assigned',
+  DEAL_STAGE_CHANGED = 'deal_stage_changed',
+  DEAL_WON = 'deal_won',
+  DEAL_FOLLOW_UP = 'deal_follow_up',
 }
 
 export enum NotificationPriority {

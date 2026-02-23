@@ -64,6 +64,19 @@ export const removeAvatar = async (): Promise<void> => {
 };
 
 /**
+ * Upload cover photo
+ */
+export const uploadCover = async (file: File): Promise<{ cover_url: string }> => {
+  const formData = new FormData();
+  formData.append('cover', file);
+
+  const response = await apiClient.post('/users/cover', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data;
+};
+
+/**
  * Change password
  */
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {

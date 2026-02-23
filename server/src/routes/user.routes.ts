@@ -54,6 +54,9 @@ router.put('/profile', userController.updateProfile);
 router.post('/avatar', avatarUpload.single('avatar'), userController.uploadAvatar);
 router.delete('/avatar', userController.removeAvatar);
 
+// Cover photo
+router.post('/cover', avatarUpload.single('cover'), userController.uploadCover);
+
 // Password change
 router.put('/password', userController.changePassword);
 

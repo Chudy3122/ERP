@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   department?: string | null;
   avatar_url?: string | null;
+  cover_url?: string | null;
   phone?: string | null;
   is_active: boolean;
   last_login?: string | null;

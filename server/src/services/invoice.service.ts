@@ -592,6 +592,244 @@ export class InvoiceService {
       order: { position: 'ASC' },
     });
   }
+
+  // ==================== REPORTS ====================
+
+  /**
+   * Get revenue over time (daily/weekly/monthly)
+   */
+  async getRevenueOverTime(filters: {
+    start_date?: Date;
+    end_date?: Date;
+    period: 'daily' | 'weekly' | 'monthly';
+  }): Promise<{
+    period: string;
+    net_total: number;
+    gross_total: number;
+    paid_amount: number;
+    invoice_count: number;
+  }[]> {
+    const queryBuilder = this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where('invoice.status != :cancelled', { cancelled: InvoiceStatus.CANCELLED });
+
+    if (filters.start_date) {
+      queryBuilder.andWhere('invoice.issue_date >= :startDate', { startDate: filters.start_date });
+    }
+
+    if (filters.end_date) {
+      queryBuilder.andWhere('invoice.issue_date <= :endDate', { endDate: filters.end_date });
+    }
+
+    const invoices = await queryBuilder.orderBy('invoice.issue_date', 'ASC').getMany();
+
+    // Group by period
+    const grouped: Record<string, {
+      net_total: number;
+      gross_total: number;
+      paid_amount: number;
+      invoice_count: number;
+    }> = {};
+
+    for (const invoice of invoices) {
+      const date = new Date(invoice.issue_date);
+      let periodKey: string;
+
+      if (filters.period === 'daily') {
+        periodKey = date.toISOString().split('T')[0];
+      } else if (filters.period === 'weekly') {
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay() + 1);
+        periodKey = `${weekStart.getFullYear()}-W${String(Math.ceil((weekStart.getDate() + 6) / 7)).padStart(2, '0')}`;
+      } else {
+        periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      }
+
+      if (!grouped[periodKey]) {
+        grouped[periodKey] = { net_total: 0, gross_total: 0, paid_amount: 0, invoice_count: 0 };
+      }
+
+      grouped[periodKey].net_total += Number(invoice.net_total);
+      grouped[periodKey].gross_total += Number(invoice.gross_total);
+      grouped[periodKey].paid_amount += Number(invoice.paid_amount);
+      grouped[periodKey].invoice_count++;
+    }
+
+    return Object.entries(grouped)
+      .map(([period, data]) => ({
+        period,
+        net_total: Math.round(data.net_total * 100) / 100,
+        gross_total: Math.round(data.gross_total * 100) / 100,
+        paid_amount: Math.round(data.paid_amount * 100) / 100,
+        invoice_count: data.invoice_count,
+      }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+  }
+
+  /**
+   * Get revenue by client
+   */
+  async getRevenueByClient(filters: {
+    start_date?: Date;
+    end_date?: Date;
+    limit?: number;
+  }): Promise<{
+    client_id: string;
+    client_name: string;
+    total_gross: number;
+    total_paid: number;
+    invoice_count: number;
+  }[]> {
+    const queryBuilder = this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.client', 'client')
+      .where('invoice.status != :cancelled', { cancelled: InvoiceStatus.CANCELLED });
+
+    if (filters.start_date) {
+      queryBuilder.andWhere('invoice.issue_date >= :startDate', { startDate: filters.start_date });
+    }
+
+    if (filters.end_date) {
+      queryBuilder.andWhere('invoice.issue_date <= :endDate', { endDate: filters.end_date });
+    }
+
+    const invoices = await queryBuilder.getMany();
+
+    // Group by client
+    const grouped: Record<string, {
+      client_name: string;
+      total_gross: number;
+      total_paid: number;
+      invoice_count: number;
+    }> = {};
+
+    for (const invoice of invoices) {
+      const clientId = invoice.client_id;
+      const clientName = invoice.client?.name || 'Nieznany';
+
+      if (!grouped[clientId]) {
+        grouped[clientId] = { client_name: clientName, total_gross: 0, total_paid: 0, invoice_count: 0 };
+      }
+
+      grouped[clientId].total_gross += Number(invoice.gross_total);
+      grouped[clientId].total_paid += Number(invoice.paid_amount);
+      grouped[clientId].invoice_count++;
+    }
+
+    const result = Object.entries(grouped)
+      .map(([client_id, data]) => ({
+        client_id,
+        client_name: data.client_name,
+        total_gross: Math.round(data.total_gross * 100) / 100,
+        total_paid: Math.round(data.total_paid * 100) / 100,
+        invoice_count: data.invoice_count,
+      }))
+      .sort((a, b) => b.total_gross - a.total_gross);
+
+    return filters.limit ? result.slice(0, filters.limit) : result;
+  }
+
+  /**
+   * Get invoice status distribution
+   */
+  async getStatusDistribution(filters?: {
+    start_date?: Date;
+    end_date?: Date;
+  }): Promise<{
+    status: InvoiceStatus;
+    count: number;
+    total_gross: number;
+  }[]> {
+    const queryBuilder = this.invoiceRepository.createQueryBuilder('invoice');
+
+    if (filters?.start_date) {
+      queryBuilder.andWhere('invoice.issue_date >= :startDate', { startDate: filters.start_date });
+    }
+
+    if (filters?.end_date) {
+      queryBuilder.andWhere('invoice.issue_date <= :endDate', { endDate: filters.end_date });
+    }
+
+    const invoices = await queryBuilder.getMany();
+
+    const distribution: Record<InvoiceStatus, { count: number; total_gross: number }> = {
+      [InvoiceStatus.DRAFT]: { count: 0, total_gross: 0 },
+      [InvoiceStatus.SENT]: { count: 0, total_gross: 0 },
+      [InvoiceStatus.PAID]: { count: 0, total_gross: 0 },
+      [InvoiceStatus.PARTIALLY_PAID]: { count: 0, total_gross: 0 },
+      [InvoiceStatus.OVERDUE]: { count: 0, total_gross: 0 },
+      [InvoiceStatus.CANCELLED]: { count: 0, total_gross: 0 },
+    };
+
+    for (const invoice of invoices) {
+      distribution[invoice.status].count++;
+      distribution[invoice.status].total_gross += Number(invoice.gross_total);
+    }
+
+    return Object.entries(distribution).map(([status, data]) => ({
+      status: status as InvoiceStatus,
+      count: data.count,
+      total_gross: Math.round(data.total_gross * 100) / 100,
+    }));
+  }
+
+  /**
+   * Get payment overview
+   */
+  async getPaymentOverview(filters?: {
+    start_date?: Date;
+    end_date?: Date;
+  }): Promise<{
+    total_invoices: number;
+    total_gross: number;
+    total_paid: number;
+    total_pending: number;
+    paid_percentage: number;
+    overdue_count: number;
+    overdue_amount: number;
+  }> {
+    const queryBuilder = this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where('invoice.status != :cancelled', { cancelled: InvoiceStatus.CANCELLED });
+
+    if (filters?.start_date) {
+      queryBuilder.andWhere('invoice.issue_date >= :startDate', { startDate: filters.start_date });
+    }
+
+    if (filters?.end_date) {
+      queryBuilder.andWhere('invoice.issue_date <= :endDate', { endDate: filters.end_date });
+    }
+
+    const invoices = await queryBuilder.getMany();
+
+    let total_gross = 0;
+    let total_paid = 0;
+    let overdue_count = 0;
+    let overdue_amount = 0;
+
+    for (const invoice of invoices) {
+      total_gross += Number(invoice.gross_total);
+      total_paid += Number(invoice.paid_amount);
+
+      if (invoice.status === InvoiceStatus.OVERDUE) {
+        overdue_count++;
+        overdue_amount += Number(invoice.gross_total) - Number(invoice.paid_amount);
+      }
+    }
+
+    const total_pending = total_gross - total_paid;
+    const paid_percentage = total_gross > 0 ? Math.round((total_paid / total_gross) * 100) : 0;
+
+    return {
+      total_invoices: invoices.length,
+      total_gross: Math.round(total_gross * 100) / 100,
+      total_paid: Math.round(total_paid * 100) / 100,
+      total_pending: Math.round(total_pending * 100) / 100,
+      paid_percentage,
+      overdue_count,
+      overdue_amount: Math.round(overdue_amount * 100) / 100,
+    };
+  }
 }
 
 export default new InvoiceService();

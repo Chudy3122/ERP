@@ -31,6 +31,11 @@ import {
   GitBranch,
   Building2,
   Receipt,
+  BarChart3,
+  FileSignature,
+  Target,
+  TrendingUp,
+  LayoutTemplate,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -43,6 +48,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: string[];
+  exact?: boolean;
 }
 
 interface NavHeader {
@@ -162,6 +168,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'header', name: t('nav.invoices') },
     { name: t('nav.clients'), href: '/clients', icon: Building2 },
     { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt },
+    { name: t('nav.contracts'), href: '/contracts', icon: FileSignature },
+    { name: t('nav.financialReports'), href: '/financial-reports', icon: BarChart3 },
+
+    { type: 'divider' },
+    { type: 'header', name: 'CRM' },
+    { name: t('nav.crmPipelines', 'Pipeline'), href: '/crm', icon: Target, exact: true },
+    { name: t('nav.crmDashboard', 'Dashboard CRM'), href: '/crm/dashboard', icon: TrendingUp },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
@@ -171,6 +184,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.administration'), roles: ['ADMIN'] },
     { name: t('nav.users'), href: '/admin/users', icon: UserCog, roles: ['ADMIN'] },
+    { name: t('nav.projectTemplates', 'Szablony projektów'), href: '/admin/project-templates', icon: LayoutTemplate, roles: ['ADMIN'] },
     { name: t('nav.reports'), href: '/reports', icon: FileText, roles: ['ADMIN', 'TEAM_LEADER'] },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
   ];
@@ -203,7 +217,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     const navItem = item as NavItem;
     if (navItem.roles && !navItem.roles.includes(user?.role || '')) return null;
 
-    const isActive = location.pathname === navItem.href || location.pathname.startsWith(navItem.href + '/');
+    const isActive = location.pathname === navItem.href || (!navItem.exact && location.pathname.startsWith(navItem.href + '/'));
     const Icon = navItem.icon;
 
     return (

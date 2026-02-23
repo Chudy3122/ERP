@@ -1028,14 +1028,14 @@ const ProjectDetail = () => {
               </button>
             )}
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {members.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 Brak członków w projekcie
               </div>
             ) : (
               members.map((member) => (
-                <div key={member.id} className="p-4 flex items-center justify-between">
+                <div key={member.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <div className="flex items-center gap-3">
                     {member.user?.avatar_url ? (
                       <img
@@ -1044,18 +1044,18 @@ const ProjectDetail = () => {
                         className="w-10 h-10 rounded-full"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
                         {member.user && getInitials(member.user.first_name, member.user.last_name)}
                       </div>
                     )}
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-white">
                         {member.user?.first_name} {member.user?.last_name}
                       </p>
-                      <p className="text-sm text-gray-500">{member.user?.email}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.user?.email}</p>
                     </div>
                   </div>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                     {member.role === 'lead' ? 'Lider' : member.role === 'observer' ? 'Obserwator' : 'Członek'}
                   </span>
                 </div>
@@ -1070,7 +1070,7 @@ const ProjectDetail = () => {
           {/* Upload area */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-900">Pliki projektu</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white">Pliki projektu</h3>
               <label className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium text-sm cursor-pointer">
                 {isUploading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1091,24 +1091,24 @@ const ProjectDetail = () => {
 
             {/* Files list */}
             {attachments.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
-                <FileIcon className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500 mb-2">Brak plików</p>
-                <p className="text-sm text-gray-400">Przeciągnij pliki tutaj lub kliknij "Dodaj pliki"</p>
+              <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg">
+                <FileIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 mb-2">Brak plików</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">Przeciągnij pliki tutaj lub kliknij "Dodaj pliki"</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
                 {attachments.map((attachment) => {
                   const FileTypeIcon = getFileIcon(attachment.file_type);
                   return (
-                    <div key={attachment.id} className="py-3 flex items-center justify-between">
+                    <div key={attachment.id} className="py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg px-2 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                          <FileTypeIcon className="w-5 h-5 text-gray-500" />
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                          <FileTypeIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 text-sm">{attachment.original_name}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">{attachment.original_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {formatFileSize(attachment.file_size)} • {formatRelativeTime(attachment.created_at)}
                             {attachment.uploader && ` • ${attachment.uploader.first_name} ${attachment.uploader.last_name}`}
                           </p>
@@ -1118,7 +1118,7 @@ const ProjectDetail = () => {
                         <a
                           href={getFileUrl(attachment.file_url) || ''}
                           download={attachment.original_name}
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded"
+                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
                           title="Pobierz"
                         >
                           <Download className="w-4 h-4" />
@@ -1126,7 +1126,7 @@ const ProjectDetail = () => {
                         <button
                           onClick={() => setShowDeleteFileConfirm(attachment.id)}
                           disabled={isDeletingFile === attachment.id}
-                          className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
+                          className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
                           title="Usuń"
                         >
                           {isDeletingFile === attachment.id ? (
@@ -1147,25 +1147,25 @@ const ProjectDetail = () => {
 
       {activeTab === 'activity' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">Historia aktywności</h3>
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="font-medium text-gray-900 dark:text-white">Historia aktywności</h3>
           </div>
-          <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
             {activities.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 Brak aktywności
               </div>
             ) : (
               activities.map((activity) => {
                 const Icon = getActivityIcon(activity.action);
                 return (
-                  <div key={activity.id} className="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-5 h-5 text-gray-500" />
+                  <div key={activity.id} className="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">{activity.description}</p>
-                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <p className="text-sm text-gray-900 dark:text-white">{activity.description}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatRelativeTime(activity.created_at)}
                       </p>
@@ -1180,39 +1180,39 @@ const ProjectDetail = () => {
 
       {activeTab === 'settings' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Ustawienia projektu</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Ustawienia projektu</h3>
           <div className="space-y-4">
             <button
               onClick={() => navigate(`/projects/${id}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
               <Edit3 className="w-4 h-4" />
               Edytuj projekt
             </button>
 
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="font-medium text-gray-900 mb-3">Etapy projektu</h4>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Etapy projektu</h4>
               <div className="space-y-2">
                 {stages.map((stage) => (
                   <div
                     key={stage.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-4 h-4 rounded-full"
+                        className="w-4 h-4 rounded-full flex-shrink-0"
                         style={{ backgroundColor: stage.color }}
                       />
-                      <span className="text-sm font-medium text-gray-900">{stage.name}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{stage.name}</span>
                       {stage.is_completed_stage && (
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                        <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">
                           Etap końcowy
                         </span>
                       )}
                     </div>
                     <button
                       onClick={() => handleOpenEditStage(stage)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
+                      className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
@@ -1220,7 +1220,7 @@ const ProjectDetail = () => {
                 ))}
                 <button
                   onClick={() => setShowNewStageModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors w-full"
                 >
                   <Plus className="w-4 h-4" />
                   Dodaj nowy etap
@@ -1236,10 +1236,10 @@ const ProjectDetail = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Nowy etap</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Nowy etap</h3>
               <button
                 onClick={() => setShowNewStageModal(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1247,7 +1247,7 @@ const ProjectDetail = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nazwa etapu
                 </label>
                 <input
@@ -1255,12 +1255,12 @@ const ProjectDetail = () => {
                   value={newStageName}
                   onChange={(e) => setNewStageName(e.target.value)}
                   placeholder="np. Do zrobienia, W trakcie..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Kolor
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1281,7 +1281,7 @@ const ProjectDetail = () => {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowNewStageModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 Anuluj
               </button>
@@ -1303,13 +1303,13 @@ const ProjectDetail = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Edytuj etap</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Edytuj etap</h3>
               <button
                 onClick={() => {
                   setShowEditStageModal(false);
                   setEditingStage(null);
                 }}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1317,7 +1317,7 @@ const ProjectDetail = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nazwa etapu
                 </label>
                 <input
@@ -1325,12 +1325,12 @@ const ProjectDetail = () => {
                   value={editStageName}
                   onChange={(e) => setEditStageName(e.target.value)}
                   placeholder="np. Do zrobienia, W trakcie..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Kolor
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1367,7 +1367,7 @@ const ProjectDetail = () => {
                     setShowEditStageModal(false);
                     setEditingStage(null);
                   }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   Anuluj
                 </button>

@@ -16,6 +16,7 @@ export interface User {
   department: string | null;
   department_id: string | null;
   avatar_url: string | null;
+  cover_url?: string | null;
   phone: string | null;
   is_active: boolean;
   last_login: string | null;

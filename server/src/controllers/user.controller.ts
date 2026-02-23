@@ -207,6 +207,41 @@ export const removeAvatar = async (req: Request, res: Response) => {
 };
 
 /**
+ * Upload cover photo
+ * POST /api/users/cover
+ */
+export const uploadCover = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'Validation Error', message: 'No file provided' });
+
+    const user = await userRepository.findOne({ where: { id: req.user.userId } });
+    if (!user) return res.status(404).json({ error: 'Not Found', message: 'User not found' });
+
+    // Delete old cover if exists
+    if (user.cover_url) {
+      const oldPath = user.cover_url.replace('/uploads/avatars/', '');
+      const fullPath = path.join(avatarsDir, oldPath);
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+    }
+
+    const coverUrl = `/uploads/avatars/${file.filename}`;
+    user.cover_url = coverUrl;
+    await userRepository.save(user);
+
+    return res.status(200).json({
+      message: 'Cover uploaded successfully',
+      data: { cover_url: coverUrl },
+    });
+  } catch (error) {
+    console.error('Upload cover error:', error);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to upload cover' });
+  }
+};
+
+/**
  * Change password
  * PUT /api/users/password
  */

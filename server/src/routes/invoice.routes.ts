@@ -12,6 +12,25 @@ router.use(authenticate);
 // Read routes (available to all authenticated users)
 router.get('/', invoiceController.getAllInvoices.bind(invoiceController));
 router.get('/statistics', invoiceController.getStatistics.bind(invoiceController));
+
+// Report routes (available to all authenticated users)
+router.get('/reports/revenue-over-time', invoiceController.getRevenueOverTime.bind(invoiceController));
+router.get('/reports/revenue-by-client', invoiceController.getRevenueByClient.bind(invoiceController));
+router.get('/reports/status-distribution', invoiceController.getStatusDistribution.bind(invoiceController));
+router.get('/reports/payment-overview', invoiceController.getPaymentOverview.bind(invoiceController));
+
+// Export routes (ADMIN, KSIEGOWOSC only)
+router.get(
+  '/reports/export/excel',
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  invoiceController.exportExcel.bind(invoiceController)
+);
+router.get(
+  '/reports/export/pdf',
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  invoiceController.exportPdf.bind(invoiceController)
+);
+
 router.get('/:id', invoiceController.getInvoiceById.bind(invoiceController));
 router.get('/:id/pdf', invoiceController.downloadPdf.bind(invoiceController));
 router.get('/:id/items', invoiceController.getInvoiceItems.bind(invoiceController));
