@@ -38,6 +38,7 @@ import ProjectTemplates from '../pages/ProjectTemplates';
 import CrmBoard from '../pages/CrmBoard';
 import CrmDealDetail from '../pages/CrmDealDetail';
 import CrmDashboard from '../pages/CrmDashboard';
+import LandingPage from '../pages/LandingPage';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -385,11 +386,11 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Default redirect */}
+      {/* Default: landing page for guests, dashboard for authenticated */}
       <Route
         path="/"
         element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
         }
       />
 
