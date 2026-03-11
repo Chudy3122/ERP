@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, Clock, Users, BarChart3, Shield } from 'lucide-react';
@@ -103,6 +104,15 @@ const Login = () => {
       {/* Right Panel - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
+          {/* Back to landing */}
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Wróć do strony głównej
+          </Link>
+
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
