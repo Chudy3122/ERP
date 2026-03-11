@@ -111,6 +111,22 @@ const faq = [
     q: 'Czy mogę zobaczyć system przed zakupem?',
     a: 'Tak. Skontaktuj się z nami, a umówimy demonstrację systemu dostosowaną do specyfiki Twojej firmy.',
   },
+  {
+    q: 'Czy system obsługuje wiele firm lub oddziałów?',
+    a: 'Tak. Możesz tworzyć działy, przypisywać do nich pracowników i zarządzać uprawnieniami osobno dla każdej jednostki organizacyjnej.',
+  },
+  {
+    q: 'Czy mogę śledzić czas pracy pracowników?',
+    a: 'Tak. Moduł ewidencji czasu pracy pozwala rejestrować przepracowane godziny, przypisywać je do projektów i generować raporty miesięczne.',
+  },
+  {
+    q: 'Jak działają powiadomienia w systemie?',
+    a: 'System wysyła powiadomienia o nowych zadaniach, zbliżających się deadlinach, zmianach statusu projektów oraz nieodczytanych wiadomościach na czacie.',
+  },
+  {
+    q: 'Czy dane są regularnie backupowane?',
+    a: 'Tak. Baza danych jest regularnie archiwizowana. W razie awarii możliwe jest przywrócenie danych do poprzedniego stanu.',
+  },
 ];
 
 // Floating UI card mock
@@ -160,37 +176,116 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+function ContactForm() {
+  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const res = await fetch('https://formspree.io/f/xqedvokw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ name: form.name, email: form.email, message: form.message }),
+      });
+      if (res.ok) setSent(true);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div className="mt-8 pt-8 border-t border-white/10 text-center">
+        <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+          <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+        </div>
+        <p className="text-white font-semibold mb-1">Wiadomość wysłana!</p>
+        <p className="text-gray-400 text-sm">Odezwiemy się najszybciej jak to możliwe.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-8 pt-8 border-t border-white/10 space-y-3">
+      <p className="text-sm font-semibold text-white mb-4">Napisz do nas</p>
+      <input
+        type="text"
+        placeholder="Imię i nazwisko"
+        required
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-400 transition-colors"
+      />
+      <input
+        type="email"
+        placeholder="Adres e-mail"
+        required
+        value={form.email}
+        onChange={(e) => setForm({ ...form, email: e.target.value })}
+        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-400 transition-colors"
+      />
+      <textarea
+        placeholder="Twoja wiadomość..."
+        required
+        rows={3}
+        value={form.message}
+        onChange={(e) => setForm({ ...form, message: e.target.value })}
+        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-400 transition-colors resize-none"
+      />
+      <button
+        type="submit"
+        disabled={sending}
+        className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+      >
+        {sending ? 'Wysyłanie...' : (
+          <>Wyślij wiadomość <ArrowRight className="w-4 h-4" /></>
+        )}
+      </button>
+    </form>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* ── NAVBAR ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-lg flex items-center justify-center shadow-sm">
               <Building2 className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight">ERP System</span>
+            <span className="text-lg font-black text-gray-900 tracking-tight">
+              ERP<span className="text-indigo-600">System</span>
+            </span>
           </div>
 
           {/* Nav links */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#funkcje" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Funkcje
-            </a>
-            <a href="#zalety" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Zalety
-            </a>
-            <a href="#faq" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              FAQ
-            </a>
+          <div className="hidden md:flex items-center gap-1 bg-gray-100 rounded-full px-1.5 py-1.5">
+            {[
+              { label: 'Funkcje', href: '#funkcje' },
+              { label: 'Zalety', href: '#zalety' },
+              { label: 'FAQ', href: '#faq' },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm px-4 py-1.5 rounded-full transition-all duration-150"
+              >
+                {item.label}
+              </a>
+            ))}
           </div>
 
-          {/* Single CTA */}
+          {/* CTA button */}
           <Link
             to="/login"
-            className="text-sm font-semibold bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg transition-colors"
+            className="text-sm font-semibold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white px-5 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200"
           >
             Zaloguj się
           </Link>
@@ -444,24 +539,51 @@ export default function LandingPage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="bg-gray-50 py-24">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-3">
-              Masz pytania?
-            </p>
-            <h2 className="text-4xl font-black text-gray-900 mb-4">
-              Najczęściej zadawane pytania
-            </h2>
-            <p className="text-lg text-gray-500">
-              Nie znalazłeś odpowiedzi? Skontaktuj się z nami.
-            </p>
-          </div>
+      <section id="faq" className="bg-white py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
 
-          <div className="space-y-3">
-            {faq.map((item) => (
-              <FaqItem key={item.q} q={item.q} a={item.a} />
-            ))}
+            {/* Left sticky panel */}
+            <div className="lg:col-span-2 lg:sticky lg:top-24">
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white">
+                <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">
+                  Masz pytania?
+                </p>
+                <h2 className="text-3xl font-black leading-tight mb-4">
+                  Wszystko, co chcesz wiedzieć
+                </h2>
+                <p className="text-gray-400 text-sm leading-relaxed mb-8">
+                  Zebraliśmy najczęstsze pytania. Jeśli nie znajdziesz odpowiedzi — napisz do nas.
+                </p>
+
+                <div className="space-y-4">
+                  {[
+                    { num: '01', label: 'Bezpieczeństwo i dostęp' },
+                    { num: '02', label: 'Instalacja i wdrożenie' },
+                    { num: '03', label: 'Funkcje i możliwości' },
+                    { num: '04', label: 'Faktury i finanse' },
+                  ].map((item) => (
+                    <div key={item.num} className="flex items-center gap-3 group cursor-default">
+                      <span className="text-xs font-bold text-indigo-400 w-6">{item.num}</span>
+                      <span className="text-sm text-gray-400 group-hover:text-white transition-colors">
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <ContactForm />
+              </div>
+            </div>
+
+            {/* Right: accordion */}
+            <div className="lg:col-span-3 space-y-3">
+              {faq.map((item) => (
+                <div key={item.q} className="group">
+                  <FaqItem q={item.q} a={item.a} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
