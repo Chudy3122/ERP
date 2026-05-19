@@ -5,9 +5,9 @@ import MainLayout from '../components/layout/MainLayout';
 import TimeChartWidget from '../components/dashboard/TimeChartWidget';
 import DeadlineCounterWidget from '../components/dashboard/DeadlineCounterWidget';
 import ActivityStreamWidget from '../components/dashboard/ActivityStreamWidget';
+import OvertimeWidget from '../components/dashboard/OvertimeWidget';
 import ClockInWidget from '../components/dashboard/ClockInWidget';
 import StatWidget from '../components/widgets/StatWidget';
-import WidgetCard from '../components/widgets/WidgetCard';
 import * as notificationApi from '../api/notification.api';
 import * as timeApi from '../api/time.api';
 import * as statusApi from '../api/status.api';
@@ -96,67 +96,35 @@ const Dashboard = () => {
             value={pendingLeaveCount}
             icon={<Calendar className="w-5 h-5" />}
             color="gray"
-            onClick={() => window.location.href = '/time-tracking/leave/approvals'}
+            onClick={() => window.location.href = '/absences'}
           />
         )}
       </div>
 
-      {/* Main Dashboard Grid */}
+      {/* Main Dashboard Grid — single unified grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-        {/* Left Column - Full width on mobile, 2 cols on desktop */}
-        <div className="lg:col-span-2 space-y-2">
-          {/* Time Chart Widget */}
-          <TimeChartWidget />
 
-          {/* Activity Stream Widget */}
+        {/* Row 1: ClockIn (2/3) + Overtime (1/3) */}
+        <div className="lg:col-span-2">
+          <ClockInWidget />
+        </div>
+        <div>
+          <OvertimeWidget />
+        </div>
+
+        {/* Row 2: Chart (2/3) + Deadline (1/3) */}
+        <div className="lg:col-span-2">
+          <TimeChartWidget />
+        </div>
+        <div>
+          <DeadlineCounterWidget />
+        </div>
+
+        {/* Row 3: Activity — full width */}
+        <div className="lg:col-span-3">
           <ActivityStreamWidget />
         </div>
 
-        {/* Right Column - Full width on mobile, 1 col on desktop */}
-        <div className="space-y-2">
-          {/* Clock In/Out Widget */}
-          <ClockInWidget />
-
-          {/* Deadline Counter Widget */}
-          <DeadlineCounterWidget />
-
-          {/* User Info Widget */}
-          <WidgetCard
-            title={t('dashboard.accountInfo')}
-            icon={<User className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
-          >
-            <div className="space-y-1">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('common.fullName')}</p>
-                <p className="text-xs font-medium text-gray-900 dark:text-white">
-                  {user?.first_name} {user?.last_name}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('common.email')}</p>
-                <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                  {user?.email}
-                </p>
-              </div>
-
-              <div className="pt-1 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('common.role')}</p>
-                <div className="mt-0.5">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                    user?.role === 'admin'
-                      ? 'bg-gray-200 text-gray-800'
-                      : user?.role === 'team_leader'
-                      ? 'bg-gray-100 text-gray-700'
-                      : 'bg-gray-50 text-gray-600'
-                  }`}>
-                    {user?.role === 'admin' ? 'Administrator' : user?.role === 'team_leader' ? 'Team Leader' : t('common.employee')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </WidgetCard>
-        </div>
       </div>
     </MainLayout>
   );

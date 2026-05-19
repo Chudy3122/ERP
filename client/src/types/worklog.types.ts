@@ -96,6 +96,17 @@ export interface ProjectTimeStats {
   }>;
 }
 
+export interface OvertimeSummaryEntry {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  total_overtime: number;
+  overtime_this_month: number;
+  total_collected: number;
+  collected_this_month: number;
+  balance: number;
+}
+
 export interface DailyWorkSummary {
   date: string;
   totalHours: number;

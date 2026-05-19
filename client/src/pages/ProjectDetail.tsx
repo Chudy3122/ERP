@@ -94,6 +94,11 @@ const ProjectDetail = () => {
   const [showDeleteStageConfirm, setShowDeleteStageConfirm] = useState(false);
   const [showDeleteFileConfirm, setShowDeleteFileConfirm] = useState<string | null>(null);
 
+  // Work log modal
+  const [workLogTask, setWorkLogTask] = useState<Task | null>(null);
+  const [workLogForm, setWorkLogForm] = useState({ work_date: '', hours: '', description: '', work_type: 'regular' });
+  const [isSubmittingWorkLog, setIsSubmittingWorkLog] = useState(false);
+
   const { t } = useTranslation();
   const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
 
@@ -235,6 +240,39 @@ const ProjectDetail = () => {
     }
     mouseStartPos.current = null;
     navigate(`/tasks/${taskId}/edit`);
+  };
+
+  const handleOpenWorkLog = (e: React.MouseEvent, task: Task) => {
+    e.stopPropagation();
+    setWorkLogTask(task);
+    setWorkLogForm({
+      work_date: new Date().toISOString().split('T')[0],
+      hours: '',
+      description: '',
+      work_type: 'regular',
+    });
+  };
+
+  const handleSubmitWorkLog = async () => {
+    if (!workLogTask || !workLogForm.hours || parseFloat(workLogForm.hours) <= 0) return;
+    setIsSubmittingWorkLog(true);
+    try {
+      await workLogApi.createWorkLog({
+        task_id: workLogTask.id,
+        project_id: workLogTask.project_id,
+        work_date: workLogForm.work_date,
+        hours: parseFloat(workLogForm.hours),
+        description: workLogForm.description || undefined,
+        work_type: workLogForm.work_type as any,
+      });
+      setWorkLogTask(null);
+      loadTasksByStages();
+      if (activeTab === 'dashboard') loadProject();
+    } catch (err) {
+      console.error('Work log error', err);
+    } finally {
+      setIsSubmittingWorkLog(false);
+    }
   };
 
   const handleStageDragOver = (e: React.DragEvent) => {
@@ -927,6 +965,14 @@ const ProjectDetail = () => {
                             )}
 
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => handleOpenWorkLog(e, task)}
+                                title="Zaloguj czas"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[9px] text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 px-1.5 py-0.5 rounded font-semibold"
+                              >
+                                <Plus className="w-2.5 h-2.5" />
+                                czas
+                              </button>
                               {(task.actual_hours !== undefined || task.estimated_hours !== undefined) && (
                                 <span
                                   className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5 font-medium"
@@ -1412,6 +1458,87 @@ const ProjectDetail = () => {
         icon="delete"
         loading={isDeletingFile !== null}
       />
+
+      {/* Work Log Modal */}
+      {workLogTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Zaloguj czas pracy</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-xs">{workLogTask.title}</p>
+              </div>
+              <button onClick={() => setWorkLogTask(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data</label>
+                  <input
+                    type="date"
+                    value={workLogForm.work_date}
+                    onChange={(e) => setWorkLogForm({ ...workLogForm, work_date: e.target.value })}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Godziny</label>
+                  <input
+                    type="number"
+                    min="0.5"
+                    max="24"
+                    step="0.5"
+                    value={workLogForm.hours}
+                    onChange={(e) => setWorkLogForm({ ...workLogForm, hours: e.target.value })}
+                    placeholder="np. 2.5"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Typ pracy</label>
+                <select
+                  value={workLogForm.work_type}
+                  onChange={(e) => setWorkLogForm({ ...workLogForm, work_type: e.target.value })}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="regular">Zwykłe</option>
+                  <option value="overtime">Nadgodziny</option>
+                  <option value="unpaid">Niepłatne</option>
+                  <option value="business_trip">Wyjście służbowe</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opis (opcjonalnie)</label>
+                <textarea
+                  value={workLogForm.description}
+                  onChange={(e) => setWorkLogForm({ ...workLogForm, description: e.target.value })}
+                  rows={3}
+                  placeholder="Co zrobiłeś w tym czasie..."
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => setWorkLogTask(null)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={handleSubmitWorkLog}
+                disabled={isSubmittingWorkLog || !workLogForm.hours}
+                className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium disabled:opacity-60"
+              >
+                {isSubmittingWorkLog ? 'Zapisywanie...' : 'Zapisz czas'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };

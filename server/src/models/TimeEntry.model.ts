@@ -109,8 +109,8 @@ export class TimeEntry {
     return lateMinutes > 0 ? lateMinutes : 0;
   }
 
-  clockOut(notes?: string): void {
-    this.clock_out = new Date();
+  clockOut(notes?: string, clockOutTime?: Date): void {
+    this.clock_out = clockOutTime ?? new Date();
     this.notes = notes || this.notes;
     this.duration_minutes = this.calculateDuration();
     this.overtime_minutes = this.calculateOvertime();

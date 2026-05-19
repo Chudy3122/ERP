@@ -84,6 +84,7 @@ const ClockInWidget = () => {
 
   const isClockedIn = currentEntry && currentEntry.status === TimeEntryStatus.IN_PROGRESS;
   const clockInTime = currentEntry ? new Date(currentEntry.clock_in).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
+  const autoEndTime = currentEntry ? new Date(new Date(currentEntry.clock_in).getTime() + 8 * 60 * 60 * 1000).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
   const isLate = currentEntry?.is_late;
 
   if (isLoading) {
@@ -103,7 +104,7 @@ const ClockInWidget = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm">
+    <div className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
@@ -111,15 +112,15 @@ const ClockInWidget = () => {
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Ewidencja czasu</h3>
         </div>
         <button
-          onClick={() => navigate('/time-tracking')}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          onClick={() => navigate('/work-time')}
+          className="text-xs text-[#F7941D] hover:underline"
         >
           Szczegóły
         </button>
       </div>
 
       {/* Content */}
-      <div className="p-3">
+      <div className="p-3 flex-1 flex flex-col justify-center">
         {error && (
           <div className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded px-2 py-1">
             {error}
@@ -147,6 +148,9 @@ const ClockInWidget = () => {
                     +{currentEntry.late_minutes} min
                   </span>
                 )}
+              </div>
+              <div className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+                Auto-zakończenie o {autoEndTime}
               </div>
             </div>
 
@@ -184,7 +188,7 @@ const ClockInWidget = () => {
             <button
               onClick={handleClockIn}
               disabled={isClocking}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#F7941D] hover:bg-[#e08317] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
               {isClocking ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

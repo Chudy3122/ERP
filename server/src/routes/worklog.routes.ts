@@ -13,6 +13,7 @@ router.get('/', workLogController.getWorkLogs.bind(workLogController));
 router.get('/my', workLogController.getMyWorkLogs.bind(workLogController));
 router.get('/my/stats', workLogController.getMyTimeStats.bind(workLogController));
 router.get('/my/daily', workLogController.getMyDailySummary.bind(workLogController));
+router.get('/overtime-summary', workLogController.getOvertimeSummary.bind(workLogController));
 router.get('/:id', workLogController.getWorkLogById.bind(workLogController));
 router.put('/:id', workLogController.updateWorkLog.bind(workLogController));
 router.delete('/:id', workLogController.deleteWorkLog.bind(workLogController));

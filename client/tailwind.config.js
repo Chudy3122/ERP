@@ -6,16 +6,22 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#F7941D',
+          600: '#F7941D',
+          700: '#e08317',
+          800: '#c97210',
+          900: '#a85f0c',
+        },
+        brand: {
+          orange: '#F7941D',
+          'orange-hover': '#e08317',
+          cyan: '#00AEEF',
+          'cyan-hover': '#0098d4',
         },
       },
       keyframes: {

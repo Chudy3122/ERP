@@ -4,6 +4,11 @@ import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus, LeaveType } from '../models/LeaveRequest.model';
 import { User } from '../models/User.model';
 
+function roundToNearest15Min(date: Date): Date {
+  const ms15 = 15 * 60 * 1000;
+  return new Date(Math.floor(date.getTime() / ms15) * ms15);
+}
+
 export class TimeService {
   private timeEntryRepository: Repository<TimeEntry>;
   private leaveRequestRepository: Repository<LeaveRequest>;
@@ -35,7 +40,7 @@ export class TimeService {
 
     const timeEntry = this.timeEntryRepository.create({
       user_id: userId,
-      clock_in: new Date(),
+      clock_in: roundToNearest15Min(new Date()),
       notes,
       expected_clock_in: expectedClockIn || '09:00:00', // Default 9 AM
       status: TimeEntryStatus.IN_PROGRESS,
@@ -47,6 +52,31 @@ export class TimeService {
     timeEntry.late_minutes = lateMinutes;
 
     return await this.timeEntryRepository.save(timeEntry);
+  }
+
+  /**
+   * Auto clock-out all entries that have been running for 8+ hours
+   */
+  async autoClockOutStale(): Promise<number> {
+    const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
+
+    const staleEntries = await this.timeEntryRepository
+      .createQueryBuilder('entry')
+      .where('entry.status = :status', { status: TimeEntryStatus.IN_PROGRESS })
+      .andWhere('entry.clock_in <= :cutoff', { cutoff: eightHoursAgo })
+      .getMany();
+
+    for (const entry of staleEntries) {
+      const autoClockOut = new Date(entry.clock_in.getTime() + 8 * 60 * 60 * 1000);
+      entry.clockOut('Auto-zakończono po 8 godzinach pracy', autoClockOut);
+      await this.timeEntryRepository.save(entry);
+    }
+
+    if (staleEntries.length > 0) {
+      console.log(`[AutoClockOut] Zakończono ${staleEntries.length} sesji po 8h`);
+    }
+
+    return staleEntries.length;
   }
 
   /**
@@ -64,7 +94,7 @@ export class TimeService {
       throw new Error('No active time entry found');
     }
 
-    timeEntry.clockOut(notes);
+    timeEntry.clockOut(notes, roundToNearest15Min(new Date()));
     return await this.timeEntryRepository.save(timeEntry);
   }
 
@@ -167,6 +197,49 @@ export class TimeService {
       entriesCount: entries.length,
       averageHoursPerDay: daysWorked > 0 ? totalMinutes / 60 / daysWorked : 0,
     };
+  }
+
+  /**
+   * Get attendance overview for all users (last N days)
+   */
+  async getAttendance(days: number = 7) {
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days - 1));
+    startDate.setHours(0, 0, 0, 0);
+
+    const users = await this.userRepository.find({
+      where: { is_active: true },
+      order: { first_name: 'ASC', last_name: 'ASC' },
+    });
+
+    const entries = await this.timeEntryRepository.find({
+      where: { clock_in: Between(startDate, endDate) },
+      order: { clock_in: 'ASC' },
+    });
+
+    const dates: string[] = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0]);
+    }
+
+    const result = users.map((user) => {
+      const userEntries = entries.filter((e) => e.user_id === user.id);
+      const daysData = dates.map((date) => {
+        const entry = userEntries.find((e) => e.clock_in.toISOString().split('T')[0] === date);
+        return {
+          date,
+          clock_in: entry?.clock_in ?? null,
+          clock_out: entry?.clock_out ?? null,
+          duration_minutes: entry?.duration_minutes ?? null,
+          status: entry?.status ?? null,
+        };
+      });
+      return { id: user.id, first_name: user.first_name, last_name: user.last_name, days: daysData };
+    });
+
+    return { users: result, dates };
   }
 
   // ===== LEAVE REQUESTS =====

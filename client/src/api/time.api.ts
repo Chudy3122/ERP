@@ -164,6 +164,14 @@ export const cancelLeaveRequest = async (requestId: string): Promise<LeaveReques
   return response.data.data;
 };
 
+/**
+ * Get attendance overview for all users
+ */
+export const getAttendance = async (days: number = 7) => {
+  const response = await apiClient.get(`/time/attendance?days=${days}`);
+  return response.data.data;
+};
+
 export default {
   clockIn,
   clockOut,

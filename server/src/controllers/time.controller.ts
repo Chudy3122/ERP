@@ -451,6 +451,20 @@ export class TimeController {
       });
     }
   }
+  /**
+   * Get attendance overview
+   * GET /api/time/attendance?days=7
+   */
+  async getAttendance(req: Request, res: Response): Promise<void> {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 7;
+      const data = await timeService.getAttendance(days);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      console.error('Get attendance error:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to get attendance' });
+    }
+  }
 }
 
 export default new TimeController();

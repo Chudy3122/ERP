@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { Calendar, Plus, X, Clock, Home, Umbrella, Heart, MoreHorizontal } from 'lucide-react';
+import { Calendar, Plus, X, Clock, Home, Umbrella, Heart, MoreHorizontal, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as timeApi from '../api/time.api';
+import * as calendarApi from '../api/calendar.api';
 import type { LeaveRequest, LeaveBalance } from '../types/time.types';
+import type { TeamAvailability } from '../api/calendar.api';
 
 type LeaveType = 'vacation' | 'sick_leave' | 'remote_work' | 'other';
 
@@ -22,7 +24,13 @@ const Absences = () => {
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'my' | 'pending'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar'>('my');
+
+  // Calendar tab state
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarDays, setCalendarDays] = useState(7);
+  const [availability, setAvailability] = useState<TeamAvailability[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     leave_type: 'vacation' as LeaveType,
@@ -34,6 +42,37 @@ const Absences = () => {
   useEffect(() => {
     loadData();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'calendar') loadCalendar();
+  }, [activeTab, calendarDate, calendarDays]);
+
+  const loadCalendar = async () => {
+    setCalendarLoading(true);
+    try {
+      const start = new Date(calendarDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(calendarDate);
+      end.setDate(end.getDate() + calendarDays - 1);
+      end.setHours(23, 59, 59, 999);
+      const data = await calendarApi.getTeamAvailability(start.toISOString(), end.toISOString());
+      setAvailability(data);
+    } catch {
+      setAvailability([]);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const calStatusColor = (s: string) =>
+    s === 'working' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+    s === 'on_leave' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+    'bg-gray-100 text-gray-500 border-gray-200';
+
+  const calStatusIcon = (s: string) => s === 'working' ? '✓' : s === 'on_leave' ? '✈' : '–';
+  const calStatusText = (s: string) => s === 'working' ? 'Pracuje' : s === 'on_leave' ? 'Urlop' : 'Nieobecny';
+
+  const formatCalDate = (d: string) => new Date(d).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
 
   const loadData = async () => {
     try {
@@ -139,19 +178,19 @@ const Absences = () => {
       )}
 
       {/* Tabs */}
-      {(user?.role === 'admin' || user?.role === 'team_leader') && (
-        <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('my')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'my'
-                  ? 'border-gray-800 dark:border-white text-gray-900 dark:text-white'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              Moje wnioski
-            </button>
+      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('my')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'my'
+                ? 'border-gray-800 dark:border-white text-gray-900 dark:text-white'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            Moje wnioski
+          </button>
+          {(user?.role === 'admin' || user?.role === 'team_leader') && (
             <button
               onClick={() => setActiveTab('pending')}
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -167,12 +206,23 @@ const Absences = () => {
                 </span>
               )}
             </button>
-          </nav>
-        </div>
-      )}
+          )}
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`flex items-center gap-1.5 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'calendar'
+                ? 'border-gray-800 dark:border-white text-gray-900 dark:text-white'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Kalendarz zespołu
+          </button>
+        </nav>
+      </div>
 
       {/* Leave Requests List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+      {activeTab !== 'calendar' && <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         {isLoading ? (
           <div className="p-6 space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -251,7 +301,111 @@ const Absences = () => {
             )}
           </div>
         )}
-      </div>
+      </div>}
+
+      {/* Calendar tab content */}
+      {activeTab === 'calendar' && (
+        <div className="space-y-4">
+          {/* Controls */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { const d = new Date(calendarDate); d.setDate(d.getDate() - 7); setCalendarDate(d); }}
+                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-medium"
+              >
+                ← Poprzedni tydzień
+              </button>
+              <button
+                onClick={() => setCalendarDate(new Date())}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium"
+              >
+                Dzisiaj
+              </button>
+              <button
+                onClick={() => { const d = new Date(calendarDate); d.setDate(d.getDate() + 7); setCalendarDate(d); }}
+                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-medium"
+              >
+                Następny tydzień →
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-300">Widok:</span>
+              <select
+                value={calendarDays}
+                onChange={(e) => setCalendarDays(Number(e.target.value))}
+                className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1.5 text-sm"
+              >
+                <option value={7}>7 dni</option>
+                <option value={14}>14 dni</option>
+                <option value={30}>30 dni</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
+            <span className="font-medium">Legenda:</span>
+            {[['working','Pracuje','✓'],['on_leave','Urlop','✈'],['absent','Nieobecny','–']].map(([s,label,icon]) => (
+              <div key={s} className="flex items-center gap-1.5">
+                <span className={`w-7 h-7 rounded border flex items-center justify-center text-xs ${calStatusColor(s)}`}>{icon}</span>
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {/* Table */}
+          {calendarLoading ? (
+            <div className="flex justify-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
+                        Pracownik
+                      </th>
+                      {availability.map((day) => (
+                        <th key={day.date} className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[110px]">
+                          {formatCalDate(day.date)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                    {availability.length > 0 && availability[0].users.map((u, i) => (
+                      <tr key={u.id} className={i % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/40'}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white sticky left-0 bg-inherit z-10">
+                          {u.name}
+                        </td>
+                        {availability.map((day) => {
+                          const du = day.users.find((x) => x.id === u.id);
+                          if (!du) return <td key={day.date} className="px-3 py-3 text-center text-gray-400">—</td>;
+                          return (
+                            <td key={day.date} className="px-3 py-3 text-center">
+                              <div className={`inline-flex flex-col items-center gap-0.5 px-2 py-1.5 rounded border text-xs font-medium ${calStatusColor(du.status)} min-w-[90px]`} title={du.details}>
+                                <span>{calStatusIcon(du.status)}</span>
+                                <span>{calStatusText(du.status)}</span>
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    {availability.length === 0 && (
+                      <tr>
+                        <td colSpan={99} className="text-center py-12 text-gray-400 text-sm">Brak danych</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Create Leave Request Modal */}
       {showForm && (

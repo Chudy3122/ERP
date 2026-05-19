@@ -1857,10 +1857,11 @@ engine.io@~6.6.0:
     engine.io-parser "~5.2.1"
     ws "~8.18.3"
 
-"erp-client@file:C:\\Users\\Mateusz\\Desktop\\ERP\\client":
+"erp-client@file:C:\\Users\\praco\\Desktop\\ERP\\client":
   version "1.0.0"
   resolved "file:client"
   dependencies:
+    "@hello-pangea/dnd" "^18.0.1"
     "@hookform/resolvers" "^3.3.3"
     "@tanstack/react-query" "^5.17.9"
     axios "^1.6.3"
@@ -1880,7 +1881,7 @@ engine.io@~6.6.0:
     zod "^3.22.4"
     zustand "^4.4.7"
 
-"erp-server@file:C:\\Users\\Mateusz\\Desktop\\ERP\\server":
+"erp-server@file:C:\\Users\\praco\\Desktop\\ERP\\server":
   version "1.0.0"
   resolved "file:server"
   dependencies:

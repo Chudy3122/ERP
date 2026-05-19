@@ -118,6 +118,7 @@ const DeadlineCounterWidget = () => {
 
   return (
     <WidgetCard
+      className="h-full"
       title="Terminarz moich zadań"
       icon={<Calendar className="w-5 h-5 text-gray-600" />}
       actions={

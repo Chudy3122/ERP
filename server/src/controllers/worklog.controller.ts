@@ -145,6 +145,19 @@ export class WorkLogController {
   }
 
   /**
+   * Get overtime summary for all users
+   * GET /api/work-logs/overtime-summary
+   */
+  async getOvertimeSummary(req: Request, res: Response): Promise<void> {
+    try {
+      const summary = await workLogService.getOvertimeSummary();
+      res.json(summary);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
    * Get task work logs
    * GET /api/tasks/:taskId/work-logs
    */

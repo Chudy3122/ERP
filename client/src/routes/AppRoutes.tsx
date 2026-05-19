@@ -7,8 +7,8 @@ import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import VideoMeeting from '../pages/VideoMeeting';
 import Meetings from '../pages/Meetings';
-import TimeTracking from '../pages/TimeTracking';
-import TeamCalendar from '../pages/TeamCalendar';
+import Overtime from '../pages/Overtime';
+import WorkTime from '../pages/WorkTime';
 import Admin from '../pages/Admin';
 import AdminUsers from '../pages/AdminUsers';
 import Reports from '../pages/Reports';
@@ -39,6 +39,7 @@ import CrmBoard from '../pages/CrmBoard';
 import CrmDealDetail from '../pages/CrmDealDetail';
 import CrmDashboard from '../pages/CrmDashboard';
 import LandingPage from '../pages/LandingPage';
+import Procedures from '../pages/Procedures';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -82,10 +83,18 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/time-tracking"
+        path="/work-time"
         element={
           <PrivateRoute>
-            <TimeTracking />
+            <WorkTime />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/overtime"
+        element={
+          <PrivateRoute>
+            <Overtime />
           </PrivateRoute>
         }
       />
@@ -330,6 +339,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/procedures"
+        element={
+          <PrivateRoute>
+            <Procedures />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/admin/project-templates"
         element={
           <PrivateRoute>
@@ -363,11 +380,7 @@ const AppRoutes = () => {
       />
       <Route
         path="/team-calendar"
-        element={
-          <PrivateRoute>
-            <TeamCalendar />
-          </PrivateRoute>
-        }
+        element={<Navigate to="/absences" replace />}
       />
       <Route
         path="/settings"

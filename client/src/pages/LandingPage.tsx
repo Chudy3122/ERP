@@ -11,7 +11,6 @@ import {
   Zap,
   ArrowRight,
   CheckCircle2,
-  Building2,
   CreditCard,
   Target,
   Video,
@@ -31,7 +30,7 @@ const features = [
     icon: FolderKanban,
     title: 'Zarządzanie projektami',
     description: 'Kanban, etapy, zadania, priorytety i terminy — pełny wgląd w postęp prac.',
-    color: 'bg-indigo-500',
+    color: 'bg-[#F7941D]',
   },
   {
     icon: Target,
@@ -223,7 +222,7 @@ function ContactForm() {
         required
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-400 transition-colors"
+        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#F7941D] transition-colors"
       />
       <input
         type="email"
@@ -231,7 +230,7 @@ function ContactForm() {
         required
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
-        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-400 transition-colors"
+        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#F7941D] transition-colors"
       />
       <textarea
         placeholder="Twoja wiadomość..."
@@ -239,12 +238,12 @@ function ContactForm() {
         rows={3}
         value={form.message}
         onChange={(e) => setForm({ ...form, message: e.target.value })}
-        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-400 transition-colors resize-none"
+        className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#F7941D] transition-colors resize-none"
       />
       <button
         type="submit"
         disabled={sending}
-        className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+        className="w-full flex items-center justify-center gap-2 bg-[#F7941D] hover:bg-[#e08317] disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
       >
         {sending ? 'Wysyłanie...' : (
           <>Wyślij wiadomość <ArrowRight className="w-4 h-4" /></>
@@ -290,13 +289,8 @@ function LoginModal({ onClose }: { onClose: () => void }) {
         </button>
 
         {/* Logo */}
-        <div className="flex items-center gap-2.5 mb-8">
-          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-sm">
-            <Building2 className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-lg font-black text-gray-900">
-            ERP<span className="text-indigo-600">System</span>
-          </span>
+        <div className="flex items-center mb-8">
+          <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-10 w-auto" />
         </div>
 
         <h2 className="text-2xl font-black text-gray-900 mb-1">Witaj ponownie</h2>
@@ -315,7 +309,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="twoj@email.pl"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all"
               />
             </div>
           </div>
@@ -332,7 +326,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all"
               />
               <button
                 type="button"
@@ -347,7 +341,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 text-sm mt-2 shadow-sm hover:shadow-md"
+            className="w-full py-3 bg-[#F7941D] hover:bg-[#e08317] text-white font-semibold rounded-xl transition-all disabled:opacity-50 text-sm mt-2 shadow-sm hover:shadow-md"
           >
             {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
           </button>
@@ -356,7 +350,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
         <div className="mt-6 pt-6 border-t border-gray-100 text-center">
           <p className="text-sm text-gray-500">
             Nie masz konta?{' '}
-            <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+            <Link to="/register" className="font-semibold text-[#F7941D] hover:text-[#e08317] transition-colors">
               Zarejestruj się
             </Link>
           </p>
@@ -376,13 +370,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-lg flex items-center justify-center shadow-sm">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-black text-gray-900 tracking-tight">
-              ERP<span className="text-indigo-600">System</span>
-            </span>
+          <div className="flex items-center">
+            <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-8 w-auto" />
           </div>
 
           {/* Nav links */}
@@ -405,7 +394,7 @@ export default function LandingPage() {
           {/* CTA button */}
           <button
             onClick={() => setLoginOpen(true)}
-            className="text-sm font-semibold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white px-5 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200"
+            className="text-sm font-semibold bg-[#F7941D] hover:bg-[#e08317] text-white px-5 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200"
           >
             Zaloguj się
           </button>
@@ -424,20 +413,20 @@ export default function LandingPage() {
           }}
         />
         {/* Glow blobs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#F7941D]/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00AEEF]/15 rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: Text */}
           <div>
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-medium px-3 py-1.5 rounded-full mb-6">
-              <Zap className="w-3 h-3 text-amber-400" />
+              <Zap className="w-3 h-3 text-[#F7941D]" />
               Kompletny system ERP dla Twojej firmy
             </div>
 
             <h1 className="text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
               Zarządzaj firmą{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F7941D] to-[#00AEEF]">
                 w jednym miejscu
               </span>
             </h1>
@@ -475,7 +464,7 @@ export default function LandingPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'Projekty', val: '24', color: 'text-indigo-400' },
+                  { label: 'Projekty', val: '24', color: 'text-[#F7941D]' },
                   { label: 'Zadania', val: '138', color: 'text-emerald-400' },
                   { label: 'Faktury', val: '56', color: 'text-amber-400' },
                 ].map((s) => (
@@ -489,7 +478,7 @@ export default function LandingPage() {
                 {[40, 65, 45, 80, 55, 90, 70, 85, 60, 75, 95, 50].map((h, i) => (
                   <div
                     key={i}
-                    className="flex-1 rounded-sm bg-indigo-500/60 hover:bg-indigo-400/80 transition-colors"
+                    className="flex-1 rounded-sm bg-[#F7941D]/60 hover:bg-[#F7941D]/80 transition-colors"
                     style={{ height: `${h}%` }}
                   />
                 ))}
@@ -550,7 +539,7 @@ export default function LandingPage() {
       <section id="funkcje" className="bg-gray-50 py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-3">
+            <p className="text-sm font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
               Moduły systemu
             </p>
             <h2 className="text-4xl font-black text-gray-900 mb-4">
@@ -573,7 +562,7 @@ export default function LandingPage() {
                   <div className={`w-12 h-12 ${f.color} rounded-xl flex items-center justify-center mb-4`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-[#F7941D] transition-colors">
                     {f.title}
                   </h3>
                   <p className="text-gray-500 text-sm leading-relaxed">{f.description}</p>
@@ -589,12 +578,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <p className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3">
+              <p className="text-sm font-semibold text-[#00AEEF] uppercase tracking-wider mb-3">
                 Dlaczego nasz system?
               </p>
               <h2 className="text-4xl font-black text-gray-900 mb-6 leading-tight">
                 Jeden system,<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-emerald-500">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F7941D] to-[#00AEEF]">
                   pełna kontrola
                 </span>
               </h2>
@@ -619,8 +608,8 @@ export default function LandingPage() {
                   icon: ShieldCheck,
                   title: 'Bezpieczeństwo',
                   desc: 'Role i uprawnienia — każdy widzi tylko to, do czego ma dostęp',
-                  color: 'text-indigo-600',
-                  bg: 'bg-indigo-50',
+                  color: 'text-[#F7941D]',
+                  bg: 'bg-orange-50',
                 },
                 {
                   icon: TrendingUp,
@@ -666,7 +655,7 @@ export default function LandingPage() {
             {/* Left sticky panel */}
             <div className="lg:col-span-2 lg:sticky lg:top-24">
               <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white">
-                <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">
+                <p className="text-xs font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
                   Masz pytania?
                 </p>
                 <h2 className="text-3xl font-black leading-tight mb-4">
@@ -684,7 +673,7 @@ export default function LandingPage() {
                     { num: '04', label: 'Faktury i finanse' },
                   ].map((item) => (
                     <div key={item.num} className="flex items-center gap-3 group cursor-default">
-                      <span className="text-xs font-bold text-indigo-400 w-6">{item.num}</span>
+                      <span className="text-xs font-bold text-[#F7941D] w-6">{item.num}</span>
                       <span className="text-sm text-gray-400 group-hover:text-white transition-colors">
                         {item.label}
                       </span>
@@ -730,14 +719,11 @@ export default function LandingPage() {
       {/* ── FOOTER ── */}
       <footer className="bg-gray-900 border-t border-gray-800 py-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-white font-bold">ERP System</span>
+          <div className="flex items-center">
+            <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-7 w-auto" />
           </div>
           <p className="text-gray-500 text-sm">
-            &copy; {new Date().getFullYear()} ERP System. Wszelkie prawa zastrzeżone.
+            &copy; {new Date().getFullYear()} ITComplete.pl. Wszelkie prawa zastrzeżone.
           </p>
           <button
             onClick={() => setLoginOpen(true)}

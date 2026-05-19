@@ -24,6 +24,9 @@ router.get('/entries', timeController.getUserTimeEntries);
 // Get statistics
 router.get('/stats', timeController.getUserTimeStats);
 
+// Get attendance overview (all users, last N days)
+router.get('/attendance', timeController.getAttendance.bind(timeController));
+
 // Get all entries (admin/team_leader only)
 router.get(
   '/entries/all',

@@ -7,6 +7,7 @@ import {
   UserTimeStats,
   ProjectTimeStats,
   DailyWorkSummary,
+  OvertimeSummaryEntry,
 } from '../types/worklog.types';
 
 // Create work log
@@ -83,5 +84,11 @@ export const getProjectWorkLogs = async (
 // Get project time stats
 export const getProjectTimeStats = async (projectId: string): Promise<ProjectTimeStats> => {
   const response = await client.get(`/projects/${projectId}/time-stats`);
+  return response.data;
+};
+
+// Get overtime summary for all users
+export const getOvertimeSummary = async (): Promise<OvertimeSummaryEntry[]> => {
+  const response = await client.get('/work-logs/overtime-summary');
   return response.data;
 };

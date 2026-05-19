@@ -12,7 +12,7 @@ import {
   Video,
   Clock,
   CalendarDays,
-  Calendar,
+  TrendingUp,
   Folder,
   CheckSquare,
   Users,
@@ -20,6 +20,7 @@ import {
   List,
   UserCog,
   FileText,
+  BookOpen,
   Settings,
   LogOut,
   Menu,
@@ -29,12 +30,7 @@ import {
   Check,
   User,
   GitBranch,
-  Building2,
   Receipt,
-  BarChart3,
-  FileSignature,
-  Target,
-  TrendingUp,
   LayoutTemplate,
 } from 'lucide-react';
 
@@ -150,9 +146,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.workTime') },
-    { name: t('nav.timeTracking'), href: '/time-tracking', icon: Clock },
+    { name: 'Czas pracy', href: '/work-time', icon: Clock },
     { name: t('nav.absences'), href: '/absences', icon: CalendarDays },
-    { name: t('nav.teamCalendar'), href: '/team-calendar', icon: Calendar },
+    { name: 'Nadgodziny', href: '/overtime', icon: TrendingUp },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.projects') },
@@ -166,15 +162,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.invoices') },
-    { name: t('nav.clients'), href: '/clients', icon: Building2 },
     { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt },
-    { name: t('nav.contracts'), href: '/contracts', icon: FileSignature },
-    { name: t('nav.financialReports'), href: '/financial-reports', icon: BarChart3 },
 
     { type: 'divider' },
-    { type: 'header', name: 'CRM' },
-    { name: t('nav.crmPipelines', 'Pipeline'), href: '/crm', icon: Target, exact: true },
-    { name: t('nav.crmDashboard', 'Dashboard CRM'), href: '/crm/dashboard', icon: TrendingUp },
+    { type: 'header', name: 'Procedury' },
+    { name: 'Procedury', href: '/procedures', icon: BookOpen },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
@@ -227,7 +219,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         onClick={() => setSidebarOpen(false)}
         className={`flex items-center gap-3 px-6 py-2 text-sm transition-colors ${
           isActive
-            ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-l-4 border-gray-800 dark:border-blue-500 font-medium'
+            ? 'bg-orange-50 dark:bg-orange-900/10 text-[#F7941D] border-l-4 border-[#F7941D] font-medium'
             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-4 border-transparent'
         }`}
       >
@@ -254,16 +246,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         } lg:translate-x-0 transition-transform duration-200 ease-in-out z-50 flex flex-col`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-800 dark:bg-gray-600 rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ERP</span>
-            </div>
-            <span className="font-bold text-gray-900 dark:text-white">System ERP</span>
-          </div>
+        <div className="h-16 relative flex items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
+          <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-11 w-auto" />
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            className="lg:hidden absolute right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400"
           >
             <X className="w-6 h-6" />
           </button>

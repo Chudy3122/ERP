@@ -369,6 +369,64 @@ export class WorkLogService {
   }
 
   /**
+   * Get overtime summary for all users
+   */
+  async getOvertimeSummary(): Promise<Array<{
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    total_overtime: number;
+    overtime_this_month: number;
+    total_collected: number;
+    collected_this_month: number;
+    balance: number;
+  }>> {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    const overtimeRows = await this.workLogRepository
+      .createQueryBuilder('wl')
+      .select('wl.user_id', 'user_id')
+      .addSelect('SUM(CASE WHEN wl.work_type = :ot THEN wl.hours ELSE 0 END)', 'total_overtime')
+      .addSelect(
+        `SUM(CASE WHEN wl.work_type = :ot AND wl.work_date BETWEEN :ms AND :me THEN wl.hours ELSE 0 END)`,
+        'overtime_this_month'
+      )
+      .addSelect('SUM(CASE WHEN wl.work_type = :oc THEN wl.hours ELSE 0 END)', 'total_collected')
+      .addSelect(
+        `SUM(CASE WHEN wl.work_type = :oc AND wl.work_date BETWEEN :ms AND :me THEN wl.hours ELSE 0 END)`,
+        'collected_this_month'
+      )
+      .leftJoin('wl.user', 'u')
+      .addSelect('u.first_name', 'first_name')
+      .addSelect('u.last_name', 'last_name')
+      .where('wl.work_type IN (:...types)', { types: [WorkLogType.OVERTIME, WorkLogType.OVERTIME_COMP] })
+      .setParameters({ ot: WorkLogType.OVERTIME, oc: WorkLogType.OVERTIME_COMP, ms: monthStart, me: monthEnd })
+      .groupBy('wl.user_id')
+      .addGroupBy('u.first_name')
+      .addGroupBy('u.last_name')
+      .getRawMany();
+
+    return overtimeRows.map((row) => {
+      const total = parseFloat(row.total_overtime) || 0;
+      const overtimeThisMonth = parseFloat(row.overtime_this_month) || 0;
+      const collected = parseFloat(row.total_collected) || 0;
+      const thisMonth = parseFloat(row.collected_this_month) || 0;
+      return {
+        user_id: row.user_id,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        total_overtime: total,
+        overtime_this_month: overtimeThisMonth,
+        total_collected: collected,
+        collected_this_month: thisMonth,
+        balance: total - collected,
+      };
+    });
+  }
+
+  /**
    * Get daily work summary for calendar view
    */
   async getDailyWorkSummary(userId: string, startDate: Date, endDate: Date) {

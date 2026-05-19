@@ -33,7 +33,7 @@ const Login = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#F7941D] mx-auto"></div>
           <p className="mt-4 text-gray-500 text-sm">{t('loading')}</p>
         </div>
       </div>
@@ -51,7 +51,7 @@ const Login = () => {
     <div className="min-h-screen flex bg-gray-50">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-blue-950"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950"></div>
         {/* Grid pattern */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -61,24 +61,20 @@ const Login = () => {
           </defs>
           <rect width="100%" height="100%" fill="url(#grid-login)" />
         </svg>
-        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-500/10 rounded-full filter blur-3xl"></div>
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-slate-500/10 rounded-full filter blur-3xl"></div>
+        {/* Brand color glows */}
+        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-[#F7941D]/10 rounded-full filter blur-3xl"></div>
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-[#00AEEF]/10 rounded-full filter blur-3xl"></div>
 
         <div className="relative z-10 flex flex-col justify-center px-16 xl:px-20">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-xl font-semibold text-white">ERP System</span>
+          <div className="mb-12">
+            <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-12 w-auto" />
           </div>
 
           {/* Heading */}
           <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
             Kompleksowe zarządzanie<br />
-            <span className="text-blue-400">Twoją organizacją</span>
+            <span className="text-[#F7941D]">Twoją organizacją</span>
           </h1>
           <p className="text-slate-400 text-base mb-12 max-w-md leading-relaxed">
             Platforma do zarządzania czasem pracy, projektami, zespołem i komunikacją. Wszystko czego potrzebujesz w jednym systemie.
@@ -88,8 +84,8 @@ const Login = () => {
           <div className="space-y-5">
             {features.map((feature, i) => (
               <div key={i} className="flex items-start gap-4">
-                <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <feature.icon className="w-4 h-4 text-blue-400" />
+                <div className="w-9 h-9 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <feature.icon className="w-4 h-4 text-[#F7941D]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-slate-200">{feature.title}</h3>
@@ -114,13 +110,8 @@ const Login = () => {
           </Link>
 
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-xl font-semibold text-gray-900">ERP System</span>
+          <div className="flex items-center mb-8 lg:hidden">
+            <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-9 w-auto" />
           </div>
 
           {/* Title */}
@@ -150,7 +141,7 @@ const Login = () => {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all duration-200"
                   placeholder={t('emailPlaceholder')}
                 />
               </div>
@@ -171,7 +162,7 @@ const Login = () => {
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all duration-200"
                   placeholder={t('passwordPlaceholder')}
                 />
                 <button
@@ -188,7 +179,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full py-2.5 bg-[#F7941D] hover:bg-[#e08317] text-white font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               {isSubmitting ? t('loggingIn') : t('login')}
             </button>
@@ -199,7 +190,7 @@ const Login = () => {
                 {t('noAccount')}{' '}
                 <Link
                   to="/register"
-                  className="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200"
+                  className="font-medium text-[#F7941D] hover:text-[#e08317] transition-colors duration-200"
                 >
                   {t('register')}
                 </Link>

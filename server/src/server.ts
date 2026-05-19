@@ -8,6 +8,7 @@ import { setupChatHandlers } from './sockets/chat.socket';
 import { setupStatusHandlers } from './sockets/status.socket';
 import { setupNotificationHandlers } from './sockets/notification.socket';
 import { setupMeetingHandlers } from './sockets/meeting.socket';
+import { TimeService } from './services/time.service';
 
 const PORT = process.env.PORT || 5000;
 
@@ -34,6 +35,10 @@ const startServer = async () => {
 
     // Setup meeting handlers
     setupMeetingHandlers(io);
+
+    // Auto clock-out scheduler — every 5 minutes close entries running 8+ hours
+    const timeService = new TimeService();
+    setInterval(() => timeService.autoClockOutStale().catch(console.error), 5 * 60 * 1000);
 
     // Start HTTP server
     httpServer.listen(PORT, () => {
