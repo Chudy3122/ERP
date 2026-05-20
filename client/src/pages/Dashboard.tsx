@@ -43,7 +43,7 @@ const Dashboard = () => {
       setUnreadNotifications(count);
 
       // Load pending leave requests for admins/team leaders
-      if (user?.role === 'admin' || user?.role === 'team_leader') {
+      if (user?.role === 'admin' || user?.role === 'kierownik') {
         const requests = await timeApi.getPendingLeaveRequests();
         setPendingLeaveCount(requests.length);
       }
@@ -68,7 +68,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
         <StatWidget
           label={t('common.profile')}
-          value={user?.role === 'admin' ? 'Administrator' : user?.role === 'team_leader' ? 'Team Leader' : t('common.employee')}
+          value={user?.role === 'admin' ? 'Administrator' : user?.role === 'kierownik' ? 'Team Leader' : t('common.employee')}
           icon={<User className="w-5 h-5" />}
           color="gray"
         />

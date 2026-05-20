@@ -40,7 +40,7 @@ export class EmployeeController {
       const filters = {
         department: req.query.department as string,
         position: req.query.position as string,
-        role: req.query.role as 'ADMIN' | 'TEAM_LEADER' | 'EMPLOYEE',
+        role: req.query.role as 'ADMIN' | 'KIEROWNIK' | 'EMPLOYEE',
         managerId: req.query.managerId as string,
         contractType: req.query.contractType as string,
         search: req.query.search as string,

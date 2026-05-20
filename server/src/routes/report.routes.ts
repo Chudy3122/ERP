@@ -8,7 +8,7 @@ const router = Router();
 
 // All report routes require authentication and admin/team leader role
 router.use(authenticate);
-router.use(requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]));
+router.use(requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]));
 
 // Get time report data
 router.get('/time', reportController.getTimeReport.bind(reportController));

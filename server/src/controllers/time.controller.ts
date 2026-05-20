@@ -243,7 +243,7 @@ export class TimeController {
       const managers = await userRepository.find({
         where: [
           { role: UserRole.ADMIN },
-          { role: UserRole.TEAM_LEADER }
+          { role: UserRole.KIEROWNIK }
         ]
       });
 

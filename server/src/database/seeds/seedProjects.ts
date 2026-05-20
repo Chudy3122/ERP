@@ -25,7 +25,7 @@ async function seedProjects() {
     }
 
     const admin = users.find((u) => u.role === 'admin');
-    const teamLeader = users.find((u) => u.role === 'team_leader');
+    const teamLeader = users.find((u) => u.role === 'kierownik');
     const employees = users.filter((u) => u.role === 'employee');
 
     if (!admin) {

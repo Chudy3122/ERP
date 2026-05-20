@@ -131,7 +131,7 @@ export class ProjectService {
     // Check if user is admin or team leader
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
-    if (user && (user.role === 'admin' || user.role === 'team_leader')) {
+    if (user && (user.role === 'admin' || user.role === 'kierownik')) {
       // Admins and team leaders see all non-archived projects
       return this.projectRepository.find({
         where: { is_archived: false },

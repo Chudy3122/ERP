@@ -18,7 +18,7 @@ interface UpdateEmployeeDto {
 interface EmployeeFilters {
   department?: string;
   position?: string;
-  role?: 'ADMIN' | 'TEAM_LEADER' | 'EMPLOYEE';
+  role?: 'ADMIN' | 'KIEROWNIK' | 'EMPLOYEE';
   managerId?: string;
   contractType?: string;
   search?: string;

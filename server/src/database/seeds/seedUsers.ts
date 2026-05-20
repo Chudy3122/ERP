@@ -36,14 +36,14 @@ const testUsers: TestUser[] = [
     password: 'Test123!',
     first_name: 'Jan',
     last_name: 'Kowalski',
-    role: UserRole.TEAM_LEADER,
+    role: UserRole.KIEROWNIK,
   },
   {
     email: 'anna.nowak@erp.pl',
     password: 'Test123!',
     first_name: 'Anna',
     last_name: 'Nowak',
-    role: UserRole.TEAM_LEADER,
+    role: UserRole.KIEROWNIK,
   },
 
   // EMPLOYEES (10)

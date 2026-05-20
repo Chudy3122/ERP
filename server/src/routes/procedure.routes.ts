@@ -12,12 +12,12 @@ router.get('/', procedureController.getAll.bind(procedureController));
 router.get('/:id', procedureController.getById.bind(procedureController));
 router.post(
   '/',
-  requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   procedureController.create.bind(procedureController),
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   procedureController.update.bind(procedureController),
 );
 router.delete(

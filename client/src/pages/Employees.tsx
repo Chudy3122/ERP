@@ -106,11 +106,11 @@ const Employees = () => {
   const getRoleLabel = (role: string, translateFn: typeof t) => {
     const labels: Record<string, string> = {
       admin: 'Administrator',
-      team_leader: 'Team Leader',
+      kierownik: 'Team Leader',
       employee: translateFn('roleEmployee'),
       ksiegowosc: 'Księgowość',
       szef: 'Szef',
-      recepcja: 'Recepcja',
+      sekretariat: 'Recepcja',
     };
     return labels[role] || role;
   };
@@ -293,7 +293,7 @@ const Employees = () => {
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
                           employee.role === 'admin'
                             ? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200'
-                            : employee.role === 'team_leader'
+                            : employee.role === 'kierownik'
                             ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                             : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                         }`}>

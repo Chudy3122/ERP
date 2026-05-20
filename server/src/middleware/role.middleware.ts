@@ -34,7 +34,7 @@ export const requireAdmin = requireRole(UserRole.ADMIN);
 /**
  * Middleware to check if user is admin or team leader
  */
-export const requireAdminOrTeamLeader = requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]);
+export const requireAdminOrTeamLeader = requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]);
 
 /**
  * Middleware to check if user can access resource (either owns it or is admin)

@@ -84,7 +84,7 @@ const Absences = () => {
       setLeaveRequests(requests);
       setBalance(leaveBalance);
 
-      if (user?.role === 'admin' || user?.role === 'team_leader') {
+      if (user?.role === 'admin' || user?.role === 'kierownik') {
         const pending = await timeApi.getPendingLeaveRequests();
         setPendingRequests(pending);
       }
@@ -190,7 +190,7 @@ const Absences = () => {
           >
             Moje wnioski
           </button>
-          {(user?.role === 'admin' || user?.role === 'team_leader') && (
+          {(user?.role === 'admin' || user?.role === 'kierownik') && (
             <button
               onClick={() => setActiveTab('pending')}
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${

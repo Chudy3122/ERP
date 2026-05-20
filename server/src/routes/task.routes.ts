@@ -28,7 +28,7 @@ router.post('/', taskController.createTask.bind(taskController));
 router.get('/', taskController.getAllTasks.bind(taskController));
 router.get('/:id', taskController.getTaskById.bind(taskController));
 router.put('/:id', taskController.updateTask.bind(taskController));
-router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), taskController.deleteTask.bind(taskController));
+router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), taskController.deleteTask.bind(taskController));
 
 // Task actions
 router.put('/:id/assign', taskController.assignTask.bind(taskController));

@@ -94,7 +94,7 @@ const TaskForm = () => {
   const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
   const [deleteWorkLogId, setDeleteWorkLogId] = useState<string | null>(null);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
+  const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
 
   useEffect(() => {
     loadProjects();

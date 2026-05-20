@@ -162,7 +162,7 @@ const AdminUsers: React.FC = () => {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
-      case 'team_leader':
+      case 'kierownik':
         return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-blue-100 text-blue-800';
@@ -234,7 +234,7 @@ const AdminUsers: React.FC = () => {
               >
                 <option value="">Wszystkie role</option>
                 <option value="admin">Admin</option>
-                <option value="team_leader">Team Leader</option>
+                <option value="kierownik">Team Leader</option>
                 <option value="employee">Employee</option>
               </select>
             </div>
@@ -418,7 +418,7 @@ const AdminUsers: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="employee">Employee</option>
-                  <option value="team_leader">Team Leader</option>
+                  <option value="kierownik">Team Leader</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>

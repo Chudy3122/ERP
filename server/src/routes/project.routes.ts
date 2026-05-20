@@ -35,12 +35,12 @@ router.get('/', projectController.getAllProjects.bind(projectController));
 router.get('/my', projectController.getUserProjects.bind(projectController));
 router.get('/:id', projectController.getProjectById.bind(projectController));
 router.put('/:id', projectController.updateProject.bind(projectController));
-router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), projectController.deleteProject.bind(projectController));
+router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), projectController.deleteProject.bind(projectController));
 
 // Project members
 router.get('/:id/members', projectController.getProjectMembers.bind(projectController));
-router.post('/:id/members', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), projectController.addProjectMember.bind(projectController));
-router.delete('/:id/members/:userId', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), projectController.removeProjectMember.bind(projectController));
+router.post('/:id/members', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), projectController.addProjectMember.bind(projectController));
+router.delete('/:id/members/:userId', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), projectController.removeProjectMember.bind(projectController));
 
 // Project statistics
 router.get('/:id/statistics', projectController.getProjectStatistics.bind(projectController));

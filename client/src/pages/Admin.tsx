@@ -219,7 +219,7 @@ const Admin: React.FC = () => {
                   const percentage = ((count / stats.users.total) * 100).toFixed(1);
                   const roleColors: Record<string, string> = {
                     admin: 'bg-red-500',
-                    team_leader: 'bg-orange-500',
+                    kierownik: 'bg-orange-500',
                     employee: 'bg-blue-500',
                   };
 

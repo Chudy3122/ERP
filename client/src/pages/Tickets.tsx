@@ -48,7 +48,7 @@ const Tickets = () => {
   const { user } = useAuth();
 
   const activeTab = (searchParams.get('tab') as ViewTab) || 'my';
-  const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
+  const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
 
   useEffect(() => {
     loadTickets();

@@ -27,22 +27,22 @@ router.get('/stats', timeController.getUserTimeStats);
 // Get attendance overview (all users, last N days)
 router.get('/attendance', timeController.getAttendance.bind(timeController));
 
-// Get all entries (admin/team_leader only)
+// Get all entries (admin/kierownik only)
 router.get(
   '/entries/all',
-  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
   timeController.getAllTimeEntries
 );
 
-// Approve/reject time entries (admin/team_leader only)
+// Approve/reject time entries (admin/kierownik only)
 router.put(
   '/entries/:id/approve',
-  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
   timeController.approveTimeEntry
 );
 router.put(
   '/entries/:id/reject',
-  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
   timeController.rejectTimeEntry
 );
 
@@ -60,22 +60,22 @@ router.get('/leave/balance', timeController.getUserLeaveBalance);
 // Cancel leave request
 router.delete('/leave/:id', timeController.cancelLeaveRequest);
 
-// Get pending leave requests (admin/team_leader only)
+// Get pending leave requests (admin/kierownik only)
 router.get(
   '/leave/pending',
-  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
   timeController.getPendingLeaveRequests
 );
 
-// Approve/reject leave requests (admin/team_leader only)
+// Approve/reject leave requests (admin/kierownik only)
 router.put(
   '/leave/:id/approve',
-  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
   timeController.approveLeaveRequest
 );
 router.put(
   '/leave/:id/reject',
-  roleMiddleware([UserRole.ADMIN, UserRole.TEAM_LEADER]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
   timeController.rejectLeaveRequest
 );
 

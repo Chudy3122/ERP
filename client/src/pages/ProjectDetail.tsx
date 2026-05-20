@@ -100,7 +100,7 @@ const ProjectDetail = () => {
   const [isSubmittingWorkLog, setIsSubmittingWorkLog] = useState(false);
 
   const { t } = useTranslation();
-  const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
+  const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
 
   useEffect(() => {
     if (id) {

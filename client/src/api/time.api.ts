@@ -54,7 +54,7 @@ export const getUserTimeEntries = async (
 };
 
 /**
- * Get all time entries (admin/team_leader only)
+ * Get all time entries (admin/kierownik only)
  */
 export const getAllTimeEntries = async (
   startDate?: string,
@@ -84,7 +84,7 @@ export const getUserTimeStats = async (
 };
 
 /**
- * Approve time entry (admin/team_leader only)
+ * Approve time entry (admin/kierownik only)
  */
 export const approveTimeEntry = async (entryId: string): Promise<TimeEntry> => {
   const response = await apiClient.put(`/time/entries/${entryId}/approve`);
@@ -92,7 +92,7 @@ export const approveTimeEntry = async (entryId: string): Promise<TimeEntry> => {
 };
 
 /**
- * Reject time entry (admin/team_leader only)
+ * Reject time entry (admin/kierownik only)
  */
 export const rejectTimeEntry = async (entryId: string): Promise<TimeEntry> => {
   const response = await apiClient.put(`/time/entries/${entryId}/reject`);
@@ -118,7 +118,7 @@ export const getUserLeaveRequests = async (): Promise<LeaveRequest[]> => {
 };
 
 /**
- * Get pending leave requests (admin/team_leader only)
+ * Get pending leave requests (admin/kierownik only)
  */
 export const getPendingLeaveRequests = async (): Promise<LeaveRequest[]> => {
   const response = await apiClient.get('/time/leave/pending');
@@ -135,7 +135,7 @@ export const getUserLeaveBalance = async (year?: number): Promise<LeaveBalance> 
 };
 
 /**
- * Approve leave request (admin/team_leader only)
+ * Approve leave request (admin/kierownik only)
  */
 export const approveLeaveRequest = async (
   requestId: string,
@@ -146,7 +146,7 @@ export const approveLeaveRequest = async (
 };
 
 /**
- * Reject leave request (admin/team_leader only)
+ * Reject leave request (admin/kierownik only)
  */
 export const rejectLeaveRequest = async (
   requestId: string,

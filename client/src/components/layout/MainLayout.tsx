@@ -171,13 +171,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
     { name: t('nav.myTickets'), href: '/tickets?filter=my', icon: AlertCircle },
-    { name: t('nav.allTickets'), href: '/tickets', icon: List, roles: ['ADMIN', 'TEAM_LEADER'] },
+    { name: t('nav.allTickets'), href: '/tickets', icon: List, roles: ['ADMIN', 'KIEROWNIK'] },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.administration'), roles: ['ADMIN'] },
     { name: t('nav.users'), href: '/admin/users', icon: UserCog, roles: ['ADMIN'] },
     { name: t('nav.projectTemplates', 'Szablony projektów'), href: '/admin/project-templates', icon: LayoutTemplate, roles: ['ADMIN'] },
-    { name: t('nav.reports'), href: '/reports', icon: FileText, roles: ['ADMIN', 'TEAM_LEADER'] },
+    { name: t('nav.reports'), href: '/reports', icon: FileText, roles: ['ADMIN', 'KIEROWNIK'] },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
   ];
 

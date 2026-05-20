@@ -11,7 +11,7 @@ const router = Router();
 router.use(authenticate);
 
 // Statistics (before :id routes)
-router.get('/statistics', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), ticketController.getTicketStatistics.bind(ticketController));
+router.get('/statistics', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), ticketController.getTicketStatistics.bind(ticketController));
 
 // User tickets
 router.get('/my', ticketController.getUserTickets.bind(ticketController));
@@ -22,10 +22,10 @@ router.post('/', ticketController.createTicket.bind(ticketController));
 router.get('/', ticketController.getAllTickets.bind(ticketController));
 router.get('/:id', ticketController.getTicketById.bind(ticketController));
 router.put('/:id', ticketController.updateTicket.bind(ticketController));
-router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), ticketController.deleteTicket.bind(ticketController));
+router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), ticketController.deleteTicket.bind(ticketController));
 
 // Ticket actions
-router.put('/:id/assign', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), ticketController.assignTicket.bind(ticketController));
+router.put('/:id/assign', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), ticketController.assignTicket.bind(ticketController));
 router.put('/:id/status', ticketController.updateTicketStatus.bind(ticketController));
 
 // Ticket comments

@@ -146,7 +146,7 @@ const EmployeeDetail = () => {
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
       admin: 'Administrator',
-      team_leader: 'Team Leader',
+      kierownik: 'Team Leader',
       employee: 'Pracownik',
     };
     return labels[role] || role;
@@ -245,7 +245,7 @@ const EmployeeDetail = () => {
                   <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
                     employee.role === 'admin'
                       ? 'bg-gray-800 text-white'
-                      : employee.role === 'team_leader'
+                      : employee.role === 'kierownik'
                       ? 'bg-gray-600 text-white'
                       : 'bg-gray-100 text-gray-700'
                   }`}>
@@ -515,7 +515,7 @@ const EmployeeDetail = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
                   >
                     <option value="employee">Pracownik</option>
-                    <option value="team_leader">Team Leader</option>
+                    <option value="kierownik">Team Leader</option>
                     <option value="admin">Administrator</option>
                   </select>
                 ) : (
@@ -524,7 +524,7 @@ const EmployeeDetail = () => {
                 <p className="text-xs text-gray-500 mt-1">
                   {employee.role === 'admin'
                     ? 'Pełny dostęp do wszystkich funkcji systemu'
-                    : employee.role === 'team_leader'
+                    : employee.role === 'kierownik'
                     ? 'Zarządzanie zespołem i zatwierdzanie wniosków'
                     : 'Podstawowy dostęp do funkcji pracowniczych'}
                 </p>

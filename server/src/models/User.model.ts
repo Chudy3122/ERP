@@ -15,11 +15,11 @@ import { Department } from './Department.model';
 
 export enum UserRole {
   ADMIN = 'admin',
-  TEAM_LEADER = 'team_leader',
+  KIEROWNIK = 'kierownik',
   EMPLOYEE = 'employee',
   KSIEGOWOSC = 'ksiegowosc',
   SZEF = 'szef',
-  RECEPCJA = 'recepcja',
+  SEKRETARIAT = 'sekretariat',
 }
 
 @Entity('users')

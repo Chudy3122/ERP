@@ -17,10 +17,10 @@ router.delete('/pipelines/:id', requireRole([UserRole.ADMIN]), crmController.del
 router.post('/pipelines/reorder', requireRole([UserRole.ADMIN]), crmController.reorderPipelines.bind(crmController));
 
 // ── Stages ──
-router.post('/pipelines/:pipelineId/stages', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), crmController.createStage.bind(crmController));
-router.put('/stages/:id', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), crmController.updateStage.bind(crmController));
-router.delete('/stages/:id', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), crmController.deleteStage.bind(crmController));
-router.post('/pipelines/:pipelineId/stages/reorder', requireRole([UserRole.ADMIN, UserRole.TEAM_LEADER]), crmController.reorderStages.bind(crmController));
+router.post('/pipelines/:pipelineId/stages', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), crmController.createStage.bind(crmController));
+router.put('/stages/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), crmController.updateStage.bind(crmController));
+router.delete('/stages/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), crmController.deleteStage.bind(crmController));
+router.post('/pipelines/:pipelineId/stages/reorder', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), crmController.reorderStages.bind(crmController));
 
 // ── Deals ──
 router.get('/pipelines/:pipelineId/deals', crmController.getDealsByPipeline.bind(crmController));

@@ -96,7 +96,7 @@ const TicketForm = () => {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'team_leader';
+  const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
 
   useEffect(() => {
     loadProjects();

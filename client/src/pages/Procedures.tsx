@@ -30,7 +30,7 @@ const emptyForm: CreateProcedureRequest = {
 
 export default function Procedures() {
   const { user } = useAuth();
-  const isEditor = user?.role === 'admin' || user?.role === 'team_leader';
+  const isEditor = user?.role === 'admin' || user?.role === 'kierownik';
 
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [isLoading, setIsLoading] = useState(true);
