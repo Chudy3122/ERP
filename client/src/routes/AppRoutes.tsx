@@ -40,6 +40,7 @@ import CrmDealDetail from '../pages/CrmDealDetail';
 import CrmDashboard from '../pages/CrmDashboard';
 import LandingPage from '../pages/LandingPage';
 import Procedures from '../pages/Procedures';
+import BossCalendar from '../pages/BossCalendar';
 import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
@@ -343,6 +344,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Procedures />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/boss-calendar"
+        element={
+          <PrivateRoute>
+            <BossCalendar />
           </PrivateRoute>
         }
       />

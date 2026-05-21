@@ -21,6 +21,7 @@ import {
   UserCog,
   FileText,
   BookOpen,
+  CalendarClock,
   Settings,
   LogOut,
   Menu,
@@ -167,6 +168,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Procedury' },
     { name: 'Procedury', href: '/procedures', icon: BookOpen },
+
+    { type: 'divider' },
+    { type: 'header', name: 'Kalendarz Szefa', roles: ['admin', 'szef', 'sekretariat'] },
+    { name: 'Kalendarz Szefa', href: '/boss-calendar', icon: CalendarClock, roles: ['admin', 'szef', 'sekretariat'] },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },

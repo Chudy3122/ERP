@@ -103,14 +103,14 @@ const Employees = () => {
     return matchesSearch && matchesDepartment;
   });
 
-  const getRoleLabel = (role: string, translateFn: typeof t) => {
+  const getRoleLabel = (role: string, _translateFn?: typeof t) => {
     const labels: Record<string, string> = {
       admin: 'Administrator',
-      kierownik: 'Team Leader',
-      employee: translateFn('roleEmployee'),
+      kierownik: 'Kierownik',
+      employee: 'Pracownik',
       ksiegowosc: 'Księgowość',
       szef: 'Szef',
-      sekretariat: 'Recepcja',
+      sekretariat: 'Sekretariat',
     };
     return labels[role] || role;
   };
