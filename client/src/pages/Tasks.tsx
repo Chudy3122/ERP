@@ -102,7 +102,7 @@ const Tasks = () => {
           case 'week':
             data = await taskApi.getUpcomingDeadlines(7);
             break;
-          case 'overdue':
+          case 'overdue': {
             const allTasks = await taskApi.getMyTasks();
             data = allTasks.filter(t =>
               t.due_date &&
@@ -110,6 +110,7 @@ const Tasks = () => {
               t.status !== TaskStatus.DONE
             );
             break;
+          }
           case 'all':
             data = await taskApi.getTasks();
             break;

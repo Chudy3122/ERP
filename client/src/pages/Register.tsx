@@ -54,7 +54,14 @@ const Register = () => {
     setIsSubmitting(true);
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      const registerData = {
+        email: formData.email,
+        password: formData.password,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        department: formData.department,
+        phone: formData.phone,
+      };
       await register(registerData);
       navigate('/dashboard');
     } catch (error) {
@@ -105,9 +112,9 @@ const Register = () => {
 
         <div className="relative z-10 flex flex-col justify-center px-16 xl:px-20">
           {/* Logo */}
-          <div className="mb-12">
+          <Link to="/" className="mb-12 inline-flex" aria-label="Strona główna">
             <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-12 w-auto" />
-          </div>
+          </Link>
 
           {/* Heading */}
           <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
@@ -139,9 +146,9 @@ const Register = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="flex items-center mb-8 lg:hidden">
+          <Link to="/" className="flex items-center mb-8 lg:hidden" aria-label="Strona główna">
             <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-9 w-auto" />
-          </div>
+          </Link>
 
           {/* Title */}
           <div className="mb-8">

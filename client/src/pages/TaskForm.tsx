@@ -734,7 +734,7 @@ const TaskForm = () => {
                   ) : (
                     <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <Upload className="w-4 h-4" />
-                      <span>Przeciągnij pliki lub kliknij "Dodaj"</span>
+                      <span>Przeciągnij pliki lub kliknij &quot;Dodaj&quot;</span>
                     </div>
                   )}
                 </div>

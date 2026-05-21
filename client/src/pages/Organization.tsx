@@ -73,18 +73,14 @@ const Organization = () => {
   };
 
   const handleFormSubmit = async (data: any) => {
-    try {
-      if (editingDepartment) {
-        await departmentApi.updateDepartment(editingDepartment.id, data);
-      } else {
-        await departmentApi.createDepartment(data);
-      }
-      await loadDepartments();
-      setIsFormOpen(false);
-      setEditingDepartment(null);
-    } catch (error: any) {
-      throw error;
+    if (editingDepartment) {
+      await departmentApi.updateDepartment(editingDepartment.id, data);
+    } else {
+      await departmentApi.createDepartment(data);
     }
+    await loadDepartments();
+    setIsFormOpen(false);
+    setEditingDepartment(null);
   };
 
   const handleSelectDepartment = async (dept: Department) => {

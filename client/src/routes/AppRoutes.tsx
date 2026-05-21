@@ -42,6 +42,7 @@ import LandingPage from '../pages/LandingPage';
 import Procedures from '../pages/Procedures';
 import BossCalendar from '../pages/BossCalendar';
 import PrivateRoute from './PrivateRoute';
+import { UserRole } from '../types/auth.types';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -278,7 +279,7 @@ const AppRoutes = () => {
       <Route
         path="/financial-reports"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.KSIEGOWOSC]}>
             <FinancialReports />
           </PrivateRoute>
         }
@@ -350,7 +351,7 @@ const AppRoutes = () => {
       <Route
         path="/boss-calendar"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.SEKRETARIAT]}>
             <BossCalendar />
           </PrivateRoute>
         }
@@ -358,7 +359,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/project-templates"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN]}>
             <ProjectTemplates />
           </PrivateRoute>
         }
@@ -366,7 +367,7 @@ const AppRoutes = () => {
       <Route
         path="/admin"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN]}>
             <Admin />
           </PrivateRoute>
         }
@@ -374,7 +375,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/users"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN]}>
             <AdminUsers />
           </PrivateRoute>
         }
@@ -382,7 +383,7 @@ const AppRoutes = () => {
       <Route
         path="/reports"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.KIEROWNIK]}>
             <Reports />
           </PrivateRoute>
         }

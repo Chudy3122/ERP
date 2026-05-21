@@ -1140,7 +1140,7 @@ const ProjectDetail = () => {
               <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg">
                 <FileIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400 mb-2">Brak plików</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">Przeciągnij pliki tutaj lub kliknij "Dodaj pliki"</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">Przeciągnij pliki tutaj lub kliknij &quot;Dodaj pliki&quot;</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-700">

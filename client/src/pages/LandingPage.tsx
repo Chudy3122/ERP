@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FolderKanban,
@@ -29,49 +29,49 @@ const features = [
   {
     icon: FolderKanban,
     title: 'Zarządzanie projektami',
-    description: 'Kanban, etapy, zadania, priorytety i terminy — pełny wgląd w postęp prac.',
+    description: 'Kanban, etapy, zadania, priorytety i terminy — pełny wgląd w postęp prac.',
     color: 'bg-[#F7941D]',
   },
   {
     icon: Target,
     title: 'CRM',
-    description: 'Leady, pipeline sprzedaży i pełna historia relacji z każdym klientem.',
+    description: 'Leady, pipeline sprzedaży i pełna historia relacji z każdym klientem.',
     color: 'bg-emerald-500',
   },
   {
     icon: FileText,
-    title: 'Faktury i umowy',
-    description: 'Wystawiaj faktury, generuj PDF-y, śledź płatności i zarządzaj umowami.',
+    title: 'Faktury i umowy',
+    description: 'Wystawiaj faktury, generuj PDF-y, śledź płatności i zarządzaj umowami.',
     color: 'bg-amber-500',
   },
   {
     icon: Clock,
     title: 'Ewidencja czasu pracy',
-    description: 'Timetracking z podsumowaniami, raportami i integracją z projektami.',
+    description: 'Timetracking z podsumowaniami, raportami i integracją z projektami.',
     color: 'bg-blue-500',
   },
   {
     icon: BarChart3,
     title: 'Raporty finansowe',
-    description: 'Przychody, koszty, wykresy trendów i analizy per klient — zawsze aktualne.',
+    description: 'Przychody, koszty, wykresy trendów i analizy per klient — zawsze aktualne.',
     color: 'bg-purple-500',
   },
   {
     icon: CalendarDays,
-    title: 'Nieobecności i HR',
+    title: 'Nieobecności i HR',
     description: 'Urlopy, zwolnienia, delegacje — pełna kontrola nad zespołem.',
     color: 'bg-rose-500',
   },
   {
     icon: Video,
     title: 'Wideokonferencje',
-    description: 'Spotkania wideo bez wychodzenia z systemu — prosto ze strony projektu lub zadania.',
+    description: 'Spotkania wideo bez wychodzenia z systemu — prosto ze strony projektu lub zadania.',
     color: 'bg-cyan-500',
   },
   {
     icon: MessageSquare,
     title: 'Chat live',
-    description: 'Wewnętrzny komunikator zespołowy — wiadomości, powiadomienia i historia rozmów.',
+    description: 'Wewnętrzny komunikator zespołowy — wiadomości, powiadomienia i historia rozmów.',
     color: 'bg-teal-500',
   },
 ];
@@ -83,55 +83,66 @@ const stats = [
 ];
 
 const benefits = [
-  'Jeden system zamiast 10 osobnych narzędzi — koniec z przełączaniem zakładek',
-  'Pełna historia każdego klienta, projektu i faktury w jednym miejscu',
-  'Automatyczne przypomnienia o terminach płatności i deadlinach',
+  'Jeden system zamiast 10 osobnych narzędzi — koniec z przełączaniem zakładek',
+  'Pełna historia każdego klienta, projektu i faktury w jednym miejscu',
+  'Automatyczne przypomnienia o terminach płatności i deadlinach',
   'Kontrola dostępu — każdy pracownik widzi tylko to, co powinien',
-  'Raporty gotowe w kilka sekund, nie kilka godzin',
+  'Raporty gotowe w kilka sekund, nie kilka godzin',
   'Eksport danych do PDF jednym kliknięciem',
 ];
 
 const faq = [
   {
     q: 'Czy system jest bezpieczny?',
-    a: 'Tak. Każdy użytkownik ma osobne konto i przypisaną rolę (admin, team leader, pracownik). Dane są szyfrowane, a dostęp do modułów jest kontrolowany przez uprawnienia.',
+    a: 'Tak. Każdy użytkownik ma osobne konto i przypisaną rolę (Administrator, Kierownik, Pracownik). Dane są szyfrowane, a dostęp do modułów jest kontrolowany przez uprawnienia, nadawane przez administratora.',
   },
   {
     q: 'Czy muszę instalować cokolwiek na komputerze?',
-    a: 'Nie. System działa w całości w przeglądarce internetowej — wystarczy adres URL i dane logowania. Działa na każdym urządzeniu z dostępem do internetu.',
+    a: 'Nie. System działa w całości w przeglądarce internetowej — wystarczy adres URL i dane logowania. Działa na każdym urządzeniu z dostępem do internetu.',
   },
   {
     q: 'Jak wygląda wdrożenie?',
-    a: 'Wdrożenie obejmuje konfigurację kont, działów i uprawnień. Dane z poprzednich systemów można zaimportować. Pierwsze logowanie jest możliwe już w dniu wdrożenia.',
+    a: 'Wdrożenie obejmuje konfigurację kont, działów i uprawnień. Dane z poprzednich systemów można zaimportować. Pierwsze logowanie jest możliwe już w dniu wdrożenia.',
   },
   {
     q: 'Czy mogę zarządzać wieloma projektami jednocześnie?',
-    a: 'Tak. System obsługuje nieograniczoną liczbę projektów, zadań i użytkowników. Możesz filtrować, grupować i sortować wszystko według własnych potrzeb.',
+    a: 'Tak. System obsługuje nieograniczoną liczbę projektów, zadań i użytkowników. Możesz filtrować, grupować i sortować wszystko według własnych potrzeb.',
   },
   {
-    q: 'Czy faktury generowane są zgodnie z polskim prawem?',
-    a: 'Tak. Faktury zawierają wszystkie wymagane pola zgodne z przepisami, są numerowane automatycznie i generowane jako pliki PDF gotowe do wysyłki.',
+    q: 'Czy faktury generowane są zgodnie z polskim prawem?',
+    a: 'Tak. Faktury zawierają wszystkie wymagane pola zgodne z przepisami, są numerowane automatycznie i generowane jako pliki PDF gotowe do wysyłki.',
   },
   {
     q: 'Czy mogę zobaczyć system przed zakupem?',
-    a: 'Tak. Skontaktuj się z nami, a umówimy demonstrację systemu dostosowaną do specyfiki Twojej firmy.',
+    a: 'Tak. Skontaktuj się z nami, a umówimy demonstrację systemu dostosowaną do specyfiki Twojej firmy.',
   },
   {
     q: 'Czy system obsługuje wiele firm lub oddziałów?',
-    a: 'Tak. Możesz tworzyć działy, przypisywać do nich pracowników i zarządzać uprawnieniami osobno dla każdej jednostki organizacyjnej.',
+    a: 'Tak. Możesz tworzyć działy, przypisywać do nich pracowników i zarządzać uprawnieniami osobno dla każdej jednostki organizacyjnej.',
   },
   {
     q: 'Czy mogę śledzić czas pracy pracowników?',
-    a: 'Tak. Moduł ewidencji czasu pracy pozwala rejestrować przepracowane godziny, przypisywać je do projektów i generować raporty miesięczne.',
+    a: 'Tak. Moduł ewidencji czasu pracy pozwala rejestrować przepracowane godziny, przypisywać je do projektów i generować raporty miesięczne.',
   },
   {
-    q: 'Jak działają powiadomienia w systemie?',
-    a: 'System wysyła powiadomienia o nowych zadaniach, zbliżających się deadlinach, zmianach statusu projektów oraz nieodczytanych wiadomościach na czacie.',
+    q: 'Jak działają powiadomienia w systemie?',
+    a: 'System wysyła powiadomienia o nowych zadaniach, zbliżających się deadlinach, zmianach statusu projektów oraz nieodczytanych wiadomościach na czacie.',
   },
   {
     q: 'Czy dane są regularnie backupowane?',
-    a: 'Tak. Baza danych jest regularnie archiwizowana. W razie awarii możliwe jest przywrócenie danych do poprzedniego stanu.',
+    a: 'Tak. Baza danych jest regularnie archiwizowana. W razie awarii możliwe jest przywrócenie danych do poprzedniego stanu.',
   },
+];
+
+const heroLines = [
+  { top: '12%', left: '-18%', width: '58%', color: 'rgba(247, 148, 29, 0.18)', delay: '0s', duration: '15s', rotate: '-8deg' },
+  { top: '20%', left: '34%', width: '44%', color: 'rgba(0, 174, 239, 0.14)', delay: '2s', duration: '18s', rotate: '-8deg' },
+  { top: '32%', left: '-12%', width: '48%', color: 'rgba(255, 255, 255, 0.10)', delay: '4s', duration: '17s', rotate: '-8deg' },
+  { top: '43%', left: '54%', width: '36%', color: 'rgba(247, 148, 29, 0.13)', delay: '1s', duration: '16s', rotate: '-8deg' },
+  { top: '55%', left: '4%', width: '52%', color: 'rgba(0, 174, 239, 0.13)', delay: '5s', duration: '20s', rotate: '-8deg' },
+  { top: '67%', left: '42%', width: '50%', color: 'rgba(255, 255, 255, 0.09)', delay: '3s', duration: '19s', rotate: '-8deg' },
+  { top: '76%', left: '-8%', width: '62%', color: 'rgba(247, 148, 29, 0.12)', delay: '6s', duration: '22s', rotate: '-8deg' },
+  { top: '84%', left: '48%', width: '42%', color: 'rgba(0, 174, 239, 0.12)', delay: '7s', duration: '21s', rotate: '-8deg' },
 ];
 
 // Floating UI card mock
@@ -218,7 +229,7 @@ function ContactForm() {
       <p className="text-sm font-semibold text-white mb-4">Napisz do nas</p>
       <input
         type="text"
-        placeholder="Imię i nazwisko"
+        placeholder="Imię i nazwisko"
         required
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -289,9 +300,9 @@ function LoginModal({ onClose }: { onClose: () => void }) {
         </button>
 
         {/* Logo */}
-        <div className="flex items-center mb-8">
+        <Link to="/" className="flex items-center mb-8" aria-label="Strona główna">
           <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-10 w-auto" />
-        </div>
+        </Link>
 
         <h2 className="text-2xl font-black text-gray-900 mb-1">Witaj ponownie</h2>
         <p className="text-gray-500 text-sm mb-8">Zaloguj się do swojego konta</p>
@@ -316,8 +327,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              Hasło
-            </label>
+              Hasło </label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -362,47 +372,95 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 
 export default function LandingPage() {
   const [loginOpen, setLoginOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToSection = (href: string) => {
+    const target = document.querySelector(href);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="relative max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
           {/* Logo */}
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center" aria-label="Strona główna">
             <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-8 w-auto" />
-          </div>
+          </Link>
 
           {/* Nav links */}
-          <div className="hidden md:flex items-center gap-1 bg-gray-100 rounded-full px-1.5 py-1.5">
+          <div className="hidden md:flex items-center gap-1 bg-gray-100 rounded-full px-1.5 py-1.5 absolute left-1/2 -translate-x-1/2">
             {[
-              { label: 'Funkcje', href: '#funkcje' },
+              { label: 'Moduły', href: '#moduly' },
               { label: 'Zalety', href: '#zalety' },
               { label: 'FAQ', href: '#faq' },
-            ].map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm px-4 py-1.5 rounded-full transition-all duration-150"
-              >
-                {item.label}
-              </a>
+            ].map((item, index, items) => (
+              <div key={item.href} className="flex items-center">
+                <a
+                  href={item.href}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    scrollToSection(item.href);
+                  }}
+                  className="text-[15px] font-medium uppercase tracking-wide text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm px-4 py-1.5 rounded-full transition-all duration-150"
+                >
+                  {item.label}
+                </a>
+                {index < items.length - 1 && (
+                  <span className="text-gray-300 select-none" aria-hidden="true">
+                    |
+                  </span>
+                )}
+              </div>
             ))}
           </div>
 
-          {/* CTA button */}
+          {/* CTA buttons */}
+          <div className="flex items-center gap-3">
           <button
             onClick={() => setLoginOpen(true)}
-            className="text-sm font-semibold bg-[#F7941D] hover:bg-[#e08317] text-white px-5 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200"
+            className="text-[15px] font-semibold tracking-wide bg-[#F7941D] hover:bg-[#e08317] text-white px-5 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200"
           >
             Zaloguj się
           </button>
+            <Link
+              to="/register"
+              className="text-[15px] font-semibold tracking-wide bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2.5 rounded-full shadow-sm transition-all duration-200"
+            >
+              Zarejestruj się
+            </Link>
+          </div>
         </div>
       </nav>
 
       {/* ── HERO ── */}
       <section className="relative min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center overflow-hidden pt-16">
+        <style>
+          {`
+            @keyframes heroLineDrift {
+              0% { transform: translateX(-18%); opacity: 0; }
+              18% { opacity: 1; }
+              82% { opacity: 1; }
+              100% { transform: translateX(22%); opacity: 0; }
+            }
+          `}
+        </style>
         {/* Background grid */}
         <div
           className="absolute inset-0 opacity-10"
@@ -416,6 +474,29 @@ export default function LandingPage() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#F7941D]/20 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00AEEF]/15 rounded-full blur-3xl" />
 
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {heroLines.map((line, index) => (
+            <div
+              key={index}
+              className="absolute"
+              style={{
+                top: line.top,
+                left: line.left,
+                width: line.width,
+                transform: `rotate(${line.rotate})`,
+              }}
+            >
+              <div
+                className="h-px rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${line.color}, transparent)`,
+                  animation: `heroLineDrift ${line.duration} ease-in-out ${line.delay} infinite`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
         <div className="relative max-w-7xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: Text */}
           <div>
@@ -427,13 +508,13 @@ export default function LandingPage() {
             <h1 className="text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
               Zarządzaj firmą{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F7941D] to-[#00AEEF]">
-                w jednym miejscu
+                w jednym miejscu
               </span>
             </h1>
 
             <p className="text-lg text-gray-400 leading-relaxed mb-10 max-w-lg">
-              Projekty, CRM, faktury, HR i raporty — wszystko zintegrowane w jednym, intuicyjnym
-              systemie. Oszczędzaj czas i podejmuj lepsze decyzje.
+              Projekty, CRM, faktury, HR i raporty — wszystko zintegrowane w jednym, intuicyjnym
+              systemie. Oszczędzaj czas i podejmuj lepsze decyzje.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -445,7 +526,7 @@ export default function LandingPage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
               <a
-                href="#funkcje"
+                href="#moduly"
                 className="inline-flex items-center justify-center gap-2 border border-white/20 text-white font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
               >
                 Zobacz funkcje
@@ -485,7 +566,7 @@ export default function LandingPage() {
               </div>
               <div className="space-y-2">
                 {[
-                  { name: 'Wdrożenie modułu CRM', status: 'W toku', color: 'bg-blue-500' },
+                  { name: 'Wdrożenie modułu CRM', status: 'W toku', color: 'bg-blue-500' },
                   { name: 'Raport finansowy Q1', status: 'Ukończone', color: 'bg-emerald-500' },
                 ].map((t) => (
                   <div key={t.name} className="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
@@ -513,12 +594,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Bottom wave */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="white" />
-          </svg>
-        </div>
       </section>
 
       {/* ── STATS ── */}
@@ -533,10 +608,17 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+
+        {/* Bottom wave */}
+        <div className="absolute -bottom-px left-0 right-0">
+          <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" className="w-full block">
+            <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="white" />
+          </svg>
+        </div>
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="funkcje" className="bg-gray-50 py-24">
+      <section id="moduly" className="bg-gray-50 py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-sm font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
@@ -546,8 +628,8 @@ export default function LandingPage() {
               Wszystko, czego potrzebuje Twoja firma
             </h2>
             <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-              Jeden system zamiast dziesiątek narzędzi. Każdy moduł działa samodzielnie i w pełnej
-              integracji z pozostałymi.
+              Jeden system zamiast dziesiątek narzędzi. Każdy moduł działa samodzielnie i w pełnej
+              integracji z pozostałymi.
             </p>
           </div>
 
@@ -588,8 +670,8 @@ export default function LandingPage() {
                 </span>
               </h2>
               <p className="text-lg text-gray-500 mb-10 leading-relaxed">
-                Zamiast sklejać arkusze Excel, maile i kilka różnych aplikacji — masz jeden panel,
-                w którym wszystko jest połączone i zawsze aktualne.
+                Zamiast sklejać arkusze Excel, maile i kilka różnych aplikacji — masz jeden panel,
+                w którym wszystko jest połączone i zawsze aktualne.
               </p>
 
               <ul className="space-y-4">
@@ -607,28 +689,28 @@ export default function LandingPage() {
                 {
                   icon: ShieldCheck,
                   title: 'Bezpieczeństwo',
-                  desc: 'Role i uprawnienia — każdy widzi tylko to, do czego ma dostęp',
+                  desc: 'Role i uprawnienia — każdy widzi tylko to, do czego ma dostęp',
                   color: 'text-[#F7941D]',
                   bg: 'bg-orange-50',
                 },
                 {
                   icon: TrendingUp,
                   title: 'Decyzje oparte na danych',
-                  desc: 'Raporty i dashboardy aktualizowane w czasie rzeczywistym',
+                  desc: 'Raporty i dashboardy aktualizowane w czasie rzeczywistym',
                   color: 'text-emerald-600',
                   bg: 'bg-emerald-50',
                 },
                 {
                   icon: MessageSquare,
-                  title: 'Komunikacja w zespole',
-                  desc: 'Chat, wideokonferencje i powiadomienia bez zewnętrznych aplikacji',
+                  title: 'Komunikacja w zespole',
+                  desc: 'Chat, wideokonferencje i powiadomienia bez zewnętrznych aplikacji',
                   color: 'text-amber-600',
                   bg: 'bg-amber-50',
                 },
                 {
                   icon: CreditCard,
                   title: 'Finanse pod kontrolą',
-                  desc: 'Faktury, płatności i umowy — zawsze wiesz co jest opłacone',
+                  desc: 'Faktury, płatności i umowy — zawsze wiesz co jest opłacone',
                   color: 'text-rose-600',
                   bg: 'bg-rose-50',
                 },
@@ -667,10 +749,10 @@ export default function LandingPage() {
 
                 <div className="space-y-4">
                   {[
-                    { num: '01', label: 'Bezpieczeństwo i dostęp' },
-                    { num: '02', label: 'Instalacja i wdrożenie' },
-                    { num: '03', label: 'Funkcje i możliwości' },
-                    { num: '04', label: 'Faktury i finanse' },
+                    { num: '01', label: 'Bezpieczeństwo i dostęp' },
+                    { num: '02', label: 'Instalacja i wdrożenie' },
+                    { num: '03', label: 'Funkcje i możliwości' },
+                    { num: '04', label: 'Faktury i finanse' },
                   ].map((item) => (
                     <div key={item.num} className="flex items-center gap-3 group cursor-default">
                       <span className="text-xs font-bold text-[#F7941D] w-6">{item.num}</span>
@@ -704,7 +786,7 @@ export default function LandingPage() {
             Gotowy, żeby zacząć?
           </h2>
           <p className="text-gray-400 text-lg mb-10">
-            Zaloguj się do systemu i zacznij zarządzać firmą efektywniej już dziś.
+            Zaloguj się do systemu i zacznij zarządzać firmą efektywniej już dziś.
           </p>
           <button
             onClick={() => setLoginOpen(true)}
@@ -719,9 +801,9 @@ export default function LandingPage() {
       {/* ── FOOTER ── */}
       <footer className="bg-gray-900 border-t border-gray-800 py-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center" aria-label="Strona główna">
             <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-7 w-auto" />
-          </div>
+          </Link>
           <p className="text-gray-500 text-sm">
             &copy; {new Date().getFullYear()} ITComplete.pl. Wszelkie prawa zastrzeżone.
           </p>
@@ -736,6 +818,17 @@ export default function LandingPage() {
 
       {/* ── LOGIN MODAL ── */}
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          aria-label="Przewiń do góry strony"
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#F7941D] text-white shadow-lg transition-all hover:bg-[#e08317] hover:shadow-xl"
+        >
+          <ChevronUp className="h-6 w-6" />
+        </button>
+      )}
     </div>
   );
 }

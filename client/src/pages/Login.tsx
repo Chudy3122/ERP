@@ -67,9 +67,9 @@ const Login = () => {
 
         <div className="relative z-10 flex flex-col justify-center px-16 xl:px-20">
           {/* Logo */}
-          <div className="mb-12">
+          <Link to="/" className="mb-12 inline-flex" aria-label="Strona główna">
             <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-12 w-auto" />
-          </div>
+          </Link>
 
           {/* Heading */}
           <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
@@ -110,9 +110,9 @@ const Login = () => {
           </Link>
 
           {/* Mobile logo */}
-          <div className="flex items-center mb-8 lg:hidden">
+          <Link to="/" className="flex items-center mb-8 lg:hidden" aria-label="Strona główna">
             <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-9 w-auto" />
-          </div>
+          </Link>
 
           {/* Title */}
           <div className="mb-8">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import { UserRole } from '../../types/auth.types';
 import StatusSelector from '../status/StatusSelector';
 import AIAssistant from '../helpdesk/AIAssistant';
 import FloatingChatPanel from '../chat/FloatingChatPanel';
@@ -44,14 +45,14 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles?: string[];
+  roles?: UserRole[];
   exact?: boolean;
 }
 
 interface NavHeader {
   type: 'header';
   name: string;
-  roles?: string[];
+  roles?: UserRole[];
 }
 
 interface NavDivider {
@@ -170,19 +171,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: 'Procedury', href: '/procedures', icon: BookOpen },
 
     { type: 'divider' },
-    { type: 'header', name: 'Kalendarz Szefa', roles: ['admin', 'szef', 'sekretariat'] },
-    { name: 'Kalendarz Szefa', href: '/boss-calendar', icon: CalendarClock, roles: ['admin', 'szef', 'sekretariat'] },
+    { type: 'header', name: 'Kalendarz Szefa', roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.SEKRETARIAT] },
+    { name: 'Kalendarz Szefa', href: '/boss-calendar', icon: CalendarClock, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.SEKRETARIAT] },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
     { name: t('nav.myTickets'), href: '/tickets?filter=my', icon: AlertCircle },
-    { name: t('nav.allTickets'), href: '/tickets', icon: List, roles: ['ADMIN', 'KIEROWNIK'] },
+    { name: t('nav.allTickets'), href: '/tickets', icon: List, roles: [UserRole.ADMIN, UserRole.KIEROWNIK] },
 
     { type: 'divider' },
-    { type: 'header', name: t('nav.administration'), roles: ['ADMIN'] },
-    { name: t('nav.users'), href: '/admin/users', icon: UserCog, roles: ['ADMIN'] },
-    { name: t('nav.projectTemplates', 'Szablony projektów'), href: '/admin/project-templates', icon: LayoutTemplate, roles: ['ADMIN'] },
-    { name: t('nav.reports'), href: '/reports', icon: FileText, roles: ['ADMIN', 'KIEROWNIK'] },
+    { type: 'header', name: t('nav.administration'), roles: [UserRole.ADMIN] },
+    { name: t('nav.users'), href: '/admin/users', icon: UserCog, roles: [UserRole.ADMIN] },
+    { name: t('nav.projectTemplates', 'Szablony projektów'), href: '/admin/project-templates', icon: LayoutTemplate, roles: [UserRole.ADMIN] },
+    { name: t('nav.reports'), href: '/reports', icon: FileText, roles: [UserRole.ADMIN, UserRole.KIEROWNIK] },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
   ];
 
@@ -202,7 +203,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       }
 
       if (item.type === 'header') {
-        if (item.roles && !item.roles.includes(user?.role || '')) return null;
+        if (item.roles && (!user || !item.roles.includes(user.role))) return null;
         return (
           <div key={`header-${idx}`} className="px-6 py-1 text-xs uppercase text-gray-400 dark:text-gray-500 font-semibold tracking-wider">
             {item.name}
@@ -212,9 +213,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     }
 
     const navItem = item as NavItem;
-    if (navItem.roles && !navItem.roles.includes(user?.role || '')) return null;
+    if (navItem.roles && (!user || !navItem.roles.includes(user.role))) return null;
 
-    const isActive = location.pathname === navItem.href || (!navItem.exact && location.pathname.startsWith(navItem.href + '/'));
+    const [navPath, navSearch] = navItem.href.split('?');
+    const hasQuerySpecificSibling = navigation.some(candidate => {
+      if ('type' in candidate) return false;
+      return candidate.href.startsWith(`${location.pathname}?`);
+    });
+    const pathMatches =
+      location.pathname === navPath ||
+      (!navItem.exact && location.pathname.startsWith(`${navPath}/`));
+    const searchMatches = navSearch
+      ? location.search === `?${navSearch}`
+      : !(location.pathname === navPath && location.search && hasQuerySpecificSibling);
+    const isActive = pathMatches && searchMatches;
     const Icon = navItem.icon;
 
     return (
@@ -252,7 +264,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       >
         {/* Logo */}
         <div className="h-16 relative flex items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
-          <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-11 w-auto" />
+          <Link to="/" onClick={() => setSidebarOpen(false)} aria-label="Strona główna">
+            <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-11 w-auto" />
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden absolute right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400"
