@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Minus, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import * as worklogApi from '../../api/worklog.api';
 import { OvertimeSummaryEntry } from '../../types/worklog.types';
+import WidgetCard from '../widgets/WidgetCard';
 
 const OvertimeWidget = () => {
   const { user } = useAuth();
@@ -41,21 +42,21 @@ const OvertimeWidget = () => {
     : 'text-gray-500 dark:text-gray-400';
 
   return (
-    <div className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm flex flex-col">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Nadgodziny</h3>
-        </div>
+    <WidgetCard
+      className="h-full"
+      title="Nadgodziny"
+      icon={<TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+      actions={
         <button
           onClick={() => navigate('/overtime')}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
         >
           Szczegóły
         </button>
-      </div>
+      }
+    >
 
-      <div className="p-3 flex-1 flex flex-col justify-center">
+      <div className="flex flex-1 flex-col justify-center">
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
             <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -97,14 +98,14 @@ const OvertimeWidget = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => navigate('/overtime')}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors"
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
               >
                 <Plus className="w-3 h-3" />
                 Dodaj
               </button>
               <button
                 onClick={() => navigate('/overtime')}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 rounded text-xs font-medium transition-colors"
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg text-xs font-medium transition-colors"
               >
                 <Minus className="w-3 h-3" />
                 Odbierz
@@ -117,7 +118,7 @@ const OvertimeWidget = () => {
             <p className="text-xs text-gray-500 dark:text-gray-400">Brak nadgodzin</p>
             <button
               onClick={() => navigate('/overtime')}
-              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-1 px-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
             >
               <Plus className="w-3 h-3" />
               Dodaj nadgodziny
@@ -125,7 +126,7 @@ const OvertimeWidget = () => {
           </div>
         )}
       </div>
-    </div>
+    </WidgetCard>
   );
 };
 

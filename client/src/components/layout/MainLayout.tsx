@@ -6,6 +6,7 @@ import { UserRole } from '../../types/auth.types';
 import StatusSelector from '../status/StatusSelector';
 import AIAssistant from '../helpdesk/AIAssistant';
 import FloatingChatPanel from '../chat/FloatingChatPanel';
+import GlobalSearch from './GlobalSearch';
 import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
 import {
@@ -199,13 +200,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const renderNavigationItem = (item: NavigationItem, idx: number) => {
     if ('type' in item) {
       if (item.type === 'divider') {
-        return <div key={`divider-${idx}`} className="my-1 border-t border-gray-200 dark:border-gray-700" />;
+        return <div key={`divider-${idx}`} className="my-2 h-px bg-gray-100 dark:bg-gray-700" />;
       }
 
       if (item.type === 'header') {
         if (item.roles && (!user || !item.roles.includes(user.role))) return null;
         return (
-          <div key={`header-${idx}`} className="px-6 py-1 text-xs uppercase text-gray-400 dark:text-gray-500 font-semibold tracking-wider">
+          <div key={`header-${idx}`} className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
             {item.name}
           </div>
         );
@@ -234,14 +235,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         key={`nav-${idx}`}
         to={navItem.href}
         onClick={() => setSidebarOpen(false)}
-        className={`flex items-center gap-3 px-6 py-2 text-sm transition-colors ${
+        className={`mx-2 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
           isActive
-            ? 'bg-orange-50 dark:bg-orange-900/10 text-[#F7941D] border-l-4 border-[#F7941D] font-medium'
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-4 border-transparent'
+            ? 'bg-orange-50 text-[#F7941D] shadow-sm dark:bg-orange-900/15 dark:text-orange-300'
+            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/60 dark:hover:text-white'
         }`}
       >
-        <Icon className="w-4 h-4 flex-shrink-0" />
-        <span>{navItem.name}</span>
+        <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-[#F7941D] dark:text-orange-300' : 'text-gray-400 dark:text-gray-500'}`} />
+        <span className="truncate font-medium">{navItem.name}</span>
       </Link>
     );
   };
@@ -276,7 +277,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-3">
           {navigation.map((item, idx) => renderNavigationItem(item, idx))}
         </nav>
 
@@ -312,23 +313,39 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-4">
+        <header className="relative h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 px-4 lg:px-6">
+          <div className="flex min-w-0 shrink-0 items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400"
+              className="lg:hidden rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               <Menu className="w-6 h-6" />
             </button>
-            {title && <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>}
+            {title && (
+              <nav aria-label="Ścieżka" className="flex min-w-0 items-center gap-2 text-sm">
+                <span className="shrink-0 font-medium text-gray-400 dark:text-gray-500">
+                  ITComplete
+                </span>
+                <span className="shrink-0 text-gray-300 dark:text-gray-600">/</span>
+                <span className="truncate font-medium text-gray-600 dark:text-gray-300">
+                  {title}
+                </span>
+              </nav>
+            )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="pointer-events-none absolute left-1/2 hidden w-full max-w-xl -translate-x-1/2 px-4 md:block">
+            <div className="pointer-events-auto">
+            <GlobalSearch />
+            </div>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             {/* Notifications Bell */}
             <div className="relative">
               <button
                 onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
-                className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
@@ -345,7 +362,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     className="fixed inset-0 z-10"
                     onClick={() => setNotificationDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 max-h-[500px] flex flex-col">
+                  <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-20 max-h-[500px] flex flex-col overflow-hidden">
                     {/* Header */}
                     <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900 dark:text-white">{t('common.notifications')}</h3>
@@ -361,7 +378,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     </div>
 
                     {/* Notifications List */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="min-h-0 flex-1 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
                           <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -417,6 +434,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                       )}
                     </div>
 
+                    <div className="border-t border-gray-200 dark:border-gray-700 p-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate('/notifications');
+                          setNotificationDropdownOpen(false);
+                        }}
+                        className="w-full rounded-md px-3 py-2 text-sm font-medium text-[#F7941D] transition-colors hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                      >
+                        Zobacz wszystkie
+                      </button>
+                    </div>
+
                   </div>
                 </>
               )}
@@ -427,7 +457,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
                     {user.avatar_url ? (

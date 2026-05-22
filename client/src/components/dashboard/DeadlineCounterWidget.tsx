@@ -130,14 +130,14 @@ const DeadlineCounterWidget = () => {
         )
       }
     >
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         {counters.map((counter) => (
           <button
             key={counter.label}
             onClick={() => handleCounterClick(counter.filter)}
-            className={`${counter.bgColor} dark:bg-gray-700 ${counter.borderColor} dark:border-gray-600 border rounded-md p-1.5 text-center hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-gray-400`}
+            className={`${counter.bgColor} dark:bg-gray-700 ${counter.borderColor} dark:border-gray-600 rounded-lg border p-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400`}
           >
-            <div className={`text-xl font-bold ${counter.textColor} dark:text-white`}>
+            <div className={`text-2xl font-bold ${counter.textColor} dark:text-white`}>
               {counter.value}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
@@ -147,7 +147,7 @@ const DeadlineCounterWidget = () => {
         ))}
       </div>
 
-      <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-500 dark:text-gray-400">Wszystkich zadań:</span>
           <span className="font-semibold text-gray-900 dark:text-white">{counts.twoWeeks}</span>

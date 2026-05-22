@@ -13,6 +13,7 @@ import Admin from '../pages/Admin';
 import AdminUsers from '../pages/AdminUsers';
 import Reports from '../pages/Reports';
 import Settings from '../pages/Settings';
+import Notifications from '../pages/Notifications';
 import Projects from '../pages/Projects';
 import ProjectForm from '../pages/ProjectForm';
 import ProjectDetail from '../pages/ProjectDetail';
@@ -397,6 +398,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Settings />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <PrivateRoute>
+            <Notifications />
           </PrivateRoute>
         }
       />

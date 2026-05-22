@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
 import TimeChartWidget from '../components/dashboard/TimeChartWidget';
@@ -14,9 +15,20 @@ import * as statusApi from '../api/status.api';
 import { StatusType, STATUS_TRANSLATION_KEYS } from '../types/status.types';
 import { User, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 
+const statusCardColors: Record<StatusType, 'green' | 'yellow' | 'red' | 'purple' | 'gray'> = {
+  [StatusType.ONLINE]: 'green',
+  [StatusType.OFFLINE]: 'gray',
+  [StatusType.AWAY]: 'yellow',
+  [StatusType.BUSY]: 'red',
+  [StatusType.IN_MEETING]: 'purple',
+};
+
 const Dashboard = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [currentStatus, setCurrentStatus] = useState<StatusType>(StatusType.OFFLINE);
@@ -31,6 +43,24 @@ const Dashboard = () => {
     window.addEventListener('status-changed', handleStatusChanged);
     return () => window.removeEventListener('status-changed', handleStatusChanged);
   }, [user]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const formattedDateTime = currentDateTime.toLocaleString('pl-PL', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 
   const loadDashboardData = async () => {
     try {
@@ -55,54 +85,53 @@ const Dashboard = () => {
   return (
     <MainLayout title={t('dashboard.title')}>
       {/* Welcome Header */}
-      <div className="mb-2">
-        <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-          {t('dashboard.welcome', { name: user?.first_name })}
+      <div className="mb-6 px-5 py-4 text-center">
+        <p className="mb-1 text-xs font-semibold tracking-wide text-[#F7941D]">
+          {formattedDateTime}
+        </p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Witaj, {fullName || user?.first_name || t('common.user', 'użytkowniku')}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 text-sm">
+        <p className="mx-auto mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
           {t('dashboard.subtitle')}
         </p>
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatWidget
           label={t('common.profile')}
           value={user?.role === 'admin' ? 'Administrator' : user?.role === 'kierownik' ? 'Team Leader' : t('common.employee')}
           icon={<User className="w-5 h-5" />}
-          color="gray"
+          color="blue"
         />
 
         <StatWidget
           label={t('common.status')}
           value={t(STATUS_TRANSLATION_KEYS[currentStatus])}
           icon={<CheckCircle className="w-5 h-5" />}
-          color="gray"
+          color={statusCardColors[currentStatus]}
         />
 
-        {unreadNotifications > 0 && (
-          <StatWidget
-            label={t('common.notifications')}
-            value={unreadNotifications}
-            icon={<AlertCircle className="w-5 h-5" />}
-            color="gray"
-            onClick={() => window.location.href = '/settings'}
-          />
-        )}
+        <StatWidget
+          label={t('common.notifications')}
+          value={unreadNotifications}
+          icon={<AlertCircle className="w-5 h-5" />}
+          color={unreadNotifications > 0 ? 'yellow' : 'gray'}
+          onClick={() => navigate('/notifications')}
+        />
 
-        {pendingLeaveCount > 0 && (
-          <StatWidget
-            label={t('dashboard.pendingLeaves')}
-            value={pendingLeaveCount}
-            icon={<Calendar className="w-5 h-5" />}
-            color="gray"
-            onClick={() => window.location.href = '/absences'}
-          />
-        )}
+        <StatWidget
+          label={t('dashboard.pendingLeaves')}
+          value={pendingLeaveCount}
+          icon={<Calendar className="w-5 h-5" />}
+          color={pendingLeaveCount > 0 ? 'blue' : 'gray'}
+          onClick={() => window.location.href = '/absences'}
+        />
       </div>
 
       {/* Main Dashboard Grid — single unified grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 
         {/* Row 1: ClockIn (2/3) + Overtime (1/3) */}
         <div className="lg:col-span-2">

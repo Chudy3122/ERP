@@ -144,7 +144,7 @@ const ActivityStreamWidget = () => {
         </span>
       }
     >
-      <div className="space-y-1 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="max-h-72 space-y-2 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {activities.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
             <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
@@ -155,21 +155,21 @@ const ActivityStreamWidget = () => {
             <div
               key={activity.id}
               onClick={() => handleActivityClick(activity)}
-              className={`flex gap-2 p-1.5 rounded-md transition-colors ${
+              className={`flex gap-3 rounded-lg p-2.5 transition-colors ${
                 activity.entity_id ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : ''
               }`}
             >
               {/* Avatar */}
-              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                 {getInitials(activity.user)}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-900 dark:text-gray-100 leading-tight">
+                <p className="text-sm leading-snug text-gray-900 dark:text-gray-100">
                   {activity.description}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                   {formatRelativeTime(activity.created_at)}
                 </p>
               </div>
@@ -184,10 +184,10 @@ const ActivityStreamWidget = () => {
       </div>
 
       {activities.length > 0 && (
-        <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700 text-center">
+        <div className="mt-3 border-t border-gray-100 pt-3 text-center dark:border-gray-700">
           <button
             onClick={() => navigate('/activities')}
-            className="text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
+            className="text-xs font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
           >
             Zobacz wszystkie aktywności →
           </button>

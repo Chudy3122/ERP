@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, LogIn, LogOut, Timer, AlertTriangle } from 'lucide-react';
 import * as timeApi from '../../api/time.api';
 import { TimeEntry, TimeEntryStatus } from '../../types/time.types';
+import WidgetCard from '../widgets/WidgetCard';
 
 const ClockInWidget = () => {
   const navigate = useNavigate();
@@ -89,38 +90,34 @@ const ClockInWidget = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Ewidencja czasu</h3>
-          </div>
-        </div>
+      <WidgetCard
+        title="Ewidencja czasu"
+        icon={<Clock className="w-5 h-5 text-[#F7941D]" />}
+      >
         <div className="p-4 flex items-center justify-center">
           <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
         </div>
-      </div>
+      </WidgetCard>
     );
   }
 
   return (
-    <div className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Ewidencja czasu</h3>
-        </div>
+    <WidgetCard
+      className="h-full"
+      title="Ewidencja czasu"
+      icon={<Clock className="w-5 h-5 text-[#F7941D]" />}
+      actions={
         <button
           onClick={() => navigate('/work-time')}
-          className="text-xs text-[#F7941D] hover:underline"
+          className="text-xs font-medium text-[#F7941D] hover:underline"
         >
           Szczegóły
         </button>
-      </div>
+      }
+    >
 
       {/* Content */}
-      <div className="p-3 flex-1 flex flex-col justify-center">
+      <div className="flex flex-1 flex-col justify-center">
         {error && (
           <div className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded px-2 py-1">
             {error}
@@ -200,7 +197,7 @@ const ClockInWidget = () => {
           </div>
         )}
       </div>
-    </div>
+    </WidgetCard>
   );
 };
 
