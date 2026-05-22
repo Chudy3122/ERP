@@ -1857,7 +1857,7 @@ engine.io@~6.6.0:
     engine.io-parser "~5.2.1"
     ws "~8.18.3"
 
-"erp-client@file:C:\\Users\\praco\\Desktop\\ERP\\client":
+"erp-client@file:C:\\WebDevelopment\\ERP\\client":
   version "1.0.0"
   resolved "file:client"
   dependencies:
@@ -1881,7 +1881,7 @@ engine.io@~6.6.0:
     zod "^3.22.4"
     zustand "^4.4.7"
 
-"erp-server@file:C:\\Users\\praco\\Desktop\\ERP\\server":
+"erp-server@file:C:\\WebDevelopment\\ERP\\server":
   version "1.0.0"
   resolved "file:server"
   dependencies:

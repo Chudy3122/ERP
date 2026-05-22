@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Zap,
   ArrowRight,
+  ArrowDown,
   CheckCircle2,
   CreditCard,
   Target,
@@ -126,10 +127,10 @@ const faq = [
   },
   {
     q: 'Jak działają powiadomienia w systemie?',
-    a: 'System wysyła powiadomienia o nowych zadaniach, zbliżających się deadlinach, zmianach statusu projektów oraz nieodczytanych wiadomościach na czacie.',
+    a: 'System wysyła powiadomienia o nowych zadaniach, zbliżających się terminach wykonania, zmianach statusu projektów oraz nieodczytanych wiadomościach na czacie.',
   },
   {
-    q: 'Czy dane są regularnie backupowane?',
+    q: 'Czy jest wykonywana regularna kopia zapasowa danych?',
     a: 'Tak. Baza danych jest regularnie archiwizowana. W razie awarii możliwe jest przywrócenie danych do poprzedniego stanu.',
   },
 ];
@@ -192,7 +193,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-function ContactForm() {
+function ContactForm({ standalone = false }: { standalone?: boolean }) {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -214,7 +215,7 @@ function ContactForm() {
 
   if (sent) {
     return (
-      <div className="mt-8 pt-8 border-t border-white/10 text-center">
+      <div className={`${standalone ? '' : 'mt-8 pt-8 border-t border-white/10'} text-center`}>
         <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
           <CheckCircle2 className="w-6 h-6 text-emerald-400" />
         </div>
@@ -225,8 +226,11 @@ function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 pt-8 border-t border-white/10 space-y-3">
-      <p className="text-sm font-semibold text-white mb-4">Napisz do nas</p>
+    <form
+      onSubmit={handleSubmit}
+      className={`${standalone ? '' : 'mt-8 pt-8 border-t border-white/10'} space-y-3`}
+    >
+      {!standalone && <p className="text-sm font-semibold text-white mb-4">Napisz do nas</p>}
       <input
         type="text"
         placeholder="Imię i nazwisko"
@@ -384,6 +388,34 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const animatedElements = Array.from(document.querySelectorAll<HTMLElement>('[data-animate]'));
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+      animatedElements.forEach((element) => element.classList.add('is-visible'));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        rootMargin: '0px 0px -10% 0px',
+        threshold: 0.18,
+      },
+    );
+
+    animatedElements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, []);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -395,6 +427,55 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans">
+      <style>
+        {`
+          [data-animate] {
+            opacity: 0;
+            filter: blur(3px);
+            transition:
+              opacity 700ms ease,
+              transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+              filter 700ms ease,
+              border-color 200ms ease,
+              box-shadow 200ms ease,
+              background-color 200ms ease,
+              color 200ms ease;
+            will-change: opacity, transform, filter;
+          }
+
+          [data-animate="fade-up"] {
+            transform: translate3d(0, 30px, 0);
+          }
+
+          [data-animate="fade-left"] {
+            transform: translate3d(-34px, 0, 0);
+          }
+
+          [data-animate="fade-right"] {
+            transform: translate3d(34px, 0, 0);
+          }
+
+          [data-animate="scale-in"] {
+            transform: translate3d(0, 18px, 0) scale(0.96);
+          }
+
+          [data-animate].is-visible {
+            opacity: 1;
+            filter: blur(0);
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            [data-animate] {
+              opacity: 1;
+              filter: none;
+              transform: none;
+              transition: none;
+            }
+          }
+        `}
+      </style>
+
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="relative max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -406,11 +487,12 @@ export default function LandingPage() {
 
           {/* Nav links */}
           <div className="hidden md:flex items-center gap-1 bg-gray-100 rounded-full px-1.5 py-1.5 absolute left-1/2 -translate-x-1/2">
-            {[
-              { label: 'Moduły', href: '#moduly' },
-              { label: 'Zalety', href: '#zalety' },
-              { label: 'FAQ', href: '#faq' },
-            ].map((item, index, items) => (
+              {[
+                { label: 'Moduły', href: '#moduly' },
+                { label: 'Zalety', href: '#zalety' },
+                { label: 'FAQ', href: '#faq' },
+                { label: 'Kontakt', href: '#kontakt' },
+              ].map((item, index, items) => (
               <div key={item.href} className="flex items-center">
                 <a
                   href={item.href}
@@ -499,7 +581,7 @@ export default function LandingPage() {
 
         <div className="relative max-w-7xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: Text */}
-          <div>
+          <div data-animate="fade-left">
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-medium px-3 py-1.5 rounded-full mb-6">
               <Zap className="w-3 h-3 text-[#F7941D]" />
               Kompletny system ERP dla Twojej firmy
@@ -513,8 +595,8 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-lg text-gray-400 leading-relaxed mb-10 max-w-lg">
-              Projekty, CRM, faktury, HR i raporty — wszystko zintegrowane w jednym, intuicyjnym
-              systemie. Oszczędzaj czas i podejmuj lepsze decyzje.
+              Zarządzaj projektami, klientami, fakturami i&nbsp;czasem pracy w&nbsp;jednym systemie.
+              Monitoruj zadania, płatności i&nbsp;raporty bez przełączania się między narzędziami.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -527,68 +609,119 @@ export default function LandingPage() {
               </button>
               <a
                 href="#moduly"
+                onClick={(event) => {
+                  event.preventDefault();
+                  scrollToSection("#moduly");
+                }}
                 className="inline-flex items-center justify-center gap-2 border border-white/20 text-white font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
               >
-                Zobacz funkcje
+                Zobacz moduły
+                <ArrowDown className="w-4 h-4" />
               </a>
             </div>
           </div>
 
           {/* Right: Mock dashboard UI */}
-          <div className="relative h-96 lg:h-[480px] hidden lg:block">
-            <div className="absolute inset-0 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm p-6 flex flex-col gap-3">
+          <div className="relative h-96 lg:h-[500px] hidden lg:block" data-animate="fade-right" style={{ transitionDelay: '120ms' }}>
+            <div className="absolute inset-0 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm p-6 flex flex-col gap-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-rose-400" />
                 <div className="w-3 h-3 rounded-full bg-amber-400" />
                 <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                <span className="text-white/40 text-xs ml-2">dashboard</span>
+                <span className="text-white/40 text-xs ml-2">ERP panel</span>
+                <span className="ml-auto rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                  live
+                </span>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 {[
                   { label: 'Projekty', val: '24', color: 'text-[#F7941D]' },
                   { label: 'Zadania', val: '138', color: 'text-emerald-400' },
                   { label: 'Faktury', val: '56', color: 'text-amber-400' },
+                  { label: 'Czas', val: '1 248h', color: 'text-emerald-400' },
                 ].map((s) => (
                   <div key={s.label} className="bg-white/10 rounded-xl p-3">
                     <p className="text-white/50 text-xs">{s.label}</p>
-                    <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
+                    <p className={`text-xl font-bold ${s.color}`}>{s.val}</p>
                   </div>
                 ))}
               </div>
-              <div className="flex-1 bg-white/5 rounded-xl p-4 flex items-end gap-2">
-                {[40, 65, 45, 80, 55, 90, 70, 85, 60, 75, 95, 50].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-sm bg-[#F7941D]/60 hover:bg-[#F7941D]/80 transition-colors"
-                    style={{ height: `${h}%` }}
-                  />
-                ))}
+              <div className="grid grid-cols-[1.15fr_0.85fr] gap-3 flex-1 min-h-0 overflow-hidden">
+                <div className="bg-white/5 rounded-xl p-3 overflow-hidden">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-white/70 text-xs font-semibold uppercase tracking-wide">
+                      Priorytety
+                    </p>
+                    <span className="text-white/35 text-xs">dziś</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {[
+                      { name: 'Akceptacja faktury FV/05/24', meta: 'Księgowość', color: 'bg-amber-400' },
+                      { name: 'Oferta dla potencjalnego klienta', meta: 'CRM', color: 'bg-cyan-400' },
+                      { name: 'Sprint aplikacji mobilnej', meta: 'Projekty', color: 'bg-[#F7941D]' },
+                      { name: 'Urlopy zespołu wdrożeń', meta: 'HR', color: 'bg-emerald-400' },
+                    ].map((task) => (
+                      <div key={task.name} className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-1.5">
+                        <div className={`h-2 w-2 rounded-full ${task.color}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-white/75">{task.name}</p>
+                          <p className="text-[11px] text-white/35">{task.meta}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-xl p-3 overflow-hidden">
+                  <p className="text-white/70 text-xs font-semibold uppercase tracking-wide mb-4">
+                    Finanse i&nbsp;czas
+                  </p>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Opłacone faktury', value: '78%', width: '78%', color: 'bg-emerald-400' },
+                      { label: 'Budżet projektów', value: '64%', width: '64%', color: 'bg-[#F7941D]' },
+                      { label: 'Raporty czasu', value: '92%', width: '92%', color: 'bg-cyan-400' },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        <div className="mb-1 flex items-center justify-between text-[11px]">
+                          <span className="text-white/45">{item.label}</span>
+                          <span className="font-semibold text-white/65">{item.value}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                          <div className={`h-full rounded-full ${item.color}`} style={{ width: item.width }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-2 shrink-0 pt-1">
                 {[
-                  { name: 'Wdrożenie modułu CRM', status: 'W toku', color: 'bg-blue-500' },
-                  { name: 'Raport finansowy Q1', status: 'Ukończone', color: 'bg-emerald-500' },
-                ].map((t) => (
-                  <div key={t.name} className="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
-                    <div className={`w-2 h-2 rounded-full ${t.color}`} />
-                    <p className="text-white/70 text-xs flex-1">{t.name}</p>
-                    <span className="text-white/40 text-xs">{t.status}</span>
+                  { name: 'Projekty', status: '8 aktywnych', color: 'bg-[#F7941D]/20 text-[#F7941D]' },
+                  { name: 'Faktury', status: '5 po terminie', color: 'bg-amber-400/20 text-amber-300' },
+                  { name: 'CRM', status: '12 leadów', color: 'bg-cyan-400/20 text-cyan-300' },
+                ].map((module) => (
+                  <div key={module.name} className="rounded-lg bg-white/5 px-3 py-2">
+                    <p className="text-white/40 text-[11px]">{module.name}</p>
+                    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${module.color}`}>
+                      {module.status}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
             <MockCard
-              title="Przychód miesięczny"
-              value="48 200 zł"
-              sub="↑ +12% vs ostatni miesiąc"
-              color="text-emerald-600"
+              title="Należności"
+              value="32 400 zł"
+              sub="5 faktur po terminie"
+              color="text-amber-600"
               className="-right-8 top-8"
             />
             <MockCard
-              title="Aktywne projekty"
-              value="24"
-              sub="8 zbliża się do deadline"
-              color="text-amber-600"
+              title="Czas pracy"
+              value="1 248 h"
+              sub="92% raportów uzupełnione"
+              color="text-emerald-600"
               className="-left-8 bottom-16"
             />
           </div>
@@ -600,8 +733,13 @@ export default function LandingPage() {
       <section className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            {stats.map((s) => (
-              <div key={s.label} className="p-8 rounded-2xl bg-gray-50 border border-gray-100">
+            {stats.map((s, index) => (
+              <div
+                key={s.label}
+                data-animate="scale-in"
+                style={{ transitionDelay: `${index * 90}ms` }}
+                className="p-8 rounded-2xl bg-gray-50 border border-gray-100"
+              >
                 <p className="text-5xl font-black text-gray-900 mb-2">{s.value}</p>
                 <p className="text-gray-500 font-medium">{s.label}</p>
               </div>
@@ -620,7 +758,7 @@ export default function LandingPage() {
       {/* ── FEATURES ── */}
       <section id="moduly" className="bg-gray-50 py-24">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16" data-animate="fade-up">
             <p className="text-sm font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
               Moduły systemu
             </p>
@@ -634,11 +772,13 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((f) => {
+            {features.map((f, index) => {
               const Icon = f.icon;
               return (
                 <div
                   key={f.title}
+                  data-animate="fade-up"
+                  style={{ transitionDelay: `${index * 70}ms` }}
                   className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all group"
                 >
                   <div className={`w-12 h-12 ${f.color} rounded-xl flex items-center justify-center mb-4`}>
@@ -658,25 +798,37 @@ export default function LandingPage() {
       {/* ── BENEFITS ── */}
       <section id="zalety" className="bg-white py-24">
         <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16" data-animate="fade-up">
+            <p className="text-sm font-semibold text-[#00AEEF] uppercase tracking-wider mb-3">
+              Zalety systemu
+            </p>
+            <h2 className="text-4xl font-black text-gray-900 mb-4">
+              Jeden system, pełna kontrola
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Zamiast szukać plików, komunikować się wewnątrz firmy przez maile i&nbsp;mieć kilka różnych aplikacji, każdą do innego przeznaczenia, masz jeden panel,
+              w&nbsp;którym wszystko jest połączone i&nbsp;zawsze aktualne.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <p className="text-sm font-semibold text-[#00AEEF] uppercase tracking-wider mb-3">
-                Dlaczego nasz system?
-              </p>
-              <h2 className="text-4xl font-black text-gray-900 mb-6 leading-tight">
-                Jeden system,<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F7941D] to-[#00AEEF]">
-                  pełna kontrola
-                </span>
-              </h2>
+            <div data-animate="fade-left">
+              <h3 className="text-2xl font-black text-gray-900 mb-4">
+                Co zyskujesz na co dzień?
+              </h3>
               <p className="text-lg text-gray-500 mb-10 leading-relaxed">
-                Zamiast sklejać arkusze Excel, maile i kilka różnych aplikacji — masz jeden panel,
-                w którym wszystko jest połączone i zawsze aktualne.
+                Najważniejsze procesy firmy są widoczne w&nbsp;jednym miejscu, a&nbsp;zespół pracuje
+                na tych samych, aktualnych danych.
               </p>
 
               <ul className="space-y-4">
-                {benefits.map((b) => (
-                  <li key={b} className="flex items-start gap-3">
+                {benefits.map((b, index) => (
+                  <li
+                    key={b}
+                    data-animate="fade-left"
+                    style={{ transitionDelay: `${index * 55}ms` }}
+                    className="flex items-start gap-3"
+                  >
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700">{b}</span>
                   </li>
@@ -684,7 +836,7 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4" data-animate="fade-right" style={{ transitionDelay: '120ms' }}>
               {[
                 {
                   icon: ShieldCheck,
@@ -714,10 +866,15 @@ export default function LandingPage() {
                   color: 'text-rose-600',
                   bg: 'bg-rose-50',
                 },
-              ].map((item) => {
+              ].map((item, index) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.title} className={`${item.bg} rounded-2xl p-6`}>
+                  <div
+                    key={item.title}
+                    data-animate="scale-in"
+                    style={{ transitionDelay: `${index * 80}ms` }}
+                    className={`${item.bg} rounded-2xl p-6`}
+                  >
                     <Icon className={`w-8 h-8 ${item.color} mb-3`} />
                     <h4 className="font-bold text-gray-900 mb-1">{item.title}</h4>
                     <p className="text-sm text-gray-500">{item.desc}</p>
@@ -732,19 +889,33 @@ export default function LandingPage() {
       {/* ── FAQ ── */}
       <section id="faq" className="bg-white py-24">
         <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16" data-animate="fade-up">
+            <p className="text-sm font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
+              FAQ
+            </p>
+            <h2 className="text-4xl font-black text-gray-900 mb-4">
+              Najczęściej zadawane pytania
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Krótkie odpowiedzi na najważniejsze kwestie dotyczące działania,
+              wdrożenia i&nbsp;bezpieczeństwa systemu.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
 
             {/* Left sticky panel */}
-            <div className="lg:col-span-2 lg:sticky lg:top-24">
+            <div className="lg:col-span-2 lg:sticky lg:top-24" data-animate="fade-left">
               <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white">
                 <p className="text-xs font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
-                  Masz pytania?
+                  FAQ w skrócie
                 </p>
                 <h2 className="text-3xl font-black leading-tight mb-4">
                   Wszystko, co chcesz wiedzieć
                 </h2>
                 <p className="text-gray-400 text-sm leading-relaxed mb-8">
-                  Zebraliśmy najczęstsze pytania. Jeśli nie znajdziesz odpowiedzi — napisz do nas.
+                  Zebraliśmy najczęstsze pytania o działanie systemu, wdrożenie, uprawnienia
+                  i&nbsp;codzienną pracę zespołu.
                 </p>
 
                 <div className="space-y-4">
@@ -762,15 +933,18 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-
-                <ContactForm />
               </div>
             </div>
 
             {/* Right: accordion */}
             <div className="lg:col-span-3 space-y-3">
-              {faq.map((item) => (
-                <div key={item.q} className="group">
+              {faq.map((item, index) => (
+                <div
+                  key={item.q}
+                  data-animate="fade-right"
+                  style={{ transitionDelay: `${index * 55}ms` }}
+                  className="group"
+                >
                   <FaqItem q={item.q} a={item.a} />
                 </div>
               ))}
@@ -779,40 +953,160 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── CONTACT ── */}
+      <section id="kontakt" className="bg-gray-50 py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16" data-animate="fade-up">
+            <p className="text-sm font-semibold text-[#00AEEF] uppercase tracking-wider mb-3">
+              Kontakt
+            </p>
+            <h2 className="text-4xl font-black text-gray-900 mb-4">
+              Porozmawiajmy o&nbsp;Twoim ERP
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Jeśli chcesz doprecyzować wdrożenie, dostępne moduły albo sposób pracy systemu,
+              wyślij nam krótką wiadomość.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch">
+            <div
+              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm"
+              data-animate="fade-left"
+            >
+              <p className="text-xs font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
+                Jak możemy pomóc?
+              </p>
+              <h3 className="text-3xl font-black text-gray-900 mb-4">
+                Opisz krótko potrzeby firmy
+              </h3>
+              <p className="text-gray-500 leading-relaxed mb-8">
+                Najlepiej napisz, które obszary są dla Ciebie najważniejsze: projekty, CRM,
+                faktury, czas pracy, raporty albo uprawnienia użytkowników.
+              </p>
+
+              <div className="space-y-4">
+                {[
+                  { icon: MessageSquare, title: 'Zakres systemu', desc: 'Dobór modułów do realnych procesów firmy.' },
+                  { icon: Clock, title: 'Wdrożenie', desc: 'Omówienie startu, ról użytkowników i organizacji pracy.' },
+                  { icon: Mail, title: 'Odpowiedź', desc: 'Wracamy z informacją po analizie wiadomości.' },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.title} className="flex gap-4 rounded-2xl bg-gray-50 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900">{item.title}</h4>
+                        <p className="text-sm text-gray-500">{item.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div
+              className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white shadow-xl"
+              data-animate="fade-right"
+              style={{ transitionDelay: '120ms' }}
+            >
+              <p className="text-xs font-semibold text-[#F7941D] uppercase tracking-wider mb-3">
+                Formularz kontaktowy
+              </p>
+              <h3 className="text-3xl font-black mb-3">
+                Napisz do nas
+              </h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-8">
+                Wypełnij formularz, a&nbsp;przygotujemy odpowiedź dopasowaną do Twojej sytuacji.
+              </p>
+
+              <ContactForm standalone />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA BANNER ── */}
-      <section className="bg-gradient-to-r from-gray-900 to-slate-800 py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
+      <section className="bg-gradient-to-r from-gray-800 to-slate-800 py-20">
+        <div className="max-w-4xl mx-auto px-6 text-center" data-animate="scale-in">
           <h2 className="text-4xl font-black text-white mb-4">
             Gotowy, żeby zacząć?
           </h2>
           <p className="text-gray-400 text-lg mb-10">
             Zaloguj się do systemu i zacznij zarządzać firmą efektywniej już dziś.
           </p>
-          <button
-            onClick={() => setLoginOpen(true)}
-            className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold px-8 py-4 rounded-xl hover:bg-gray-100 transition-colors text-lg"
-          >
-            Zaloguj się do systemu
-            <ArrowRight className="w-5 h-5" />
-          </button>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-gray-900 border-t border-gray-800 py-10">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link to="/" className="flex items-center" aria-label="Strona główna">
-            <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-7 w-auto" />
-          </Link>
-          <p className="text-gray-500 text-sm">
-            &copy; {new Date().getFullYear()} ITComplete.pl. Wszelkie prawa zastrzeżone.
-          </p>
-          <button
-            onClick={() => setLoginOpen(true)}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
-          >
-            Zaloguj się →
-          </button>
+      <footer className="bg-gray-900 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-12" data-animate="fade-up">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.8fr_0.8fr] gap-10">
+            <div>
+              <Link to="/" className="inline-flex items-center mb-5" aria-label="Strona główna">
+                <img src="/logo_itc.svg" alt="ITComplete.pl" className="h-8 w-auto" />
+              </Link>
+              <p className="max-w-md text-sm leading-6 text-gray-400">
+                System ERP do zarządzania projektami, CRM, fakturami, czasem pracy
+                i&nbsp;komunikacją zespołu.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 mb-4">
+                Sekcje
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { label: "Moduły", href: "#moduly" },
+                  { label: "Zalety", href: "#zalety" },
+                  { label: "FAQ", href: "#faq" },
+                  { label: "Kontakt", href: "#kontakt" },
+                ].map((item) => (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => scrollToSection(item.href)}
+                    className="block text-sm text-gray-300 transition-colors hover:text-white"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 mb-4">
+                Konto
+              </h3>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setLoginOpen(true)}
+                  className="inline-flex items-center justify-center rounded-lg bg-[#F7941D] px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#e08317]"
+                >
+                  Zaloguj się
+                </button>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold uppercase tracking-wide text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  Zarejestruj się
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-t border-white/10 pt-6">
+            <p className="text-xs text-gray-400">
+              &copy; {new Date().getFullYear()} ITComplete.pl. Wszelkie prawa zastrzeżone.
+            </p>
+            <p className="text-xs text-gray-400">
+              ERP dla firm oparty na spójnych danych.
+            </p>
+          </div>
         </div>
       </footer>
 
