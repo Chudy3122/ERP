@@ -22,13 +22,8 @@ const StatWidget: React.FC<StatWidgetProps> = ({ label, value, icon, trend, colo
     gray: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
   };
 
-  return (
-    <div
-      onClick={onClick}
-      className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800 ${
-        onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md dark:hover:border-gray-600' : ''
-      }`}
-    >
+  const content = (
+    <>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -44,11 +39,27 @@ const StatWidget: React.FC<StatWidgetProps> = ({ label, value, icon, trend, colo
       <div className="truncate text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
       {trend && (
         <div className={`mt-2 text-xs font-medium ${trend.isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-          {trend.isPositive ? '↑' : '↓'} {trend.value}
+          {trend.isPositive ? '+' : '-'} {trend.value}
         </div>
       )}
-    </div>
+    </>
   );
+
+  const className = `rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800 ${
+    onClick
+      ? 'w-full cursor-pointer text-left hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:hover:border-gray-600'
+      : ''
+  }`;
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 };
 
 export default StatWidget;

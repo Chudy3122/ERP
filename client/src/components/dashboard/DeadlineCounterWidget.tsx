@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Calendar, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WidgetCard from '../widgets/WidgetCard';
-import { client } from '../../api/client';
+import { getUpcomingDeadlines } from '../../api/task.api';
+import { Task, TaskStatus } from '../../types/task.types';
+import { DashboardWidgetLoading } from './DashboardWidgetState';
 
 interface DeadlineCounts {
   today: number;
@@ -10,6 +12,28 @@ interface DeadlineCounts {
   week: number;
   twoWeeks: number;
 }
+
+const getLocalDayStart = (date: Date) => {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return day;
+};
+
+const getDaysUntilDueDate = (dueDate: string) => {
+  const today = getLocalDayStart(new Date());
+  const due = getLocalDayStart(new Date(dueDate));
+
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const countTasksInRange = (tasks: Task[], minDay: number, maxDay: number) => {
+  return tasks.filter((task) => {
+    if (!task.due_date || task.status === TaskStatus.DONE) return false;
+
+    const daysUntilDue = getDaysUntilDueDate(task.due_date);
+    return daysUntilDue >= minDay && daysUntilDue <= maxDay;
+  }).length;
+};
 
 const DeadlineCounterWidget = () => {
   const [counts, setCounts] = useState<DeadlineCounts>({
@@ -29,19 +53,13 @@ const DeadlineCounterWidget = () => {
     try {
       setIsLoading(true);
 
-      // Fetch tasks for different deadline ranges
-      const [todayRes, tomorrowRes, weekRes, twoWeeksRes] = await Promise.all([
-        client.get('/tasks/upcoming-deadlines?days=0'),
-        client.get('/tasks/upcoming-deadlines?days=1'),
-        client.get('/tasks/upcoming-deadlines?days=7'),
-        client.get('/tasks/upcoming-deadlines?days=14'),
-      ]);
+      const tasks = await getUpcomingDeadlines(14);
 
       setCounts({
-        today: todayRes.data.length,
-        tomorrow: tomorrowRes.data.length,
-        week: weekRes.data.length,
-        twoWeeks: twoWeeksRes.data.length,
+        today: countTasksInRange(tasks, 0, 0),
+        tomorrow: countTasksInRange(tasks, 1, 1),
+        week: countTasksInRange(tasks, 2, 7),
+        twoWeeks: countTasksInRange(tasks, 8, 14),
       });
     } catch (error) {
       console.error('Error fetching deadline counts:', error);
@@ -60,13 +78,7 @@ const DeadlineCounterWidget = () => {
         title="Terminarz moich zadań"
         icon={<Calendar className="w-5 h-5 text-gray-600" />}
       >
-        <div className="grid grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
-            </div>
-          ))}
-        </div>
+        <DashboardWidgetLoading label="Ładowanie terminów zadań..." />
       </WidgetCard>
     );
   }
@@ -93,7 +105,7 @@ const DeadlineCounterWidget = () => {
       urgent: false,
     },
     {
-      label: 'Na 7 dni',
+      label: '2-7 dni',
       value: counts.week,
       color: 'gray',
       bgColor: 'bg-white',
@@ -103,7 +115,7 @@ const DeadlineCounterWidget = () => {
       urgent: false,
     },
     {
-      label: 'Na 14 dni',
+      label: '8-14 dni',
       value: counts.twoWeeks,
       color: 'gray',
       bgColor: 'bg-gray-50',
@@ -148,9 +160,20 @@ const DeadlineCounterWidget = () => {
       </div>
 
       <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500 dark:text-gray-400">Wszystkich zadań:</span>
-          <span className="font-semibold text-gray-900 dark:text-white">{counts.twoWeeks}</span>
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div>
+            <span className="text-gray-500 dark:text-gray-400">W terminie 14 dni: </span>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {counts.today + counts.tomorrow + counts.week + counts.twoWeeks}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/tasks')}
+            className="shrink-0 font-medium text-gray-700 transition-colors hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+          >
+            Moje wszystkie zadania →
+          </button>
         </div>
       </div>
     </WidgetCard>

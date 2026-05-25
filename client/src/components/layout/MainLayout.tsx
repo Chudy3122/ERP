@@ -103,6 +103,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const handleOpenUserStatusMenu = () => {
+      setNotificationDropdownOpen(false);
+      setUserDropdownOpen(true);
+    };
+
+    window.addEventListener('open-user-status-menu', handleOpenUserStatusMenu);
+
+    return () => {
+      window.removeEventListener('open-user-status-menu', handleOpenUserStatusMenu);
+    };
+  }, []);
+
   const handleMarkAsRead = async (id: string) => {
     try {
       await notificationApi.markAsRead(id);

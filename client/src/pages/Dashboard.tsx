@@ -8,6 +8,7 @@ import DeadlineCounterWidget from '../components/dashboard/DeadlineCounterWidget
 import ActivityStreamWidget from '../components/dashboard/ActivityStreamWidget';
 import OvertimeWidget from '../components/dashboard/OvertimeWidget';
 import ClockInWidget from '../components/dashboard/ClockInWidget';
+import DashboardQuickActions from '../components/dashboard/DashboardQuickActions';
 import StatWidget from '../components/widgets/StatWidget';
 import * as notificationApi from '../api/notification.api';
 import * as timeApi from '../api/time.api';
@@ -82,78 +83,87 @@ const Dashboard = () => {
     }
   };
 
+  const openStatusMenu = () => {
+    window.dispatchEvent(new Event('open-user-status-menu'));
+  };
+
   return (
     <MainLayout title={t('dashboard.title')}>
-      {/* Welcome Header */}
-      <div className="mb-6 px-5 py-4 text-center">
-        <p className="mb-1 text-xs font-semibold tracking-wide text-[#F7941D]">
-          {formattedDateTime}
-        </p>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Witaj, {fullName || user?.first_name || t('common.user', 'użytkowniku')}
-        </h1>
-        <p className="mx-auto mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
-          {t('dashboard.subtitle')}
-        </p>
-      </div>
-
-      {/* Quick Stats Row */}
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatWidget
-          label={t('common.profile')}
-          value={user?.role === 'admin' ? 'Administrator' : user?.role === 'kierownik' ? 'Team Leader' : t('common.employee')}
-          icon={<User className="w-5 h-5" />}
-          color="blue"
-        />
-
-        <StatWidget
-          label={t('common.status')}
-          value={t(STATUS_TRANSLATION_KEYS[currentStatus])}
-          icon={<CheckCircle className="w-5 h-5" />}
-          color={statusCardColors[currentStatus]}
-        />
-
-        <StatWidget
-          label={t('common.notifications')}
-          value={unreadNotifications}
-          icon={<AlertCircle className="w-5 h-5" />}
-          color={unreadNotifications > 0 ? 'yellow' : 'gray'}
-          onClick={() => navigate('/notifications')}
-        />
-
-        <StatWidget
-          label={t('dashboard.pendingLeaves')}
-          value={pendingLeaveCount}
-          icon={<Calendar className="w-5 h-5" />}
-          color={pendingLeaveCount > 0 ? 'blue' : 'gray'}
-          onClick={() => window.location.href = '/absences'}
-        />
-      </div>
-
-      {/* Main Dashboard Grid — single unified grid */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-
-        {/* Row 1: ClockIn (2/3) + Overtime (1/3) */}
-        <div className="lg:col-span-2">
-          <ClockInWidget />
-        </div>
-        <div>
-          <OvertimeWidget />
+      <div className="mx-auto max-w-[1600px]">
+        {/* Welcome Header */}
+        <div className="mb-6 px-5 py-4 text-center">
+          <p className="mb-1 text-xs font-semibold tracking-wide text-[#F7941D]">
+            {formattedDateTime}
+          </p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Witaj, {fullName || user?.first_name || t('common.user', 'użytkowniku')}
+          </h1>
+          <p className="mx-auto mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
+            {t('dashboard.subtitle')}
+          </p>
         </div>
 
-        {/* Row 2: Chart (2/3) + Deadline (1/3) */}
-        <div className="lg:col-span-2">
-          <TimeChartWidget />
-        </div>
-        <div>
-          <DeadlineCounterWidget />
+        {/* Quick Stats Row */}
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatWidget
+            label={t('common.profile')}
+            value={user?.role === 'admin' ? 'Administrator' : user?.role === 'kierownik' ? 'Team Leader' : t('common.employee')}
+            icon={<User className="w-5 h-5" />}
+            color="blue"
+            onClick={() => navigate('/profile')}
+          />
+
+          <StatWidget
+            label={t('common.status')}
+            value={t(STATUS_TRANSLATION_KEYS[currentStatus])}
+            icon={<CheckCircle className="w-5 h-5" />}
+            color={statusCardColors[currentStatus]}
+            onClick={openStatusMenu}
+          />
+
+          <StatWidget
+            label={t('common.notifications')}
+            value={unreadNotifications}
+            icon={<AlertCircle className="w-5 h-5" />}
+            color={unreadNotifications > 0 ? 'yellow' : 'gray'}
+            onClick={() => navigate('/notifications')}
+          />
+
+          <StatWidget
+            label={t('dashboard.pendingLeaves')}
+            value={pendingLeaveCount}
+            icon={<Calendar className="w-5 h-5" />}
+            color={pendingLeaveCount > 0 ? 'blue' : 'gray'}
+            onClick={() => navigate('/absences')}
+          />
         </div>
 
-        {/* Row 3: Activity — full width */}
-        <div className="lg:col-span-3">
-          <ActivityStreamWidget />
-        </div>
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-6 xl:grid-cols-12">
+          <div className="lg:col-span-4 xl:col-span-6">
+            <ClockInWidget />
+          </div>
 
+          <div className="lg:col-span-2 xl:col-span-3">
+            <OvertimeWidget />
+          </div>
+
+          <div className="lg:col-span-3 xl:col-span-3">
+            <DeadlineCounterWidget />
+          </div>
+
+          <div className="lg:col-span-3 xl:col-span-7">
+            <TimeChartWidget />
+          </div>
+
+          <div className="lg:col-span-6 xl:col-span-5">
+            <ActivityStreamWidget />
+          </div>
+
+          <div className="lg:col-span-6 xl:col-span-12">
+            <DashboardQuickActions />
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

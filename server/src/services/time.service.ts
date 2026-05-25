@@ -9,6 +9,14 @@ function roundToNearest15Min(date: Date): Date {
   return new Date(Math.floor(date.getTime() / ms15) * ms15);
 }
 
+function getLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 export class TimeService {
   private timeEntryRepository: Repository<TimeEntry>;
   private leaveRequestRepository: Repository<LeaveRequest>;
@@ -200,13 +208,16 @@ export class TimeService {
   }
 
   /**
-   * Get attendance overview for all users (last N days)
+   * Get attendance overview for all users.
    */
-  async getAttendance(days: number = 7) {
-    const endDate = new Date();
+  async getAttendance(days: number = 7, rangeStart?: Date, rangeEnd?: Date) {
+    const endDate = rangeEnd ? new Date(rangeEnd) : new Date();
     endDate.setHours(23, 59, 59, 999);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - (days - 1));
+
+    const startDate = rangeStart ? new Date(rangeStart) : new Date();
+    if (!rangeStart) {
+      startDate.setDate(startDate.getDate() - (days - 1));
+    }
     startDate.setHours(0, 0, 0, 0);
 
     const users = await this.userRepository.find({
@@ -221,13 +232,13 @@ export class TimeService {
 
     const dates: string[] = [];
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      dates.push(d.toISOString().split('T')[0]);
+      dates.push(getLocalDateKey(d));
     }
 
     const result = users.map((user) => {
       const userEntries = entries.filter((e) => e.user_id === user.id);
       const daysData = dates.map((date) => {
-        const entry = userEntries.find((e) => e.clock_in.toISOString().split('T')[0] === date);
+        const entry = userEntries.find((e) => getLocalDateKey(e.clock_in) === date);
         return {
           date,
           clock_in: entry?.clock_in ?? null,

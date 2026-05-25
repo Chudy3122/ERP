@@ -581,16 +581,47 @@ const EmployeeDetail = () => {
                   Godziny pracy dziennie
                 </label>
                 {isEditing ? (
-                  <input
-                    type="number"
-                    name="working_hours_per_day"
-                    value={formData.working_hours_per_day || 8}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="24"
-                    step="0.5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      name="working_hours_per_day"
+                      value={formData.working_hours_per_day || 8}
+                      onChange={handleInputChange}
+                      min="0.5"
+                      max="24"
+                      step="0.5"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: '1/2 etatu', value: 4 },
+                        { label: '3/4 etatu', value: 6 },
+                        { label: '7/8 etatu', value: 7 },
+                        { label: 'Pełny etat', value: 8 },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              working_hours_per_day: option.value,
+                            }))
+                          }
+                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                            formData.working_hours_per_day === option.value
+                              ? 'bg-[#F7941D] text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Ta wartość jest używana m.in. do planu dnia na dashboardzie.
+                    </p>
+                  </div>
                 ) : (
                   <p className="text-gray-900">{employee.working_hours_per_day || 8} godzin</p>
                 )}

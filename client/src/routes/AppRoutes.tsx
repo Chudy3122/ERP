@@ -14,6 +14,7 @@ import AdminUsers from '../pages/AdminUsers';
 import Reports from '../pages/Reports';
 import Settings from '../pages/Settings';
 import Notifications from '../pages/Notifications';
+import Activities from '../pages/Activities';
 import Projects from '../pages/Projects';
 import ProjectForm from '../pages/ProjectForm';
 import ProjectDetail from '../pages/ProjectDetail';
@@ -406,6 +407,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Notifications />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/activities"
+        element={
+          <PrivateRoute>
+            <Activities />
           </PrivateRoute>
         }
       />

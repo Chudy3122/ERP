@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as worklogApi from '../../api/worklog.api';
 import { OvertimeSummaryEntry } from '../../types/worklog.types';
 import WidgetCard from '../widgets/WidgetCard';
+import { DashboardWidgetEmpty, DashboardWidgetLoading } from './DashboardWidgetState';
 
 const OvertimeWidget = () => {
   const { user } = useAuth();
@@ -58,9 +59,7 @@ const OvertimeWidget = () => {
 
       <div className="flex flex-1 flex-col justify-center">
         {isLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-          </div>
+          <DashboardWidgetLoading label="Ładowanie nadgodzin..." />
         ) : entry ? (
           <div className="space-y-3">
             {/* Balance */}
@@ -113,17 +112,20 @@ const OvertimeWidget = () => {
             </div>
           </div>
         ) : (
-          <div className="text-center py-4 space-y-2">
-            <TrendingUp className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600" />
-            <p className="text-xs text-gray-500 dark:text-gray-400">Brak nadgodzin</p>
-            <button
-              onClick={() => navigate('/overtime')}
-              className="w-full flex items-center justify-center gap-1 px-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              Dodaj nadgodziny
-            </button>
-          </div>
+          <DashboardWidgetEmpty
+            icon={<TrendingUp className="h-5 w-5" />}
+            title="Brak nadgodzin"
+            description="Nie masz jeszcze zapisanych nadgodzin ani odbiorów czasu."
+            action={
+              <button
+                onClick={() => navigate('/overtime')}
+                className="flex w-full items-center justify-center gap-1 rounded-lg bg-blue-600 px-2 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                <Plus className="w-3 h-3" />
+                Dodaj nadgodziny
+              </button>
+            }
+          />
         )}
       </div>
     </WidgetCard>

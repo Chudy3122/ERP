@@ -164,11 +164,27 @@ export const cancelLeaveRequest = async (requestId: string): Promise<LeaveReques
   return response.data.data;
 };
 
+interface AttendanceRangeParams {
+  days?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
 /**
  * Get attendance overview for all users
  */
-export const getAttendance = async (days: number = 7) => {
-  const response = await apiClient.get(`/time/attendance?days=${days}`);
+export const getAttendance = async (params: number | AttendanceRangeParams = 7) => {
+  const query = new URLSearchParams();
+
+  if (typeof params === 'number') {
+    query.append('days', String(params));
+  } else {
+    if (params.days) query.append('days', String(params.days));
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+  }
+
+  const response = await apiClient.get(`/time/attendance?${query.toString()}`);
   return response.data.data;
 };
 

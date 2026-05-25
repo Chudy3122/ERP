@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
-import { Play, Square, Clock, Users, Calendar } from 'lucide-react';
+import { Pause, Play, Square, Clock, Users, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import type { TimeEntry } from '../types/time.types';
@@ -26,6 +26,45 @@ interface AttendanceData {
   dates: string[];
 }
 
+type AttendanceRange = 'week' | '14' | '30';
+
+function getLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getCurrentWeekRange() {
+  const today = new Date();
+  const start = new Date(today);
+  const day = start.getDay();
+  const daysFromMonday = day === 0 ? 6 : day - 1;
+
+  start.setDate(start.getDate() - daysFromMonday);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+function getAttendanceRequestParams(range: AttendanceRange) {
+  if (range !== 'week') {
+    return Number(range);
+  }
+
+  const { start, end } = getCurrentWeekRange();
+
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+  };
+}
+
 function formatTime(date: string | Date | null) {
   if (!date) return '—';
   return new Date(date).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
@@ -47,7 +86,7 @@ function formatElapsed(seconds: number) {
 
 function formatDateHeader(dateStr: string) {
   const d = new Date(dateStr);
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateKey(new Date());
   if (dateStr === today) return { day: 'Dziś', date: d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }) };
   return {
     day: d.toLocaleDateString('pl-PL', { weekday: 'short' }),
@@ -69,7 +108,7 @@ export default function WorkTime() {
 
   // Attendance state
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
-  const [attendanceDays, setAttendanceDays] = useState(7);
+  const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>('week');
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => { loadMyData(); }, []);
@@ -89,7 +128,7 @@ export default function WorkTime() {
 
   useEffect(() => {
     if (activeTab === 'attendance') loadAttendance();
-  }, [activeTab, attendanceDays]);
+  }, [activeTab, attendanceRange]);
 
   async function loadMyData() {
     setLoadingMy(true);
@@ -110,7 +149,7 @@ export default function WorkTime() {
   async function loadAttendance() {
     setLoadingAttendance(true);
     try {
-      const data = await timeApi.getAttendance(attendanceDays);
+      const data = await timeApi.getAttendance(getAttendanceRequestParams(attendanceRange));
       setAttendance(data);
     } catch {
       toast.error('Błąd ładowania frekwencji');
@@ -119,10 +158,10 @@ export default function WorkTime() {
     }
   }
 
-  async function handleClockIn() {
+  async function handleClockIn(notes: string = 'Rozpoczęcie pracy') {
     setClocking(true);
     try {
-      const entry = await timeApi.clockIn();
+      const entry = await timeApi.clockIn({ notes });
       setCurrentEntry(entry);
       toast.success(`Rozpoczęto pracę o ${formatTime(entry.clock_in)}`);
       loadMyData();
@@ -133,10 +172,10 @@ export default function WorkTime() {
     }
   }
 
-  async function handleClockOut() {
+  async function handleClockOut(notes: string = 'Zakończenie pracy') {
     setClocking(true);
     try {
-      const entry = await timeApi.clockOut();
+      const entry = await timeApi.clockOut({ notes });
       setCurrentEntry(null);
       toast.success(`Zakończono pracę o ${formatTime(entry.clock_out)} • ${formatDuration(entry.duration_minutes)}`);
       loadMyData();
@@ -148,6 +187,9 @@ export default function WorkTime() {
   }
 
   const isWorking = !!currentEntry;
+  const hasReportedTimeToday = entries.some(
+    (entry) => getLocalDateKey(new Date(entry.clock_in)) === getLocalDateKey(new Date()),
+  );
 
   return (
     <MainLayout title="Czas pracy">
@@ -207,28 +249,43 @@ export default function WorkTime() {
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
                   Auto-zakończenie o {new Date(new Date(currentEntry!.clock_in).getTime() + 8 * 60 * 60 * 1000).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                <button
-                  onClick={handleClockOut}
-                  disabled={clocking}
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-semibold rounded-xl transition-colors disabled:opacity-60"
-                >
-                  <Square className="w-5 h-5" />
-                  {clocking ? 'Zapisywanie...' : 'Zakończ pracę'}
-                </button>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => handleClockOut('Pauza w pracy')}
+                    disabled={clocking}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    <Pause className="w-5 h-5" />
+                    {clocking ? 'Zapisywanie...' : 'Pauza'}
+                  </button>
+
+                  <button
+                    onClick={() => handleClockOut('Zakończenie pracy')}
+                    disabled={clocking}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gray-800 px-8 py-3 font-semibold text-white transition-colors hover:bg-gray-900 disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
+                  >
+                    <Square className="w-5 h-5" />
+                    {clocking ? 'Zapisywanie...' : 'Zakończ pracę'}
+                  </button>
+                </div>
               </>
             ) : (
               <>
                 <Clock className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
                 <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
-                  Nie jesteś aktualnie zalogowany do pracy
+                  {hasReportedTimeToday
+                    ? 'Jesteś aktualnie na pauzie'
+                    : 'Nie jesteś aktualnie zalogowany do pracy'}
                 </p>
                 <button
-                  onClick={handleClockIn}
+                  onClick={() =>
+                    handleClockIn(hasReportedTimeToday ? 'Wznowienie pracy' : 'Rozpoczęcie pracy')
+                  }
                   disabled={clocking}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-[#F7941D] hover:bg-[#e08317] text-white font-semibold rounded-xl transition-colors disabled:opacity-60 shadow-sm hover:shadow-md"
                 >
                   <Play className="w-5 h-5" />
-                  {clocking ? 'Zapisywanie...' : 'Rozpocznij pracę'}
+                  {clocking ? 'Zapisywanie...' : hasReportedTimeToday ? 'Wznów pracę' : 'Rozpocznij pracę'}
                 </button>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
                   Czas zostanie zaokrąglony do 15 minut
@@ -322,17 +379,21 @@ export default function WorkTime() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Zakres:</span>
-              {[7, 14, 30].map((d) => (
+              {[
+                { value: 'week', label: 'Bieżący tydzień' },
+                { value: '14', label: '14 dni' },
+                { value: '30', label: '30 dni' },
+              ].map((option) => (
                 <button
-                  key={d}
-                  onClick={() => setAttendanceDays(d)}
+                  key={option.value}
+                  onClick={() => setAttendanceRange(option.value as AttendanceRange)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    attendanceDays === d
+                    attendanceRange === option.value
                       ? 'bg-[#F7941D] text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {d} dni
+                  {option.label}
                 </button>
               ))}
             </div>
@@ -367,7 +428,7 @@ export default function WorkTime() {
                       </th>
                       {attendance.dates.map((date) => {
                         const { day, date: dateLabel } = formatDateHeader(date);
-                        const isToday = date === new Date().toISOString().split('T')[0];
+                        const isToday = date === getLocalDateKey(new Date());
                         return (
                           <th
                             key={date}

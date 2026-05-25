@@ -458,7 +458,9 @@ export class TimeController {
   async getAttendance(req: Request, res: Response): Promise<void> {
     try {
       const days = req.query.days ? parseInt(req.query.days as string) : 7;
-      const data = await timeService.getAttendance(days);
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const data = await timeService.getAttendance(days, startDate, endDate);
       res.status(200).json({ success: true, data });
     } catch (error: any) {
       console.error('Get attendance error:', error);

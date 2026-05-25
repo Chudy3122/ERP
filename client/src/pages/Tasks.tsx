@@ -26,7 +26,44 @@ import { Task, TaskStatus, TaskPriority } from '../types/task.types';
 import { Project } from '../types/project.types';
 import { WorkLogType, WorkLogTypeLabels } from '../types/worklog.types';
 
-type FilterTab = 'my' | 'all' | 'today' | 'week' | 'overdue';
+type FilterTab = 'my' | 'all' | 'today' | 'tomorrow' | 'week' | 'twoweeks' | 'overdue';
+
+const getFilterTabFromDueParam = (due: string | null): FilterTab => {
+  switch (due) {
+    case 'today':
+      return 'today';
+    case 'tomorrow':
+      return 'tomorrow';
+    case 'week':
+      return 'week';
+    case 'twoweeks':
+      return 'twoweeks';
+    default:
+      return 'my';
+  }
+};
+
+const getLocalDayStart = (date: Date) => {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return day;
+};
+
+const getDaysUntilDueDate = (dueDate: string) => {
+  const today = getLocalDayStart(new Date());
+  const due = getLocalDayStart(new Date(dueDate));
+
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const filterTasksByDueRange = (tasks: Task[], minDay: number, maxDay: number) => {
+  return tasks.filter((task) => {
+    if (!task.due_date || task.status === TaskStatus.DONE) return false;
+
+    const daysUntilDue = getDaysUntilDueDate(task.due_date);
+    return daysUntilDue >= minDay && daysUntilDue <= maxDay;
+  });
+};
 
 const Tasks = () => {
   const { t } = useTranslation('tasks');
@@ -34,7 +71,9 @@ const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<FilterTab>('my');
+  const [activeTab, setActiveTab] = useState<FilterTab>(() =>
+    getFilterTabFromDueParam(searchParams.get('due')),
+  );
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
   const navigate = useNavigate();
 
@@ -63,6 +102,15 @@ const Tasks = () => {
   useEffect(() => {
     loadProjects();
   }, []);
+
+  useEffect(() => {
+    const dueFilter = searchParams.get('due');
+
+    if (dueFilter) {
+      setSelectedProjectId(null);
+      setActiveTab(getFilterTabFromDueParam(dueFilter));
+    }
+  }, [searchParams]);
 
   // Close menu on outside click
   useEffect(() => {
@@ -99,8 +147,14 @@ const Tasks = () => {
           case 'today':
             data = await taskApi.getTasksDueToday();
             break;
+          case 'tomorrow':
+            data = await taskApi.getTasksDueTomorrow();
+            break;
           case 'week':
-            data = await taskApi.getUpcomingDeadlines(7);
+            data = filterTasksByDueRange(await taskApi.getUpcomingDeadlines(14), 2, 7);
+            break;
+          case 'twoweeks':
+            data = filterTasksByDueRange(await taskApi.getUpcomingDeadlines(14), 8, 14);
             break;
           case 'overdue': {
             const allTasks = await taskApi.getMyTasks();
@@ -358,7 +412,9 @@ const Tasks = () => {
                 { key: 'my', label: t('my') },
                 { key: 'all', label: t('all') },
                 { key: 'today', label: t('today') },
-                { key: 'week', label: t('thisWeek') },
+                { key: 'tomorrow', label: t('tomorrow') },
+                { key: 'week', label: '2-7 dni' },
+                { key: 'twoweeks', label: '8-14 dni' },
                 { key: 'overdue', label: t('overdue') },
               ].map((tab) => (
                 <button
