@@ -119,7 +119,7 @@ function getFilteredHistoryEntries(
 }
 
 // ─── Manual Entry Modal ───────────────────────────────────────────────────────
-function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => Promise<void> }) {
   const [date, setDate] = useState(todayStr());
   const [clockIn, setClockIn] = useState('09:00');
   const [clockOut, setClockOut] = useState('17:00');
@@ -149,8 +149,8 @@ function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
     try {
       await timeApi.addManualEntry({ date, clockIn, clockOut, notes: notes || undefined });
       toast.success('Wpis został dodany');
-      onSaved();
       onClose();
+      await onSaved();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Błąd zapisu');
     } finally {
