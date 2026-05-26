@@ -197,8 +197,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: 'Procedury', href: '/procedures', icon: BookOpen },
 
     { type: 'divider' },
-    { type: 'header', name: 'Kalendarz Szefa', roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.SEKRETARIAT] },
-    { name: 'Kalendarz Szefa', href: '/boss-calendar', icon: CalendarClock, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.SEKRETARIAT] },
+    { type: 'header', name: 'Kalendarz Szefa' },
+    { name: 'Kalendarz Szefa', href: '/boss-calendar', icon: CalendarClock },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },

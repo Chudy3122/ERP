@@ -47,7 +47,7 @@ function addDays(date: Date, n: number): Date {
   return d;
 }
 
-const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin'];
+const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik'];
 
 const EMPTY_FORM: CreateEntryPayload = {
   date: formatDate(new Date()),

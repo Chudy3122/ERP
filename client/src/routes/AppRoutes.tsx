@@ -353,7 +353,7 @@ const AppRoutes = () => {
       <Route
         path="/boss-calendar"
         element={
-          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.SEKRETARIAT]}>
+          <PrivateRoute>
             <BossCalendar />
           </PrivateRoute>
         }

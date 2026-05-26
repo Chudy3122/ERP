@@ -118,16 +118,19 @@ apiClient.interceptors.response.use(
 
         // Retry original request
         return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, logout user
+      } catch (refreshError: any) {
         processQueue(refreshError as Error, null);
         isRefreshing = false;
 
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-
-        window.location.href = '/login';
+        // Only logout if the refresh token is actually invalid (401/403)
+        // Don't logout on network errors — Render free tier may still be waking up
+        const status = refreshError?.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
 
         return Promise.reject(refreshError);
       }

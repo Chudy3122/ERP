@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 
-const canEdit = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN]);
+const canEdit = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN, UserRole.KIEROWNIK]);
 
 router.get('/', bossCalendarController.getByRange.bind(bossCalendarController));
 router.post('/', canEdit, bossCalendarController.create.bind(bossCalendarController));

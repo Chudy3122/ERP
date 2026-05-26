@@ -21,22 +21,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Load user from localStorage on mount
   useEffect(() => {
     const loadUser = async () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        const accessToken = localStorage.getItem('accessToken');
+      const storedUser = localStorage.getItem('user');
+      const accessToken = localStorage.getItem('accessToken');
 
-        if (storedUser && accessToken) {
-          // Verify token is still valid by fetching current user
-          const currentUser = await getCurrentUserApi();
-          setUser(currentUser);
-          localStorage.setItem('user', JSON.stringify(currentUser));
+      if (!storedUser || !accessToken) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const currentUser = await getCurrentUserApi();
+        setUser(currentUser);
+        localStorage.setItem('user', JSON.stringify(currentUser));
+      } catch (error: any) {
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+          // Token truly invalid — clear everything and force re-login
+          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          setUser(null);
+        } else {
+          // Network error or server sleeping — trust the stored session
+          setUser(JSON.parse(storedUser));
         }
-      } catch (error) {
-        // Token invalid, clear storage
-        localStorage.removeItem('user');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        setUser(null);
       } finally {
         setIsLoading(false);
       }
