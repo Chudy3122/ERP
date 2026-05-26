@@ -1,17 +1,10 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
 import { User } from '../models/User.model';
-import path from 'path';
 import fs from 'fs';
-import sharp from 'sharp';
+import { cloudinary } from '../config/cloudinary';
 
 const userRepository = AppDataSource.getRepository(User);
-
-// Ensure avatars directory exists
-const avatarsDir = path.join(__dirname, '../../uploads/avatars');
-if (!fs.existsSync(avatarsDir)) {
-  fs.mkdirSync(avatarsDir, { recursive: true });
-}
 
 /**
  * Get current user profile
@@ -129,36 +122,26 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       });
     }
 
-    // Delete old avatar if exists
-    if (user.avatar_url) {
-      const oldAvatarPath = user.avatar_url.replace('/uploads/avatars/', '');
-      const fullPath = path.join(avatarsDir, oldAvatarPath);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    }
+    // Upload to Cloudinary (overwrites previous avatar for this user)
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'erp-avatars',
+      public_id: `avatar-${req.user!.userId}`,
+      overwrite: true,
+      transformation: [
+        { width: 512, height: 512, crop: 'fill', gravity: 'face' },
+        { quality: 85, fetch_format: 'auto' },
+      ],
+    });
 
-    // Resize and compress the uploaded image to 512x512 JPEG
-    const outputFilename = `avatar-${req.user!.userId}-${Date.now()}.jpg`;
-    const outputPath = path.join(avatarsDir, outputFilename);
-
-    await sharp(file.path)
-      .resize(512, 512, { fit: 'cover', position: 'centre' })
-      .jpeg({ quality: 85, progressive: true })
-      .toFile(outputPath);
-
-    // Remove the original uploaded file (multer saved raw, we saved processed)
     fs.unlinkSync(file.path);
 
-    // Update avatar URL
-    const avatarUrl = `/uploads/avatars/${outputFilename}`;
-    user.avatar_url = avatarUrl;
+    user.avatar_url = result.secure_url;
     await userRepository.save(user);
 
     return res.status(200).json({
       message: 'Avatar uploaded successfully',
       data: {
-        avatar_url: avatarUrl,
+        avatar_url: result.secure_url,
       },
     });
   } catch (error) {
@@ -194,16 +177,11 @@ export const removeAvatar = async (req: Request, res: Response) => {
       });
     }
 
-    // Delete avatar file if exists
-    if (user.avatar_url) {
-      const avatarPath = user.avatar_url.replace('/uploads/avatars/', '');
-      const fullPath = path.join(avatarsDir, avatarPath);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
+    // Delete from Cloudinary if it's a Cloudinary URL
+    if (user.avatar_url?.includes('cloudinary.com')) {
+      await cloudinary.uploader.destroy(`erp-avatars/avatar-${req.user!.userId}`).catch(() => {});
     }
 
-    // Clear avatar URL
     user.avatar_url = null;
     await userRepository.save(user);
 
@@ -233,20 +211,25 @@ export const uploadCover = async (req: Request, res: Response) => {
     const user = await userRepository.findOne({ where: { id: req.user.userId } });
     if (!user) return res.status(404).json({ error: 'Not Found', message: 'User not found' });
 
-    // Delete old cover if exists
-    if (user.cover_url) {
-      const oldPath = user.cover_url.replace('/uploads/avatars/', '');
-      const fullPath = path.join(avatarsDir, oldPath);
-      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-    }
+    // Upload cover to Cloudinary
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'erp-covers',
+      public_id: `cover-${req.user!.userId}`,
+      overwrite: true,
+      transformation: [
+        { width: 1200, height: 400, crop: 'fill', gravity: 'center' },
+        { quality: 85, fetch_format: 'auto' },
+      ],
+    });
 
-    const coverUrl = `/uploads/avatars/${file.filename}`;
-    user.cover_url = coverUrl;
+    fs.unlinkSync(file.path);
+
+    user.cover_url = result.secure_url;
     await userRepository.save(user);
 
     return res.status(200).json({
       message: 'Cover uploaded successfully',
-      data: { cover_url: coverUrl },
+      data: { cover_url: result.secure_url },
     });
   } catch (error) {
     console.error('Upload cover error:', error);

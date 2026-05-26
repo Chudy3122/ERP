@@ -68,6 +68,7 @@ class AdminService {
         'user.is_active',
         'user.last_login',
         'user.created_at',
+        'user.avatar_url',
       ])
       .orderBy('user.created_at', 'DESC')
       .skip(skip)
