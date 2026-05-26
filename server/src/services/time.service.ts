@@ -215,25 +215,38 @@ export class TimeService {
    * Auto clock-out all entries that have been running for 8+ hours
    */
   async autoClockOutStale(): Promise<number> {
-    const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
+    const userRepository = AppDataSource.getRepository(User);
 
-    const staleEntries = await this.timeEntryRepository
+    const activeEntries = await this.timeEntryRepository
       .createQueryBuilder('entry')
       .where('entry.status = :status', { status: TimeEntryStatus.IN_PROGRESS })
-      .andWhere('entry.clock_in <= :cutoff', { cutoff: eightHoursAgo })
       .getMany();
 
-    for (const entry of staleEntries) {
-      const autoClockOut = new Date(entry.clock_in.getTime() + 8 * 60 * 60 * 1000);
-      entry.clockOut('Auto-zakończono po 8 godzinach pracy', autoClockOut);
-      await this.timeEntryRepository.save(entry);
+    let stopped = 0;
+    const now = Date.now();
+
+    for (const entry of activeEntries) {
+      const user = await userRepository.findOne({
+        where: { id: entry.user_id },
+        select: ['id', 'working_hours_per_day'],
+      });
+
+      const maxHours = user?.working_hours_per_day ?? 8;
+      const maxMs = maxHours * 60 * 60 * 1000;
+
+      if (now >= entry.clock_in.getTime() + maxMs) {
+        const autoClockOut = new Date(entry.clock_in.getTime() + maxMs);
+        entry.clockOut(`Auto-zakończono po ${maxHours}h pracy`, autoClockOut);
+        await this.timeEntryRepository.save(entry);
+        stopped++;
+      }
     }
 
-    if (staleEntries.length > 0) {
-      console.log(`[AutoClockOut] Zakończono ${staleEntries.length} sesji po 8h`);
+    if (stopped > 0) {
+      console.log(`[AutoClockOut] Zakończono ${stopped} sesji na podstawie etatu użytkownika`);
     }
 
-    return staleEntries.length;
+    return stopped;
   }
 
   /**

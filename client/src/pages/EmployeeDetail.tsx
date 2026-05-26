@@ -619,7 +619,7 @@ const EmployeeDetail = () => {
                       ))}
                     </div>
                     <p className="text-xs text-gray-500">
-                      Ta wartość jest używana m.in. do planu dnia na dashboardzie.
+                      Używane do planu dnia na dashboardzie oraz automatycznego zatrzymania czasu pracy.
                     </p>
                   </div>
                 ) : (

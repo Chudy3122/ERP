@@ -12,6 +12,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<StatusType>(StatusType.OFFLINE);
+  const [prevStatus, setPrevStatus] = useState<StatusType>(StatusType.OFFLINE);
   const [customMessage, setCustomMessage] = useState('');
   const [showMessageInput, setShowMessageInput] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,16 +65,22 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
   }, [isOpen]);
 
   const handleStatusSelect = async (newStatus: StatusType) => {
+    const currentStatus = status;
+
     // Show message input for Away, Busy, and In Meeting
     if ([StatusType.AWAY, StatusType.BUSY, StatusType.IN_MEETING].includes(newStatus)) {
-      setShowMessageInput(true);
+      setPrevStatus(currentStatus);
       setStatus(newStatus);
+      // Optimistic update so navbar refreshes immediately
+      window.dispatchEvent(new CustomEvent('status-changed', { detail: newStatus }));
+      setShowMessageInput(true);
       return;
     }
 
-    // Directly set status for Online and Offline
+    // Optimistic update before API call
     setStatus(newStatus);
     setIsOpen(false);
+    window.dispatchEvent(new CustomEvent('status-changed', { detail: newStatus }));
 
     try {
       let updatedStatus;
@@ -91,9 +98,16 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
       if (onStatusChange) {
         onStatusChange(updatedStatus.status);
       }
-      window.dispatchEvent(new CustomEvent('status-changed', { detail: updatedStatus.status }));
+      // Confirm final value in case server returned something different
+      if (updatedStatus.status !== newStatus) {
+        setStatus(updatedStatus.status);
+        window.dispatchEvent(new CustomEvent('status-changed', { detail: updatedStatus.status }));
+      }
     } catch (error) {
       console.error('Failed to update status:', error);
+      // Rollback on error
+      setStatus(currentStatus);
+      window.dispatchEvent(new CustomEvent('status-changed', { detail: currentStatus }));
     }
   };
 
@@ -211,6 +225,9 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
                 </button>
                 <button
                   onClick={() => {
+                    // Rollback optimistic update on cancel
+                    setStatus(prevStatus);
+                    window.dispatchEvent(new CustomEvent('status-changed', { detail: prevStatus }));
                     setShowMessageInput(false);
                     setCustomMessage('');
                   }}
