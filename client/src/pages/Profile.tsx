@@ -170,14 +170,26 @@ const Profile: React.FC = () => {
               <div className="relative flex-shrink-0">
                 <div
                   onClick={handlePhotoClick}
-                  className="w-28 h-28 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden cursor-pointer group shadow-lg"
+                  className="w-28 h-28 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 dark:bg-gray-600 relative overflow-hidden cursor-pointer group shadow-lg"
                 >
                   {isUploadingPhoto ? (
-                    <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
-                  ) : user?.avatar_url ? (
-                    <img src={getFileUrl(user.avatar_url) || ''} alt="Avatar" className="w-full h-full object-cover" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                    </span>
                   ) : (
-                    <span className="text-3xl font-bold text-gray-500 dark:text-gray-300">{getInitials()}</span>
+                    <>
+                      {user?.avatar_url && (
+                        <img
+                          src={getFileUrl(user.avatar_url) || ''}
+                          alt="Avatar"
+                          className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center text-3xl font-bold text-gray-500 dark:text-gray-300">
+                        {getInitials()}
+                      </span>
+                    </>
                   )}
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
                     <Camera className="w-7 h-7 text-white" />

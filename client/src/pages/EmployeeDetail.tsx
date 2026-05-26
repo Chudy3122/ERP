@@ -221,18 +221,18 @@ const EmployeeDetail = () => {
           <div className="px-6 pb-6 pt-4">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Avatar */}
-              <div className="w-20 h-20 -mt-14 rounded-full border-4 border-white bg-gray-200 flex items-center justify-center overflow-hidden shadow-lg flex-shrink-0">
+              <div className="w-20 h-20 -mt-14 rounded-full border-4 border-white bg-gray-200 relative overflow-hidden shadow-lg flex-shrink-0">
                 {employee.avatar_url ? (
                   <img
                     src={getFileUrl(employee.avatar_url) || ''}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
-                ) : (
-                  <span className="text-2xl font-bold text-gray-500">
-                    {getInitials(employee.first_name, employee.last_name)}
-                  </span>
-                )}
+                ) : null}
+                <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-gray-500">
+                  {getInitials(employee.first_name, employee.last_name)}
+                </span>
               </div>
 
               {/* Name & Info */}

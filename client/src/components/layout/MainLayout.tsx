@@ -313,12 +313,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         {user && (
           <div className="border-t border-gray-200 dark:border-gray-700 p-3">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
-                {user.avatar_url ? (
-                  <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  getInitials(user.first_name, user.last_name)
+              <div className="w-8 h-8 rounded-full bg-gray-700 relative overflow-hidden text-white text-sm font-semibold">
+                {user.avatar_url && (
+                  <img src={getFileUrl(user.avatar_url) || ''} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 )}
+                <span className="absolute inset-0 flex items-center justify-center">{getInitials(user.first_name, user.last_name)}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -488,12 +487,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                   className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
-                      {user.avatar_url ? (
-                        <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        getInitials(user.first_name, user.last_name)
+                    <div className="w-8 h-8 rounded-full bg-gray-700 relative overflow-hidden text-white text-sm font-semibold">
+                      {user.avatar_url && (
+                        <img src={getFileUrl(user.avatar_url) || ''} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                       )}
+                      <span className="absolute inset-0 flex items-center justify-center">{getInitials(user.first_name, user.last_name)}</span>
                     </div>
                     <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${STATUS_COLORS[navbarStatus]}`} />
                   </div>
@@ -517,12 +515,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                       {/* User Info Header */}
                       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-semibold">
-                            {user.avatar_url ? (
-                              <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              getInitials(user.first_name, user.last_name)
+                          <div className="w-10 h-10 rounded-full bg-gray-700 relative overflow-hidden text-white font-semibold">
+                            {user.avatar_url && (
+                              <img src={getFileUrl(user.avatar_url) || ''} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             )}
+                            <span className="absolute inset-0 flex items-center justify-center">{getInitials(user.first_name, user.last_name)}</span>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
