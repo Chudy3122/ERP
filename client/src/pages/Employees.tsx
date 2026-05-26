@@ -7,6 +7,7 @@ import * as adminApi from '../api/admin.api';
 import * as statusApi from '../api/status.api';
 import { StatusType, STATUS_COLORS, STATUS_TRANSLATION_KEYS } from '../types/status.types';
 import { useChatContext } from '../contexts/ChatContext';
+import { getFileUrl } from '../api/axios-config';
 
 interface Employee {
   id: string;
@@ -20,6 +21,7 @@ interface Employee {
   hire_date?: string | null;
   role: string;
   is_active: boolean;
+  avatar_url?: string | null;
 }
 
 const Employees = () => {
@@ -241,8 +243,18 @@ const Employees = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 relative">
-                            <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-700 dark:text-gray-300 font-medium text-sm">
-                              {getInitials(employee.first_name, employee.last_name)}
+                            <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 relative overflow-hidden text-gray-700 dark:text-gray-300 font-medium text-sm">
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                {getInitials(employee.first_name, employee.last_name)}
+                              </span>
+                              {employee.avatar_url && (
+                                <img
+                                  src={getFileUrl(employee.avatar_url) || ''}
+                                  alt=""
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
                             </div>
                             <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStatusDotColor(status)}`} />
                           </div>

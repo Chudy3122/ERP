@@ -178,6 +178,9 @@ const Profile: React.FC = () => {
                     </span>
                   ) : (
                     <>
+                      <span className="absolute inset-0 flex items-center justify-center text-3xl font-bold text-gray-500 dark:text-gray-300">
+                        {getInitials()}
+                      </span>
                       {user?.avatar_url && (
                         <img
                           src={getFileUrl(user.avatar_url) || ''}
@@ -186,9 +189,6 @@ const Profile: React.FC = () => {
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                       )}
-                      <span className="absolute inset-0 flex items-center justify-center text-3xl font-bold text-gray-500 dark:text-gray-300">
-                        {getInitials()}
-                      </span>
                     </>
                   )}
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
