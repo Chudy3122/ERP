@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { User } from '../models/User.model';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 
 const userRepository = AppDataSource.getRepository(User);
 
@@ -137,8 +138,20 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       }
     }
 
+    // Resize and compress the uploaded image to 512x512 JPEG
+    const outputFilename = `avatar-${req.user!.userId}-${Date.now()}.jpg`;
+    const outputPath = path.join(avatarsDir, outputFilename);
+
+    await sharp(file.path)
+      .resize(512, 512, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 85, progressive: true })
+      .toFile(outputPath);
+
+    // Remove the original uploaded file (multer saved raw, we saved processed)
+    fs.unlinkSync(file.path);
+
     // Update avatar URL
-    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const avatarUrl = `/uploads/avatars/${outputFilename}`;
     user.avatar_url = avatarUrl;
     await userRepository.save(user);
 

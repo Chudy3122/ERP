@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
 import Message from './Message';
 import MessageInput from './MessageInput';
+import { getFileUrl } from '../../api/axios-config';
 
 const ChatWindow: React.FC = () => {
   const { t } = useTranslation();
@@ -75,7 +76,7 @@ const ChatWindow: React.FC = () => {
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
                 {activeChannel.members[0].user.avatar_url ? (
                   <img
-                    src={activeChannel.members[0].user.avatar_url}
+                    src={getFileUrl(activeChannel.members[0].user.avatar_url) || ''}
                     alt=""
                     className="w-full h-full rounded-full object-cover"
                   />

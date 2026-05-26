@@ -38,6 +38,7 @@
     "pg": "^8.11.3",
     "redis": "^4.6.12",
     "reflect-metadata": "^0.2.1",
+    "sharp": "^0.34.5",
     "socket.io": "^4.6.1",
     "typeorm": "^0.3.19",
     "uuid": "^9.0.1",
