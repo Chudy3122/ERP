@@ -13,9 +13,18 @@ function getLocalDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-
   return `${year}-${month}-${day}`;
 }
+
+function todayRange(): { start: Date; end: Date } {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+export type DayState = 'not_started' | 'working' | 'paused' | 'ended';
 
 export class TimeService {
   private timeEntryRepository: Repository<TimeEntry>;
@@ -31,33 +40,173 @@ export class TimeService {
   // ===== TIME ENTRIES =====
 
   /**
-   * Clock in - Start a new time entry
+   * Get today's work state for a user
+   */
+  async getDayStatus(userId: string): Promise<{
+    state: DayState;
+    currentEntry: TimeEntry | null;
+    todayEntries: TimeEntry[];
+    totalWorkedMinutesToday: number;
+  }> {
+    const { start, end } = todayRange();
+
+    const currentEntry = await this.timeEntryRepository.findOne({
+      where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
+      relations: ['user'],
+    });
+
+    const todayEntries = await this.timeEntryRepository.find({
+      where: { user_id: userId, clock_in: Between(start, end) },
+      order: { clock_in: 'DESC' },
+    });
+
+    let state: DayState;
+    if (currentEntry) {
+      state = 'working';
+    } else if (todayEntries.length > 0) {
+      state = todayEntries[0].is_break ? 'paused' : 'ended';
+    } else {
+      state = 'not_started';
+    }
+
+    const totalWorkedMinutesToday = todayEntries
+      .filter((e) => e.status !== TimeEntryStatus.IN_PROGRESS)
+      .reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
+
+    return { state, currentEntry, todayEntries, totalWorkedMinutesToday };
+  }
+
+  /**
+   * Clock in - Start work (first clock-in of the day gets 15-min rounding bonus)
    */
   async clockIn(userId: string, notes?: string, expectedClockIn?: string): Promise<TimeEntry> {
-    // Check if user already has an in-progress entry
     const existingEntry = await this.timeEntryRepository.findOne({
-      where: {
-        user_id: userId,
-        status: TimeEntryStatus.IN_PROGRESS,
-      },
+      where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
 
     if (existingEntry) {
-      throw new Error('You already have an active time entry. Please clock out first.');
+      throw new Error('Masz już aktywny wpis czasu pracy. Najpierw zakończ lub zapauzuj pracę.');
+    }
+
+    const { start, end } = todayRange();
+    const todayCount = await this.timeEntryRepository.count({
+      where: { user_id: userId, clock_in: Between(start, end) },
+    });
+
+    // Only the first clock-in of the day gets the 15-minute floor rounding
+    const clockInTime = todayCount === 0 ? roundToNearest15Min(new Date()) : new Date();
+
+    const timeEntry = this.timeEntryRepository.create({
+      user_id: userId,
+      clock_in: clockInTime,
+      notes,
+      expected_clock_in: expectedClockIn || '09:00:00',
+      status: TimeEntryStatus.IN_PROGRESS,
+      is_break: false,
+      is_manual: false,
+    });
+
+    const lateMinutes = timeEntry.calculateLateArrival();
+    timeEntry.is_late = lateMinutes > 0;
+    timeEntry.late_minutes = lateMinutes;
+
+    return await this.timeEntryRepository.save(timeEntry);
+  }
+
+  /**
+   * Pause work — clock out with exact time (no rounding — avoids negative durations)
+   */
+  async pauseWork(userId: string, notes?: string): Promise<TimeEntry> {
+    const timeEntry = await this.timeEntryRepository.findOne({
+      where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
+    });
+
+    if (!timeEntry) {
+      throw new Error('Brak aktywnej sesji pracy do zapauzowania');
+    }
+
+    timeEntry.clockOut(notes || 'Pauza w pracy', new Date());
+    timeEntry.is_break = true;
+    return await this.timeEntryRepository.save(timeEntry);
+  }
+
+  /**
+   * End work for the day — clock-out rounded to nearest 15 min (same as clock-in);
+   * if paused, just mark day as ended (no time to adjust)
+   */
+  async endWork(userId: string, notes?: string): Promise<TimeEntry> {
+    const activeEntry = await this.timeEntryRepository.findOne({
+      where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
+    });
+
+    if (activeEntry) {
+      const now = new Date();
+      const rounded = roundToNearest15Min(now);
+      // Safety: never let rounded clock_out be before clock_in (would give negative duration)
+      const clockOutTime = rounded.getTime() > activeEntry.clock_in.getTime() ? rounded : now;
+      activeEntry.clockOut(notes || 'Zakończenie pracy', clockOutTime);
+      activeEntry.is_break = false;
+      return await this.timeEntryRepository.save(activeEntry);
+    }
+
+    // If paused → flip last break entry's is_break to false (day officially ended)
+    const { start, end } = todayRange();
+    const lastEntry = await this.timeEntryRepository.findOne({
+      where: { user_id: userId, clock_in: Between(start, end) },
+      order: { clock_in: 'DESC' },
+    });
+
+    if (!lastEntry) {
+      throw new Error('Brak wpisów z dzisiaj');
+    }
+
+    if (!lastEntry.is_break) {
+      throw new Error('Praca jest już zakończona na dziś');
+    }
+
+    lastEntry.is_break = false;
+    return await this.timeEntryRepository.save(lastEntry);
+  }
+
+  /**
+   * Add a manual time entry (completed, no rounding)
+   */
+  async addManualEntry(
+    userId: string,
+    data: {
+      date: string; // YYYY-MM-DD
+      clockIn: string; // HH:MM
+      clockOut: string; // HH:MM
+      notes?: string;
+    }
+  ): Promise<TimeEntry> {
+    const [inH, inM] = data.clockIn.split(':').map(Number);
+    const [outH, outM] = data.clockOut.split(':').map(Number);
+    const [y, mo, d] = data.date.split('-').map(Number);
+
+    const clockInDate = new Date(y, mo - 1, d, inH, inM, 0, 0);
+    const clockOutDate = new Date(y, mo - 1, d, outH, outM, 0, 0);
+
+    if (clockOutDate <= clockInDate) {
+      throw new Error('Czas zakończenia musi być po czasie rozpoczęcia');
     }
 
     const timeEntry = this.timeEntryRepository.create({
       user_id: userId,
-      clock_in: roundToNearest15Min(new Date()),
-      notes,
-      expected_clock_in: expectedClockIn || '09:00:00', // Default 9 AM
-      status: TimeEntryStatus.IN_PROGRESS,
+      clock_in: clockInDate,
+      clock_out: clockOutDate,
+      notes: data.notes,
+      expected_clock_in: '09:00:00',
+      status: TimeEntryStatus.COMPLETED,
+      is_break: false,
+      is_manual: true,
     });
 
-    // Calculate if user is late
-    const lateMinutes = timeEntry.calculateLateArrival();
-    timeEntry.is_late = lateMinutes > 0;
-    timeEntry.late_minutes = lateMinutes;
+    timeEntry.duration_minutes = timeEntry.calculateDuration();
+    timeEntry.overtime_minutes = timeEntry.calculateOvertime();
+    timeEntry.is_overtime = timeEntry.overtime_minutes > 0;
+    timeEntry.is_late = false;
+    timeEntry.late_minutes = 0;
 
     return await this.timeEntryRepository.save(timeEntry);
   }
@@ -88,21 +237,19 @@ export class TimeService {
   }
 
   /**
-   * Clock out - End current time entry
+   * Clock out - End current time entry (legacy, kept for backward compatibility)
    */
   async clockOut(userId: string, notes?: string): Promise<TimeEntry> {
     const timeEntry = await this.timeEntryRepository.findOne({
-      where: {
-        user_id: userId,
-        status: TimeEntryStatus.IN_PROGRESS,
-      },
+      where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
 
     if (!timeEntry) {
-      throw new Error('No active time entry found');
+      throw new Error('Brak aktywnej sesji pracy');
     }
 
-    timeEntry.clockOut(notes, roundToNearest15Min(new Date()));
+    timeEntry.clockOut(notes, new Date());
+    timeEntry.is_break = false;
     return await this.timeEntryRepository.save(timeEntry);
   }
 

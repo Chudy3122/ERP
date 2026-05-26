@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/auth.types';
 import StatusSelector from '../status/StatusSelector';
+import { useAutoAway } from '../../hooks/useAutoAway';
+import { StatusType, STATUS_COLORS } from '../../types/status.types';
+import * as statusApi from '../../api/status.api';
 import AIAssistant from '../helpdesk/AIAssistant';
 import FloatingChatPanel from '../chat/FloatingChatPanel';
 import GlobalSearch from './GlobalSearch';
@@ -81,6 +84,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [navbarStatus, setNavbarStatus] = useState<StatusType>(StatusType.ONLINE);
+
+  useAutoAway();
 
   // Load notifications
   useEffect(() => {
@@ -101,6 +107,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     // Refresh every 30 seconds
     const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Load initial status for navbar dot and track changes
+  useEffect(() => {
+    statusApi.getMyStatus().then((s) => setNavbarStatus(s.status)).catch(() => {});
+
+    const handler = (e: Event) => setNavbarStatus((e as CustomEvent<StatusType>).detail);
+    window.addEventListener('status-changed', handler);
+    return () => window.removeEventListener('status-changed', handler);
   }, []);
 
   useEffect(() => {
@@ -472,12 +487,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
-                    {user.avatar_url ? (
-                      <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      getInitials(user.first_name, user.last_name)
-                    )}
+                  <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
+                      {user.avatar_url ? (
+                        <img src={getFileUrl(user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        getInitials(user.first_name, user.last_name)
+                      )}
+                    </div>
+                    <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${STATUS_COLORS[navbarStatus]}`} />
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">

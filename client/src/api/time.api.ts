@@ -8,12 +8,14 @@ import type {
   ClockOutRequest,
   CreateLeaveRequest,
   ReviewLeaveRequest,
+  DayStatus,
+  ManualEntryRequest,
 } from '../types/time.types';
 
 // ===== TIME ENTRIES =====
 
 /**
- * Clock in
+ * Clock in (start work / resume after end-of-day)
  */
 export const clockIn = async (data?: ClockInRequest): Promise<TimeEntry> => {
   const response = await apiClient.post('/time/clock-in', data);
@@ -21,10 +23,42 @@ export const clockIn = async (data?: ClockInRequest): Promise<TimeEntry> => {
 };
 
 /**
- * Clock out
+ * Clock out (legacy)
  */
 export const clockOut = async (data?: ClockOutRequest): Promise<TimeEntry> => {
   const response = await apiClient.post('/time/clock-out', data);
+  return response.data.data;
+};
+
+/**
+ * Get today's day status (state machine)
+ */
+export const getDayStatus = async (): Promise<DayStatus> => {
+  const response = await apiClient.get('/time/day-status');
+  return response.data.data;
+};
+
+/**
+ * Pause work
+ */
+export const pauseWork = async (notes?: string): Promise<TimeEntry> => {
+  const response = await apiClient.post('/time/pause', { notes });
+  return response.data.data;
+};
+
+/**
+ * End work for the day (works from both 'working' and 'paused' states)
+ */
+export const endWork = async (notes?: string): Promise<TimeEntry> => {
+  const response = await apiClient.post('/time/end-work', { notes });
+  return response.data.data;
+};
+
+/**
+ * Add a manual time entry
+ */
+export const addManualEntry = async (data: ManualEntryRequest): Promise<TimeEntry> => {
+  const response = await apiClient.post('/time/manual-entry', data);
   return response.data.data;
 };
 

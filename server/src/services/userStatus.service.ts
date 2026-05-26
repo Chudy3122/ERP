@@ -124,13 +124,25 @@ class UserStatusService {
   }
 
   /**
-   * Get all online users
+   * Get all online users (strictly ONLINE only)
    */
   async getOnlineUsers(): Promise<UserStatus[]> {
     return this.userStatusRepository.find({
       where: { status: StatusType.ONLINE },
       relations: ['user'],
     });
+  }
+
+  /**
+   * Get all active users (online + away + busy + in_meeting)
+   * Used for initial status load — offline users are excluded
+   */
+  async getActiveUsers(): Promise<UserStatus[]> {
+    return this.userStatusRepository
+      .createQueryBuilder('status')
+      .leftJoinAndSelect('status.user', 'user')
+      .where('status.status != :offline', { offline: StatusType.OFFLINE })
+      .getMany();
   }
 
   /**

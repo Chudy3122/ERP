@@ -93,6 +93,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const activeChannelRef = useRef<Channel | null>(null);
   const isPanelOpenRef = useRef(false);
   const userRef = useRef(user);
+  // Sequence counter — prevents stale loadChannels responses from overwriting fresh ones
+  const loadChannelsSeqRef = useRef(0);
 
   // Keep refs in sync with state
   useEffect(() => { activeChannelRef.current = activeChannel; }, [activeChannel]);
@@ -142,6 +144,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!socket) return;
 
+    // Re-join all channels on reconnect (socket loses room membership after disconnect)
+    socket.on('connect', () => {
+      socket.emit('chat:join_channels');
+    });
+
     // Channel events
     socket.on('chat:channels_joined', (data: { channels: string[] }) => {
       console.log('✅ Joined channels:', data.channels);
@@ -156,8 +163,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       console.log('📨 New message:', data);
 
       // Add message to state if it's for the active channel (use ref to avoid stale closure)
+      // Replace any matching optimistic (temp-*) message to avoid duplicates
       if (data.channelId === activeChannelRef.current?.id) {
-        setMessages((prev) => [...prev, data.message]);
+        setMessages((prev) => {
+          const withoutTemp = prev.filter(
+            (m) =>
+              !(
+                m.id.startsWith('temp-') &&
+                m.sender_id === data.message.sender_id &&
+                m.content === data.message.content
+              )
+          );
+          return [...withoutTemp, data.message];
+        });
       }
 
       // Track unread messages if:
@@ -264,6 +282,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     });
 
     return () => {
+      socket.off('connect');
       socket.off('chat:channels_joined');
       socket.off('chat:channel_joined');
       socket.off('chat:new_message');
@@ -278,16 +297,20 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   // Load channels from REST API
   const loadChannels = useCallback(async () => {
+    const seq = ++loadChannelsSeqRef.current;
     try {
       setLoading(true);
       const fetchedChannels = await chatApi.getChannels();
+      // Ignore response if a newer loadChannels call was made in the meantime
+      if (seq !== loadChannelsSeqRef.current) return;
       setChannels(fetchedChannels);
       setError(null);
     } catch (err: any) {
+      if (seq !== loadChannelsSeqRef.current) return;
       console.error('Failed to load channels:', err);
       setError(err.response?.data?.message || 'Failed to load channels');
     } finally {
-      setLoading(false);
+      if (seq === loadChannelsSeqRef.current) setLoading(false);
     }
   }, []);
 
@@ -344,13 +367,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const createDirectChannel = useCallback(async (userId: string): Promise<Channel | null> => {
     try {
       const channel = await chatApi.createDirectChannel({ userId });
-
-      // Check if channel already exists in state
-      const existingChannel = channels.find((c) => c.id === channel.id);
-      if (!existingChannel) {
-        setChannels((prev) => [...prev, channel]);
-      }
-
+      // Refresh channel list from server to guarantee it's in sync
+      await loadChannels();
       setActiveChannel(channel);
       return channel;
     } catch (err: any) {
@@ -358,13 +376,33 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setError(err.response?.data?.message || 'Failed to create direct channel');
       return null;
     }
-  }, [channels, setActiveChannel]);
+  }, [loadChannels, setActiveChannel]);
 
   // Send a message
   const sendMessage = useCallback(
     (content: string, channelId?: string) => {
       const targetChannelId = channelId || activeChannel?.id;
       if (!targetChannelId || !socket) return;
+
+      // Optimistic update — show message immediately before server confirms
+      const currentUser = userRef.current;
+      if (targetChannelId === activeChannelRef.current?.id && currentUser) {
+        const tempMessage: Message = {
+          id: `temp-${Date.now()}`,
+          channel_id: targetChannelId,
+          sender_id: currentUser.id,
+          content,
+          message_type: MessageType.TEXT,
+          parent_message_id: null,
+          is_edited: false,
+          is_deleted: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          sender: currentUser,
+          attachments: [],
+        };
+        setMessages((prev) => [...prev, tempMessage]);
+      }
 
       const messageData: SendMessageData = {
         channelId: targetChannelId,

@@ -50,7 +50,7 @@ const ClockInWidget = () => {
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isClocking, setIsClocking] = useState(false);
-  const [elapsed, setElapsed] = useState('00:00:00');
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -62,27 +62,34 @@ const ClockInWidget = () => {
   }, []);
 
   useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    // Sum completed sessions from actual timestamps — no rounding, exact seconds
+    const baseSec = todayEntries
+      .filter((e) => e.clock_out)
+      .reduce((sum, e) => sum + Math.floor(
+        (new Date(e.clock_out!).getTime() - new Date(e.clock_in).getTime()) / 1000
+      ), 0);
+
     if (currentEntry && currentEntry.status === TimeEntryStatus.IN_PROGRESS) {
-      updateElapsed();
-      intervalRef.current = setInterval(updateElapsed, 1000);
+      const clockInMs = new Date(currentEntry.clock_in).getTime();
+      const tick = () => setElapsedSec(baseSec + Math.floor((Date.now() - clockInMs) / 1000));
+      tick();
+      intervalRef.current = setInterval(tick, 1000);
     } else {
-      setElapsed('00:00:00');
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      setElapsedSec(baseSec);
     }
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [currentEntry]);
+  }, [currentEntry?.id, todayEntries]);
 
-  const updateElapsed = () => {
-    if (!currentEntry) return;
-    const start = new Date(currentEntry.clock_in).getTime();
-    const now = Date.now();
-    const diff = Math.floor((now - start) / 1000);
-    const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-    const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-    const s = String(diff % 60).padStart(2, '0');
-    setElapsed(`${h}:${m}:${s}`);
+  const formatElapsedSec = (sec: number) => {
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
   };
 
   const loadClockWidgetData = async (showLoading = true) => {
@@ -246,7 +253,7 @@ const ClockInWidget = () => {
                 <span className="text-xs font-medium text-green-700 dark:text-green-400">W pracy</span>
               </div>
               <div className="mt-2 font-mono text-2xl font-bold text-gray-900 dark:text-white tracking-wider">
-                {elapsed}
+                {formatElapsedSec(elapsedSec)}
               </div>
               <div className="mt-1 flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <LogIn className="w-3 h-3" />
@@ -307,11 +314,8 @@ const ClockInWidget = () => {
                   {hasReportedTimeToday ? 'Pauza' : 'Poza pracą'}
                 </span>
               </div>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <Timer className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              <div className="mt-2 font-mono text-2xl font-bold text-gray-500 dark:text-gray-400 tracking-wider">
+                {formatElapsedSec(elapsedSec)}
               </div>
             </div>
 

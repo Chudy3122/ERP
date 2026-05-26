@@ -34,6 +34,8 @@ export interface TimeEntry {
   overtime_minutes: number;
   is_late: boolean;
   late_minutes: number;
+  is_break: boolean;
+  is_manual: boolean;
   expected_clock_in: string | null;
   status: TimeEntryStatus;
   approved_by: string | null;
@@ -42,6 +44,22 @@ export interface TimeEntry {
   updated_at: string;
   user?: User;
   approver?: User | null;
+}
+
+export type DayState = 'not_started' | 'working' | 'paused' | 'ended';
+
+export interface DayStatus {
+  state: DayState;
+  currentEntry: TimeEntry | null;
+  todayEntries: TimeEntry[];
+  totalWorkedMinutesToday: number;
+}
+
+export interface ManualEntryRequest {
+  date: string;    // YYYY-MM-DD
+  clockIn: string; // HH:MM
+  clockOut: string;// HH:MM
+  notes?: string;
 }
 
 export interface LeaveRequest {

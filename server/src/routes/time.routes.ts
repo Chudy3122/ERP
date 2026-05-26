@@ -11,12 +11,18 @@ router.use(authMiddleware);
 
 // ===== TIME ENTRIES =====
 
-// Clock in/out
-router.post('/clock-in', timeController.clockIn);
-router.post('/clock-out', timeController.clockOut);
+// Clock in/out (legacy kept)
+router.post('/clock-in', timeController.clockIn.bind(timeController));
+router.post('/clock-out', timeController.clockOut.bind(timeController));
+
+// New state-machine endpoints
+router.get('/day-status', timeController.getDayStatus.bind(timeController));
+router.post('/pause', timeController.pauseWork.bind(timeController));
+router.post('/end-work', timeController.endWork.bind(timeController));
+router.post('/manual-entry', timeController.addManualEntry.bind(timeController));
 
 // Get current entry
-router.get('/current', timeController.getCurrentEntry);
+router.get('/current', timeController.getCurrentEntry.bind(timeController));
 
 // Get user's time entries
 router.get('/entries', timeController.getUserTimeEntries);

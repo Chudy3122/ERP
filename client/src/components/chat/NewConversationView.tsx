@@ -28,6 +28,7 @@ const NewConversationView: React.FC<NewConversationViewProps> = ({ onClose, onCo
   const [groupName, setGroupName] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [creatingDirect, setCreatingDirect] = useState<string | null>(null);
   const [avatarErrors, setAvatarErrors] = useState<Set<string>>(new Set());
 
   const handleAvatarError = (userId: string) => {
@@ -56,20 +57,22 @@ const NewConversationView: React.FC<NewConversationViewProps> = ({ onClose, onCo
 
   const handleUserClick = async (userId: string) => {
     if (viewMode === 'createGroup') {
-      // Toggle selection
       setSelectedUsers(prev =>
         prev.includes(userId)
           ? prev.filter(id => id !== userId)
           : [...prev, userId]
       );
     } else {
-      // Start direct conversation
+      if (creatingDirect) return;
+      setCreatingDirect(userId);
       try {
         await createDirectChannel(userId);
         onConversationCreated?.();
         onClose();
       } catch (error) {
         console.error('Failed to create direct channel:', error);
+      } finally {
+        setCreatingDirect(null);
       }
     }
   };
@@ -229,9 +232,12 @@ const NewConversationView: React.FC<NewConversationViewProps> = ({ onClose, onCo
                 <button
                   key={user.id}
                   onClick={() => handleUserClick(user.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                  disabled={viewMode === 'select' && creatingDirect !== null}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all disabled:opacity-60 disabled:cursor-wait ${
                     isSelected
                       ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-200 dark:ring-blue-700'
+                      : creatingDirect === user.id
+                      ? 'bg-gray-100 dark:bg-gray-700'
                       : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                   }`}
                 >

@@ -27,6 +27,7 @@ import projectTemplateRoutes from './projectTemplate.routes';
 import crmRoutes from './crm.routes';
 import procedureRoutes from './procedure.routes';
 import bossCalendarRoutes from './boss-calendar.routes';
+import searchRoutes from './search.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -114,6 +115,9 @@ router.use('/procedures', procedureRoutes);
 
 // Boss calendar routes (Kalendarz szefa)
 router.use('/boss-calendar', bossCalendarRoutes);
+
+// Global search
+router.use('/search', searchRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

@@ -35,6 +35,16 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
     }
   }, [currentStatus]);
 
+  // Sync display when status changes from outside (auto-away hook, socket events)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const newStatus = (e as CustomEvent<StatusType>).detail;
+      setStatus(newStatus);
+    };
+    window.addEventListener('status-changed', handler);
+    return () => window.removeEventListener('status-changed', handler);
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

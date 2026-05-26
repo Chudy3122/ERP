@@ -37,27 +37,82 @@ export class TimeController {
   }
 
   /**
-   * Clock out
+   * Clock out (legacy)
    * POST /api/time/clock-out
    */
   async clockOut(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
       const { notes } = req.body;
-
       const timeEntry = await timeService.clockOut(userId, notes);
-
-      res.status(200).json({
-        success: true,
-        message: 'Clocked out successfully',
-        data: timeEntry,
-      });
+      res.status(200).json({ success: true, data: timeEntry });
     } catch (error: any) {
-      console.error('Clock out error:', error);
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to clock out',
-      });
+      res.status(400).json({ success: false, message: error.message || 'Failed to clock out' });
+    }
+  }
+
+  /**
+   * Get today's day status
+   * GET /api/time/day-status
+   */
+  async getDayStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const status = await timeService.getDayStatus(userId);
+      res.status(200).json({ success: true, data: status });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to get day status' });
+    }
+  }
+
+  /**
+   * Pause work
+   * POST /api/time/pause
+   */
+  async pauseWork(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { notes } = req.body;
+      const timeEntry = await timeService.pauseWork(userId, notes);
+      res.status(200).json({ success: true, data: timeEntry });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to pause work' });
+    }
+  }
+
+  /**
+   * End work for the day
+   * POST /api/time/end-work
+   */
+  async endWork(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { notes } = req.body;
+      const timeEntry = await timeService.endWork(userId, notes);
+      res.status(200).json({ success: true, data: timeEntry });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to end work' });
+    }
+  }
+
+  /**
+   * Add a manual time entry
+   * POST /api/time/manual-entry
+   */
+  async addManualEntry(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { date, clockIn, clockOut, notes } = req.body;
+
+      if (!date || !clockIn || !clockOut) {
+        res.status(400).json({ success: false, message: 'Wymagane pola: date, clockIn, clockOut' });
+        return;
+      }
+
+      const timeEntry = await timeService.addManualEntry(userId, { date, clockIn, clockOut, notes });
+      res.status(201).json({ success: true, data: timeEntry });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to add manual entry' });
     }
   }
 

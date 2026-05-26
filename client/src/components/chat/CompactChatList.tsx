@@ -57,15 +57,18 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
     setContextMenu({ channelId, x: e.clientX, y: e.clientY });
   };
 
+  const getOtherMember = (channel: Channel) => {
+    if (!channel.members) return undefined;
+    return channel.members.find(m => m.user_id !== user?.id) ?? channel.members[0];
+  };
+
   const getChannelName = (channel: Channel): string => {
-    if (channel.name) return channel.name;
-    if (channel.type === 'direct' && channel.members && channel.members.length > 0) {
-      const otherMember = channel.members[0];
-      return otherMember.user
-        ? `${otherMember.user.first_name} ${otherMember.user.last_name}`
-        : t('chat.unnamed');
+    if (channel.type === 'direct') {
+      const other = getOtherMember(channel);
+      if (other?.user) return `${other.user.first_name} ${other.user.last_name}`;
+      return channel.name ?? t('chat.unnamed');
     }
-    return t('chat.unnamed');
+    return channel.name ?? t('chat.unnamed');
   };
 
   const formatLastMessageTime = (dateString: string | null): string => {
@@ -162,7 +165,7 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
         ) : (
           channels.map((channel) => {
             const isActive = activeChannel?.id === channel.id;
-            const otherMember = channel.type === 'direct' ? channel.members?.[0] : undefined;
+            const otherMember = channel.type === 'direct' ? getOtherMember(channel) : undefined;
             const unreadCount = unreadMessages.get(channel.id) || 0;
 
             return (

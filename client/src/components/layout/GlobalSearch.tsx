@@ -1,20 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CheckSquare, Folder, Loader2, Search, X } from 'lucide-react';
-import { getProjects } from '../../api/project.api';
-import { getTasks } from '../../api/task.api';
+import {
+  ArrowRight,
+  BookOpen,
+  Building2,
+  CheckSquare,
+  FileText,
+  Folder,
+  Loader2,
+  Receipt,
+  Search,
+  Ticket,
+  User,
+  X,
+} from 'lucide-react';
+import { globalSearch, type SearchResult } from '../../api/search.api';
 
-type SearchResultType = 'project' | 'task';
+type ResultType = SearchResult['type'];
 
-interface SearchResult {
-  id: string;
-  type: SearchResultType;
-  title: string;
-  subtitle: string;
-  href: string;
-}
-
-const resultTypeConfig: Record<SearchResultType, { label: string; icon: typeof Folder; color: string }> = {
+const TYPE_CONFIG: Record<ResultType, { label: string; icon: typeof Folder; color: string }> = {
   project: {
     label: 'Projekt',
     icon: Folder,
@@ -24,6 +28,36 @@ const resultTypeConfig: Record<SearchResultType, { label: string; icon: typeof F
     label: 'Zadanie',
     icon: CheckSquare,
     color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300',
+  },
+  ticket: {
+    label: 'Zgłoszenie',
+    icon: Ticket,
+    color: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300',
+  },
+  invoice: {
+    label: 'Faktura',
+    icon: Receipt,
+    color: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300',
+  },
+  contract: {
+    label: 'Umowa',
+    icon: FileText,
+    color: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300',
+  },
+  client: {
+    label: 'Kontrahent',
+    icon: Building2,
+    color: 'bg-cyan-50 text-[#00AEEF] dark:bg-cyan-900/20 dark:text-cyan-300',
+  },
+  procedure: {
+    label: 'Procedura',
+    icon: BookOpen,
+    color: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300',
+  },
+  employee: {
+    label: 'Pracownik',
+    icon: User,
+    color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
   },
 };
 
@@ -42,7 +76,6 @@ const GlobalSearch = () => {
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, []);
@@ -57,50 +90,26 @@ const GlobalSearch = () => {
       return;
     }
 
-    let isCurrentRequest = true;
+    let active = true;
     const timeoutId = window.setTimeout(async () => {
       try {
         setIsLoading(true);
         setError('');
-
-        const [projectResponse, taskResponse] = await Promise.all([
-          getProjects({ search: trimmedQuery }),
-          getTasks({ search: trimmedQuery }),
-        ]);
-
-        if (!isCurrentRequest) return;
-
-        const projectResults: SearchResult[] = projectResponse.projects.slice(0, 5).map((project) => ({
-          id: project.id,
-          type: 'project',
-          title: project.name,
-          subtitle: `${project.code} · ${project.status}`,
-          href: `/projects/${project.id}`,
-        }));
-
-        const taskResults: SearchResult[] = taskResponse.slice(0, 5).map((task) => ({
-          id: task.id,
-          type: 'task',
-          title: task.title,
-          subtitle: task.project?.name || 'Zadanie bez nazwy projektu',
-          href: `/tasks/${task.id}/edit`,
-        }));
-
-        setResults([...projectResults, ...taskResults].slice(0, 8));
+        const data = await globalSearch(trimmedQuery);
+        if (!active) return;
+        setResults(data);
       } catch {
-        if (isCurrentRequest) {
+        if (active) {
           setResults([]);
           setError('Nie udało się pobrać wyników.');
         }
       } finally {
-        if (isCurrentRequest) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }, 250);
 
     return () => {
-      isCurrentRequest = false;
+      active = false;
       window.clearTimeout(timeoutId);
     };
   }, [query]);
@@ -113,31 +122,35 @@ const GlobalSearch = () => {
   };
 
   const trimmedQuery = query.trim();
-  const showDropdown = isOpen && (trimmedQuery.length > 0 || results.length > 0);
+  const showDropdown = isOpen && trimmedQuery.length > 0;
+
+  // Group results by type for section headers
+  const grouped = results.reduce<Record<string, SearchResult[]>>((acc, r) => {
+    if (!acc[r.type]) acc[r.type] = [];
+    acc[r.type].push(r);
+    return acc;
+  }, {});
+  const orderedTypes = (Object.keys(grouped) as ResultType[]).sort();
 
   return (
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
-          type="search"
+          type="text"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder="Szukaj projektów i zadań..."
+          placeholder="Szukaj projektów, zadań, pracowników..."
           className="h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-gray-800 placeholder-gray-400 outline-none transition-colors focus:border-[#F7941D]/50 focus:bg-white focus:ring-2 focus:ring-[#F7941D]/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500"
         />
         {query && (
           <button
             type="button"
-            onClick={() => {
-              setQuery('');
-              setResults([]);
-              setError('');
-            }}
+            onClick={() => { setQuery(''); setResults([]); setError(''); }}
             aria-label="Wyczyść wyszukiwanie"
             className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
           >
@@ -172,31 +185,39 @@ const GlobalSearch = () => {
           )}
 
           {results.length > 0 && (
-            <div className="max-h-80 overflow-y-auto py-1">
-              {results.map((result) => {
-                const config = resultTypeConfig[result.type];
+            <div className="max-h-[28rem] overflow-y-auto py-1">
+              {orderedTypes.map((type) => {
+                const config = TYPE_CONFIG[type as ResultType];
                 const Icon = config.icon;
-
                 return (
-                  <button
-                    key={`${result.type}-${result.id}`}
-                    type="button"
-                    onClick={() => handleSelect(result.href)}
-                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.color}`}>
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-gray-900 dark:text-white">
-                        {result.title}
+                  <div key={type}>
+                    <div className="px-3 pt-2 pb-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        {config.label}
                       </span>
-                      <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-                        {config.label} · {result.subtitle}
-                      </span>
-                    </span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-gray-300" />
-                  </button>
+                    </div>
+                    {grouped[type].map((result) => (
+                      <button
+                        key={`${result.type}-${result.id}`}
+                        type="button"
+                        onClick={() => handleSelect(result.href)}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${config.color}`}>
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-gray-900 dark:text-white">
+                            {result.title}
+                          </span>
+                          <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                            {result.subtitle}
+                          </span>
+                        </span>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-gray-300" />
+                      </button>
+                    ))}
+                  </div>
                 );
               })}
             </div>

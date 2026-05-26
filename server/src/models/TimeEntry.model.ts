@@ -58,6 +58,12 @@ export class TimeEntry {
   })
   status: TimeEntryStatus;
 
+  @Column({ type: 'boolean', default: false })
+  is_break: boolean; // true = paused (can resume), false = day ended or in progress
+
+  @Column({ type: 'boolean', default: false })
+  is_manual: boolean; // true = manually added by user
+
   @Column({ type: 'uuid', nullable: true })
   approved_by: string | null;
 

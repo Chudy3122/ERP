@@ -78,16 +78,28 @@ export class ChatService {
    * Create or get direct message channel
    */
   async createDirectChannel(userId1: string, userId2: string) {
-    // Check if direct channel already exists
-    const existingChannel = await this.channelRepository
+    // Find all direct channels where both users are members AND member count = 2
+    const existingChannels = await this.channelRepository
       .createQueryBuilder('channel')
       .innerJoin('channel.members', 'member1', 'member1.user_id = :userId1', { userId1 })
       .innerJoin('channel.members', 'member2', 'member2.user_id = :userId2', { userId2 })
       .where('channel.type = :type', { type: ChannelType.DIRECT })
-      .getOne();
+      .andWhere('channel.is_active = :active', { active: true })
+      .andWhere(qb => {
+        const sub = qb
+          .subQuery()
+          .select('COUNT(*)')
+          .from('channel_members', 'cm')
+          .where('cm.channel_id = channel.id')
+          .getQuery();
+        return `(${sub}) = 2`;
+      })
+      .orderBy('channel.created_at', 'ASC')
+      .getMany();
 
-    if (existingChannel) {
-      return this.getChannelById(existingChannel.id, userId1);
+    // Return oldest existing channel (handles pre-existing duplicates too)
+    if (existingChannels.length > 0) {
+      return this.getChannelById(existingChannels[0].id, userId1);
     }
 
     // Create new direct channel

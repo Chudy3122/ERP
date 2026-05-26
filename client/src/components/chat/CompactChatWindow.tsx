@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Message from './Message';
 import MessageInput from './MessageInput';
 import { ArrowLeft, Users } from 'lucide-react';
@@ -12,6 +13,7 @@ interface CompactChatWindowProps {
 
 const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
   const { t } = useTranslation();
+  const { user: currentUser } = useAuth();
   const {
     activeChannel,
     messages,
@@ -38,23 +40,24 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
     }
   }, [messages]);
 
+  const getOtherMember = () => {
+    if (!activeChannel?.members) return undefined;
+    return activeChannel.members.find(m => m.user_id !== currentUser?.id) ?? activeChannel.members[0];
+  };
+
   const getChannelName = (): string => {
     if (!activeChannel) return '';
-    if (activeChannel.name) return activeChannel.name;
-    if (activeChannel.type === 'direct' && activeChannel.members && activeChannel.members.length > 0) {
-      const otherMember = activeChannel.members[0];
-      return otherMember.user
-        ? `${otherMember.user.first_name} ${otherMember.user.last_name}`
-        : t('chat.unnamed');
+    if (activeChannel.type === 'direct') {
+      const other = getOtherMember();
+      if (other?.user) return `${other.user.first_name} ${other.user.last_name}`;
+      return activeChannel.name ?? t('chat.unnamed');
     }
-    return t('chat.unnamed');
+    return activeChannel.name ?? t('chat.unnamed');
   };
 
   const getOtherUser = () => {
-    if (activeChannel?.type === 'direct' && activeChannel.members?.[0]?.user) {
-      return activeChannel.members[0].user;
-    }
-    return null;
+    const other = getOtherMember();
+    return other?.user ?? null;
   };
 
   const getStatusText = (status?: string) => {
