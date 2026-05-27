@@ -5,6 +5,7 @@ import { getFileUrl } from '../../api/axios-config';
 import * as meetingApi from '../../api/meeting.api';
 import socketService from '../../services/socket.service';
 import { useChatContext } from '../../contexts/ChatContext';
+import { playCallRingtone, stopCallRingtone } from '../../utils/audio';
 
 interface CallData {
   meeting_id: string;
@@ -26,13 +27,12 @@ const IncomingCallOverlay = () => {
   const [call, setCall] = useState<CallData | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SEC);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const dismiss = () => {
     setCall(null);
     setSecondsLeft(AUTO_DISMISS_SEC);
     if (timerRef.current) clearInterval(timerRef.current);
-    audioRef.current?.pause();
+    stopCallRingtone();
   };
 
   const handleAccept = () => {
@@ -57,15 +57,7 @@ const IncomingCallOverlay = () => {
     const handler = (data: CallData) => {
       setCall(data);
       setSecondsLeft(AUTO_DISMISS_SEC);
-
-      // Play ringtone
-      try {
-        const audio = new Audio('/sounds/gadu_gadu.mp3');
-        audio.loop = true;
-        audio.volume = 0.6;
-        audio.play().catch(() => {});
-        audioRef.current = audio;
-      } catch {}
+      playCallRingtone();
 
       // Countdown
       if (timerRef.current) clearInterval(timerRef.current);
@@ -83,7 +75,7 @@ const IncomingCallOverlay = () => {
     return () => {
       socket.off('meeting:invitation', handler);
       if (timerRef.current) clearInterval(timerRef.current);
-      audioRef.current?.pause();
+      stopCallRingtone();
     };
   }, [isConnected]);
 

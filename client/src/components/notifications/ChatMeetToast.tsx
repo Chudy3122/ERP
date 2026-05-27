@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Video, X } from 'lucide-react';
+import { playNotificationSound } from '../../utils/audio';
 
 export interface ChatMeetNotificationPayload {
   type: 'chat_message' | 'meeting_invitation' | 'meeting_scheduled';
@@ -25,14 +26,6 @@ interface ToastItem extends ChatMeetNotificationPayload {
 }
 
 const TOAST_DURATION = 6000;
-
-const playNotificationSound = () => {
-  try {
-    const audio = new Audio('/sounds/gadu_gadu.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(() => {});
-  } catch {}
-};
 
 const getInitials = (name: string) =>
   name

@@ -15,6 +15,7 @@ import { useChatContext } from '../../contexts/ChatContext';
 import GlobalSearch from './GlobalSearch';
 import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
+import { unlockAudio } from '../../utils/audio';
 import {
   Home,
   MessageSquare,
@@ -90,6 +91,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   useAutoAway();
 
   // Load notifications
+  // Unlock audio API on first user interaction (required by browser autoplay policy)
+  useEffect(() => {
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
+
   useEffect(() => {
     const loadNotifications = async () => {
       try {
