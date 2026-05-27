@@ -346,7 +346,7 @@ const EmployeeDetail = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
                   <Mail className="w-4 h-4" />
                   Email
                 </label>
@@ -364,7 +364,7 @@ const EmployeeDetail = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
                   <Phone className="w-4 h-4" />
                   Telefon
                 </label>
@@ -409,7 +409,7 @@ const EmployeeDetail = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
                   <Building className="w-4 h-4" />
                   Dział
                 </label>
@@ -450,7 +450,7 @@ const EmployeeDetail = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
                   <Calendar className="w-4 h-4" />
                   Data zatrudnienia
                 </label>
@@ -576,7 +576,7 @@ const EmployeeDetail = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
                   <Clock className="w-4 h-4" />
                   Godziny pracy dziennie
                 </label>
@@ -628,7 +628,7 @@ const EmployeeDetail = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
                   <CalendarDays className="w-4 h-4" />
                   Roczny wymiar urlopu
                 </label>
