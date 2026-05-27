@@ -97,6 +97,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   // Sequence counter — prevents stale loadChannels responses from overwriting fresh ones
   const loadChannelsSeqRef = useRef(0);
 
+  // Persist channel activity timestamps across panel open/close
+  const STORAGE_KEY = 'chat_channel_activity';
+  const getStoredActivity = (): Record<string, string> => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  };
+  const setStoredActivity = (channelId: string, ts: string) => {
+    const map = getStoredActivity();
+    map[channelId] = ts;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  };
+
   // Keep refs in sync with state
   useEffect(() => { activeChannelRef.current = activeChannel; }, [activeChannel]);
   useEffect(() => { isPanelOpenRef.current = isPanelOpen; }, [isPanelOpen]);
@@ -194,13 +205,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
       }
 
-      // Bump channel to top (most recent activity first)
+      // Bump channel to top (most recent activity first) + persist to localStorage
+      const ts = data.message.created_at || new Date().toISOString();
+      setStoredActivity(data.channelId, ts);
       setChannels((prev) => {
         const idx = prev.findIndex((ch) => ch.id === data.channelId);
         if (idx < 0) return prev;
         const updated = [...prev];
         const [ch] = updated.splice(idx, 1);
-        return [{ ...ch, last_message_at: data.message.created_at }, ...updated];
+        return [{ ...ch, last_message_at: ts }, ...updated];
       });
     });
 
@@ -331,7 +344,21 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const fetchedChannels = await chatApi.getChannels();
       // Ignore response if a newer loadChannels call was made in the meantime
       if (seq !== loadChannelsSeqRef.current) return;
-      setChannels(fetchedChannels);
+      // Merge locally cached activity timestamps (survive panel close/open)
+      const stored = getStoredActivity();
+      const merged = fetchedChannels.map((ch) => {
+        const local = stored[ch.id];
+        const server = ch.last_message_at;
+        const best = local && server
+          ? (new Date(local) > new Date(server) ? local : server)
+          : (local || server || null);
+        return { ...ch, last_message_at: best };
+      }).sort((a, b) => {
+        const aT = new Date((a.last_message_at as string) || a.created_at).getTime();
+        const bT = new Date((b.last_message_at as string) || b.created_at).getTime();
+        return bT - aT;
+      });
+      setChannels(merged);
       setError(null);
     } catch (err: any) {
       if (seq !== loadChannelsSeqRef.current) return;
@@ -438,13 +465,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         messageType: MessageType.TEXT,
       };
 
-      // Optimistically bump channel to top
+      // Optimistically bump channel to top + persist to localStorage
+      const now = new Date().toISOString();
+      setStoredActivity(targetChannelId, now);
       setChannels((prev) => {
         const idx = prev.findIndex((ch) => ch.id === targetChannelId);
         if (idx <= 0) return prev;
         const updated = [...prev];
         const [ch] = updated.splice(idx, 1);
-        return [{ ...ch, last_message_at: new Date().toISOString() }, ...updated];
+        return [{ ...ch, last_message_at: now }, ...updated];
       });
 
       socket.emit('chat:send_message', messageData);
