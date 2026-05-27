@@ -194,14 +194,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
       }
 
-      // Update channel's last message
-      setChannels((prev) =>
-        prev.map((channel) =>
-          channel.id === data.channelId
-            ? { ...channel, last_message_at: data.message.created_at }
-            : channel
-        )
-      );
+      // Bump channel to top (most recent activity first)
+      setChannels((prev) => {
+        const idx = prev.findIndex((ch) => ch.id === data.channelId);
+        if (idx < 0) return prev;
+        const updated = [...prev];
+        const [ch] = updated.splice(idx, 1);
+        return [{ ...ch, last_message_at: data.message.created_at }, ...updated];
+      });
     });
 
     socket.on('chat:message_edited', (data: { message: Message; channelId: string }) => {
@@ -437,6 +437,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         content,
         messageType: MessageType.TEXT,
       };
+
+      // Optimistically bump channel to top
+      setChannels((prev) => {
+        const idx = prev.findIndex((ch) => ch.id === targetChannelId);
+        if (idx <= 0) return prev;
+        const updated = [...prev];
+        const [ch] = updated.splice(idx, 1);
+        return [{ ...ch, last_message_at: new Date().toISOString() }, ...updated];
+      });
 
       socket.emit('chat:send_message', messageData);
     },
