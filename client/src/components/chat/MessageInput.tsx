@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import FileUpload from './FileUpload';
 import * as fileApi from '../../api/file.api';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -26,8 +27,40 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
+    }
+  }, [showEmojiPicker]);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setContent((prev) => prev + emojiData.emoji);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newContent = content.slice(0, start) + emojiData.emoji + content.slice(end);
+    setContent(newContent);
+    // Restore cursor after emoji
+    requestAnimationFrame(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + emojiData.emoji.length;
+      textarea.focus();
+    });
+  };
 
   // Cleanup image preview URLs when files are removed
   useEffect(() => {
@@ -227,6 +260,31 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onFilesSelected={handleFilesSelected}
             disabled={disabled || isUploading}
           />
+        </div>
+
+        {/* Emoji Picker Button */}
+        <div className="flex-shrink-0 relative" ref={emojiPickerRef}>
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            disabled={disabled || isUploading}
+            className="w-10 h-10 flex items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-yellow-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xl"
+            title="Emotikony"
+          >
+            😊
+          </button>
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 left-0 z-50 shadow-xl rounded-xl overflow-hidden">
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                theme={'auto' as Theme}
+                height={380}
+                width={320}
+                searchPlaceholder="Szukaj emotikony..."
+                previewConfig={{ showPreview: false }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Textarea */}
