@@ -3,14 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import Message from '../components/chat/Message';
 import MessageInput from '../components/chat/MessageInput';
-import IncomingCallModal from '../components/meeting/IncomingCallModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useChatContext } from '../contexts/ChatContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 import * as meetingApi from '../api/meeting.api';
 import * as adminApi from '../api/admin.api';
-import socketService from '../services/socket.service';
 import type { Channel } from '../types/chat.types';
 import type { AdminUser } from '../types/admin.types';
 import {
@@ -134,17 +132,15 @@ const ChatMeet: React.FC = () => {
   const [extSearch, setExtSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Incoming call
-  const [incomingCall, setIncomingCall] = useState<{ callerName: string; meetingTitle: string; meetingId: string; roomId: string } | null>(null);
-
   // Members panel
   const [showMembers, setShowMembers] = useState(false);
 
   // Messages scroll ref
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load channels and meetings on mount
+  // Load channels and meetings on mount + scroll to top
   useEffect(() => {
+    window.scrollTo(0, 0);
     loadChannels();
     loadScheduledMeetings();
   }, [loadChannels]);
@@ -160,27 +156,7 @@ const ChatMeet: React.FC = () => {
     }
   }, [searchParams, channels]);
 
-  // Listen for incoming WebRTC call via socket
-  useEffect(() => {
-    const socket = socketService.getSocket();
-    if (!socket) return;
-
-    const handler = (data: {
-      meeting_id: string;
-      meeting_title: string;
-      caller: { id: string; first_name: string; last_name: string; avatar_url?: string };
-    }) => {
-      setIncomingCall({
-        callerName: `${data.caller.first_name} ${data.caller.last_name}`,
-        meetingTitle: data.meeting_title,
-        meetingId: data.meeting_id,  // room_id (used for navigation)
-        roomId: data.meeting_id,     // same field — room_id from server
-      });
-    };
-
-    socket.on('meeting:invitation', handler);
-    return () => { socket.off('meeting:invitation', handler); };
-  }, []);
+  // Note: meeting:invitation is handled globally by IncomingCallOverlay in MainLayout
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -423,16 +399,6 @@ const ChatMeet: React.FC = () => {
 
   return (
     <MainLayout title="Chat & Meet">
-      {/* Incoming Call Modal */}
-      {incomingCall && (
-        <IncomingCallModal
-          callerName={incomingCall.callerName}
-          meetingTitle={incomingCall.meetingTitle}
-          onAccept={() => { navigate(`/meeting/${incomingCall.roomId}`); setIncomingCall(null); }}
-          onReject={() => { meetingApi.rejectMeeting(incomingCall.meetingId); setIncomingCall(null); }}
-        />
-      )}
-
       <div className="flex h-[calc(100vh-64px)] -m-3 lg:-m-4 overflow-hidden">
 
         {/* ── LEFT SIDEBAR ── */}

@@ -10,6 +10,8 @@ import * as statusApi from '../../api/status.api';
 import AIAssistant from '../helpdesk/AIAssistant';
 import FloatingChatPanel from '../chat/FloatingChatPanel';
 import ChatMeetToast from '../notifications/ChatMeetToast';
+import IncomingCallOverlay from '../meeting/IncomingCallOverlay';
+import { useChatContext } from '../../contexts/ChatContext';
 import GlobalSearch from './GlobalSearch';
 import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
@@ -75,6 +77,7 @@ interface NotificationItem {
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const { totalUnreadCount } = useChatContext();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -262,6 +265,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     const isActive = pathMatches && searchMatches;
     const Icon = navItem.icon;
 
+    const isChatMeet = navItem.href === '/meeting';
+    const chatBadge = isChatMeet && totalUnreadCount > 0;
+
     return (
       <Link
         key={`nav-${idx}`}
@@ -274,7 +280,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         }`}
       >
         <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-[#F7941D] dark:text-orange-300' : 'text-gray-400 dark:text-gray-500'}`} />
-        <span className="truncate font-medium">{navItem.name}</span>
+        <span className="truncate font-medium flex-1">{navItem.name}</span>
+        {chatBadge && (
+          <span className="ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold flex-shrink-0">
+            {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+          </span>
+        )}
       </Link>
     );
   };
@@ -591,6 +602,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
       {/* Chat & Meet toast notifications */}
       <ChatMeetToast />
+
+      {/* Incoming video call overlay (Teams-style, global) */}
+      <IncomingCallOverlay />
     </div>
   );
 };

@@ -89,30 +89,30 @@ const ToastCard = ({
       : toast.preview || '';
 
   return (
-    <div className="pointer-events-auto relative flex flex-col w-80 rounded-xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="pointer-events-auto relative flex flex-col w-96 rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Progress bar */}
       <div
         className="absolute top-0 left-0 h-0.5 bg-[#F7941D] transition-none"
         style={{ width: `${progress}%` }}
       />
 
-      <div className="flex items-start gap-3 p-3 pt-3.5">
+      <div className="flex items-start gap-3 p-4 pt-4">
         {/* Avatar */}
         <div className="flex-shrink-0">
           {toast.senderAvatar ? (
             <img
               src={toast.senderAvatar}
               alt={toast.senderName}
-              className="w-9 h-9 rounded-full object-cover"
+              className="w-11 h-11 rounded-full object-cover"
             />
           ) : (
             <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
+              className={`w-11 h-11 rounded-full flex items-center justify-center text-white text-base font-bold ${
                 isMeeting ? 'bg-purple-600' : 'bg-[#F7941D]'
               }`}
             >
               {isMeeting ? (
-                <Video className="w-4 h-4" />
+                <Video className="w-5 h-5" />
               ) : (
                 getInitials(toast.senderName)
               )}
@@ -122,18 +122,18 @@ const ToastCard = ({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 mb-0.5">
+          <div className="flex items-center gap-1.5 mb-1">
             {isMeeting ? (
-              <Video className="w-3 h-3 text-purple-500 flex-shrink-0" />
+              <Video className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
             ) : (
-              <MessageSquare className="w-3 h-3 text-[#F7941D] flex-shrink-0" />
+              <MessageSquare className="w-3.5 h-3.5 text-[#F7941D] flex-shrink-0" />
             )}
-            <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
               {title}
             </p>
           </div>
           {body && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{body}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-snug">{body}</p>
           )}
         </div>
 
@@ -150,14 +150,14 @@ const ToastCard = ({
       <div className="flex border-t border-gray-100 dark:border-gray-700">
         <button
           onClick={onOpen}
-          className="flex-1 py-2 text-xs font-medium text-[#F7941D] hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+          className="flex-1 py-2.5 text-sm font-semibold text-[#F7941D] hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
         >
           Otwórz
         </button>
         <div className="w-px bg-gray-100 dark:bg-gray-700" />
         <button
           onClick={onClose}
-          className="flex-1 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="flex-1 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Odrzuć
         </button>

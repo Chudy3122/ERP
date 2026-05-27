@@ -36,7 +36,8 @@ export class MeetingController {
       meeting.participants.forEach((participant) => {
         if (participant.user_id !== userId && participant.status === 'invited') {
           emitMeetingInvitation(io, participant.user_id, {
-            meeting_id: meeting.room_id,   // room_id for WebRTC navigation
+            meeting_id: meeting.id,        // UUID for reject/join API calls
+            room_id: meeting.room_id,      // room_id for WebRTC navigation
             meeting_title: meeting.title,
             caller: {
               id: meeting.creator.id,

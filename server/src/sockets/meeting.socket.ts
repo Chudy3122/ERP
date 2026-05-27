@@ -162,7 +162,8 @@ export const emitMeetingInvitation = (
   io: Server,
   userId: string,
   meetingData: {
-    meeting_id: string;
+    meeting_id: string;   // UUID — used for reject/join API calls
+    room_id: string;      // room_id — used for WebRTC navigation
     meeting_title: string;
     caller: {
       id: string;
@@ -174,7 +175,7 @@ export const emitMeetingInvitation = (
   }
 ) => {
   io.to(`user:${userId}`).emit('meeting:invitation', meetingData);
-  console.log(`Sent meeting invitation to user ${userId} for meeting ${meetingData.meeting_id}`);
+  console.log(`Sent meeting invitation to user ${userId} for meeting ${meetingData.room_id}`);
 };
 
 /**
