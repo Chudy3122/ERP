@@ -452,7 +452,14 @@ const Projects = () => {
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {paginatedProjects.map(project => {
                 const statusConfig = getStatusConfig(project.status);
-                const priorityConfig = getPriorityConfig(project.priority);
+                const priorityConfig = project.target_end_date
+                  ? getPriorityConfig(project.priority)
+                  : {
+                      label: 'Stały',
+                      color: 'text-slate-700 dark:text-slate-300',
+                      dot: 'bg-slate-700 dark:bg-slate-300',
+                      bar: 'bg-slate-700',
+                    };
                 const stats = projectStats[project.id];
 
                 return (

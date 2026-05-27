@@ -31,9 +31,21 @@ import {
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import * as workLogApi from '../api/worklog.api';
-import { Project, ProjectStage, ProjectMember, ProjectStatistics, ProjectAttachment, ProjectActivity } from '../types/project.types';
+import * as adminApi from '../api/admin.api';
+import * as taskApi from '../api/task.api';
+import {
+  Project,
+  ProjectStage,
+  ProjectMember,
+  ProjectStatistics,
+  ProjectAttachment,
+  ProjectActivity,
+  ProjectMemberRole,
+  ProjectPriority,
+} from '../types/project.types';
 import type { ProjectTimeStats } from '../types/worklog.types';
-import { Task, TaskPriority } from '../types/task.types';
+import type { AdminUser } from '../types/admin.types';
+import { Task, TaskPriority, TaskStatus } from '../types/task.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -48,8 +60,15 @@ const ProjectDetail = () => {
 
   const [project, setProject] = useState<Project | null>(null);
   const [stages, setStages] = useState<ProjectStage[]>([]);
-  const [tasksByStages, setTasksByStages] = useState<{ stage: ProjectStage | null; tasks: Task[] }[]>([]);
+  const [tasksByStages, setTasksByStages] = useState<
+    { stage: ProjectStage | null; tasks: Task[] }[]
+  >([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [showAddMemberPanel, setShowAddMemberPanel] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(ProjectMemberRole.MEMBER);
+  const [memberActionUserId, setMemberActionUserId] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<ProjectStatistics | null>(null);
   const [attachments, setAttachments] = useState<ProjectAttachment[]>([]);
   const [activities, setActivities] = useState<ProjectActivity[]>([]);
@@ -62,6 +81,7 @@ const ProjectDetail = () => {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
+  const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
   const mouseStartPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -96,7 +116,12 @@ const ProjectDetail = () => {
 
   // Work log modal
   const [workLogTask, setWorkLogTask] = useState<Task | null>(null);
-  const [workLogForm, setWorkLogForm] = useState({ work_date: '', hours: '', description: '', work_type: 'regular' });
+  const [workLogForm, setWorkLogForm] = useState({
+    work_date: '',
+    hours: '',
+    description: '',
+    work_type: 'regular',
+  });
   const [isSubmittingWorkLog, setIsSubmittingWorkLog] = useState(false);
 
   const { t } = useTranslation();
@@ -111,6 +136,7 @@ const ProjectDetail = () => {
   useEffect(() => {
     if (id && activeTab === 'tasks') {
       loadTasksByStages();
+      loadMembers();
     } else if (id && activeTab === 'members') {
       loadMembers();
     } else if (id && activeTab === 'dashboard') {
@@ -164,7 +190,20 @@ const ProjectDetail = () => {
   const loadMembers = async () => {
     try {
       const data = await projectApi.getProjectMembers(id!);
-      setMembers(data);
+      if (data.length === 0 && project?.created_by && isAdmin) {
+        try {
+          await projectApi.addProjectMember(id!, project.created_by, ProjectMemberRole.LEAD);
+          const refreshedMembers = await projectApi.getProjectMembers(id!);
+          setMembers(refreshedMembers);
+        } catch (error) {
+          console.warn('Failed to auto-add project creator as member:', error);
+          setMembers(data);
+        }
+      } else {
+        setMembers(data);
+      }
+      const usersData = await adminApi.getUsers();
+      setUsers(usersData.filter(userItem => userItem.is_active));
     } catch (error) {
       console.error('Failed to load members:', error);
     }
@@ -203,6 +242,118 @@ const ProjectDetail = () => {
       setTimeStats(stats);
     } catch (error) {
       console.error('Failed to load time stats:', error);
+    }
+  };
+
+  const getProjectMemberRoleLabel = (role: ProjectMemberRole) => {
+    const labels = {
+      [ProjectMemberRole.LEAD]: 'Lider',
+      [ProjectMemberRole.MEMBER]: 'Członek',
+      [ProjectMemberRole.OBSERVER]: 'Obserwator',
+    };
+    return labels[role] || 'Członek';
+  };
+
+  const getProjectMemberRoleClass = (role: ProjectMemberRole) => {
+    const classes = {
+      [ProjectMemberRole.LEAD]: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      [ProjectMemberRole.MEMBER]:
+        'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+      [ProjectMemberRole.OBSERVER]:
+        'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    };
+    return classes[role] || classes[ProjectMemberRole.MEMBER];
+  };
+
+  const getUserDisplayName = (userItem?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  }) => {
+    if (!userItem) return 'Nieznany użytkownik';
+    return (
+      `${userItem.first_name || ''} ${userItem.last_name || ''}`.trim() ||
+      userItem.email ||
+      'Nieznany użytkownik'
+    );
+  };
+
+  const visibleMembers =
+    members.length > 0
+      ? members
+      : project?.creator
+        ? [
+            {
+              id: 'project-creator-fallback',
+              project_id: project.id,
+              user_id: project.created_by,
+              role: ProjectMemberRole.LEAD,
+              joined_at: project.created_at,
+              user: project.creator,
+            } satisfies ProjectMember,
+          ]
+        : [];
+
+  const assignableProjectMembers = [...visibleMembers].sort((firstMember, secondMember) =>
+    getUserDisplayName(firstMember.user).localeCompare(
+      getUserDisplayName(secondMember.user),
+      'pl',
+      {
+        sensitivity: 'base',
+      }
+    )
+  );
+
+  const availableUsers = users
+    .filter(userItem => !visibleMembers.some(member => member.user_id === userItem.id))
+    .sort((firstUser, secondUser) =>
+      getUserDisplayName(firstUser).localeCompare(getUserDisplayName(secondUser), 'pl', {
+        sensitivity: 'base',
+      })
+    );
+
+  const filteredAvailableUsers = availableUsers.filter(userItem => {
+    const query = memberSearchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    return [
+      userItem.first_name,
+      userItem.last_name,
+      userItem.email,
+      userItem.position || '',
+      userItem.department || '',
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  });
+
+  const handleAddProjectMember = async (userId: string) => {
+    if (!id) return;
+
+    try {
+      setMemberActionUserId(userId);
+      await projectApi.addProjectMember(id, userId, newMemberRole);
+      await loadMembers();
+      setMemberSearchQuery('');
+    } catch (error) {
+      console.error('Failed to add project member:', error);
+    } finally {
+      setMemberActionUserId(null);
+    }
+  };
+
+  const handleRemoveProjectMember = async (userId: string) => {
+    if (!id) return;
+
+    try {
+      setMemberActionUserId(userId);
+      await projectApi.removeProjectMember(id, userId);
+      await loadMembers();
+    } catch (error) {
+      console.error('Failed to remove project member:', error);
+    } finally {
+      setMemberActionUserId(null);
     }
   };
 
@@ -251,6 +402,25 @@ const ProjectDetail = () => {
       description: '',
       work_type: 'regular',
     });
+  };
+
+  const handleAssignTask = async (event: React.ChangeEvent<HTMLSelectElement>, task: Task) => {
+    event.stopPropagation();
+    const assigneeId = event.target.value;
+
+    if (!assigneeId || assigneeId === task.assigned_to) {
+      return;
+    }
+
+    try {
+      setAssigningTaskId(task.id);
+      await taskApi.assignTask(task.id, assigneeId);
+      await loadTasksByStages();
+    } catch (error) {
+      console.error('Failed to assign task:', error);
+    } finally {
+      setAssigningTaskId(null);
+    }
   };
 
   const handleSubmitWorkLog = async () => {
@@ -512,6 +682,71 @@ const ProjectDetail = () => {
     return configs[priority];
   };
 
+  const getTaskPriorityAccent = (priority: TaskPriority) => {
+    const accents = {
+      [TaskPriority.LOW]: '#9CA3AF',
+      [TaskPriority.MEDIUM]: '#3B82F6',
+      [TaskPriority.HIGH]: '#F97316',
+      [TaskPriority.URGENT]: '#EF4444',
+    };
+
+    return accents[priority] || '#9CA3AF';
+  };
+
+  const isTaskOverdue = (task: Task) => {
+    if (!task.due_date || task.status === TaskStatus.DONE) return false;
+    const dueDate = new Date(task.due_date);
+    dueDate.setHours(23, 59, 59, 999);
+    return dueDate.getTime() < Date.now();
+  };
+
+  const getProjectPriorityConfig = (priority: ProjectPriority, isOngoingProject: boolean) => {
+    if (isOngoingProject) {
+      return {
+        label: 'Stały',
+        color:
+          'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:border-slate-600',
+      };
+    }
+
+    const configs = {
+      low: {
+        label: 'Niski',
+        color:
+          'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
+      },
+      medium: {
+        label: 'Średni',
+        color:
+          'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/40',
+      },
+      high: {
+        label: 'Wysoki',
+        color:
+          'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-900/40',
+      },
+      critical: {
+        label: 'Krytyczny',
+        color:
+          'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-900/40',
+      },
+    };
+
+    return configs[priority] || configs.medium;
+  };
+
+  const getProjectStatusLabel = (status: Project['status']) => {
+    const labels = {
+      planning: 'Planowanie',
+      active: 'Aktywny',
+      on_hold: 'Wstrzymany',
+      completed: 'Ukończony',
+      cancelled: 'Anulowany',
+    };
+
+    return labels[status] || status;
+  };
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pl-PL', {
       day: 'numeric',
@@ -529,9 +764,8 @@ const ProjectDetail = () => {
     if (!searchQuery) return tasks;
     const query = searchQuery.toLowerCase();
     return tasks.filter(
-      (task) =>
-        task.title.toLowerCase().includes(query) ||
-        task.description?.toLowerCase().includes(query)
+      task =>
+        task.title.toLowerCase().includes(query) || task.description?.toLowerCase().includes(query)
     );
   };
 
@@ -545,10 +779,24 @@ const ProjectDetail = () => {
   ];
 
   const stageColors = [
-    '#6B7280', '#EF4444', '#F97316', '#F59E0B', '#EAB308',
-    '#84CC16', '#22C55E', '#10B981', '#14B8A6', '#06B6D4',
-    '#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7',
-    '#D946EF', '#EC4899', '#F43F5E',
+    '#6B7280',
+    '#EF4444',
+    '#F97316',
+    '#F59E0B',
+    '#EAB308',
+    '#84CC16',
+    '#22C55E',
+    '#10B981',
+    '#14B8A6',
+    '#06B6D4',
+    '#0EA5E9',
+    '#3B82F6',
+    '#6366F1',
+    '#8B5CF6',
+    '#A855F7',
+    '#D946EF',
+    '#EC4899',
+    '#F43F5E',
   ];
 
   if (isLoading) {
@@ -578,13 +826,24 @@ const ProjectDetail = () => {
     );
   }
 
+  const isOngoingProject = !project.target_end_date;
+  const projectPriorityConfig = getProjectPriorityConfig(project.priority, isOngoingProject);
+  const totalTaskCount = tasksByStages.reduce((sum, group) => sum + group.tasks.length, 0);
+  const visibleTaskCount = tasksByStages.reduce(
+    (sum, group) => sum + filterTasks(group.tasks).length,
+    0
+  );
+
   return (
     <MainLayout title={project.name}>
       {/* Header */}
       <div className="mb-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-          <button onClick={() => navigate('/projects')} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <button
+            onClick={() => navigate('/projects')}
+            className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
             {t('projects.title')}
           </button>
           <span className="text-gray-300 dark:text-gray-600">/</span>
@@ -599,20 +858,47 @@ const ProjectDetail = () => {
               <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                 {project.code}
               </span>
+              {isOngoingProject && (
+                <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/40">
+                  Projekt ciągły
+                </span>
+              )}
             </div>
             {project.description && (
-              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-2xl">{project.description}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-2xl">
+                {project.description}
+              </p>
             )}
-            <div className="flex items-center gap-5 mt-3 text-sm text-gray-500 dark:text-gray-400">
-              {project.start_date && (
+            <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-500 dark:text-gray-400">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${projectPriorityConfig.color}`}
+              >
+                Priorytet: {projectPriorityConfig.label}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:bg-gray-800/50 dark:text-gray-300">
+                Status: {getProjectStatusLabel(project.status)}
+              </span>
+              {(project.start_date || isOngoingProject) && (
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-lg">
                   <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{formatDate(project.start_date)}</span>
-                  {project.target_end_date && (
+                  {project.start_date && (
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {formatDate(project.start_date)}
+                    </span>
+                  )}
+                  {project.target_end_date ? (
                     <>
-                      <span className="text-gray-300 dark:text-gray-600 mx-1">→</span>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">{formatDate(project.target_end_date)}</span>
+                      {project.start_date && (
+                        <span className="text-gray-300 dark:text-gray-600 mx-1">→</span>
+                      )}
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        {formatDate(project.target_end_date)}
+                      </span>
                     </>
+                  ) : (
+                    <span className="font-medium text-blue-700 dark:text-blue-300">
+                      {project.start_date ? 'bez planowanej daty zakończenia' : 'Projekt ciągły'}
+                    </span>
                   )}
                 </span>
               )}
@@ -637,22 +923,22 @@ const ProjectDetail = () => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="flex gap-1 -mb-px">
-          {tabs.map((tab) => {
+      <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <nav className="flex min-w-max gap-1">
+          {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as TabType)}
-                className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                   isActive
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'bg-[#F7941D] text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/60 dark:hover:text-gray-100'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? '' : 'opacity-70'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'opacity-70'}`} />
                 {tab.label}
               </button>
             );
@@ -667,24 +953,44 @@ const ProjectDetail = () => {
           {statistics && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.total')}</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{statistics.total_tasks}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {t('tasks.total')}
+                </p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {statistics.total_tasks}
+                </p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.done')}</p>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{statistics.completed_tasks}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {t('tasks.done')}
+                </p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {statistics.completed_tasks}
+                </p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.inProgress')}</p>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{statistics.in_progress_tasks}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {t('tasks.inProgress')}
+                </p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {statistics.in_progress_tasks}
+                </p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.statusTodo')}</p>
-                <p className="text-3xl font-bold text-gray-600 dark:text-gray-300">{statistics.todo_tasks}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {t('tasks.statusTodo')}
+                </p>
+                <p className="text-3xl font-bold text-gray-600 dark:text-gray-300">
+                  {statistics.todo_tasks}
+                </p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('tasks.statusBlocked')}</p>
-                <p className="text-3xl font-bold text-red-600 dark:text-red-400">{statistics.blocked_tasks}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {t('tasks.statusBlocked')}
+                </p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-400">
+                  {statistics.blocked_tasks}
+                </p>
               </div>
             </div>
           )}
@@ -693,8 +999,12 @@ const ProjectDetail = () => {
           {statistics && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('projects.progress')}</span>
-                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{statistics.completion_percentage}%</span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  {t('projects.progress')}
+                </span>
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  {statistics.completion_percentage}%
+                </span>
               </div>
               <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div
@@ -716,30 +1026,55 @@ const ProjectDetail = () => {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('timeTracking.totalHours')}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{timeStats.totalHours.toFixed(1)}h</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                    {t('timeTracking.totalHours')}
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {timeStats.totalHours.toFixed(1)}h
+                  </p>
                 </div>
                 <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
-                  <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide mb-1">Płatne</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{timeStats.billableHours.toFixed(1)}h</p>
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide mb-1">
+                    Płatne
+                  </p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {timeStats.billableHours.toFixed(1)}h
+                  </p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Niepłatne</p>
-                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{timeStats.nonBillableHours.toFixed(1)}h</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                    Niepłatne
+                  </p>
+                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">
+                    {timeStats.nonBillableHours.toFixed(1)}h
+                  </p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
-                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">Wpisów</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{timeStats.logsCount}</p>
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+                    Wpisów
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {timeStats.logsCount}
+                  </p>
                 </div>
               </div>
               {timeStats.byUser.length > 0 && (
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Czas wg osób:</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+                    Czas wg osób:
+                  </p>
                   <div className="space-y-2">
-                    {timeStats.byUser.slice(0, 5).map((item) => (
-                      <div key={item.user_id} className="flex justify-between items-center text-sm bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2">
-                        <span className="text-gray-600 dark:text-gray-300 font-medium">{item.user_name}</span>
-                        <span className="font-bold text-gray-900 dark:text-white">{item.hours.toFixed(1)}h</span>
+                    {timeStats.byUser.slice(0, 5).map(item => (
+                      <div
+                        key={item.user_id}
+                        className="flex justify-between items-center text-sm bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2"
+                      >
+                        <span className="text-gray-600 dark:text-gray-300 font-medium">
+                          {item.user_name}
+                        </span>
+                        <span className="font-bold text-gray-900 dark:text-white">
+                          {item.hours.toFixed(1)}h
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -751,7 +1086,9 @@ const ProjectDetail = () => {
           {/* Recent activity preview */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-semibold text-gray-900 dark:text-white">{t('dashboard.recentActivity')}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                {t('dashboard.recentActivity')}
+              </h3>
               <button
                 onClick={() => setActiveTab('activity')}
                 className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
@@ -760,16 +1097,23 @@ const ProjectDetail = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {activities.slice(0, 5).map((activity) => {
+              {activities.slice(0, 5).map(activity => {
                 const Icon = getActivityIcon(activity.action);
                 return (
-                  <div key={activity.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
                     <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                       <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 dark:text-white font-medium">{activity.description}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatRelativeTime(activity.created_at)}</p>
+                      <p className="text-sm text-gray-900 dark:text-white font-medium">
+                        {activity.description}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {formatRelativeTime(activity.created_at)}
+                      </p>
                     </div>
                   </div>
                 );
@@ -786,26 +1130,42 @@ const ProjectDetail = () => {
       )}
 
       {activeTab === 'tasks' && (
-        <div>
+        <div className="space-y-4">
           {/* Search and controls */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder={t('tasks.searchTasks')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
-              />
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Zadania projektu
+                </h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {searchQuery
+                    ? `Widoczne: ${visibleTaskCount} z ${totalTaskCount} zadań`
+                    : `Łącznie: ${totalTaskCount} zadań w ${tasksByStages.length} etapach`}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-72 max-w-full">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder={t('tasks.searchTasks')}
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 transition-all placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewStageModal(true)}
+                  className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  <Plus className="h-4 w-4 text-[#F7941D]" />
+                  {t('projects.newStage') || 'Nowy etap'}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setShowNewStageModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-all shadow-sm hover:shadow"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {t('projects.newStage') || 'Nowy etap'}
-            </button>
           </div>
 
           {/* Kanban Board */}
@@ -840,158 +1200,216 @@ const ProjectDetail = () => {
               const stageId = stage?.id || null;
               const isOver = dragOverStage === stageId;
               const stageColor = stage?.color || '#6B7280';
+              const isUnassignedStage = !stage;
 
               return (
                 <div
                   key={stageId || 'unassigned'}
-                  className={`flex-shrink-0 w-[270px] rounded-xl transition-all duration-200 ${
-                    isOver
-                      ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
-                      : ''
+                  className={`flex-shrink-0 w-[292px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 dark:border-gray-700 dark:bg-gray-900/40 ${
+                    isOver ? 'ring-2 ring-[#F7941D] ring-offset-2 dark:ring-offset-gray-900' : ''
                   }`}
                   onDragOver={handleStageDragOver}
-                  onDragEnter={(e) => handleStageDragEnter(e, stageId)}
+                  onDragEnter={e => handleStageDragEnter(e, stageId)}
                   onDragLeave={handleStageDragLeave}
-                  onDrop={(e) => handleDrop(e, stageId)}
+                  onDrop={e => handleDrop(e, stageId)}
                 >
                   {/* Column header */}
                   <div
-                    className="px-3 py-2 rounded-t-xl flex items-center justify-between"
+                    className="flex items-start justify-between gap-3 px-3 py-3"
                     style={{
                       background: `linear-gradient(135deg, ${stageColor}25 0%, ${stageColor}15 100%)`,
-                      borderBottom: `2px solid ${stageColor}40`
+                      borderBottom: `2px solid ${stageColor}40`,
                     }}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
                       <div
-                        className="w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-gray-800 shadow-sm"
+                        className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-800"
                         style={{ backgroundColor: stageColor }}
                       />
-                      <span className="font-semibold text-xs text-gray-800 dark:text-gray-100">
-                        {stage?.name || t('projects.noStage') || 'Bez etapu'}
-                      </span>
-                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 px-1.5 py-0.5 rounded-full">
-                        {filteredTasks.length}
-                      </span>
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {stage?.name || t('projects.noStage') || 'Bez etapu'}
+                          </span>
+                          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">
+                            {searchQuery ? `${filteredTasks.length}/${tasks.length}` : tasks.length}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                          {isUnassignedStage ? 'Zadania bez przypisanego etapu' : 'Etap projektu'}
+                        </p>
+                      </div>
                     </div>
                     {stage && (
                       <button
+                        type="button"
                         onClick={() => handleOpenEditStage(stage)}
-                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded transition-all"
+                        className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200"
+                        aria-label="Opcje etapu"
                       >
-                        <MoreHorizontal className="w-3.5 h-3.5" />
+                        <MoreHorizontal className="h-4 w-4" />
                       </button>
                     )}
                   </div>
 
                   {/* Tasks container */}
                   <div
-                    className="p-2 space-y-2 min-h-[200px] bg-gray-100/50 dark:bg-gray-800/50 rounded-b-xl"
+                    className="min-h-[260px] space-y-2 p-2.5"
                     style={{
                       background: isOver
-                        ? 'linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)'
-                        : undefined
+                        ? 'linear-gradient(180deg, rgba(247, 148, 29, 0.12) 0%, rgba(247, 148, 29, 0.05) 100%)'
+                        : undefined,
                     }}
                   >
-                    {filteredTasks.map((task) => {
+                    {filteredTasks.map(task => {
                       const priorityConfig = getPriorityConfig(task.priority);
                       const isDragging = draggedTask?.id === task.id;
-
+                      const priorityAccent = getTaskPriorityAccent(task.priority);
+                      const overdue = isTaskOverdue(task);
                       return (
                         <div
                           key={task.id}
                           draggable
                           onMouseDown={handleMouseDown}
-                          onClick={(e) => handleCardClick(e, task.id)}
-                          onDragStart={(e) => handleDragStart(e, task)}
+                          onClick={e => handleCardClick(e, task.id)}
+                          onDragStart={e => handleDragStart(e, task)}
                           onDragEnd={handleDragEnd}
-                          className={`relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200/80 dark:border-gray-700/80 p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group select-none ${
+                          className={`relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/80 p-3 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group select-none ${
                             isUpdatingTask === task.id ? 'opacity-60' : ''
                           } ${isDragging ? 'opacity-50 scale-[1.02] shadow-lg ring-2 ring-blue-400' : 'hover:-translate-y-0.5'}`}
                         >
                           {/* Priority indicator bar */}
                           <div
-                            className="absolute top-0 left-3 right-3 h-0.5 rounded-full"
-                            style={{ backgroundColor: priorityConfig.dotColor.replace('bg-', '').includes('gray') ? '#9CA3AF' :
-                              priorityConfig.dotColor.includes('blue') ? '#3B82F6' :
-                              priorityConfig.dotColor.includes('orange') ? '#F97316' :
-                              priorityConfig.dotColor.includes('red') ? '#EF4444' : '#9CA3AF'
+                            className="absolute left-3 right-3 top-0 h-1 rounded-b-full"
+                            style={{
+                              backgroundColor: priorityAccent,
                             }}
                           />
 
-                          <div className="flex items-start justify-between gap-1.5 mb-1.5 mt-0.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[9px] font-semibold uppercase tracking-wide ${priorityConfig.color}`}>
+                          <div className="mb-2 mt-1 flex items-start justify-between gap-2">
+                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                              <span
+                                className={`rounded-full bg-gray-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:bg-gray-700/60 ${priorityConfig.color}`}
+                              >
                                 {priorityConfig.label}
                               </span>
+                              {overdue && (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                                  Po terminie
+                                </span>
+                              )}
                             </div>
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <GripVertical className="w-3 h-3 text-gray-300 dark:text-gray-600" />
+                            <div className="rounded-md p-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                              <GripVertical className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600" />
                             </div>
                           </div>
 
-                          <h4 className="font-medium text-gray-900 dark:text-white text-xs mb-1.5 line-clamp-2 leading-snug">
+                          <h4 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-white">
                             {task.title}
                           </h4>
 
                           {task.description && (
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2 line-clamp-2 leading-relaxed">
+                            <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                               {task.description}
                             </p>
                           )}
 
-                          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            <div className="relative max-w-full">
+                              <UserPlus className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[#F7941D]" />
+                              <select
+                                value=""
+                                onMouseDown={event => event.stopPropagation()}
+                                onClick={event => event.stopPropagation()}
+                                onChange={event => handleAssignTask(event, task)}
+                                disabled={
+                                  assigningTaskId === task.id ||
+                                  assignableProjectMembers.length === 0
+                                }
+                                className="max-w-full appearance-none rounded-full border border-[#F7941D]/30 bg-[#F7941D]/10 py-0.5 pl-6 pr-3 text-[10px] font-semibold text-[#C86F0A] outline-none transition-colors hover:border-[#F7941D]/60 hover:bg-[#F7941D]/15 focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#F7941D]/40 dark:bg-[#F7941D]/15 dark:text-orange-300"
+                                title="Zmień osobę odpowiedzialną za zadanie"
+                              >
+                                <option value="">Przypisz osobę</option>
+                                {assignableProjectMembers.map(member => (
+                                  <option key={member.user_id} value={member.user_id}>
+                                    {getUserDisplayName(member.user)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            {task.due_date && (
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                  overdue
+                                    ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300'
+                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(task.due_date)}
+                              </span>
+                            )}
+                            {(task.actual_hours !== undefined ||
+                              task.estimated_hours !== undefined) && (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+                                title={`${task.actual_hours || 0}h zalogowanych / ${task.estimated_hours || '?'}h szacowanych`}
+                              >
+                                <Clock className="h-3 w-3" />
+                                {task.actual_hours || 0}h
+                                {task.estimated_hours && (
+                                  <span className="text-gray-400 dark:text-gray-500">
+                                    /{task.estimated_hours}h
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-gray-700/50">
                             {task.assignee ? (
-                              <div className="flex items-center gap-1.5" title={`${task.assignee.first_name} ${task.assignee.last_name}`}>
+                              <div
+                                className="flex min-w-0 items-center gap-2"
+                                title={`${task.assignee.first_name} ${task.assignee.last_name}`}
+                              >
                                 {task.assignee.avatar_url ? (
                                   <img
                                     src={getFileUrl(task.assignee.avatar_url) || ''}
                                     alt=""
-                                    className="w-5 h-5 rounded-full ring-1 ring-white dark:ring-gray-800"
+                                    className="h-6 w-6 rounded-full object-cover ring-1 ring-white dark:ring-gray-800"
                                   />
                                 ) : (
-                                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-white dark:ring-gray-800">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-[9px] font-bold text-white ring-1 ring-white dark:ring-gray-800">
                                     {getInitials(task.assignee.first_name, task.assignee.last_name)}
                                   </div>
                                 )}
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                                  {task.assignee.first_name}
-                                </span>
+                                <div className="min-w-0">
+                                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                    Odpowiedzialny
+                                  </span>
+                                  <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+                                    {task.assignee.first_name} {task.assignee.last_name}
+                                  </span>
+                                </div>
                               </div>
                             ) : (
-                              <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                <Users className="w-2.5 h-2.5 text-gray-400 dark:text-gray-500" />
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                                  <Users className="h-3 w-3" />
+                                </div>
+                                Brak przypisanej osoby
                               </div>
                             )}
 
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => handleOpenWorkLog(e, task)}
-                                title="Zaloguj czas"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[9px] text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 px-1.5 py-0.5 rounded font-semibold"
-                              >
-                                <Plus className="w-2.5 h-2.5" />
-                                czas
-                              </button>
-                              {(task.actual_hours !== undefined || task.estimated_hours !== undefined) && (
-                                <span
-                                  className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5 font-medium"
-                                  title={`${task.actual_hours || 0}h zalogowanych / ${task.estimated_hours || '?'}h szacowanych`}
-                                >
-                                  <Clock className="w-2.5 h-2.5" />
-                                  {task.actual_hours || 0}h
-                                  {task.estimated_hours && (
-                                    <span className="text-gray-300 dark:text-gray-600">/{task.estimated_hours}h</span>
-                                  )}
-                                </span>
-                              )}
-                              {task.due_date && (
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5 font-medium">
-                                  <Calendar className="w-2.5 h-2.5" />
-                                  {formatDate(task.due_date)}
-                                </span>
-                              )}
-                            </div>
+                            <button
+                              type="button"
+                              onClick={e => handleOpenWorkLog(e, task)}
+                              title="Zaloguj czas"
+                              className="inline-flex items-center gap-1 rounded-lg bg-[#F7941D]/10 px-2 py-1 text-[10px] font-semibold text-[#F7941D] opacity-0 transition-all hover:bg-[#F7941D]/15 group-hover:opacity-100"
+                            >
+                              <Plus className="h-3 w-3" />
+                              czas
+                            </button>
                           </div>
 
                           {isUpdatingTask === task.id && (
@@ -1004,20 +1422,29 @@ const ProjectDetail = () => {
                     })}
 
                     {filteredTasks.length === 0 && quickTaskStageId !== stageId && (
-                      <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
-                        <CheckSquare className="w-6 h-6 mb-1.5 opacity-50" />
-                        <span className="text-xs font-medium">{t('tasks.noTasks')}</span>
+                      <div className="flex min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white/70 px-4 py-8 text-center text-gray-400 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-500">
+                        <CheckSquare className="mb-2 h-7 w-7 opacity-50" />
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          {searchQuery
+                            ? 'Brak zadań pasujących do wyszukiwania'
+                            : t('tasks.noTasks')}
+                        </span>
+                        {!searchQuery && (
+                          <span className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+                            Dodaj pierwsze zadanie w tym etapie.
+                          </span>
+                        )}
                       </div>
                     )}
 
                     {/* Quick task input */}
                     {quickTaskStageId === stageId ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-400 dark:border-blue-500 p-2 shadow-md">
+                      <div className="rounded-lg border-2 border-[#F7941D] bg-white p-2 shadow-md dark:bg-gray-800">
                         <input
                           ref={quickTaskInputRef}
                           type="text"
                           value={quickTaskTitle}
-                          onChange={(e) => setQuickTaskTitle(e.target.value)}
+                          onChange={e => setQuickTaskTitle(e.target.value)}
                           onKeyDown={handleQuickTaskKeyDown}
                           onBlur={() => {
                             if (!quickTaskTitle.trim()) {
@@ -1032,13 +1459,16 @@ const ProjectDetail = () => {
                           <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                             Enter - {t('common.save')}, Esc - {t('common.cancel')}
                           </span>
-                          {isCreatingQuickTask && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                          {isCreatingQuickTask && (
+                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                          )}
                         </div>
                       </div>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => handleStartQuickTask(stageId)}
-                        className="w-full p-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 rounded-lg transition-all flex items-center justify-center gap-1.5"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-gray-200 bg-white/70 p-2 text-xs font-semibold text-gray-500 transition-all hover:border-[#F7941D]/60 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400 dark:hover:border-[#F7941D]/60 dark:hover:bg-[#F7941D]/10 dark:hover:text-[#F7941D]"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         {t('tasks.newTask')}
@@ -1051,13 +1481,16 @@ const ProjectDetail = () => {
 
             {/* Add new column button */}
             <button
+              type="button"
               onClick={() => setShowNewStageModal(true)}
-              className="flex-shrink-0 w-[270px] min-h-[200px] bg-gradient-to-b from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/30 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all duration-200 flex flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 group"
+              className="group flex min-h-[260px] w-[292px] flex-shrink-0 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gradient-to-b from-gray-50 to-gray-100/50 text-gray-400 transition-all duration-200 hover:border-[#F7941D]/70 hover:bg-[#F7941D]/5 hover:text-[#F7941D] dark:border-gray-700 dark:from-gray-800/50 dark:to-gray-900/30 dark:text-gray-500 dark:hover:border-[#F7941D]/70 dark:hover:bg-[#F7941D]/10 dark:hover:text-[#F7941D]"
             >
-              <div className="w-9 h-9 rounded-full bg-gray-200/50 dark:bg-gray-700/50 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center transition-all">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200/50 transition-all group-hover:bg-[#F7941D]/15 dark:bg-gray-700/50">
                 <Plus className="w-5 h-5" />
               </div>
-              <span className="text-xs font-semibold">{t('projects.addStage') || 'Dodaj etap'}</span>
+              <span className="text-xs font-semibold">
+                {t('projects.addStage') || 'Dodaj etap'}
+              </span>
             </button>
           </div>
         </div>
@@ -1068,42 +1501,137 @@ const ProjectDetail = () => {
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 className="font-medium text-gray-900 dark:text-white">Członkowie zespołu</h3>
             {isAdmin && (
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button
+                type="button"
+                onClick={() => setShowAddMemberPanel(isOpen => !isOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
                 <Plus className="w-4 h-4" />
-                Dodaj członka
+                {showAddMemberPanel ? 'Zamknij' : 'Dodaj członka'}
               </button>
             )}
           </div>
+          {isAdmin && showAddMemberPanel && (
+            <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+              <div className="grid gap-3 lg:grid-cols-[1fr_180px]">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={memberSearchQuery}
+                    onChange={event => setMemberSearchQuery(event.target.value)}
+                    placeholder="Szukaj pracownika po imieniu, nazwisku, e-mailu..."
+                    className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+                <select
+                  value={newMemberRole}
+                  onChange={event => setNewMemberRole(event.target.value as ProjectMemberRole)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value={ProjectMemberRole.MEMBER}>Członek</option>
+                  <option value={ProjectMemberRole.LEAD}>Lider</option>
+                  <option value={ProjectMemberRole.OBSERVER}>Obserwator</option>
+                </select>
+              </div>
+
+              <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                {filteredAvailableUsers.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">
+                    Brak pracowników do dodania.
+                  </div>
+                ) : (
+                  filteredAvailableUsers.map(userItem => (
+                    <div
+                      key={userItem.id}
+                      className="flex items-center justify-between gap-3 border-b border-gray-100 p-3 last:border-b-0 dark:border-gray-700"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                          {getUserDisplayName(userItem)}
+                        </p>
+                        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                          {userItem.position || userItem.department || userItem.email}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddProjectMember(userItem.id)}
+                        disabled={memberActionUserId === userItem.id}
+                        className="flex flex-shrink-0 items-center gap-2 rounded-lg bg-[#F7941D] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {memberActionUserId === userItem.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <UserPlus className="h-3.5 w-3.5" />
+                        )}
+                        Dodaj
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {members.length === 0 ? (
+            {visibleMembers.length === 0 ? (
               <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 Brak członków w projekcie
               </div>
             ) : (
-              members.map((member) => (
-                <div key={member.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+              visibleMembers.map(member => (
+                <div
+                  key={member.id}
+                  className="p-4 flex items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     {member.user?.avatar_url ? (
                       <img
                         src={getFileUrl(member.user.avatar_url) || ''}
                         alt=""
-                        className="w-10 h-10 rounded-full"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
                         {member.user && getInitials(member.user.first_name, member.user.last_name)}
                       </div>
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {member.user?.first_name} {member.user?.last_name}
+                        {getUserDisplayName(member.user)}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.user?.email}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {member.user?.email}
+                      </p>
+                      {member.user?.position && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {member.user.position}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                    {member.role === 'lead' ? 'Lider' : member.role === 'observer' ? 'Obserwator' : 'Członek'}
-                  </span>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${getProjectMemberRoleClass(member.role)}`}
+                    >
+                      {getProjectMemberRoleLabel(member.role)}
+                    </span>
+                    {isAdmin && member.id !== 'project-creator-fallback' && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveProjectMember(member.user_id)}
+                        disabled={memberActionUserId === member.user_id}
+                        className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                        aria-label="Usuń członka z projektu"
+                      >
+                        {memberActionUserId === member.user_id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -1140,23 +1668,32 @@ const ProjectDetail = () => {
               <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg">
                 <FileIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400 mb-2">Brak plików</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">Przeciągnij pliki tutaj lub kliknij &quot;Dodaj pliki&quot;</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  Przeciągnij pliki tutaj lub kliknij &quot;Dodaj pliki&quot;
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {attachments.map((attachment) => {
+                {attachments.map(attachment => {
                   const FileTypeIcon = getFileIcon(attachment.file_type);
                   return (
-                    <div key={attachment.id} className="py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg px-2 transition-colors">
+                    <div
+                      key={attachment.id}
+                      className="py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg px-2 transition-colors"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                           <FileTypeIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-white text-sm">{attachment.original_name}</p>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">
+                            {attachment.original_name}
+                          </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatFileSize(attachment.file_size)} • {formatRelativeTime(attachment.created_at)}
-                            {attachment.uploader && ` • ${attachment.uploader.first_name} ${attachment.uploader.last_name}`}
+                            {formatFileSize(attachment.file_size)} •{' '}
+                            {formatRelativeTime(attachment.created_at)}
+                            {attachment.uploader &&
+                              ` • ${attachment.uploader.first_name} ${attachment.uploader.last_name}`}
                           </p>
                         </div>
                       </div>
@@ -1202,15 +1739,20 @@ const ProjectDetail = () => {
                 Brak aktywności
               </div>
             ) : (
-              activities.map((activity) => {
+              activities.map(activity => {
                 const Icon = getActivityIcon(activity.action);
                 return (
-                  <div key={activity.id} className="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <div
+                    key={activity.id}
+                    className="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
                     <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                       <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 dark:text-white">{activity.description}</p>
+                      <p className="text-sm text-gray-900 dark:text-white">
+                        {activity.description}
+                      </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatRelativeTime(activity.created_at)}
@@ -1226,7 +1768,9 @@ const ProjectDetail = () => {
 
       {activeTab === 'settings' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Ustawienia projektu</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Ustawienia projektu
+          </h3>
           <div className="space-y-4">
             <button
               onClick={() => navigate(`/projects/${id}/edit`)}
@@ -1239,7 +1783,7 @@ const ProjectDetail = () => {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Etapy projektu</h4>
               <div className="space-y-2">
-                {stages.map((stage) => (
+                {stages.map(stage => (
                   <div
                     key={stage.id}
                     className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
@@ -1249,7 +1793,9 @@ const ProjectDetail = () => {
                         className="w-4 h-4 rounded-full flex-shrink-0"
                         style={{ backgroundColor: stage.color }}
                       />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{stage.name}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {stage.name}
+                      </span>
                       {stage.is_completed_stage && (
                         <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">
                           Etap końcowy
@@ -1299,7 +1845,7 @@ const ProjectDetail = () => {
                 <input
                   type="text"
                   value={newStageName}
-                  onChange={(e) => setNewStageName(e.target.value)}
+                  onChange={e => setNewStageName(e.target.value)}
                   placeholder="np. Do zrobienia, W trakcie..."
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 />
@@ -1310,7 +1856,7 @@ const ProjectDetail = () => {
                   Kolor
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {stageColors.map((color) => (
+                  {stageColors.map(color => (
                     <button
                       key={color}
                       onClick={() => setNewStageColor(color)}
@@ -1369,7 +1915,7 @@ const ProjectDetail = () => {
                 <input
                   type="text"
                   value={editStageName}
-                  onChange={(e) => setEditStageName(e.target.value)}
+                  onChange={e => setEditStageName(e.target.value)}
                   placeholder="np. Do zrobienia, W trakcie..."
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 />
@@ -1380,7 +1926,7 @@ const ProjectDetail = () => {
                   Kolor
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {stageColors.map((color) => (
+                  {stageColors.map(color => (
                     <button
                       key={color}
                       onClick={() => setEditStageColor(color)}
@@ -1465,43 +2011,56 @@ const ProjectDetail = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
               <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Zaloguj czas pracy</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-xs">{workLogTask.title}</p>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Zaloguj czas pracy
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-xs">
+                  {workLogTask.title}
+                </p>
               </div>
-              <button onClick={() => setWorkLogTask(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button
+                onClick={() => setWorkLogTask(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Data
+                  </label>
                   <input
                     type="date"
                     value={workLogForm.work_date}
-                    onChange={(e) => setWorkLogForm({ ...workLogForm, work_date: e.target.value })}
+                    onChange={e => setWorkLogForm({ ...workLogForm, work_date: e.target.value })}
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Godziny</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Godziny
+                  </label>
                   <input
                     type="number"
                     min="0.5"
                     max="24"
                     step="0.5"
                     value={workLogForm.hours}
-                    onChange={(e) => setWorkLogForm({ ...workLogForm, hours: e.target.value })}
+                    onChange={e => setWorkLogForm({ ...workLogForm, hours: e.target.value })}
                     placeholder="np. 2.5"
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Typ pracy</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Typ pracy
+                </label>
                 <select
                   value={workLogForm.work_type}
-                  onChange={(e) => setWorkLogForm({ ...workLogForm, work_type: e.target.value })}
+                  onChange={e => setWorkLogForm({ ...workLogForm, work_type: e.target.value })}
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="regular">Zwykłe</option>
@@ -1511,10 +2070,12 @@ const ProjectDetail = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opis (opcjonalnie)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Opis (opcjonalnie)
+                </label>
                 <textarea
                   value={workLogForm.description}
-                  onChange={(e) => setWorkLogForm({ ...workLogForm, description: e.target.value })}
+                  onChange={e => setWorkLogForm({ ...workLogForm, description: e.target.value })}
                   rows={3}
                   placeholder="Co zrobiłeś w tym czasie..."
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"

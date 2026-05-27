@@ -28,13 +28,11 @@ import {
 } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
-import * as adminApi from '../api/admin.api';
 import * as workLogApi from '../api/worklog.api';
 import { Task, TaskAttachment, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority } from '../types/task.types';
 import { WorkLogType, WorkLogTypeLabels } from '../types/worklog.types';
 import type { WorkLog, CreateWorkLogRequest } from '../types/worklog.types';
-import { Project } from '../types/project.types';
-import { AdminUser } from '../types/admin.types';
+import { Project, ProjectMember } from '../types/project.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +47,8 @@ const TaskForm = () => {
 
   const [task, setTask] = useState<Task | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [isLoadingProjectMembers, setIsLoadingProjectMembers] = useState(false);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [formData, setFormData] = useState<CreateTaskRequest & UpdateTaskRequest>({
     title: '',
@@ -96,15 +95,32 @@ const TaskForm = () => {
 
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
 
+  const getProjectMemberDisplayName = (member: ProjectMember) => {
+    if (!member.user) return 'Użytkownik projektu';
+    return (
+      `${member.user.first_name || ''} ${member.user.last_name || ''}`.trim() ||
+      member.user.email ||
+      'Użytkownik projektu'
+    );
+  };
+
   useEffect(() => {
     loadProjects();
-    loadUsers();
     if (isEdit && id) {
       loadTask();
       loadAttachments();
       loadWorkLogs();
     }
   }, [id, isEdit]);
+
+  useEffect(() => {
+    if (formData.project_id) {
+      loadProjectMembers(formData.project_id);
+    } else {
+      setProjectMembers([]);
+      setFormData(prev => ({ ...prev, assigned_to: undefined }));
+    }
+  }, [formData.project_id]);
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -127,12 +143,31 @@ const TaskForm = () => {
     }
   };
 
-  const loadUsers = async () => {
+  const loadProjectMembers = async (projectId: string) => {
     try {
-      const result = await adminApi.getUsers();
-      setUsers(result || []);
+      setIsLoadingProjectMembers(true);
+      const result = await projectApi.getProjectMembers(projectId);
+      const sortedMembers = [...(result || [])].sort((firstMember, secondMember) =>
+        getProjectMemberDisplayName(firstMember).localeCompare(
+          getProjectMemberDisplayName(secondMember),
+          'pl',
+          { sensitivity: 'base' }
+        )
+      );
+      setProjectMembers(sortedMembers);
+      setFormData(prev => {
+        if (!prev.assigned_to) {
+          return prev;
+        }
+
+        const isAssignedToProjectMember = sortedMembers.some(member => member.user_id === prev.assigned_to);
+        return isAssignedToProjectMember ? prev : { ...prev, assigned_to: undefined };
+      });
     } catch (error) {
-      console.error('Failed to load users:', error);
+      console.error('Failed to load project members:', error);
+      setProjectMembers([]);
+    } finally {
+      setIsLoadingProjectMembers(false);
     }
   };
 
@@ -295,6 +330,7 @@ const TaskForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
+      ...(name === 'project_id' ? { assigned_to: undefined } : {}),
       [name]: name === 'estimated_hours' || name === 'actual_hours'
         ? (value ? parseFloat(value) : undefined)
         : value || undefined,
@@ -561,15 +597,29 @@ const TaskForm = () => {
                     name="assigned_to"
                     value={formData.assigned_to || ''}
                     onChange={handleChange}
+                    disabled={!formData.project_id || isLoadingProjectMembers || projectMembers.length === 0}
                     className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   >
-                    <option value="">Nieprzypisane</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.first_name} {u.last_name}
+                    <option value="">
+                      {!formData.project_id
+                        ? 'Najpierw wybierz projekt'
+                        : isLoadingProjectMembers
+                          ? 'Ładowanie zespołu...'
+                          : projectMembers.length === 0
+                            ? 'Brak osób w zespole projektu'
+                            : 'Nieprzypisane'}
+                    </option>
+                    {projectMembers.map((member) => (
+                      <option key={member.user_id} value={member.user_id}>
+                        {getProjectMemberDisplayName(member)}
                       </option>
                     ))}
                   </select>
+                  {formData.project_id && projectMembers.length === 0 && !isLoadingProjectMembers && (
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      Dodaj osoby w zakładce zespół projektu, aby można było przypisać zadanie.
+                    </p>
+                  )}
                 </div>
 
                 {/* Priority */}

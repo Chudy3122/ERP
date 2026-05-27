@@ -50,6 +50,9 @@ const ProjectForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isOngoingProject, setIsOngoingProject] = useState(false);
+  const [lastPriorityBeforeOngoing, setLastPriorityBeforeOngoing] = useState<ProjectPriority>(
+    ProjectPriority.MEDIUM
+  );
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -67,18 +70,20 @@ const ProjectForm = () => {
       setIsLoading(true);
       const project = await projectApi.getProjectById(id!);
       const hasTargetEndDate = Boolean(project.target_end_date);
+      const projectPriority = project.priority || ProjectPriority.MEDIUM;
       setFormData({
         name: project.name,
         code: project.code,
         description: project.description || '',
         status: project.status,
-        priority: project.priority,
+        priority: hasTargetEndDate ? projectPriority : ProjectPriority.MEDIUM,
         start_date: project.start_date ? project.start_date.split('T')[0] : '',
         target_end_date: hasTargetEndDate ? project.target_end_date!.split('T')[0] : '',
         budget: project.budget,
         manager_id: project.manager_id,
       });
       setIsOngoingProject(!hasTargetEndDate);
+      setLastPriorityBeforeOngoing(projectPriority);
     } catch (error) {
       console.error('Failed to load project:', error);
       setError('Nie udało się załadować projektu');
@@ -105,6 +110,7 @@ const ProjectForm = () => {
       setIsSaving(true);
       const projectPayload = {
         ...formData,
+        priority: isOngoingProject ? ProjectPriority.MEDIUM : formData.priority,
         target_end_date: isOngoingProject ? '' : formData.target_end_date,
       };
 
@@ -114,12 +120,23 @@ const ProjectForm = () => {
         const newProject = await projectApi.createProject(projectPayload);
         await projectApi.createDefaultStages(newProject.id, projectPayload.template_id);
 
-        if (selectedMemberIds.length > 0) {
-          await Promise.all(
-            selectedMemberIds.map(memberId =>
-              projectApi.addProjectMember(newProject.id, memberId, ProjectMemberRole.MEMBER)
-            )
-          );
+        const initialMembers = [
+          ...(user?.id ? [{ userId: user.id, role: ProjectMemberRole.LEAD }] : []),
+          ...selectedMemberIds.map(memberId => ({
+            userId: memberId,
+            role: ProjectMemberRole.MEMBER,
+          })),
+        ];
+
+        for (const member of initialMembers) {
+          try {
+            await projectApi.addProjectMember(newProject.id, member.userId, member.role);
+          } catch (error: any) {
+            const message = error.response?.data?.message || error.message || '';
+            if (!String(message).toLowerCase().includes('already')) {
+              console.warn('Failed to add initial project member:', error);
+            }
+          }
         }
       }
       navigate('/projects');
@@ -135,6 +152,10 @@ const ProjectForm = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    if (name === 'priority') {
+      setLastPriorityBeforeOngoing(value as ProjectPriority);
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: name === 'budget' ? (value ? parseFloat(value) : undefined) : value,
@@ -145,9 +166,16 @@ const ProjectForm = () => {
     setIsOngoingProject(checked);
 
     if (checked) {
+      setLastPriorityBeforeOngoing(formData.priority);
       setFormData(prev => ({
         ...prev,
+        priority: ProjectPriority.MEDIUM,
         target_end_date: '',
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        priority: lastPriorityBeforeOngoing,
       }));
     }
   };
@@ -357,15 +385,22 @@ const ProjectForm = () => {
               <select
                 id="priority"
                 name="priority"
-                value={formData.priority}
+                value={isOngoingProject ? 'fixed' : formData.priority}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                disabled={isOngoingProject}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-400"
               >
+                {isOngoingProject && <option value="fixed">Stały</option>}
                 <option value="low">Niski</option>
                 <option value="medium">Średni</option>
                 <option value="high">Wysoki</option>
                 <option value="critical">Krytyczny</option>
               </select>
+              {isOngoingProject && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Priorytet stały wynika z oznaczenia projektu jako ciągłego.
+                </p>
+              )}
             </div>
 
             {/* Budget */}
