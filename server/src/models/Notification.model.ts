@@ -31,6 +31,9 @@ export enum NotificationType {
   DEAL_STAGE_CHANGED = 'deal_stage_changed',
   DEAL_WON = 'deal_won',
   DEAL_FOLLOW_UP = 'deal_follow_up',
+  // Meeting notifications
+  MEETING_INVITATION = 'meeting_invitation',
+  MEETING_SCHEDULED = 'meeting_scheduled',
 }
 
 export enum NotificationPriority {

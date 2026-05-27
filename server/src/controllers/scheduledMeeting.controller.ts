@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import scheduledMeetingService from '../services/scheduledMeeting.service';
 import { MeetingPlatform } from '../models/ScheduledMeeting.model';
+import { getIO } from '../config/socket';
+import notificationService from '../services/notification.service';
 
 export class ScheduledMeetingController {
   /**
@@ -36,6 +38,37 @@ export class ScheduledMeetingController {
         duration_minutes: duration_minutes || 60,
         participant_ids: participant_ids || [],
       });
+
+      // Notify all participants (except organizer)
+      const organizerName = `${meeting.creator.first_name} ${meeting.creator.last_name}`;
+      const io = getIO();
+
+      for (const participantId of (meeting.participant_ids || [])) {
+        if (participantId === userId) continue;
+
+        // Real-time toast
+        io.to(`user:${participantId}`).emit('notification:meeting_scheduled', {
+          senderName: organizerName,
+          senderAvatar: (meeting.creator as any)?.avatar_url || null,
+          meetingId: meeting.id,
+          meetingTitle: meeting.title,
+          scheduledDate: meeting.scheduled_date,
+          scheduledTime: meeting.scheduled_time,
+          platform: meeting.platform,
+        });
+
+        // DB notification (fire-and-forget)
+        notificationService.notifyMeetingScheduled(
+          participantId,
+          organizerName,
+          meeting.title,
+          String(meeting.scheduled_date),
+          meeting.scheduled_time,
+          meeting.platform,
+          meeting.id,
+          userId
+        ).catch(() => {});
+      }
 
       res.status(201).json(meeting);
     } catch (error: any) {

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import meetingService from '../services/meeting.service';
 import { getIO } from '../config/socket';
 import { emitMeetingInvitation } from '../sockets/meeting.socket';
+import notificationService from '../services/notification.service';
 
 export class MeetingController {
   /**
@@ -30,10 +31,12 @@ export class MeetingController {
 
       // Emit WebSocket notification to all invited participants
       const io = getIO();
+      const callerName = `${meeting.creator.first_name} ${meeting.creator.last_name}`;
+
       meeting.participants.forEach((participant) => {
         if (participant.user_id !== userId && participant.status === 'invited') {
           emitMeetingInvitation(io, participant.user_id, {
-            meeting_id: meeting.id,
+            meeting_id: meeting.room_id,   // room_id for WebRTC navigation
             meeting_title: meeting.title,
             caller: {
               id: meeting.creator.id,
@@ -43,6 +46,24 @@ export class MeetingController {
             },
             created_at: meeting.created_at.toISOString(),
           });
+
+          // Toast event — include roomId (for navigation) and meetingId (for reject API)
+          io.to(`user:${participant.user_id}`).emit('notification:meeting_invitation', {
+            senderName: callerName,
+            senderAvatar: (meeting.creator as any)?.avatar_url || null,
+            meetingId: meeting.id,
+            roomId: meeting.room_id,
+            meetingTitle: meeting.title,
+          });
+
+          // Save to DB (fire-and-forget) — action URL uses room_id for direct join
+          notificationService.notifyMeetingInvitation(
+            participant.user_id,
+            callerName,
+            meeting.title,
+            meeting.room_id,
+            userId
+          ).catch(() => {});
         }
       });
 

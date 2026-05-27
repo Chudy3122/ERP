@@ -323,7 +323,7 @@ export default function WorkTime() {
 
     if (dayStatus?.state === 'working' && dayStatus?.currentEntry) {
       const clockInMs = new Date(dayStatus.currentEntry.clock_in).getTime();
-      const tick = () => setElapsed(base + Math.floor((Date.now() - clockInMs) / 1000));
+      const tick = () => setElapsed(Math.max(0, base + Math.floor((Date.now() - clockInMs) / 1000)));
       tick();
       timerRef.current = setInterval(tick, 1000);
     } else {

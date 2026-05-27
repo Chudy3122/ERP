@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import Message from '../components/chat/Message';
 import MessageInput from '../components/chat/MessageInput';
@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 import * as meetingApi from '../api/meeting.api';
 import * as adminApi from '../api/admin.api';
+import socketService from '../services/socket.service';
 import type { Channel } from '../types/chat.types';
 import type { AdminUser } from '../types/admin.types';
 import {
@@ -34,6 +35,7 @@ import {
   MoreHorizontal,
   LogOut,
   PhoneCall,
+  ChevronRight,
 } from 'lucide-react';
 
 type SidebarTab = 'chat' | 'meetings';
@@ -63,6 +65,7 @@ const platformConfig: Record<MeetingPlatform, { name: string; color: string; bgC
 
 const ChatMeet: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   // Chat context
@@ -132,7 +135,10 @@ const ChatMeet: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Incoming call
-  const [incomingCall, setIncomingCall] = useState<{ callerName: string; meetingTitle: string; meetingId: string } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ callerName: string; meetingTitle: string; meetingId: string; roomId: string } | null>(null);
+
+  // Members panel
+  const [showMembers, setShowMembers] = useState(false);
 
   // Messages scroll ref
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -142,6 +148,39 @@ const ChatMeet: React.FC = () => {
     loadChannels();
     loadScheduledMeetings();
   }, [loadChannels]);
+
+  // Auto-open channel from ?channel= query param
+  useEffect(() => {
+    const channelId = searchParams.get('channel');
+    if (!channelId || channels.length === 0) return;
+    const target = channels.find((ch) => ch.id === channelId);
+    if (target) {
+      setSidebarTab('chat');
+      setActiveChannel(target);
+    }
+  }, [searchParams, channels]);
+
+  // Listen for incoming WebRTC call via socket
+  useEffect(() => {
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handler = (data: {
+      meeting_id: string;
+      meeting_title: string;
+      caller: { id: string; first_name: string; last_name: string; avatar_url?: string };
+    }) => {
+      setIncomingCall({
+        callerName: `${data.caller.first_name} ${data.caller.last_name}`,
+        meetingTitle: data.meeting_title,
+        meetingId: data.meeting_id,  // room_id (used for navigation)
+        roomId: data.meeting_id,     // same field — room_id from server
+      });
+    };
+
+    socket.on('meeting:invitation', handler);
+    return () => { socket.off('meeting:invitation', handler); };
+  }, []);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -389,7 +428,7 @@ const ChatMeet: React.FC = () => {
         <IncomingCallModal
           callerName={incomingCall.callerName}
           meetingTitle={incomingCall.meetingTitle}
-          onAccept={() => { navigate(`/meeting/${incomingCall.meetingId}`); setIncomingCall(null); }}
+          onAccept={() => { navigate(`/meeting/${incomingCall.roomId}`); setIncomingCall(null); }}
           onReject={() => { meetingApi.rejectMeeting(incomingCall.meetingId); setIncomingCall(null); }}
         />
       )}
@@ -704,89 +743,173 @@ const ChatMeet: React.FC = () => {
           )}
 
           {/* Active chat view */}
-          {activeChannel && !selectedMeeting && (
-            <div className="flex flex-col h-full">
-              {/* Chat header */}
-              <div className="px-6 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
-                <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
-                    {activeOtherUser?.avatar_url && !chatAvatarError ? (
-                      <img src={getFileUrl(activeOtherUser.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={() => setChatAvatarError(true)} />
-                    ) : activeOtherUser ? (
-                      `${activeOtherUser.first_name[0]}${activeOtherUser.last_name[0]}`
-                    ) : (
-                      <Users className="w-5 h-5" />
+          {activeChannel && !selectedMeeting && (() => {
+            const isGroup = activeChannel.type !== 'direct';
+            const members = activeChannel.members ?? [];
+            const onlineMembers = members.filter((m) => {
+              const s = getUserStatus(m.user_id);
+              return s && s.status !== 'offline';
+            });
+
+            return (
+              <div className="flex flex-col h-full">
+                {/* Chat header */}
+                <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+                      {activeOtherUser?.avatar_url && !chatAvatarError ? (
+                        <img src={getFileUrl(activeOtherUser.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={() => setChatAvatarError(true)} />
+                      ) : activeOtherUser ? (
+                        `${activeOtherUser.first_name[0]}${activeOtherUser.last_name[0]}`
+                      ) : (
+                        <Users className="w-5 h-5" />
+                      )}
+                    </div>
+                    {activeOtherUser && (
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(activeUserStatus?.status)}`} />
                     )}
                   </div>
-                  {activeOtherUser && (
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(activeUserStatus?.status)}`} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-gray-900 dark:text-white truncate">
-                    {getChannelName(activeChannel)}
-                  </h2>
-                  {activeOtherUser && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {activeUserStatus?.status === 'online' ? 'Online' :
-                       activeUserStatus?.status === 'away' ? 'Zaraz wracam' :
-                       activeUserStatus?.status === 'busy' ? 'Zajęty' :
-                       activeUserStatus?.status === 'in_meeting' ? 'Na spotkaniu' : 'Offline'}
-                    </p>
-                  )}
-                  {!activeOtherUser && activeChannel.members && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{activeChannel.members.length} uczestników</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => { loadUsers(); resetIntForm(); if (activeOtherUser) setIntParticipants([activeOtherUser.id]); setShowInternalModal(true); }}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-                  title="Rozpocznij spotkanie wideo"
-                >
-                  <PhoneCall className="w-5 h-5" />
-                </button>
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-semibold text-gray-900 dark:text-white truncate">
+                      {getChannelName(activeChannel)}
+                    </h2>
+                    {activeOtherUser ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {activeUserStatus?.status === 'online' ? 'Online' :
+                         activeUserStatus?.status === 'away' ? 'Zaraz wracam' :
+                         activeUserStatus?.status === 'busy' ? 'Zajęty' :
+                         activeUserStatus?.status === 'in_meeting' ? 'Na spotkaniu' : 'Offline'}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {members.length} uczestników{onlineMembers.length > 0 ? `, ${onlineMembers.length} online` : ''}
+                      </p>
+                    )}
+                  </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1 min-h-0">
-                {messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">Brak wiadomości</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Napisz pierwszą wiadomość</p>
+                  {/* Members toggle (group only) */}
+                  {isGroup && (
+                    <button
+                      onClick={() => setShowMembers((v) => !v)}
+                      title="Uczestnicy"
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        showMembers
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="hidden sm:inline">{members.length}</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => { loadUsers(); resetIntForm(); if (activeOtherUser) setIntParticipants([activeOtherUser.id]); setShowInternalModal(true); }}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+                    title="Rozpocznij spotkanie wideo"
+                  >
+                    <PhoneCall className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Body: messages + optional members panel */}
+                <div className="flex flex-1 min-h-0">
+
+                  {/* Messages + input */}
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1 min-h-0">
+                      {messages.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">Brak wiadomości</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Napisz pierwszą wiadomość</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {messages.map((message) => (
+                            <Message key={message.id} message={message} onEdit={editMessage} onDelete={deleteMessage} />
+                          ))}
+                          {typingUsers.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-2 mt-2">
+                              <div className="flex gap-1">
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                              </div>
+                              <span>pisze...</span>
+                            </div>
+                          )}
+                          <div ref={messagesEndRef} />
+                        </>
+                      )}
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                      <MessageInput
+                        onSendMessage={sendMessage}
+                        onTyping={sendTypingIndicator}
+                        placeholder={`Napisz do ${getChannelName(activeChannel)}...`}
+                      />
                     </div>
                   </div>
-                ) : (
-                  <>
-                    {messages.map((message) => (
-                      <Message key={message.id} message={message} onEdit={editMessage} onDelete={deleteMessage} />
-                    ))}
-                    {typingUsers.length > 0 && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-2 mt-2">
-                        <div className="flex gap-1">
-                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                        </div>
-                        <span>pisze...</span>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </>
-                )}
-              </div>
 
-              {/* Message input */}
-              <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                <MessageInput
-                  onSendMessage={sendMessage}
-                  onTyping={sendTypingIndicator}
-                  placeholder={`Napisz do ${getChannelName(activeChannel)}...`}
-                />
+                  {/* Members panel */}
+                  {isGroup && showMembers && (
+                    <div className="w-56 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
+                      <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                          Uczestnicy — {members.length}
+                        </span>
+                        <button
+                          onClick={() => setShowMembers(false)}
+                          className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto py-2">
+                        {members.map((member) => {
+                          const u = member.user;
+                          if (!u) return null;
+                          const statusObj = getUserStatus(u.id);
+                          const isMe = u.id === user?.id;
+                          return (
+                            <div key={member.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                              <div className="relative flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-200 overflow-hidden">
+                                  {u.avatar_url ? (
+                                    <img src={getFileUrl(u.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                  ) : (
+                                    `${u.first_name[0]}${u.last_name[0]}`
+                                  )}
+                                </div>
+                                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(statusObj?.status)}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                                  {u.first_name} {u.last_name}{isMe ? ' (Ty)' : ''}
+                                </p>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                                  {member.role === 'admin' ? 'Admin' :
+                                   statusObj?.status === 'online' ? 'Online' :
+                                   statusObj?.status === 'away' ? 'Zaraz wracam' :
+                                   statusObj?.status === 'busy' ? 'Zajęty' :
+                                   statusObj?.status === 'in_meeting' ? 'Na spotkaniu' : 'Offline'}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Meeting detail view */}
           {selectedMeeting && !activeChannel && (

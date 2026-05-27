@@ -250,6 +250,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setTimeout(() => setError(null), 5000);
     });
 
+    // Chat & meet toast notifications
+    socket.on('notification:chat_message', (data: any) => {
+      window.dispatchEvent(new CustomEvent('chatmeet:notification', {
+        detail: { type: 'chat_message', ...data },
+      }));
+    });
+
+    socket.on('notification:meeting_invitation', (data: any) => {
+      window.dispatchEvent(new CustomEvent('chatmeet:notification', {
+        detail: { type: 'meeting_invitation', ...data },
+      }));
+    });
+
+    socket.on('notification:meeting_scheduled', (data: any) => {
+      window.dispatchEvent(new CustomEvent('chatmeet:notification', {
+        detail: { type: 'meeting_scheduled', ...data },
+      }));
+    });
+
     // Status events
     socket.on('status:online_users', (data: { users: Array<{ userId: string; status: string; custom_message?: string }> }) => {
       console.log('📊 Online users received:', data.users.length);
@@ -285,6 +304,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       socket.off('connect');
       socket.off('chat:channels_joined');
       socket.off('chat:channel_joined');
+      socket.off('notification:chat_message');
+      socket.off('notification:meeting_invitation');
+      socket.off('notification:meeting_scheduled');
       socket.off('chat:new_message');
       socket.off('chat:message_edited');
       socket.off('chat:message_deleted');

@@ -4,6 +4,8 @@ import { AppDataSource } from '../config/database';
 import { Message, MessageType } from '../models/Message.model';
 import { Channel } from '../models/Channel.model';
 import { ChannelMember } from '../models/ChannelMember.model';
+import { User } from '../models/User.model';
+import notificationService from '../services/notification.service';
 
 interface SendMessageData {
   channelId: string;
@@ -25,6 +27,7 @@ export const setupChatHandlers = (io: SocketIOServer) => {
   const messageRepository = AppDataSource.getRepository(Message);
   const channelRepository = AppDataSource.getRepository(Channel);
   const channelMemberRepository = AppDataSource.getRepository(ChannelMember);
+  const userRepository = AppDataSource.getRepository(User);
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     if (!socket.user) return;
@@ -143,6 +146,38 @@ export const setupChatHandlers = (io: SocketIOServer) => {
           message: savedMessage,
           channelId,
         });
+
+        // --- Real-time notifications for other channel members ---
+        const channel = await channelRepository.findOne({ where: { id: channelId } });
+        const sender = await userRepository.findOne({ where: { id: userId } });
+        const senderName = sender ? `${sender.first_name} ${sender.last_name}` : 'Ktoś';
+        const preview = content.length > 80 ? content.substring(0, 80) + '…' : content;
+
+        const allMembers = await channelMemberRepository.find({ where: { channel_id: channelId } });
+
+        for (const member of allMembers) {
+          if (member.user_id === userId) continue;
+
+          // Emit real-time notification event to recipient's personal room
+          io.to(`user:${member.user_id}`).emit('notification:chat_message', {
+            senderId: userId,
+            senderName,
+            senderAvatar: (sender as any)?.avatar_url || null,
+            channelId,
+            channelType: channel?.type || 'direct',
+            channelName: channel?.type === 'direct' ? senderName : (channel?.name || 'Kanał'),
+            preview,
+          });
+
+          // Save to DB (fire-and-forget, don't block the response)
+          notificationService.notifyNewChatMessage(
+            member.user_id,
+            senderName,
+            channel?.type === 'direct' ? senderName : (channel?.name || 'Kanał'),
+            preview,
+            channelId
+          ).catch(() => {});
+        }
 
         console.log(`   Message sent in channel ${channelId} by ${userId}`);
       } catch (error) {

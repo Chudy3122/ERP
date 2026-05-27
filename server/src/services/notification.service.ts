@@ -191,7 +191,7 @@ class NotificationService {
       type: NotificationType.CHAT_MESSAGE,
       title: `Nowa wiadomość od ${senderName}`,
       message: `${channelName}: ${messagePreview}`,
-      actionUrl: `/chat?channel=${channelId}`,
+      actionUrl: `/meeting?channel=${channelId}`,
       priority: NotificationPriority.NORMAL,
       relatedEntityType: 'channel',
       relatedEntityId: channelId,
@@ -214,7 +214,7 @@ class NotificationService {
       type: NotificationType.CHAT_MENTION,
       title: `${senderName} wspomniał o Tobie`,
       message: `W ${channelName}: ${messagePreview}`,
-      actionUrl: `/chat?channel=${channelId}`,
+      actionUrl: `/meeting?channel=${channelId}`,
       priority: NotificationPriority.HIGH,
       relatedUserId: senderId,
       relatedEntityType: 'channel',
@@ -237,7 +237,7 @@ class NotificationService {
       type: NotificationType.CHANNEL_INVITE,
       title: 'Zaproszenie do kanału',
       message: `${inviterName} zaprosił Cię do ${channelName}`,
-      actionUrl: `/chat?channel=${channelId}`,
+      actionUrl: `/meeting?channel=${channelId}`,
       priority: NotificationPriority.NORMAL,
       relatedUserId: inviterId,
       relatedEntityType: 'channel',
@@ -336,6 +336,60 @@ class NotificationService {
       priority: NotificationPriority.NORMAL,
       relatedEntityType: 'time_entry',
       relatedEntityId: timeEntryId,
+    });
+  }
+
+  /**
+   * Notify user about a scheduled meeting invitation
+   */
+  async notifyMeetingScheduled(
+    userId: string,
+    organizerName: string,
+    meetingTitle: string,
+    scheduledDate: string,
+    scheduledTime: string,
+    platform: string,
+    meetingId: string,
+    organizerId: string
+  ): Promise<Notification> {
+    const platformLabel = platform === 'internal' ? 'w aplikacji'
+      : platform === 'teams' ? 'Microsoft Teams'
+      : platform === 'zoom' ? 'Zoom'
+      : 'Google Meet';
+
+    return this.createNotification({
+      userId,
+      type: NotificationType.MEETING_SCHEDULED,
+      title: `Nowe spotkanie: ${meetingTitle}`,
+      message: `${organizerName} zaprosił Cię na spotkanie ${platformLabel} dnia ${scheduledDate} o ${scheduledTime}`,
+      actionUrl: '/meeting',
+      priority: NotificationPriority.HIGH,
+      relatedUserId: organizerId,
+      relatedEntityType: 'scheduled_meeting',
+      relatedEntityId: meetingId,
+    });
+  }
+
+  /**
+   * Notify user about an immediate meeting invitation (WebRTC)
+   */
+  async notifyMeetingInvitation(
+    userId: string,
+    callerName: string,
+    meetingTitle: string,
+    meetingId: string,
+    callerId: string
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      type: NotificationType.MEETING_INVITATION,
+      title: `${callerName} zaprasza na spotkanie`,
+      message: meetingTitle,
+      actionUrl: `/meeting/${meetingId}`,
+      priority: NotificationPriority.URGENT,
+      relatedUserId: callerId,
+      relatedEntityType: 'meeting',
+      relatedEntityId: meetingId,
     });
   }
 

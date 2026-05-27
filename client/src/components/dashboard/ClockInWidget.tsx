@@ -155,7 +155,7 @@ const ClockInWidget = () => {
   const expectedMinutes = workingHoursPerDay * 60;
   const completedTodayMinutes = todayEntries.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
   const activeSessionMinutes = isClockedIn && currentEntry
-    ? Math.floor((Date.now() - new Date(currentEntry.clock_in).getTime()) / 60000)
+    ? Math.max(0, Math.floor((Date.now() - new Date(currentEntry.clock_in).getTime()) / 60000))
     : 0;
   const todayTotalMinutes = completedTodayMinutes + activeSessionMinutes;
   const remainingTodayMinutes = expectedMinutes - todayTotalMinutes;

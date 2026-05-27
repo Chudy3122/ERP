@@ -9,6 +9,7 @@ import { StatusType, STATUS_COLORS } from '../../types/status.types';
 import * as statusApi from '../../api/status.api';
 import AIAssistant from '../helpdesk/AIAssistant';
 import FloatingChatPanel from '../chat/FloatingChatPanel';
+import ChatMeetToast from '../notifications/ChatMeetToast';
 import GlobalSearch from './GlobalSearch';
 import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
@@ -101,9 +102,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     };
 
     loadNotifications();
-    // Refresh every 30 seconds
     const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
+
+    // Real-time bump when a chat/meeting notification arrives via socket
+    const handleNewNotif = () => {
+      setUnreadCount((prev) => prev + 1);
+      // Refresh the list after a short delay so the new notification is saved
+      setTimeout(loadNotifications, 800);
+    };
+    window.addEventListener('chatmeet:notification', handleNewNotif);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('chatmeet:notification', handleNewNotif);
+    };
   }, []);
 
   // Load initial status for navbar dot and track changes
@@ -576,6 +588,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
       {/* AI Helpdesk Assistant */}
       <AIAssistant />
+
+      {/* Chat & Meet toast notifications */}
+      <ChatMeetToast />
     </div>
   );
 };
