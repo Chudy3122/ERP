@@ -4,6 +4,7 @@ import { Phone, PhoneOff, Video } from 'lucide-react';
 import { getFileUrl } from '../../api/axios-config';
 import * as meetingApi from '../../api/meeting.api';
 import socketService from '../../services/socket.service';
+import { useChatContext } from '../../contexts/ChatContext';
 
 interface CallData {
   meeting_id: string;
@@ -21,6 +22,7 @@ const AUTO_DISMISS_SEC = 30;
 
 const IncomingCallOverlay = () => {
   const navigate = useNavigate();
+  const { isConnected } = useChatContext();
   const [call, setCall] = useState<CallData | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SEC);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -46,6 +48,7 @@ const IncomingCallOverlay = () => {
   };
 
   useEffect(() => {
+    if (!isConnected) return;
     const socket = socketService.getSocket();
     if (!socket) return;
 
@@ -80,7 +83,7 @@ const IncomingCallOverlay = () => {
       if (timerRef.current) clearInterval(timerRef.current);
       audioRef.current?.pause();
     };
-  }, []);
+  }, [isConnected]);
 
   if (!call) return null;
 

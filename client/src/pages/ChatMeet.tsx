@@ -137,6 +137,7 @@ const ChatMeet: React.FC = () => {
 
   // Messages scroll ref
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Load channels and meetings on mount + scroll to top
   useEffect(() => {
@@ -158,9 +159,11 @@ const ChatMeet: React.FC = () => {
 
   // Note: meeting:invitation is handled globally by IncomingCallOverlay in MainLayout
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages (use container scrollTop to avoid scrolling the window)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   // Close context menu on outside click
@@ -233,9 +236,13 @@ const ChatMeet: React.FC = () => {
     return date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
   };
 
-  const filteredChannels = channels.filter((ch) =>
-    getChannelName(ch).toLowerCase().includes(chatSearch.toLowerCase())
-  );
+  const filteredChannels = channels
+    .filter((ch) => getChannelName(ch).toLowerCase().includes(chatSearch.toLowerCase()))
+    .sort((a, b) => {
+      const aTime = new Date(a.last_message_at || a.created_at).getTime();
+      const bTime = new Date(b.last_message_at || b.created_at).getTime();
+      return bTime - aTime;
+    });
 
   const filteredAllUsers = allUsers.filter((u) =>
     `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(convSearch.toLowerCase())
@@ -783,7 +790,7 @@ const ChatMeet: React.FC = () => {
 
                   {/* Messages + input */}
                   <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1 min-h-0">
+                    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-1 min-h-0">
                       {messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center">
