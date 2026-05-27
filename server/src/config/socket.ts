@@ -25,7 +25,12 @@ export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
 
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const normalized = origin.replace(/\/$/, '');
+        const allowed = allowedOrigins.some(o => normalized === o.replace(/\/$/, '')) || normalized.endsWith('.vercel.app');
+        callback(null, allowed);
+      },
       credentials: true,
     },
     pingTimeout: 60000,

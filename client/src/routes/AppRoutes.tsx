@@ -6,7 +6,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import VideoMeeting from '../pages/VideoMeeting';
-import Meetings from '../pages/Meetings';
+import ChatMeet from '../pages/ChatMeet';
 import Overtime from '../pages/Overtime';
 import WorkTime from '../pages/WorkTime';
 import Admin from '../pages/Admin';
@@ -74,7 +74,7 @@ const AppRoutes = () => {
         path="/meeting"
         element={
           <PrivateRoute>
-            <Meetings />
+            <ChatMeet />
           </PrivateRoute>
         }
       />

@@ -14,7 +14,7 @@ import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
 import {
   Home,
-  Video,
+  MessageSquare,
   Clock,
   CalendarDays,
   TrendingUp,
@@ -170,7 +170,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.communication') },
-    { name: t('nav.meetings'), href: '/meeting', icon: Video },
+    { name: 'Chat & Meet', href: '/meeting', icon: MessageSquare },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.workTime') },
