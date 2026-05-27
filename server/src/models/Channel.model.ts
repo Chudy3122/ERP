@@ -65,4 +65,7 @@ export class Channel {
 
   // Virtual property for last message
   lastMessage?: Message;
+
+  // Virtual property: timestamp of most recent message (populated by getUserChannels)
+  last_message_at?: string | null;
 }

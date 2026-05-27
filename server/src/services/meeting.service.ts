@@ -17,8 +17,9 @@ class MeetingService {
   async createMeeting(userId: string, data: CreateMeetingData): Promise<Meeting> {
     const { title, description, participant_ids } = data;
 
-    // Generate unique room ID
-    const room_id = `meeting-${uuidv4()}`;
+    // Generate meeting UUID first so room_id can be derived from it
+    const meetingUuid = uuidv4();
+    const room_id = `meeting-${meetingUuid}`;
 
     // Create meeting
     const meeting = Meeting.create({
@@ -28,6 +29,7 @@ class MeetingService {
       room_id,
       status: MeetingStatus.SCHEDULED,
     });
+    meeting.id = meetingUuid;
 
     await meeting.save();
 

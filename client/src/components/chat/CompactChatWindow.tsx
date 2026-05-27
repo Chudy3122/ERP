@@ -26,7 +26,7 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
     getUserStatus,
   } = useChatContext();
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [avatarError, setAvatarError] = useState(false);
 
   // Reset avatar error when channel changes
@@ -35,8 +35,8 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
   }, [activeChannel?.id]);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -56,6 +56,7 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
   };
 
   const getOtherUser = () => {
+    if (activeChannel?.type !== 'direct') return null;
     const other = getOtherMember();
     return other?.user ?? null;
   };
@@ -140,16 +141,22 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
               {getStatusText(userStatus?.status)}
             </p>
           )}
-          {!otherUser && activeChannel.members && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {activeChannel.members.length} {t('chat.members')}
-            </p>
-          )}
+          {!otherUser && activeChannel.members && (() => {
+            const onlineCount = activeChannel.members.filter(m => {
+              const s = getUserStatus(m.user_id);
+              return s && s.status !== 'offline';
+            }).length;
+            return (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {activeChannel.members.length} uczestników{onlineCount > 0 ? `, ${onlineCount} online` : ''}
+              </p>
+            );
+          })()}
         </div>
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 bg-gray-50 dark:bg-gray-900 min-h-0">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-3 bg-gray-50 dark:bg-gray-900 min-h-0">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -180,7 +187,6 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
           </>
         )}
       </div>

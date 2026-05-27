@@ -20,10 +20,34 @@ export class ChatService {
       order: { joined_at: 'DESC' },
     });
 
-    // Filter out inactive (deleted) channels
-    return memberships
+    const channels = memberships
       .map(m => m.channel)
       .filter(channel => channel && channel.is_active !== false);
+
+    if (channels.length === 0) return channels;
+
+    // Compute last_message_at for each channel from the messages table
+    const channelIds = channels.map(c => c.id);
+    const latestMessages = await this.messageRepository
+      .createQueryBuilder('msg')
+      .select('msg.channel_id', 'channelId')
+      .addSelect('MAX(msg.created_at)', 'lastAt')
+      .where('msg.channel_id IN (:...channelIds)', { channelIds })
+      .groupBy('msg.channel_id')
+      .getRawMany();
+
+    const lastMessageMap = new Map<string, string>(
+      latestMessages.map(r => [r.channelId, r.lastAt])
+    );
+
+    // Attach last_message_at and sort by it (most recent first)
+    return channels
+      .map(c => Object.assign(c, { last_message_at: lastMessageMap.get(c.id) ?? null }))
+      .sort((a, b) => {
+        const aTime = new Date((a.last_message_at as string) || a.created_at).getTime();
+        const bTime = new Date((b.last_message_at as string) || b.created_at).getTime();
+        return bTime - aTime;
+      });
   }
 
   /**

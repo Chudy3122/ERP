@@ -298,6 +298,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
         return newMap;
       });
+      // If it's the current user's status, sync the dashboard widget too
+      if (data.userId === userRef.current?.id) {
+        window.dispatchEvent(new CustomEvent('status-changed', { detail: data.status }));
+      }
     });
 
     return () => {

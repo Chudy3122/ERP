@@ -163,7 +163,13 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
             </button>
           </div>
         ) : (
-          channels.map((channel) => {
+          [...channels]
+            .sort((a, b) => {
+              const aTime = new Date(a.last_message_at || a.created_at).getTime();
+              const bTime = new Date(b.last_message_at || b.created_at).getTime();
+              return bTime - aTime;
+            })
+            .map((channel) => {
             const isActive = activeChannel?.id === channel.id;
             const otherMember = channel.type === 'direct' ? getOtherMember(channel) : undefined;
             const unreadCount = unreadMessages.get(channel.id) || 0;
