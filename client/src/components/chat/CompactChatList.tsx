@@ -241,16 +241,21 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      {channel.type !== 'direct' && channel.members ? (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {channel.members.length} {t('chat.members')}
-                        </p>
-                      ) : (
-                        <span></span>
-                      )}
+                    <div className="flex items-center justify-between mt-0.5 gap-2">
+                      <p className={`text-xs truncate flex-1 ${unreadCount > 0 ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {channel.last_message_preview ? (
+                          <>
+                            {channel.last_message_sender_id === user?.id && (
+                              <span className="text-gray-400 dark:text-gray-500">Ty: </span>
+                            )}
+                            {channel.last_message_preview}
+                          </>
+                        ) : channel.type !== 'direct' && channel.members ? (
+                          `${channel.members.length} ${t('chat.members')}`
+                        ) : null}
+                      </p>
                       {unreadCount > 0 && (
-                        <span className="min-w-5 h-5 px-1.5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                        <span className="min-w-5 h-5 px-1.5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-semibold flex-shrink-0">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}

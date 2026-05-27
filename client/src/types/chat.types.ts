@@ -23,6 +23,8 @@ export interface Channel {
   created_at: string;
   updated_at: string;
   last_message_at?: string | null;
+  last_message_preview?: string | null;
+  last_message_sender_id?: string | null;
   creator?: User;
   members?: ChannelMember[];
   lastMessage?: Message;

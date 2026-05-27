@@ -99,12 +99,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   // Persist channel activity timestamps across panel open/close
   const STORAGE_KEY = 'chat_channel_activity';
-  const getStoredActivity = (): Record<string, string> => {
+  type StoredChannel = { ts: string; preview?: string; senderId?: string };
+  const getStoredActivity = (): Record<string, StoredChannel> => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
   };
-  const setStoredActivity = (channelId: string, ts: string) => {
+  const setStoredActivity = (channelId: string, ts: string, preview?: string, senderId?: string) => {
     const map = getStoredActivity();
-    map[channelId] = ts;
+    map[channelId] = { ts, preview, senderId };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
   };
 
@@ -205,15 +206,18 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
       }
 
-      // Bump channel to top (most recent activity first) + persist to localStorage
+      // Bump channel to top + update preview + persist to localStorage
       const ts = data.message.created_at || new Date().toISOString();
-      setStoredActivity(data.channelId, ts);
+      const rawContent = data.message.content || '';
+      const preview = rawContent.length > 60 ? rawContent.slice(0, 60) + '…' : rawContent;
+      const senderId = data.message.sender_id;
+      setStoredActivity(data.channelId, ts, preview, senderId);
       setChannels((prev) => {
         const idx = prev.findIndex((ch) => ch.id === data.channelId);
         if (idx < 0) return prev;
         const updated = [...prev];
         const [ch] = updated.splice(idx, 1);
-        return [{ ...ch, last_message_at: ts }, ...updated];
+        return [{ ...ch, last_message_at: ts, last_message_preview: preview, last_message_sender_id: senderId }, ...updated];
       });
     });
 
@@ -344,15 +348,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const fetchedChannels = await chatApi.getChannels();
       // Ignore response if a newer loadChannels call was made in the meantime
       if (seq !== loadChannelsSeqRef.current) return;
-      // Merge locally cached activity timestamps (survive panel close/open)
+      // Merge locally cached activity timestamps + previews (survive panel close/open)
       const stored = getStoredActivity();
       const merged = fetchedChannels.map((ch) => {
         const local = stored[ch.id];
-        const server = ch.last_message_at;
-        const best = local && server
-          ? (new Date(local) > new Date(server) ? local : server)
-          : (local || server || null);
-        return { ...ch, last_message_at: best };
+        const serverTs = ch.last_message_at;
+        const localTs = local?.ts;
+        const useLocal = localTs && serverTs
+          ? new Date(localTs) > new Date(serverTs)
+          : !!localTs;
+        const best = useLocal ? localTs! : (serverTs || null);
+        const preview = useLocal ? (local?.preview ?? ch.last_message_preview) : ch.last_message_preview;
+        const senderId = useLocal ? (local?.senderId ?? ch.last_message_sender_id) : ch.last_message_sender_id;
+        return { ...ch, last_message_at: best, last_message_preview: preview, last_message_sender_id: senderId };
       }).sort((a, b) => {
         const aT = new Date((a.last_message_at as string) || a.created_at).getTime();
         const bT = new Date((b.last_message_at as string) || b.created_at).getTime();
@@ -465,15 +473,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         messageType: MessageType.TEXT,
       };
 
-      // Optimistically bump channel to top + persist to localStorage
+      // Optimistically bump channel to top + update preview + persist to localStorage
       const now = new Date().toISOString();
-      setStoredActivity(targetChannelId, now);
+      const sentPreview = content.length > 60 ? content.slice(0, 60) + '…' : content;
+      const currentUserId = userRef.current?.id || '';
+      setStoredActivity(targetChannelId, now, sentPreview, currentUserId);
       setChannels((prev) => {
         const idx = prev.findIndex((ch) => ch.id === targetChannelId);
         if (idx <= 0) return prev;
         const updated = [...prev];
         const [ch] = updated.splice(idx, 1);
-        return [{ ...ch, last_message_at: now }, ...updated];
+        return [{ ...ch, last_message_at: now, last_message_preview: sentPreview, last_message_sender_id: currentUserId }, ...updated];
       });
 
       socket.emit('chat:send_message', messageData);

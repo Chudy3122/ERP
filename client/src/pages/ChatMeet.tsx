@@ -585,9 +585,16 @@ const ChatMeet: React.FC = () => {
                                 )}
                               </div>
                             </div>
-                            {channel.type !== 'direct' && channel.members && (
+                            {channel.last_message_preview ? (
+                              <p className={`text-xs mt-0.5 truncate ${unread > 0 ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {channel.last_message_sender_id === user?.id && (
+                                  <span className="text-gray-400 dark:text-gray-500 font-normal">Ty: </span>
+                                )}
+                                {channel.last_message_preview}
+                              </p>
+                            ) : channel.type !== 'direct' && channel.members ? (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{channel.members.length} uczestników</p>
-                            )}
+                            ) : null}
                           </div>
 
                           {/* More */}
