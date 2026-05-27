@@ -54,6 +54,9 @@ interface ScheduledMeeting {
   created_at: string;
 }
 
+type VideoCall = meetingApi.Meeting;
+type MeetingListItem = { _kind: 'scheduled'; data: ScheduledMeeting } | { _kind: 'videocall'; data: VideoCall };
+
 const platformConfig: Record<MeetingPlatform, { name: string; color: string; bgColor: string; icon: string; darkBg: string }> = {
   internal: { name: 'System ERP', color: 'text-gray-700', bgColor: 'bg-gray-100', icon: '🖥️', darkBg: 'dark:bg-gray-700' },
   teams: { name: 'Microsoft Teams', color: 'text-indigo-700', bgColor: 'bg-indigo-100', icon: '🟣', darkBg: 'dark:bg-indigo-900/40' },
@@ -102,9 +105,11 @@ const ChatMeet: React.FC = () => {
 
   // Meetings state
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
+  const [myMeetings, setMyMeetings] = useState<VideoCall[]>([]);
   const [loadingMeetings, setLoadingMeetings] = useState(false);
   const [meetingsTab, setMeetingsTab] = useState<MeetingsTab>('upcoming');
   const [selectedMeeting, setSelectedMeeting] = useState<ScheduledMeeting | null>(null);
+  const [selectedVideoCall, setSelectedVideoCall] = useState<VideoCall | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [deleteMeetingId, setDeleteMeetingId] = useState<string | null>(null);
 
@@ -192,10 +197,15 @@ const ChatMeet: React.FC = () => {
   const loadScheduledMeetings = async () => {
     setLoadingMeetings(true);
     try {
-      const data = await meetingApi.getScheduledMeetings();
-      setScheduledMeetings(data);
+      const [scheduled, videoCalls] = await Promise.all([
+        meetingApi.getScheduledMeetings(),
+        meetingApi.getMyMeetings(),
+      ]);
+      setScheduledMeetings(scheduled);
+      setMyMeetings(videoCalls);
     } catch {
       setScheduledMeetings([]);
+      setMyMeetings([]);
     } finally {
       setLoadingMeetings(false);
     }
@@ -250,6 +260,7 @@ const ChatMeet: React.FC = () => {
 
   const handleChannelClick = (channel: Channel) => {
     setSelectedMeeting(null);
+    setSelectedVideoCall(null);
     setActiveChannel(channel);
   };
 
@@ -285,6 +296,7 @@ const ChatMeet: React.FC = () => {
     if (existing) {
       setActiveChannel(existing);
       setSelectedMeeting(null);
+      setSelectedVideoCall(null);
       return;
     }
     try {
@@ -292,6 +304,7 @@ const ChatMeet: React.FC = () => {
       await loadChannels();
       setActiveChannel(ch);
       setSelectedMeeting(null);
+      setSelectedVideoCall(null);
     } catch {
       // silently fail
     }
@@ -299,13 +312,37 @@ const ChatMeet: React.FC = () => {
 
   // --- Meeting helpers ---
   const now = new Date();
-  const upcomingMeetings = scheduledMeetings.filter(
+  const upcomingScheduled = scheduledMeetings.filter(
     (m) => new Date(`${m.scheduled_date}T${m.scheduled_time}`) >= now
   );
-  const pastMeetings = scheduledMeetings.filter(
+  const pastScheduled = scheduledMeetings.filter(
     (m) => new Date(`${m.scheduled_date}T${m.scheduled_time}`) < now
   );
-  const displayedMeetings = meetingsTab === 'upcoming' ? upcomingMeetings : pastMeetings;
+  const upcomingItems: MeetingListItem[] = [
+    ...upcomingScheduled.map((m) => ({ _kind: 'scheduled' as const, data: m })),
+    ...myMeetings.filter((m) => m.status !== 'ended').map((m) => ({ _kind: 'videocall' as const, data: m })),
+  ].sort((a, b) => {
+    const aDate = a._kind === 'scheduled'
+      ? new Date(`${a.data.scheduled_date}T${a.data.scheduled_time}`).getTime()
+      : new Date(a.data.created_at).getTime();
+    const bDate = b._kind === 'scheduled'
+      ? new Date(`${b.data.scheduled_date}T${b.data.scheduled_time}`).getTime()
+      : new Date(b.data.created_at).getTime();
+    return aDate - bDate;
+  });
+  const pastItems: MeetingListItem[] = [
+    ...pastScheduled.map((m) => ({ _kind: 'scheduled' as const, data: m })),
+    ...myMeetings.filter((m) => m.status === 'ended').map((m) => ({ _kind: 'videocall' as const, data: m })),
+  ].sort((a, b) => {
+    const aDate = a._kind === 'scheduled'
+      ? new Date(`${a.data.scheduled_date}T${a.data.scheduled_time}`).getTime()
+      : new Date(a.data.created_at).getTime();
+    const bDate = b._kind === 'scheduled'
+      ? new Date(`${b.data.scheduled_date}T${b.data.scheduled_time}`).getTime()
+      : new Date(b.data.created_at).getTime();
+    return bDate - aDate;
+  });
+  const displayedItems = meetingsTab === 'upcoming' ? upcomingItems : pastItems;
 
   const formatMeetingDateTime = (date: string, time: string) =>
     new Date(`${date}T${time}`).toLocaleDateString('pl-PL', {
@@ -360,7 +397,7 @@ const ChatMeet: React.FC = () => {
           description: intDesc,
           participant_ids: intParticipants,
         });
-        navigate(`/meeting/${meeting.room_id}`, { state: { meetingId: meeting.id } });
+        navigate(`/meeting/meeting-${meeting.id}`, { state: { meetingId: meeting.id } });
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Nie udało się utworzyć spotkania');
@@ -602,7 +639,7 @@ const ChatMeet: React.FC = () => {
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
-                    {tab === 'upcoming' ? `Nadchodzące (${upcomingMeetings.length})` : `Przeszłe (${pastMeetings.length})`}
+                    {tab === 'upcoming' ? `Nadchodzące (${upcomingItems.length})` : `Przeszłe (${pastItems.length})`}
                   </button>
                 ))}
               </div>
@@ -613,7 +650,7 @@ const ChatMeet: React.FC = () => {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                   </div>
-                ) : displayedMeetings.length === 0 ? (
+                ) : displayedItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                     <Calendar className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -621,37 +658,73 @@ const ChatMeet: React.FC = () => {
                     </p>
                   </div>
                 ) : (
-                  displayedMeetings.map((meeting) => {
-                    const platform = platformConfig[meeting.platform];
-                    const isSelected = selectedMeeting?.id === meeting.id;
-                    return (
-                      <div
-                        key={meeting.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => { setSelectedMeeting(meeting); setActiveChannel(null); }}
-                        onKeyDown={(e) => e.key === 'Enter' && setSelectedMeeting(meeting)}
-                        className={`w-full px-3 py-3 flex items-start gap-3 cursor-pointer transition-all border-l-2 ${
-                          isSelected
-                            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-600'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'
-                        }`}
-                      >
-                        <div className={`w-9 h-9 ${platform.bgColor} ${platform.darkBg} rounded-lg flex items-center justify-center text-base flex-shrink-0`}>
-                          {platform.icon}
+                  displayedItems.map((item) => {
+                    if (item._kind === 'scheduled') {
+                      const meeting = item.data;
+                      const platform = platformConfig[meeting.platform];
+                      const isSelected = selectedMeeting?.id === meeting.id;
+                      return (
+                        <div
+                          key={`s-${meeting.id}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { setSelectedMeeting(meeting); setSelectedVideoCall(null); setActiveChannel(null); }}
+                          onKeyDown={(e) => e.key === 'Enter' && setSelectedMeeting(meeting)}
+                          className={`w-full px-3 py-3 flex items-start gap-3 cursor-pointer transition-all border-l-2 ${
+                            isSelected
+                              ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-600'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'
+                          }`}
+                        >
+                          <div className={`w-9 h-9 ${platform.bgColor} ${platform.darkBg} rounded-lg flex items-center justify-center text-base flex-shrink-0`}>
+                            {platform.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                              {meeting.title}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {new Date(`${meeting.scheduled_date}T${meeting.scheduled_time}`).toLocaleDateString('pl-PL', {
+                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
-                            {meeting.title}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {new Date(`${meeting.scheduled_date}T${meeting.scheduled_time}`).toLocaleDateString('pl-PL', {
-                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                            })}
-                          </p>
+                      );
+                    } else {
+                      const call = item.data;
+                      const isSelected = selectedVideoCall?.id === call.id;
+                      const statusColor = call.status === 'active' ? 'text-green-600' : call.status === 'ended' ? 'text-gray-400' : 'text-blue-600';
+                      return (
+                        <div
+                          key={`v-${call.id}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { setSelectedVideoCall(call); setSelectedMeeting(null); setActiveChannel(null); }}
+                          onKeyDown={(e) => e.key === 'Enter' && setSelectedVideoCall(call)}
+                          className={`w-full px-3 py-3 flex items-start gap-3 cursor-pointer transition-all border-l-2 ${
+                            isSelected
+                              ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-600'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'
+                          }`}
+                        >
+                          <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-base flex-shrink-0">
+                            🖥️
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                              {call.title}
+                            </p>
+                            <p className={`text-xs mt-0.5 ${statusColor}`}>
+                              {call.status === 'active' ? 'Aktywne • ' : call.status === 'ended' ? 'Zakończone • ' : ''}
+                              {new Date(call.created_at).toLocaleDateString('pl-PL', {
+                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    );
+                      );
+                    }
                   })
                 )}
               </div>
@@ -663,7 +736,7 @@ const ChatMeet: React.FC = () => {
         <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900">
 
           {/* Empty state */}
-          {!activeChannel && !selectedMeeting && (
+          {!activeChannel && !selectedMeeting && !selectedVideoCall && (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
               <div className="w-20 h-20 bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center shadow-sm mb-6">
                 <MessageSquare className="w-10 h-10 text-gray-300 dark:text-gray-600" />
@@ -716,7 +789,7 @@ const ChatMeet: React.FC = () => {
           )}
 
           {/* Active chat view */}
-          {activeChannel && !selectedMeeting && (() => {
+          {activeChannel && !selectedMeeting && !selectedVideoCall && (() => {
             const isGroup = activeChannel.type !== 'direct';
             const members = activeChannel.members ?? [];
             const onlineMembers = members.filter((m) => {
@@ -1000,6 +1073,81 @@ const ChatMeet: React.FC = () => {
                               {p.name.split(' ').map((n) => n[0]).join('')}
                             </div>
                             <span className="text-sm text-gray-900 dark:text-white">{p.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Video call detail view */}
+          {selectedVideoCall && !activeChannel && (
+            <div className="flex flex-col h-full">
+              <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                    🖥️
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedVideoCall.title}</h2>
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      selectedVideoCall.status === 'ended'
+                        ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        : selectedVideoCall.status === 'active'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                    }`}>
+                      {selectedVideoCall.status === 'ended' ? 'Zakończone' : selectedVideoCall.status === 'active' ? 'Aktywne' : 'Zaplanowane'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-2xl space-y-5">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Termin</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Data</p>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm capitalize">
+                          {new Date(selectedVideoCall.created_at).toLocaleDateString('pl-PL', {
+                            weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedVideoCall.status !== 'ended' && (
+                    <button
+                      onClick={() => navigate(`/meeting/meeting-${selectedVideoCall.id}`)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl font-medium transition-colors"
+                    >
+                      <Video className="w-5 h-5" />
+                      Dołącz do rozmowy
+                    </button>
+                  )}
+
+                  {selectedVideoCall.participants && selectedVideoCall.participants.length > 0 && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                        Uczestnicy ({selectedVideoCall.participants.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedVideoCall.participants.map((p) => (
+                          <div key={p.id} className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
+                              {p.user ? `${p.user.first_name[0]}${p.user.last_name[0]}` : '?'}
+                            </div>
+                            <span className="text-sm text-gray-900 dark:text-white">
+                              {p.user ? `${p.user.first_name} ${p.user.last_name}` : p.user_id}
+                            </span>
                           </div>
                         ))}
                       </div>

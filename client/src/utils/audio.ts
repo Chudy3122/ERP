@@ -35,6 +35,10 @@ export const unlockAudio = (): void => {
   a.play()
     .then(() => { a.pause(); a.currentTime = 0; })
     .catch(() => {});
+  const c = getCallAudio();
+  c.play()
+    .then(() => { c.pause(); c.currentTime = 0; })
+    .catch(() => {});
 };
 
 export const playNotificationSound = (): void => {

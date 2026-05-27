@@ -37,8 +37,7 @@ const IncomingCallOverlay = () => {
 
   const handleAccept = () => {
     if (!call) return;
-    // room_id is "meeting-{uuid}"; if missing (old server), derive from meeting_id
-    const roomId = call.room_id || `meeting-${call.meeting_id}`;
+    const roomId = `meeting-${call.meeting_id}`;
     navigate(`/meeting/${roomId}`);
     dismiss();
   };

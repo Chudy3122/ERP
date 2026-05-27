@@ -5,6 +5,7 @@ import * as chatApi from '../api/chat.api';
 import { useAuth } from './AuthContext';
 import type { Channel, Message, SendMessageData, EditMessageData, DeleteMessageData } from '../types/chat.types';
 import { MessageType } from '../types/chat.types';
+import { playNotificationSound } from '../utils/audio';
 
 interface TypingUser {
   userId: string;
@@ -189,6 +190,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             newMap.set(data.channelId, (newMap.get(data.channelId) || 0) + 1);
             return newMap;
           });
+          playNotificationSound();
         }
       }
 
