@@ -28,8 +28,6 @@ import {
   UserPlus,
   FolderOpen,
   MessageSquare,
-  ArrowUp,
-  ArrowDown,
   ArrowUpDown,
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
@@ -83,6 +81,7 @@ const ProjectDetail = () => {
   // Drag and drop state
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
   const [columnSort, setColumnSort] = useState<Record<string, 'manual' | 'date_asc' | 'date_desc'>>({});
@@ -516,30 +515,56 @@ const ProjectDetail = () => {
     });
   };
 
-  const handleMoveTask = async (task: Task, allStageTasks: Task[], direction: 'up' | 'down') => {
-    const sorted = [...allStageTasks].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    const idx = sorted.findIndex(t => t.id === task.id);
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+  const handleTaskDragEnter = (e: React.DragEvent, targetTask: Task) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedTask && draggedTask.id !== targetTask.id) {
+      setDragOverTaskId(targetTask.id);
+    }
+  };
 
-    // Assign spread indices (0, 10, 20...) based on current visual order,
-    // then swap the two — this handles the case where all tasks share order_index = 0
-    const positions = sorted.map((t, i) => ({ id: t.id, order_index: i * 10 }));
-    const tmp = positions[idx].order_index;
-    positions[idx].order_index = positions[swapIdx].order_index;
-    positions[swapIdx].order_index = tmp;
+  const handleTaskDrop = async (e: React.DragEvent, targetTask: Task, allStageTasks: Task[]) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverTaskId(null);
+    setDragOverStage(null);
 
-    try {
-      setIsUpdatingTask(task.id);
-      await Promise.all([
-        taskApi.updateTask(positions[idx].id, { order_index: positions[idx].order_index }),
-        taskApi.updateTask(positions[swapIdx].id, { order_index: positions[swapIdx].order_index }),
-      ]);
-      loadTasksByStages();
-    } catch (error) {
-      console.error('Failed to reorder task:', error);
-    } finally {
-      setIsUpdatingTask(null);
+    if (!draggedTask || draggedTask.id === targetTask.id) {
+      setDraggedTask(null);
+      return;
+    }
+
+    // Same stage → reorder within column
+    if (draggedTask.stage_id === targetTask.stage_id) {
+      const sorted = [...allStageTasks].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+      const withoutDragged = sorted.filter(t => t.id !== draggedTask.id);
+      const targetIdx = withoutDragged.findIndex(t => t.id === targetTask.id);
+      withoutDragged.splice(targetIdx, 0, draggedTask);
+      const updates = withoutDragged.map((t, i) => ({ id: t.id, order_index: i * 10 }));
+      const taskToUpdate = draggedTask;
+      setDraggedTask(null);
+      try {
+        setIsUpdatingTask(taskToUpdate.id);
+        await Promise.all(updates.map(u => taskApi.updateTask(u.id, { order_index: u.order_index })));
+        loadTasksByStages();
+      } catch (err) {
+        console.error('Failed to reorder:', err);
+      } finally {
+        setIsUpdatingTask(null);
+      }
+    } else {
+      // Different stage → move to target's stage
+      const taskToUpdate = draggedTask;
+      setDraggedTask(null);
+      try {
+        setIsUpdatingTask(taskToUpdate.id);
+        await projectApi.moveTaskToStage(taskToUpdate.id, targetTask.stage_id ?? null);
+        loadTasksByStages();
+      } catch (err) {
+        console.error('Failed to move task:', err);
+      } finally {
+        setIsUpdatingTask(null);
+      }
     }
   };
 
@@ -1339,9 +1364,10 @@ const ProjectDetail = () => {
                         : undefined,
                     }}
                   >
-                    {filteredTasks.map((task, taskIdx) => {
+                    {filteredTasks.map((task) => {
                       const priorityConfig = getPriorityConfig(task.priority);
                       const isDragging = draggedTask?.id === task.id;
+                      const isDragTarget = dragOverTaskId === task.id && draggedTask?.stage_id === task.stage_id;
                       const priorityAccent = getTaskPriorityAccent(task.priority);
                       const overdue = isTaskOverdue(task);
                       const assignedPeople =
@@ -1363,34 +1389,15 @@ const ProjectDetail = () => {
                           onMouseDown={handleMouseDown}
                           onClick={e => handleCardClick(e, task.id)}
                           onDragStart={e => handleDragStart(e, task)}
-                          onDragEnd={handleDragEnd}
-                          className={`relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/80 p-3 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group select-none ${
+                          onDragEnd={() => { handleDragEnd(); setDragOverTaskId(null); }}
+                          onDragEnter={e => handleTaskDragEnter(e, task)}
+                          onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={e => handleTaskDrop(e, task, tasks)}
+                          className={`relative bg-white dark:bg-gray-800 rounded-xl border p-3 cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-200 group select-none ${
                             isUpdatingTask === task.id ? 'opacity-60' : ''
-                          } ${isDragging ? 'opacity-50 scale-[1.02] shadow-lg ring-2 ring-blue-400' : 'hover:-translate-y-0.5'}`}
+                          } ${isDragging ? 'opacity-50 scale-[1.02] shadow-lg ring-2 ring-blue-400 border-gray-200/80 dark:border-gray-700/80' : ''
+                          } ${isDragTarget ? 'ring-2 ring-[#F7941D] ring-offset-1 border-[#F7941D]/40' : 'border-gray-200/80 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 hover:-translate-y-0.5'}`}
                         >
-                          {/* Manual sort buttons (visible on hover, only in manual mode) */}
-                          {curSort === 'manual' && (
-                            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); handleMoveTask(task, tasks, 'up'); }}
-                                disabled={taskIdx === 0 || !!isUpdatingTask}
-                                className="p-0.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Przesuń wyżej"
-                              >
-                                <ArrowUp className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); handleMoveTask(task, tasks, 'down'); }}
-                                disabled={taskIdx === filteredTasks.length - 1 || !!isUpdatingTask}
-                                className="p-0.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Przesuń niżej"
-                              >
-                                <ArrowDown className="h-3 w-3" />
-                              </button>
-                            </div>
-                          )}
                           {/* Priority indicator bar */}
                           <div
                             className="absolute left-3 right-3 top-0 h-1 rounded-b-full"
