@@ -4,7 +4,7 @@ import { TaskAttachment } from '../models/TaskAttachment.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
 import { deleteFile } from '../config/multer';
-import { Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Between, In } from 'typeorm';
 
 interface CreateTaskDto {
   project_id: string;
@@ -13,6 +13,7 @@ interface CreateTaskDto {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigned_to?: string;
+  assignee_ids?: string[];
   estimated_hours?: number;
   due_date?: Date;
   parent_task_id?: string;
@@ -25,6 +26,7 @@ interface UpdateTaskDto {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigned_to?: string;
+  assignee_ids?: string[];
   estimated_hours?: number;
   actual_hours?: number;
   due_date?: Date;
@@ -42,12 +44,18 @@ export class TaskService {
    * Create a new task
    */
   async createTask(data: CreateTaskDto, userId: string): Promise<Task> {
-    const task = this.taskRepository.create({
-      ...data,
-      created_by: userId,
-    });
+    const { assignee_ids, ...taskData } = data;
+    if (assignee_ids && assignee_ids.length > 0 && !taskData.assigned_to) {
+      taskData.assigned_to = assignee_ids[0];
+    }
 
+    const task = this.taskRepository.create({ ...taskData, created_by: userId });
     const savedTask = await this.taskRepository.save(task);
+
+    if (assignee_ids && assignee_ids.length > 0) {
+      savedTask.assignees = await this.userRepository.find({ where: { id: In(assignee_ids) } });
+      await this.taskRepository.save(savedTask);
+    }
 
     // Log activity
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -71,7 +79,7 @@ export class TaskService {
   async getTaskById(id: string): Promise<Task> {
     const task = await this.taskRepository.findOne({
       where: { id },
-      relations: ['project', 'assignee', 'creator', 'parent', 'subtasks'],
+      relations: ['project', 'assignee', 'assignees', 'creator', 'parent', 'subtasks'],
     });
 
     if (!task) {
@@ -95,6 +103,7 @@ export class TaskService {
       .createQueryBuilder('task')
       .leftJoinAndSelect('task.project', 'project')
       .leftJoinAndSelect('task.assignee', 'assignee')
+      .leftJoinAndSelect('task.assignees', 'assignees')
       .leftJoinAndSelect('task.creator', 'creator')
       .orderBy('task.order_index', 'ASC')
       .addOrderBy('task.created_at', 'DESC');
@@ -147,8 +156,11 @@ export class TaskService {
       .createQueryBuilder('task')
       .leftJoinAndSelect('task.project', 'project')
       .leftJoinAndSelect('task.assignee', 'assignee')
+      .leftJoinAndSelect('task.assignees', 'assignees')
       .leftJoinAndSelect('task.creator', 'creator')
-      .where('(task.assigned_to = :userId OR task.created_by = :userId)', { userId })
+      .leftJoin('task_assignees', 'ta_filter', 'ta_filter.task_id = task.id AND ta_filter.user_id = :userId', { userId })
+      .where('(task.assigned_to = :userId OR task.created_by = :userId OR ta_filter.user_id IS NOT NULL)')
+      .distinct(true)
       .orderBy('task.created_at', 'DESC');
 
     if (filters?.status) {
@@ -168,12 +180,21 @@ export class TaskService {
   async updateTask(id: string, data: UpdateTaskDto, userId: string): Promise<Task> {
     const task = await this.getTaskById(id);
 
+    const { assignee_ids, ...updateData } = data;
+
     // If status changed to done, set completed_at
-    if (data.status === TaskStatus.DONE && task.status !== TaskStatus.DONE) {
-      data.completed_at = new Date();
+    if (updateData.status === TaskStatus.DONE && task.status !== TaskStatus.DONE) {
+      updateData.completed_at = new Date();
     }
 
-    Object.assign(task, data);
+    if (assignee_ids !== undefined) {
+      task.assignees = assignee_ids.length > 0
+        ? await this.userRepository.find({ where: { id: In(assignee_ids) } })
+        : [];
+      task.assigned_to = assignee_ids[0] ?? null;
+    }
+
+    Object.assign(task, updateData);
     const updatedTask = await this.taskRepository.save(task);
 
     // Log activity

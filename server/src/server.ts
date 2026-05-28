@@ -9,6 +9,7 @@ import { setupStatusHandlers } from './sockets/status.socket';
 import { setupNotificationHandlers } from './sockets/notification.socket';
 import { setupMeetingHandlers } from './sockets/meeting.socket';
 import { TimeService } from './services/time.service';
+import { seedDepartments } from './database/seeds/seedDepartments';
 
 const PORT = process.env.PORT || 5000;
 
@@ -17,6 +18,7 @@ const startServer = async () => {
   try {
     // Connect to database
     await initializeDatabase();
+    await seedDepartments();
 
     // Create HTTP server
     const httpServer = createServer(app);

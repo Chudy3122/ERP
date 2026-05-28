@@ -320,7 +320,8 @@ const ChatMeet: React.FC = () => {
   );
   const upcomingItems: MeetingListItem[] = [
     ...upcomingScheduled.map((m) => ({ _kind: 'scheduled' as const, data: m })),
-    ...myMeetings.filter((m) => m.status !== 'ended').map((m) => ({ _kind: 'videocall' as const, data: m })),
+    // Only truly active calls count as "upcoming"; old unended calls go to past
+    ...myMeetings.filter((m) => m.status === 'active').map((m) => ({ _kind: 'videocall' as const, data: m })),
   ].sort((a, b) => {
     const aDate = a._kind === 'scheduled'
       ? new Date(`${a.data.scheduled_date}T${a.data.scheduled_time}`).getTime()
@@ -332,7 +333,8 @@ const ChatMeet: React.FC = () => {
   });
   const pastItems: MeetingListItem[] = [
     ...pastScheduled.map((m) => ({ _kind: 'scheduled' as const, data: m })),
-    ...myMeetings.filter((m) => m.status === 'ended').map((m) => ({ _kind: 'videocall' as const, data: m })),
+    // ended + old unended (status !== 'active') = past
+    ...myMeetings.filter((m) => m.status !== 'active').map((m) => ({ _kind: 'videocall' as const, data: m })),
   ].sort((a, b) => {
     const aDate = a._kind === 'scheduled'
       ? new Date(`${a.data.scheduled_date}T${a.data.scheduled_time}`).getTime()
@@ -701,7 +703,8 @@ const ChatMeet: React.FC = () => {
                     } else {
                       const call = item.data;
                       const isSelected = selectedVideoCall?.id === call.id;
-                      const statusColor = call.status === 'active' ? 'text-green-600' : call.status === 'ended' ? 'text-gray-400' : 'text-blue-600';
+                      const visibleParticipants = (call.participants || []).slice(0, 4);
+                      const extraCount = Math.max(0, (call.participants?.length || 0) - 4);
                       return (
                         <div
                           key={`v-${call.id}`}
@@ -722,12 +725,41 @@ const ChatMeet: React.FC = () => {
                             <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
                               {call.title}
                             </p>
-                            <p className={`text-xs mt-0.5 ${statusColor}`}>
-                              {call.status === 'active' ? 'Aktywne • ' : call.status === 'ended' ? 'Zakończone • ' : ''}
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {call.status === 'active' && <span className="text-green-600 font-medium">Aktywne • </span>}
                               {new Date(call.created_at).toLocaleDateString('pl-PL', {
                                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                               })}
                             </p>
+                            {visibleParticipants.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1.5">
+                                <div className="flex -space-x-1.5">
+                                  {visibleParticipants.map((p) => (
+                                    <div
+                                      key={p.id}
+                                      className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border border-white dark:border-gray-800 flex items-center justify-center text-white overflow-hidden"
+                                      title={p.user ? `${p.user.first_name} ${p.user.last_name}` : ''}
+                                    >
+                                      {p.user?.avatar_url ? (
+                                        <img src={getFileUrl(p.user.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget.style.display = 'none'); }} />
+                                      ) : (
+                                        <span className="text-[8px] font-bold">
+                                          {p.user ? `${p.user.first_name[0]}${p.user.last_name[0]}` : '?'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {extraCount > 0 && (
+                                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 border border-white dark:border-gray-800 flex items-center justify-center">
+                                      <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300">+{extraCount}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                  {call.participants?.length} {call.participants?.length === 1 ? 'uczestnik' : 'uczestników'}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

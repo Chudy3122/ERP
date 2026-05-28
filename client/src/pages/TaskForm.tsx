@@ -57,6 +57,7 @@ const TaskForm = () => {
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
     assigned_to: undefined,
+    assignee_ids: [],
     due_date: '',
     estimated_hours: undefined,
     actual_hours: undefined,
@@ -86,7 +87,7 @@ const TaskForm = () => {
     work_date: new Date().toISOString().split('T')[0],
     hours: 1,
     description: '',
-    is_billable: false,
+    is_billable: true,
     work_type: WorkLogType.REGULAR,
   });
   const [isSavingWorkLog, setIsSavingWorkLog] = useState(false);
@@ -183,6 +184,7 @@ const TaskForm = () => {
         status: taskData.status,
         priority: taskData.priority,
         assigned_to: taskData.assigned_to || undefined,
+        assignee_ids: taskData.assignees?.map(a => a.id) || (taskData.assigned_to ? [taskData.assigned_to] : []),
         due_date: taskData.due_date ? taskData.due_date.split('T')[0] : '',
         estimated_hours: taskData.estimated_hours,
         actual_hours: taskData.actual_hours,
@@ -335,6 +337,14 @@ const TaskForm = () => {
         ? (value ? parseFloat(value) : undefined)
         : value || undefined,
     }));
+  };
+
+  const toggleAssignee = (userId: string) => {
+    setFormData(prev => {
+      const ids = prev.assignee_ids || [];
+      const next = ids.includes(userId) ? ids.filter(id => id !== userId) : [...ids, userId];
+      return { ...prev, assignee_ids: next, assigned_to: next[0] };
+    });
   };
 
   const handleQuickStatusChange = async (newStatus: TaskStatus) => {
@@ -587,37 +597,51 @@ const TaskForm = () => {
                   </select>
                 </div>
 
-                {/* Assignee */}
+                {/* Assignees (multi-select) */}
                 <div>
-                  <label htmlFor="assigned_to" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Przypisana osoba
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Przypisane osoby
                   </label>
-                  <select
-                    id="assigned_to"
-                    name="assigned_to"
-                    value={formData.assigned_to || ''}
-                    onChange={handleChange}
-                    disabled={!formData.project_id || isLoadingProjectMembers || projectMembers.length === 0}
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="">
-                      {!formData.project_id
-                        ? 'Najpierw wybierz projekt'
-                        : isLoadingProjectMembers
-                          ? 'Ładowanie zespołu...'
-                          : projectMembers.length === 0
-                            ? 'Brak osób w zespole projektu'
-                            : 'Nieprzypisane'}
-                    </option>
-                    {projectMembers.map((member) => (
-                      <option key={member.user_id} value={member.user_id}>
-                        {getProjectMemberDisplayName(member)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                    {!formData.project_id ? (
+                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Najpierw wybierz projekt</div>
+                    ) : isLoadingProjectMembers ? (
+                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Ładowanie zespołu...</div>
+                    ) : projectMembers.length === 0 ? (
+                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Brak osób w zespole projektu</div>
+                    ) : (
+                      <div className="max-h-36 overflow-y-auto">
+                        {projectMembers.map((member) => {
+                          const selected = (formData.assignee_ids || []).includes(member.user_id);
+                          return (
+                            <label
+                              key={member.user_id}
+                              className={`flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-xs hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleAssignee(member.user_id)}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 flex-shrink-0">
+                                {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
+                              </div>
+                              <span className="text-gray-700 dark:text-gray-300 truncate">{getProjectMemberDisplayName(member)}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                   {formData.project_id && projectMembers.length === 0 && !isLoadingProjectMembers && (
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
                       Dodaj osoby w zakładce zespół projektu, aby można było przypisać zadanie.
+                    </p>
+                  )}
+                  {(formData.assignee_ids || []).length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Wybrano: {(formData.assignee_ids || []).length} os.
                     </p>
                   )}
                 </div>
@@ -945,25 +969,25 @@ const TaskForm = () => {
                 </div>
               )}
 
-              {/* Assignee */}
-              {task.assignee && (
-                <div className="flex items-center gap-2">
-                  {task.assignee.avatar_url ? (
-                    <img
-                      src={getFileUrl(task.assignee.avatar_url) || ''}
-                      alt=""
-                      className="w-5 h-5 rounded-full shrink-0"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[9px] font-medium text-gray-600 shrink-0">
-                      {getInitials(task.assignee.first_name, task.assignee.last_name)}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Przypisano</p>
-                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                      {task.assignee.first_name} {task.assignee.last_name}
-                    </p>
+              {/* Assignees */}
+              {((task.assignees && task.assignees.length > 0) || task.assignee) && (
+                <div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1">Przypisano</p>
+                  <div className="space-y-1">
+                    {(task.assignees && task.assignees.length > 0 ? task.assignees : task.assignee ? [task.assignee] : []).map(person => (
+                      <div key={person.id} className="flex items-center gap-2">
+                        {person.avatar_url ? (
+                          <img src={getFileUrl(person.avatar_url) || ''} alt="" className="w-5 h-5 rounded-full shrink-0" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[9px] font-medium text-gray-600 shrink-0">
+                            {getInitials(person.first_name, person.last_name)}
+                          </div>
+                        )}
+                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          {person.first_name} {person.last_name}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

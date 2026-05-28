@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import employeeController from '../controllers/employee.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
+import { requireRole, requireAdminOrSameDeptManager } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
 
 const router = Router();
@@ -19,10 +19,10 @@ router.get('/', employeeController.getAllEmployees.bind(employeeController));
 
 // Employee profile
 router.get('/:id', employeeController.getEmployeeProfile.bind(employeeController));
-router.put('/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), employeeController.updateEmployeeProfile.bind(employeeController));
+router.put('/:id', requireAdminOrSameDeptManager(), employeeController.updateEmployeeProfile.bind(employeeController));
 
 // Employee management
-router.put('/:id/manager', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), employeeController.assignManager.bind(employeeController));
+router.put('/:id/manager', requireAdminOrSameDeptManager(), employeeController.assignManager.bind(employeeController));
 router.get('/:id/team', employeeController.getTeamMembers.bind(employeeController));
 
 // Employee statistics

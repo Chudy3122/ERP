@@ -84,6 +84,7 @@ export interface UpdateUserData {
   lastName?: string;
   role?: string;
   department?: string;
+  department_id?: string | null;
   phone?: string;
   position?: string;
   employee_id?: string;

@@ -17,7 +17,9 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import * as adminApi from '../api/admin.api';
+import * as departmentApi from '../api/department.api';
 import { AdminUser, UpdateUserData } from '../types/admin.types';
+import type { Department } from '../types/department.types';
 import { getFileUrl } from '../api/axios-config';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,6 +35,7 @@ const EmployeeDetail = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<UpdateUserData>({});
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -40,6 +43,7 @@ const EmployeeDetail = () => {
     if (id) {
       loadEmployee();
     }
+    departmentApi.getAllDepartments().then(setDepartments).catch(() => {});
   }, [id]);
 
   const loadEmployee = async () => {
@@ -54,6 +58,7 @@ const EmployeeDetail = () => {
         email: data.email,
         phone: data.phone || '',
         department: data.department || '',
+        department_id: data.department_id || '',
         position: data.position || '',
         role: data.role,
         employee_id: data.employee_id || '',
@@ -105,6 +110,7 @@ const EmployeeDetail = () => {
         email: employee.email,
         phone: employee.phone || '',
         department: employee.department || '',
+        department_id: employee.department_id || '',
         position: employee.position || '',
         role: employee.role,
         employee_id: employee.employee_id || '',
@@ -146,8 +152,11 @@ const EmployeeDetail = () => {
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
       admin: 'Administrator',
-      kierownik: 'Team Leader',
+      kierownik: 'Kierownik',
       employee: 'Pracownik',
+      szef: 'Szef',
+      ksiegowosc: 'Księgowość',
+      sekretariat: 'Sekretariat',
     };
     return labels[role] || role;
   };
@@ -247,6 +256,12 @@ const EmployeeDetail = () => {
                       ? 'bg-gray-800 text-white'
                       : employee.role === 'kierownik'
                       ? 'bg-gray-600 text-white'
+                      : employee.role === 'szef'
+                      ? 'bg-amber-700 text-white'
+                      : employee.role === 'ksiegowosc'
+                      ? 'bg-purple-700 text-white'
+                      : employee.role === 'sekretariat'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700'
                   }`}>
                     {getRoleLabel(employee.role)}
@@ -415,18 +430,15 @@ const EmployeeDetail = () => {
                 </label>
                 {isEditing ? (
                   <select
-                    name="department"
-                    value={formData.department || ''}
+                    name="department_id"
+                    value={formData.department_id || ''}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
                   >
-                    <option value="">Wybierz dział</option>
-                    <option value="IT">IT</option>
-                    <option value="HR">HR</option>
-                    <option value="Finance">Finanse</option>
-                    <option value="Sales">Sprzedaż</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Operations">Operacje</option>
+                    <option value="">Brak działu</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
                   </select>
                 ) : (
                   <p className="text-gray-900">{employee.department || <span className="text-gray-400">Nie podano</span>}</p>
@@ -515,18 +527,24 @@ const EmployeeDetail = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
                   >
                     <option value="employee">Pracownik</option>
-                    <option value="kierownik">Team Leader</option>
+                    <option value="kierownik">Kierownik</option>
+                    <option value="szef">Szef</option>
+                    <option value="ksiegowosc">Księgowość</option>
+                    <option value="sekretariat">Sekretariat</option>
                     <option value="admin">Administrator</option>
                   </select>
                 ) : (
                   <p className="text-gray-900">{getRoleLabel(employee.role)}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  {employee.role === 'admin'
-                    ? 'Pełny dostęp do wszystkich funkcji systemu'
-                    : employee.role === 'kierownik'
-                    ? 'Zarządzanie zespołem i zatwierdzanie wniosków'
-                    : 'Podstawowy dostęp do funkcji pracowniczych'}
+                  {{
+                    admin: 'Pełny dostęp do wszystkich funkcji systemu',
+                    kierownik: 'Zarządzanie działem, urlopy i nieobecności swoich pracowników',
+                    szef: 'Szef firmy – podgląd całości, edycja kalendarza',
+                    ksiegowosc: 'Dostęp do finansów, kadr i płac',
+                    sekretariat: 'Podstawowy dostęp + edycja kalendarza szefa',
+                    employee: 'Podstawowy dostęp do funkcji pracowniczych',
+                  }[employee.role] ?? 'Podstawowy dostęp do funkcji pracowniczych'}
                 </p>
               </div>
 

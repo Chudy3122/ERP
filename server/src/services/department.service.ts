@@ -23,6 +23,15 @@ interface UpdateDepartmentDto {
   order_index?: number;
 }
 
+export interface DepartmentEmployee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  position: string | null;
+  avatar_url: string | null;
+  role: string;
+}
+
 export interface DepartmentTreeNode {
   id: string;
   name: string;
@@ -35,6 +44,7 @@ export interface DepartmentTreeNode {
   is_active: boolean;
   color: string | null;
   employeeCount: number;
+  employees: DepartmentEmployee[];
   children: DepartmentTreeNode[];
   level: number;
 }
@@ -126,6 +136,15 @@ export class DepartmentService {
 
     // First pass: create all nodes
     departments.forEach((d) => {
+      const allEmployees: DepartmentEmployee[] = (d.employees || []).map((e) => ({
+        id: e.id,
+        first_name: e.first_name,
+        last_name: e.last_name,
+        position: e.position,
+        avatar_url: e.avatar_url,
+        role: e.role,
+      }));
+
       map.set(d.id, {
         id: d.id,
         name: d.name,
@@ -137,7 +156,8 @@ export class DepartmentService {
         order_index: d.order_index,
         is_active: d.is_active,
         color: d.color,
-        employeeCount: d.employees?.length || 0,
+        employeeCount: allEmployees.length,
+        employees: allEmployees,
         children: [],
         level: 0,
       });

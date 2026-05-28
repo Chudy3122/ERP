@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Users, User, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import type { DepartmentTreeNode } from '../../types/department.types';
+import type { DepartmentTreeNode, DepartmentEmployee } from '../../types/department.types';
+import { getFileUrl } from '../../api/axios-config';
 
 interface OrgChartProps {
   tree: DepartmentTreeNode[];
@@ -12,9 +13,40 @@ interface OrgNodeProps {
   isRoot?: boolean;
 }
 
+const MAX_VISIBLE_EMPLOYEES = 5;
+
+function EmployeeAvatar({ emp, size = 'sm' }: { emp: DepartmentEmployee; size?: 'sm' | 'xs' }) {
+  const [error, setError] = useState(false);
+  const initials = `${emp.first_name[0]}${emp.last_name[0]}`;
+  const dim = size === 'xs' ? 'w-5 h-5 text-[8px]' : 'w-6 h-6 text-[10px]';
+
+  return (
+    <div
+      className={`${dim} rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 overflow-hidden`}
+      title={`${emp.first_name} ${emp.last_name}${emp.position ? ` — ${emp.position}` : ''}`}
+    >
+      {emp.avatar_url && !error ? (
+        <img
+          src={getFileUrl(emp.avatar_url) || ''}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={() => setError(true)}
+        />
+      ) : (
+        <span className="font-semibold text-blue-700 dark:text-blue-300">{initials}</span>
+      )}
+    </div>
+  );
+}
+
 const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
+
+  // Employees excluding the head
+  const nonHeadEmployees = (node.employees || []).filter((e) => e.id !== node.head_id);
+  const visibleEmployees = nonHeadEmployees.slice(0, MAX_VISIBLE_EMPLOYEES);
+  const extraCount = nonHeadEmployees.length - visibleEmployees.length;
 
   return (
     <div className="flex flex-col items-center">
@@ -25,7 +57,7 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
         }`}
         style={{ borderLeftColor: node.color || undefined, borderLeftWidth: '4px' }}
       >
-        <div className="p-3 min-w-[180px] max-w-[220px]">
+        <div className="p-3 min-w-[200px] max-w-[240px]">
           {/* Department Header */}
           <div className="flex items-center gap-2 mb-2">
             <div
@@ -44,23 +76,54 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
 
           {/* Department Head */}
           {node.head && (
-            <div className="flex items-center gap-2 p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-2">
-              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                <User className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-center gap-2 p-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg mb-2">
+              <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {node.head.avatar_url ? (
+                  <img src={getFileUrl(node.head.avatar_url) || ''} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-3 h-3 text-amber-700 dark:text-amber-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 truncate">
                   {node.head.first_name} {node.head.last_name}
+                </p>
+                <p className="text-[10px] text-amber-600 dark:text-amber-500 truncate">
+                  {node.head.position || 'Kierownik'}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Employee Count */}
-          <div className="flex items-center justify-between text-xs">
+          {/* Employee list */}
+          {visibleEmployees.length > 0 && (
+            <div className="space-y-1">
+              {visibleEmployees.map((emp) => (
+                <div key={emp.id} className="flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <EmployeeAvatar emp={emp} size="xs" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 truncate">
+                      {emp.first_name} {emp.last_name}
+                    </p>
+                    {emp.position && (
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{emp.position}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {extraCount > 0 && (
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1 pt-0.5">
+                  +{extraCount} więcej
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Footer: count + expand toggle */}
+          <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
               <Users className="w-3 h-3" />
-              <span>{node.employeeCount}</span>
+              <span>{node.employeeCount} {node.employeeCount === 1 ? 'os.' : 'os.'}</span>
             </div>
             {hasChildren && (
               <button
@@ -96,27 +159,18 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
 
               return (
                 <div key={child.id} className="relative flex flex-col items-center">
-                  {/* Horizontal line segment extending to the right (to next sibling) */}
                   {!isLast && !isOnly && (
                     <div
                       className="absolute top-0 h-0.5 bg-gray-300 dark:bg-gray-600"
-                      style={{
-                        left: '50%',
-                        width: 'calc(50% + 16px + 2px)', // half of this card + gap + small overlap
-                      }}
+                      style={{ left: '50%', width: 'calc(50% + 16px + 2px)' }}
                     />
                   )}
-                  {/* Horizontal line segment extending to the left (from previous sibling) */}
                   {!isFirst && !isOnly && (
                     <div
                       className="absolute top-0 h-0.5 bg-gray-300 dark:bg-gray-600"
-                      style={{
-                        right: '50%',
-                        width: 'calc(50% + 16px + 2px)', // half of this card + gap + small overlap
-                      }}
+                      style={{ right: '50%', width: 'calc(50% + 16px + 2px)' }}
                     />
                   )}
-                  {/* Vertical Connector to Child */}
                   <div className="w-0.5 h-5 bg-gray-300 dark:bg-gray-600" />
                   <OrgNode node={child} />
                 </div>
@@ -136,7 +190,6 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
   const [scale, setScale] = useState(1);
   const [autoScale, setAutoScale] = useState(true);
 
-  // Auto-scale to fit content (both width and height)
   useEffect(() => {
     if (!autoScale || !containerRef.current || !contentRef.current) return;
 
@@ -145,11 +198,9 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
       const content = contentRef.current;
       if (!container || !content) return;
 
-      // Reset scale to measure true content size
       setScale(1);
       content.style.transform = 'scale(1)';
 
-      // Wait for DOM to update
       requestAnimationFrame(() => {
         const padding = 48;
         const containerWidth = container.clientWidth - padding;
@@ -157,21 +208,15 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
         const contentWidth = content.scrollWidth;
         const contentHeight = content.scrollHeight;
 
-        // Calculate scale needed to fit both dimensions
         const scaleX = contentWidth > containerWidth ? containerWidth / contentWidth : 1;
         const scaleY = contentHeight > containerHeight ? containerHeight / contentHeight : 1;
-
-        // Use the smaller scale to ensure it fits both ways
         const newScale = Math.max(0.25, Math.min(1, scaleX, scaleY));
         setScale(newScale);
       });
     };
 
-    // Calculate on mount and resize
     const timeoutId = setTimeout(calculateScale, 100);
-    const resizeObserver = new ResizeObserver(() => {
-      setTimeout(calculateScale, 50);
-    });
+    const resizeObserver = new ResizeObserver(() => setTimeout(calculateScale, 50));
     resizeObserver.observe(containerRef.current);
 
     return () => {
@@ -180,27 +225,14 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
     };
   }, [tree, autoScale]);
 
-  const handleZoomIn = () => {
-    setAutoScale(false);
-    setScale(prev => Math.min(1.5, prev + 0.1));
-  };
-
-  const handleZoomOut = () => {
-    setAutoScale(false);
-    setScale(prev => Math.max(0.3, prev - 0.1));
-  };
-
-  const handleResetZoom = () => {
-    setAutoScale(true);
-    setScale(1);
-  };
+  const handleZoomIn = () => { setAutoScale(false); setScale((prev) => Math.min(1.5, prev + 0.1)); };
+  const handleZoomOut = () => { setAutoScale(false); setScale((prev) => Math.max(0.3, prev - 0.1)); };
+  const handleResetZoom = () => { setAutoScale(true); setScale(1); };
 
   if (tree.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-        <p className="text-gray-500 dark:text-gray-400">
-          {t('organization.noDepartments')}
-        </p>
+        <p className="text-gray-500 dark:text-gray-400">{t('organization.noDepartments')}</p>
       </div>
     );
   }
@@ -209,28 +241,14 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Zoom Controls */}
       <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-        <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
-          {Math.round(scale * 100)}%
-        </span>
-        <button
-          onClick={handleZoomOut}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-          title="Zoom out"
-        >
+        <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">{Math.round(scale * 100)}%</span>
+        <button onClick={handleZoomOut} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" title="Zoom out">
           <ZoomOut className="w-4 h-4" />
         </button>
-        <button
-          onClick={handleZoomIn}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-          title="Zoom in"
-        >
+        <button onClick={handleZoomIn} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" title="Zoom in">
           <ZoomIn className="w-4 h-4" />
         </button>
-        <button
-          onClick={handleResetZoom}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-          title="Auto fit"
-        >
+        <button onClick={handleResetZoom} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" title="Auto fit">
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
@@ -244,11 +262,7 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
         <div
           ref={contentRef}
           className="flex flex-col items-center gap-4"
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top center',
-            width: 'fit-content',
-          }}
+          style={{ transform: `scale(${scale})`, transformOrigin: 'top center', width: 'fit-content' }}
         >
           {tree.map((rootNode) => (
             <OrgNode key={rootNode.id} node={rootNode} isRoot />

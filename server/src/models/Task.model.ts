@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  ManyToMany,
+  JoinTable,
   OneToMany,
   JoinColumn,
   BaseEntity,
@@ -106,6 +108,14 @@ export class Task extends BaseEntity {
 
   @OneToMany(() => Task, (task) => task.parent)
   subtasks: Task[];
+
+  @ManyToMany(() => User, { eager: true })
+  @JoinTable({
+    name: 'task_assignees',
+    joinColumn: { name: 'task_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'user_id', referencedColumnName: 'id' },
+  })
+  assignees: User[];
 
   @OneToMany(() => TaskAttachment, attachment => attachment.task, { eager: true })
   attachments: TaskAttachment[];

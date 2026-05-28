@@ -167,28 +167,33 @@ export class TimeController {
   }
 
   /**
-   * Get all time entries (admin only)
+   * Get all time entries (admin = all, kierownik = own dept only)
    * GET /api/time/entries/all?startDate=...&endDate=...
    */
   async getAllTimeEntries(req: Request, res: Response): Promise<void> {
     try {
       const { startDate, endDate } = req.query;
-
       const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const end = endDate ? new Date(endDate as string) : new Date();
 
-      const entries = await timeService.getAllTimeEntries(start, end);
+      let entries = await timeService.getAllTimeEntries(start, end);
 
-      res.status(200).json({
-        success: true,
-        data: entries,
-      });
+      if (req.user!.role === UserRole.KIEROWNIK) {
+        const userRepo = AppDataSource.getRepository(User);
+        const manager = await userRepo.findOne({ where: { id: req.user!.userId }, select: ['id', 'department_id'] });
+        if (manager?.department_id) {
+          const deptUsers = await userRepo.find({ where: { department_id: manager.department_id, is_active: true }, select: ['id'] });
+          const deptUserIds = new Set(deptUsers.map((u) => u.id));
+          entries = entries.filter((e) => deptUserIds.has((e as any).user_id || (e as any).userId));
+        } else {
+          entries = [];
+        }
+      }
+
+      res.status(200).json({ success: true, data: entries });
     } catch (error: any) {
       console.error('Get all time entries error:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to get time entries',
-      });
+      res.status(500).json({ success: false, message: error.message || 'Failed to get time entries' });
     }
   }
 
@@ -352,23 +357,29 @@ export class TimeController {
   }
 
   /**
-   * Get pending leave requests (admin/team leader only)
+   * Get pending leave requests (admin = all, kierownik = own dept only)
    * GET /api/time/leave/pending
    */
   async getPendingLeaveRequests(req: Request, res: Response): Promise<void> {
     try {
-      const requests = await timeService.getPendingLeaveRequests();
+      let requests = await timeService.getPendingLeaveRequests();
 
-      res.status(200).json({
-        success: true,
-        data: requests,
-      });
+      if (req.user!.role === UserRole.KIEROWNIK) {
+        const userRepo = AppDataSource.getRepository(User);
+        const manager = await userRepo.findOne({ where: { id: req.user!.userId }, select: ['id', 'department_id'] });
+        if (manager?.department_id) {
+          const deptUsers = await userRepo.find({ where: { department_id: manager.department_id, is_active: true }, select: ['id'] });
+          const deptUserIds = new Set(deptUsers.map((u) => u.id));
+          requests = requests.filter((r) => deptUserIds.has(r.user_id));
+        } else {
+          requests = [];
+        }
+      }
+
+      res.status(200).json({ success: true, data: requests });
     } catch (error: any) {
       console.error('Get pending leave requests error:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to get pending leave requests',
-      });
+      res.status(500).json({ success: false, message: error.message || 'Failed to get pending leave requests' });
     }
   }
 
@@ -381,6 +392,22 @@ export class TimeController {
       const { id } = req.params;
       const reviewerId = req.user!.userId;
       const { notes } = req.body;
+
+      if (req.user!.role === UserRole.KIEROWNIK) {
+        const userRepo = AppDataSource.getRepository(User);
+        const lr = await timeService.getPendingLeaveRequests();
+        const target = lr.find((r) => r.id === id);
+        if (!target) {
+          res.status(404).json({ success: false, message: 'Wniosek nie znaleziony' });
+          return;
+        }
+        const manager = await userRepo.findOne({ where: { id: reviewerId }, select: ['id', 'department_id'] });
+        const targetUser = await userRepo.findOne({ where: { id: target.user_id }, select: ['id', 'department_id'] });
+        if (!manager?.department_id || manager.department_id !== targetUser?.department_id) {
+          res.status(403).json({ success: false, message: 'Możesz zatwierdzać tylko wnioski pracowników ze swojego działu' });
+          return;
+        }
+      }
 
       const leaveRequest = await timeService.approveLeaveRequest(id, reviewerId, notes);
 
@@ -424,6 +451,22 @@ export class TimeController {
       const { id } = req.params;
       const reviewerId = req.user!.userId;
       const { notes } = req.body;
+
+      if (req.user!.role === UserRole.KIEROWNIK) {
+        const userRepo = AppDataSource.getRepository(User);
+        const lr = await timeService.getPendingLeaveRequests();
+        const target = lr.find((r) => r.id === id);
+        if (!target) {
+          res.status(404).json({ success: false, message: 'Wniosek nie znaleziony' });
+          return;
+        }
+        const manager = await userRepo.findOne({ where: { id: reviewerId }, select: ['id', 'department_id'] });
+        const targetUser = await userRepo.findOne({ where: { id: target.user_id }, select: ['id', 'department_id'] });
+        if (!manager?.department_id || manager.department_id !== targetUser?.department_id) {
+          res.status(403).json({ success: false, message: 'Możesz odrzucać tylko wnioski pracowników ze swojego działu' });
+          return;
+        }
+      }
 
       const leaveRequest = await timeService.rejectLeaveRequest(id, reviewerId, notes);
 

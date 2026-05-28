@@ -434,6 +434,7 @@ const ProjectDetail = () => {
         hours: parseFloat(workLogForm.hours),
         description: workLogForm.description || undefined,
         work_type: workLogForm.work_type as any,
+        is_billable: workLogForm.work_type === 'regular',
       });
       setWorkLogTask(null);
       loadTasksByStages();
@@ -1367,39 +1368,53 @@ const ProjectDetail = () => {
                           </div>
 
                           <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-gray-700/50">
-                            {task.assignee ? (
-                              <div
-                                className="flex min-w-0 items-center gap-2"
-                                title={`${task.assignee.first_name} ${task.assignee.last_name}`}
-                              >
-                                {task.assignee.avatar_url ? (
-                                  <img
-                                    src={getFileUrl(task.assignee.avatar_url) || ''}
-                                    alt=""
-                                    className="h-6 w-6 rounded-full object-cover ring-1 ring-white dark:ring-gray-800"
-                                  />
-                                ) : (
-                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-[9px] font-bold text-white ring-1 ring-white dark:ring-gray-800">
-                                    {getInitials(task.assignee.first_name, task.assignee.last_name)}
+                            {(() => {
+                              const people = task.assignees && task.assignees.length > 0
+                                ? task.assignees
+                                : task.assignee ? [task.assignee] : [];
+                              return people.length > 0 ? (
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <div className="flex items-center">
+                                    {people.slice(0, 3).map((person, i) => (
+                                      <div
+                                        key={person.id}
+                                        className="h-6 w-6 rounded-full ring-1 ring-white dark:ring-gray-800 flex-shrink-0"
+                                        style={{ marginLeft: i > 0 ? '-6px' : 0 }}
+                                        title={`${person.first_name} ${person.last_name}`}
+                                      >
+                                        {person.avatar_url ? (
+                                          <img src={getFileUrl(person.avatar_url) || ''} alt="" className="h-6 w-6 rounded-full object-cover" />
+                                        ) : (
+                                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-[9px] font-bold text-white">
+                                            {getInitials(person.first_name, person.last_name)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {people.length > 3 && (
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[8px] font-bold text-gray-600 dark:text-gray-300 ring-1 ring-white dark:ring-gray-800" style={{ marginLeft: '-6px' }}>
+                                        +{people.length - 3}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                                <div className="min-w-0">
-                                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                                    Odpowiedzialny
-                                  </span>
-                                  <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-200">
-                                    {task.assignee.first_name} {task.assignee.last_name}
-                                  </span>
+                                  <div className="min-w-0">
+                                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                      Odpowiedzialny
+                                    </span>
+                                    <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+                                      {people.length === 1 ? `${people[0].first_name} ${people[0].last_name}` : `${people.length} osoby`}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-                                  <Users className="h-3 w-3" />
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                                    <Users className="h-3 w-3" />
+                                  </div>
+                                  Brak przypisanej osoby
                                 </div>
-                                Brak przypisanej osoby
-                              </div>
-                            )}
+                              );
+                            })()}
 
                             <button
                               type="button"

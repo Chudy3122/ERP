@@ -18,9 +18,19 @@ export interface Department {
   employees?: User[];
 }
 
-export interface DepartmentTreeNode extends Department {
+export interface DepartmentEmployee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  position: string | null;
+  avatar_url: string | null;
+  role: string;
+}
+
+export interface DepartmentTreeNode extends Omit<Department, 'employees' | 'children'> {
   children: DepartmentTreeNode[];
   employeeCount: number;
+  employees: DepartmentEmployee[];
   level: number;
 }
 

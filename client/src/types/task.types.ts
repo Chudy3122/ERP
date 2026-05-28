@@ -48,6 +48,7 @@ export interface Task {
   project?: Project;
   stage?: ProjectStage;
   assignee?: User;
+  assignees?: User[];
   creator?: User;
   parent?: Task;
   subtasks?: Task[];
@@ -64,6 +65,7 @@ export interface CreateTaskRequest {
   status?: TaskStatus;
   priority: TaskPriority;
   assigned_to?: string;
+  assignee_ids?: string[];
   estimated_hours?: number;
   due_date?: string;
   parent_task_id?: string;
@@ -75,6 +77,7 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigned_to?: string;
+  assignee_ids?: string[];
   estimated_hours?: number;
   actual_hours?: number;
   due_date?: string;

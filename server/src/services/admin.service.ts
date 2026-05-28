@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
+import { Department } from '../models/Department.model';
 import { TimeEntry } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus } from '../models/LeaveRequest.model';
 import { Channel } from '../models/Channel.model';
@@ -24,6 +25,7 @@ interface UpdateUserData {
   lastName?: string;
   role?: UserRole;
   department?: string;
+  department_id?: string | null;
   phone?: string;
   position?: string;
   employee_id?: string;
@@ -190,6 +192,15 @@ class AdminService {
     if (data.lastName) user.last_name = data.lastName;
     if (data.role) user.role = data.role;
     if (data.department !== undefined) user.department = data.department || null;
+    if (data.department_id !== undefined) {
+      user.department_id = data.department_id || null;
+      if (data.department_id) {
+        const dept = await AppDataSource.getRepository(Department).findOne({ where: { id: data.department_id } });
+        if (dept) user.department = dept.name;
+      } else {
+        user.department = null;
+      }
+    }
     if (data.phone !== undefined) user.phone = data.phone || null;
     if (data.position !== undefined) user.position = data.position || null;
     if (data.employee_id !== undefined) user.employee_id = data.employee_id || null;
