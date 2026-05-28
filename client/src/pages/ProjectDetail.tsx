@@ -1254,19 +1254,6 @@ const ProjectDetail = () => {
             .dark .kanban-scrollbar::-webkit-scrollbar-thumb:hover {
               background: rgba(107, 114, 128, 1);
             }
-            .kanban-column-scrollbar::-webkit-scrollbar {
-              width: 6px;
-            }
-            .kanban-column-scrollbar::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            .kanban-column-scrollbar::-webkit-scrollbar-thumb {
-              background: rgba(156, 163, 175, 0.45);
-              border-radius: 999px;
-            }
-            .kanban-column-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: rgba(107, 114, 128, 0.65);
-            }
           `}</style>
           <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-2 px-2 kanban-scrollbar">
             {tasksByStages.map(({ stage, tasks }) => {
@@ -1345,7 +1332,7 @@ const ProjectDetail = () => {
 
                   {/* Tasks container */}
                   <div
-                    className="kanban-column-scrollbar max-h-[calc(100vh-360px)] min-h-[260px] space-y-2 overflow-y-auto p-2.5"
+                    className="min-h-[260px] space-y-2 p-2.5"
                     style={{
                       background: isOver
                         ? 'linear-gradient(180deg, rgba(247, 148, 29, 0.12) 0%, rgba(247, 148, 29, 0.05) 100%)'
