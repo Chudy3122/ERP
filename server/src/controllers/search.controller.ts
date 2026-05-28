@@ -64,8 +64,31 @@ export class SearchController {
           .orderBy('project.updated_at', 'DESC')
           .take(PER_TYPE);
 
-        if (!isAdmin && !isSzef && !isKierownik) {
-          qb.innerJoin('project.members', 'pm', 'pm.user_id = :userId', { userId });
+        if (isAdmin || isSzef) {
+          // see all
+        } else if (isKierownik) {
+          // see dept members' projects + dept-created
+          const deptUsers = await AppDataSource.query(
+            `SELECT u.id FROM users u
+             WHERE u.department_id = (SELECT department_id FROM users WHERE id = $1)
+               AND u.is_active = true`,
+            [userId]
+          );
+          const deptIds: string[] = deptUsers.map((u: any) => u.id);
+          if (deptIds.length) {
+            qb.andWhere(
+              `(EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = project.id AND pm.user_id = ANY(:deptIds) AND pm.left_at IS NULL)
+               OR project.created_by = ANY(:deptIds))`,
+              { deptIds }
+            );
+          }
+        } else {
+          // employee/ksiegowosc/sekretariat: member OR has assigned task
+          qb.andWhere(
+            `(EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = project.id AND pm.user_id = :userId AND pm.left_at IS NULL)
+             OR EXISTS (SELECT 1 FROM tasks t LEFT JOIN task_assignees ta ON ta.task_id = t.id WHERE t.project_id = project.id AND (t.assigned_to = :userId OR ta.user_id = :userId)))`,
+            { userId }
+          );
         }
 
         const rows = await qb.getMany();

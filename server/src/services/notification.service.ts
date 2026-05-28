@@ -284,7 +284,7 @@ class NotificationService {
       userId,
       type,
       title,
-      message: `Twój wniosek (${this.leaveTypeLabel(leaveType)}) od ${startDate} do ${endDate} został ${
+      message: `Twój wniosek urlopowy od ${startDate} do ${endDate} został ${
         status === 'approved' ? 'zatwierdzony' : 'odrzucony'
       }`,
       actionUrl: '/time-tracking/leave',
@@ -310,7 +310,7 @@ class NotificationService {
       userId: managerId,
       type: NotificationType.LEAVE_REQUEST_PENDING,
       title: 'Nowy wniosek urlopowy',
-      message: `${employeeName} złożył wniosek (${this.leaveTypeLabel(leaveType)}) od ${startDate} do ${endDate}`,
+      message: `${employeeName} złożył wniosek urlopowy od ${startDate} do ${endDate}`,
       actionUrl: '/time-tracking/leave',
       priority: NotificationPriority.NORMAL,
       relatedUserId: employeeId,

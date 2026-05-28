@@ -7,6 +7,9 @@ import { Notification } from '../types/notification.types';
 
 const PAGE_SIZE = 20;
 
+const cleanMsg = (msg: string) =>
+  msg.replace(/\s*\((vacation|sick_leave|personal|unpaid|parental|other|Urlop wypoczynkowy|Zwolnienie lekarskie|Urlop na żądanie|Urlop bezpłatny|Urlop rodzicielski|Inny)\)/gi, '').trim();
+
 const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -185,7 +188,7 @@ const Notifications = () => {
                       )}
                     </span>
                     <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
-                      {notification.message}
+                      {cleanMsg(notification.message)}
                     </span>
                     <span className="mt-2 block text-xs text-gray-400 dark:text-gray-500">
                       {formatDate(notification.created_at)}

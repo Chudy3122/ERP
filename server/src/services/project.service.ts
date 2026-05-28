@@ -5,7 +5,7 @@ import { ProjectAttachment } from '../models/ProjectAttachment.model';
 import { Task } from '../models/Task.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
-import { IsNull } from 'typeorm';
+import { IsNull, In } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -124,15 +124,23 @@ export class ProjectService {
   }
 
   /**
-   * Get user's projects (where user is member, manager, or creator)
-   * Admins and team leaders see all non-archived projects
+   * Get user's projects with role-based visibility
    */
   async getUserProjects(userId: string): Promise<Project[]> {
-    // Check if user is admin or team leader
     const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return [];
 
-    if (user && (user.role === 'admin' || user.role === 'kierownik')) {
-      // Admins and team leaders see all non-archived projects
+    const merge = (lists: Project[][]): Project[] => {
+      const seen = new Set<string>();
+      const result: Project[] = [];
+      for (const p of lists.flat()) {
+        if (!seen.has(p.id) && !p.is_archived) { seen.add(p.id); result.push(p); }
+      }
+      return result.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    };
+
+    // Admin / Szef: see everything
+    if (user.role === 'admin' || user.role === 'szef') {
       return this.projectRepository.find({
         where: { is_archived: false },
         relations: ['creator', 'manager'],
@@ -140,36 +148,52 @@ export class ProjectService {
       });
     }
 
-    // For regular users, get projects where they are:
-    // 1. A member
-    // 2. The creator
-    // 3. The manager
-    const projectMembers = await this.projectMemberRepository.find({
+    // Kierownik: own membership + whole dept membership + dept-created
+    if (user.role === 'kierownik') {
+      const deptUserIds = user.department_id
+        ? (await this.userRepository.find({
+            where: { department_id: user.department_id, is_active: true },
+            select: ['id'],
+          })).map(u => u.id)
+        : [userId];
+
+      const memberPMs = await this.projectMemberRepository.find({
+        where: { user_id: In(deptUserIds), left_at: IsNull() },
+        relations: ['project', 'project.creator', 'project.manager'],
+      });
+      const createdProjects = await this.projectRepository.find({
+        where: { created_by: In(deptUserIds), is_archived: false },
+        relations: ['creator', 'manager'],
+      });
+
+      return merge([memberPMs.map(pm => pm.project), createdProjects]);
+    }
+
+    // Regular users: member + creator/manager + tasks assigned to them
+    const memberPMs = await this.projectMemberRepository.find({
       where: { user_id: userId, left_at: IsNull() },
       relations: ['project', 'project.creator', 'project.manager'],
     });
-
-    const memberProjectIds = new Set(projectMembers.map((pm) => pm.project.id));
-
-    // Also get projects where user is creator or manager
     const ownedProjects = await this.projectRepository.find({
-      where: [
-        { created_by: userId },
-        { manager_id: userId },
-      ],
+      where: [{ created_by: userId }, { manager_id: userId }],
       relations: ['creator', 'manager'],
     });
 
-    // Merge and deduplicate
-    const allProjects = [...projectMembers.map((pm) => pm.project)];
-    for (const project of ownedProjects) {
-      if (!memberProjectIds.has(project.id)) {
-        allProjects.push(project);
-      }
-    }
+    const taskRows = await this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoin('task.assignees', 'ta')
+      .select('DISTINCT task.project_id', 'pid')
+      .where('task.assigned_to = :userId OR ta.id = :userId', { userId })
+      .getRawMany();
+    const taskProjectIds = taskRows.map(r => r.pid).filter(Boolean);
+    const taskProjects = taskProjectIds.length
+      ? await this.projectRepository.find({
+          where: { id: In(taskProjectIds), is_archived: false },
+          relations: ['creator', 'manager'],
+        })
+      : [];
 
-    // Sort by name
-    return allProjects.sort((a, b) => a.name.localeCompare(b.name));
+    return merge([memberPMs.map(pm => pm.project), ownedProjects, taskProjects]);
   }
 
   /**

@@ -16,6 +16,9 @@ import GlobalSearch from './GlobalSearch';
 import * as notificationApi from '../../api/notification.api';
 import { getFileUrl } from '../../api/axios-config';
 import { unlockAudio } from '../../utils/audio';
+const cleanNotifMsg = (msg: string) =>
+  msg.replace(/\s*\((vacation|sick_leave|personal|unpaid|parental|other)\)/gi, '').trim();
+
 import {
   Home,
   MessageSquare,
@@ -216,10 +219,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: t('nav.organization'), href: '/organization', icon: GitBranch },
 
     { type: 'divider' },
-    { name: 'Kontrahenci', href: '/clients', icon: Building2 },
-
     { type: 'divider' },
-    { type: 'header', name: t('nav.invoices') },
+    { type: 'header', name: 'Finanse' },
+    { name: 'Kontrahenci', href: '/clients', icon: Building2 },
     { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt },
 
     { type: 'divider' },
@@ -468,7 +470,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                                   {notification.title}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
-                                  {notification.message}
+                                  {cleanNotifMsg(notification.message)}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                   {formatTimeAgo(notification.created_at)}
