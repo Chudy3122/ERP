@@ -1278,7 +1278,7 @@ const ProjectDetail = () => {
               return (
                 <div
                   key={stageId || 'unassigned'}
-                  className={`flex-shrink-0 w-[292px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 dark:border-gray-700 dark:bg-gray-900/40 ${
+                  className={`flex-shrink-0 w-[292px] rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 dark:border-gray-700 dark:bg-gray-900/40 ${
                     isOver ? 'ring-2 ring-[#F7941D] ring-offset-2 dark:ring-offset-gray-900' : ''
                   }`}
                   onDragOver={handleStageDragOver}
