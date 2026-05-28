@@ -39,15 +39,31 @@ function EmployeeAvatar({ emp, size = 'sm' }: { emp: DepartmentEmployee; size?: 
   );
 }
 
+const AmberPersonRow: React.FC<{ firstName: string; lastName: string; position: string; avatarUrl: string | null }> = ({ firstName, lastName, position, avatarUrl }) => (
+  <div className="flex items-center gap-2 p-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg mb-1.5">
+    <div className="w-6 h-6 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center flex-shrink-0 overflow-hidden text-[10px] font-bold text-amber-800 dark:text-amber-200">
+      {avatarUrl ? (
+        <img src={getFileUrl(avatarUrl) || ''} alt="" className="w-full h-full object-cover" />
+      ) : (
+        `${firstName[0] || ''}${lastName[0] || ''}`
+      )}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 truncate">{firstName} {lastName}</p>
+      <p className="text-[10px] text-amber-600 dark:text-amber-500 truncate">{position}</p>
+    </div>
+  </div>
+);
+
 const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
 
-  // Employees excluding the head — managers first, then rest
-  const nonHeadEmployees = (node.employees || []).filter((e) => e.id !== node.head_id)
-    .sort((a, b) => (a.role === 'kierownik' ? -1 : 1) - (b.role === 'kierownik' ? -1 : 1));
-  const visibleEmployees = nonHeadEmployees.slice(0, MAX_VISIBLE_EMPLOYEES);
-  const extraCount = nonHeadEmployees.length - visibleEmployees.length;
+  const nonHeadEmployees = (node.employees || []).filter((e) => e.id !== node.head_id);
+  const managerEmployees = nonHeadEmployees.filter((e) => e.role === 'kierownik');
+  const regularEmployees = nonHeadEmployees.filter((e) => e.role !== 'kierownik');
+  const visibleEmployees = regularEmployees.slice(0, MAX_VISIBLE_EMPLOYEES);
+  const extraCount = regularEmployees.length - visibleEmployees.length;
 
   return (
     <div className="flex flex-col items-center">
@@ -75,26 +91,24 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
             </div>
           </div>
 
-          {/* Department Head */}
+          {/* Department Head + additional managers — all amber */}
           {node.head && (
-            <div className="flex items-center gap-2 p-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg mb-2">
-              <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {node.head.avatar_url ? (
-                  <img src={getFileUrl(node.head.avatar_url) || ''} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-3 h-3 text-amber-700 dark:text-amber-400" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 truncate">
-                  {node.head.first_name} {node.head.last_name}
-                </p>
-                <p className="text-[10px] text-amber-600 dark:text-amber-500 truncate">
-                  {node.head.position || 'Kierownik'}
-                </p>
-              </div>
-            </div>
+            <AmberPersonRow
+              firstName={node.head.first_name}
+              lastName={node.head.last_name}
+              position={node.head.position || 'Kierownik'}
+              avatarUrl={node.head.avatar_url}
+            />
           )}
+          {managerEmployees.map((emp) => (
+            <AmberPersonRow
+              key={emp.id}
+              firstName={emp.first_name}
+              lastName={emp.last_name}
+              position={emp.position || 'Kierownik'}
+              avatarUrl={emp.avatar_url}
+            />
+          ))}
 
           {/* Employee list */}
           {visibleEmployees.length > 0 && (
