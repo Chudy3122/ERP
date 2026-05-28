@@ -43,10 +43,12 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
 
-  // Employees excluding the head
+  // Employees excluding the head — split managers (amber) from regular
   const nonHeadEmployees = (node.employees || []).filter((e) => e.id !== node.head_id);
-  const visibleEmployees = nonHeadEmployees.slice(0, MAX_VISIBLE_EMPLOYEES);
-  const extraCount = nonHeadEmployees.length - visibleEmployees.length;
+  const managerEmployees = nonHeadEmployees.filter((e) => e.role === 'kierownik');
+  const regularEmployees = nonHeadEmployees.filter((e) => e.role !== 'kierownik');
+  const visibleEmployees = regularEmployees.slice(0, MAX_VISIBLE_EMPLOYEES);
+  const extraCount = regularEmployees.length - visibleEmployees.length;
 
   return (
     <div className="flex flex-col items-center">
@@ -94,6 +96,21 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
               </div>
             </div>
           )}
+
+          {/* Additional managers (amber, below head) */}
+          {managerEmployees.map((emp) => (
+            <div key={emp.id} className="flex items-center gap-2 p-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg mb-2">
+              <EmployeeAvatar emp={emp} size="xs" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 truncate">
+                  {emp.first_name} {emp.last_name}
+                </p>
+                <p className="text-[10px] text-amber-600 dark:text-amber-500 truncate">
+                  {emp.position || 'Kierownik'}
+                </p>
+              </div>
+            </div>
+          ))}
 
           {/* Employee list */}
           {visibleEmployees.length > 0 && (
