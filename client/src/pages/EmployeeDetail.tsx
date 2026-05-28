@@ -40,25 +40,32 @@ const EmployeeDetail = () => {
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
-    if (id) {
-      loadEmployee();
-    }
-    departmentApi.getAllDepartments().then(setDepartments).catch(() => {});
+    if (id) loadEmployee();
   }, [id]);
 
   const loadEmployee = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await adminApi.getUserById(id!);
+      const [data, depts] = await Promise.all([
+        adminApi.getUserById(id!),
+        departmentApi.getAllDepartments().catch(() => [] as typeof departments),
+      ]);
       setEmployee(data);
+      setDepartments(depts);
+
+      // Resolve department_id: use stored UUID or look up by name for legacy records
+      const resolvedDeptId = data.department_id
+        || depts.find(d => d.name === data.department)?.id
+        || '';
+
       setFormData({
         firstName: data.first_name,
         lastName: data.last_name,
         email: data.email,
         phone: data.phone || '',
         department: data.department || '',
-        department_id: data.department_id || '',
+        department_id: resolvedDeptId,
         position: data.position || '',
         role: data.role,
         employee_id: data.employee_id || '',
@@ -104,13 +111,16 @@ const EmployeeDetail = () => {
 
   const handleCancel = () => {
     if (employee) {
+      const resolvedDeptId = employee.department_id
+        || departments.find(d => d.name === employee.department)?.id
+        || '';
       setFormData({
         firstName: employee.first_name,
         lastName: employee.last_name,
         email: employee.email,
         phone: employee.phone || '',
         department: employee.department || '',
-        department_id: employee.department_id || '',
+        department_id: resolvedDeptId,
         position: employee.position || '',
         role: employee.role,
         employee_id: employee.employee_id || '',
