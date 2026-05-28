@@ -311,12 +311,14 @@ class AdminService {
       where: { status: LeaveStatus.REJECTED },
     });
 
-    // Channel stats
+    // Channel stats — count channels that have messages this week instead
     const totalChannels = await this.channelRepository.count();
-    const activeChannels = await this.channelRepository
-      .createQueryBuilder('channel')
-      .where('channel.last_message_at >= :weekStart', { weekStart })
-      .getCount();
+    const activeChannels = await this.messageRepository
+      .createQueryBuilder('message')
+      .select('COUNT(DISTINCT message.channel_id)', 'cnt')
+      .where('message.created_at >= :weekStart', { weekStart })
+      .getRawOne()
+      .then(r => parseInt(r?.cnt ?? '0', 10));
 
     // Message stats
     const totalMessages = await this.messageRepository.count();

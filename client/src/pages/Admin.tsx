@@ -9,7 +9,7 @@ import {
 import * as adminApi from '../api/admin.api';
 import * as departmentApi from '../api/department.api';
 import { AdminUser, CreateUserData, SystemStats } from '../types/admin.types';
-import type { Department, CreateDepartmentData } from '../types/department.types';
+import type { Department, CreateDepartmentData, DepartmentTreeNode } from '../types/department.types';
 import { toast } from 'react-hot-toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { getFileUrl } from '../api/axios-config';
@@ -69,6 +69,7 @@ const Admin = () => {
 
   // Departments
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [deptCounts, setDeptCounts] = useState<Record<string, number>>({});
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [showCreateDept, setShowCreateDept] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
@@ -105,8 +106,16 @@ const Admin = () => {
   const loadDepartments = async () => {
     try {
       setLoadingDepts(true);
-      const depts = await departmentApi.getAllDepartments(true);
+      const [depts, tree] = await Promise.all([
+        departmentApi.getAllDepartments(true),
+        departmentApi.getDepartmentTree(),
+      ]);
       setDepartments(depts);
+      // Build employee count map from tree (which has accurate employeeCount per node)
+      const counts: Record<string, number> = {};
+      const walk = (nodes: DepartmentTreeNode[]) => nodes.forEach(n => { counts[n.id] = n.employeeCount; walk(n.children); });
+      walk(tree);
+      setDeptCounts(counts);
     } catch { }
     finally { setLoadingDepts(false); }
   };
@@ -479,7 +488,7 @@ const Admin = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1"><Users className="w-3 h-3" />{dept.employees?.length ?? 0} os.</span>
+                    <span className="flex items-center gap-1"><Users className="w-3 h-3" />{deptCounts[dept.id] ?? 0} os.</span>
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${dept.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {dept.is_active ? 'Aktywny' : 'Nieaktywny'}
                     </span>
