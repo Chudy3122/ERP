@@ -522,15 +522,18 @@ const ProjectDetail = () => {
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= sorted.length) return;
 
-    const other = sorted[swapIdx];
-    const myIndex = task.order_index ?? idx;
-    const otherIndex = other.order_index ?? swapIdx;
+    // Assign spread indices (0, 10, 20...) based on current visual order,
+    // then swap the two — this handles the case where all tasks share order_index = 0
+    const positions = sorted.map((t, i) => ({ id: t.id, order_index: i * 10 }));
+    const tmp = positions[idx].order_index;
+    positions[idx].order_index = positions[swapIdx].order_index;
+    positions[swapIdx].order_index = tmp;
 
     try {
       setIsUpdatingTask(task.id);
       await Promise.all([
-        taskApi.updateTask(task.id, { order_index: otherIndex }),
-        taskApi.updateTask(other.id, { order_index: myIndex }),
+        taskApi.updateTask(positions[idx].id, { order_index: positions[idx].order_index }),
+        taskApi.updateTask(positions[swapIdx].id, { order_index: positions[swapIdx].order_index }),
       ]);
       loadTasksByStages();
     } catch (error) {
