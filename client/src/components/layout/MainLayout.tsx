@@ -216,7 +216,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: t('nav.organization'), href: '/organization', icon: GitBranch },
 
     { type: 'divider' },
-    { type: 'header', name: 'Kontrahenci' },
     { name: 'Kontrahenci', href: '/clients', icon: Building2 },
 
     { type: 'divider' },
