@@ -407,17 +407,59 @@ const ProjectDetail = () => {
   const handleAssignTask = async (event: React.ChangeEvent<HTMLSelectElement>, task: Task) => {
     event.stopPropagation();
     const assigneeId = event.target.value;
+    const currentAssigneeIds =
+      task.assignees && task.assignees.length > 0
+        ? task.assignees.map(person => person.id)
+        : task.assigned_to
+          ? [task.assigned_to]
+          : [];
 
-    if (!assigneeId || assigneeId === task.assigned_to) {
+    if (
+      !assigneeId ||
+      currentAssigneeIds.includes(assigneeId)
+    ) {
       return;
     }
 
     try {
       setAssigningTaskId(task.id);
-      await taskApi.assignTask(task.id, assigneeId);
+      const nextAssigneeIds = [...currentAssigneeIds, assigneeId];
+      await taskApi.updateTask(task.id, {
+        assignee_ids: nextAssigneeIds,
+        assigned_to: nextAssigneeIds[0],
+      });
       await loadTasksByStages();
     } catch (error) {
       console.error('Failed to assign task:', error);
+    } finally {
+      setAssigningTaskId(null);
+    }
+  };
+
+  const handleRemoveTaskAssignee = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    task: Task,
+    userId: string
+  ) => {
+    event.stopPropagation();
+
+    const currentAssigneeIds =
+      task.assignees && task.assignees.length > 0
+        ? task.assignees.map(person => person.id)
+        : task.assigned_to
+          ? [task.assigned_to]
+          : [];
+    const nextAssigneeIds = currentAssigneeIds.filter(assigneeId => assigneeId !== userId);
+
+    try {
+      setAssigningTaskId(task.id);
+      await taskApi.updateTask(task.id, {
+        assignee_ids: nextAssigneeIds,
+        assigned_to: nextAssigneeIds[0],
+      });
+      await loadTasksByStages();
+    } catch (error) {
+      console.error('Failed to remove task assignee:', error);
     } finally {
       setAssigningTaskId(null);
     }
@@ -1154,8 +1196,18 @@ const ProjectDetail = () => {
                     placeholder={t('tasks.searchTasks')}
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 transition-all placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
+                    className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 transition-all placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 rounded-md p-1 text-gray-400 transition-colors -translate-y-1/2 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                      aria-label="Wyczyść wyszukiwanie"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -1193,6 +1245,19 @@ const ProjectDetail = () => {
             }
             .dark .kanban-scrollbar::-webkit-scrollbar-thumb:hover {
               background: rgba(107, 114, 128, 1);
+            }
+            .kanban-column-scrollbar::-webkit-scrollbar {
+              width: 6px;
+            }
+            .kanban-column-scrollbar::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .kanban-column-scrollbar::-webkit-scrollbar-thumb {
+              background: rgba(156, 163, 175, 0.45);
+              border-radius: 999px;
+            }
+            .kanban-column-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: rgba(107, 114, 128, 0.65);
             }
           `}</style>
           <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-2 px-2 kanban-scrollbar">
@@ -1239,6 +1304,11 @@ const ProjectDetail = () => {
                         <p className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
                           {isUnassignedStage ? 'Zadania bez przypisanego etapu' : 'Etap projektu'}
                         </p>
+                        {stage?.is_completed_stage && (
+                          <span className="mt-1 inline-flex rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            Etap końcowy
+                          </span>
+                        )}
                       </div>
                     </div>
                     {stage && (
@@ -1255,7 +1325,7 @@ const ProjectDetail = () => {
 
                   {/* Tasks container */}
                   <div
-                    className="min-h-[260px] space-y-2 p-2.5"
+                    className="kanban-column-scrollbar max-h-[calc(100vh-360px)] min-h-[260px] space-y-2 overflow-y-auto p-2.5"
                     style={{
                       background: isOver
                         ? 'linear-gradient(180deg, rgba(247, 148, 29, 0.12) 0%, rgba(247, 148, 29, 0.05) 100%)'
@@ -1267,6 +1337,18 @@ const ProjectDetail = () => {
                       const isDragging = draggedTask?.id === task.id;
                       const priorityAccent = getTaskPriorityAccent(task.priority);
                       const overdue = isTaskOverdue(task);
+                      const assignedPeople =
+                        task.assignees && task.assignees.length > 0
+                          ? task.assignees
+                          : task.assignee
+                            ? [task.assignee]
+                            : [];
+                      const assignedPersonIds = assignedPeople.map(person => person.id);
+                      const availableAssignees = assignableProjectMembers.filter(
+                        member => !assignedPersonIds.includes(member.user_id)
+                      );
+                      const canAddAssignee = availableAssignees.length > 0;
+
                       return (
                         <div
                           key={task.id}
@@ -1317,7 +1399,7 @@ const ProjectDetail = () => {
 
                           <div className="mt-3 flex flex-wrap gap-1.5">
                             <div className="relative max-w-full">
-                              <UserPlus className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[#F7941D]" />
+                              <UserPlus className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                               <select
                                 value=""
                                 onMouseDown={event => event.stopPropagation()}
@@ -1325,13 +1407,19 @@ const ProjectDetail = () => {
                                 onChange={event => handleAssignTask(event, task)}
                                 disabled={
                                   assigningTaskId === task.id ||
-                                  assignableProjectMembers.length === 0
+                                  !canAddAssignee
                                 }
-                                className="max-w-full appearance-none rounded-full border border-[#F7941D]/30 bg-[#F7941D]/10 py-0.5 pl-6 pr-3 text-[10px] font-semibold text-[#C86F0A] outline-none transition-colors hover:border-[#F7941D]/60 hover:bg-[#F7941D]/15 focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#F7941D]/40 dark:bg-[#F7941D]/15 dark:text-orange-300"
-                                title="Zmień osobę odpowiedzialną za zadanie"
+                                className="max-w-full appearance-none rounded-full border border-gray-200 bg-white py-0.5 pl-6 pr-3 text-[10px] font-semibold text-gray-600 outline-none transition-colors hover:border-gray-300 hover:bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                title="Dodaj osobę do zadania"
                               >
-                                <option value="">Przypisz osobę</option>
-                                {assignableProjectMembers.map(member => (
+                                <option value="">
+                                  {canAddAssignee
+                                    ? 'Dodaj osobę'
+                                    : assignedPersonIds.length > 0
+                                      ? 'Wszyscy z zespołu przypisani'
+                                      : 'Brak osób w zespole'}
+                                </option>
+                                {availableAssignees.map(member => (
                                   <option key={member.user_id} value={member.user_id}>
                                     {getUserDisplayName(member.user)}
                                   </option>
@@ -1367,43 +1455,50 @@ const ProjectDetail = () => {
                             )}
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-gray-700/50">
+                          <div className="mt-3 flex items-start justify-between gap-2 border-t border-gray-100 pt-2.5 dark:border-gray-700/50">
                             {(() => {
-                              const people = task.assignees && task.assignees.length > 0
-                                ? task.assignees
-                                : task.assignee ? [task.assignee] : [];
+                              const people = assignedPeople;
                               return people.length > 0 ? (
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <div className="flex items-center">
-                                    {people.slice(0, 3).map((person, i) => (
-                                      <div
+                                <div className="min-w-0 flex-1">
+                                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                    Odpowiedzialni
+                                  </span>
+                                  <div className="mt-1 flex max-h-20 flex-wrap gap-1 overflow-y-auto pr-1">
+                                    {people.map(person => (
+                                      <span
                                         key={person.id}
-                                        className="h-6 w-6 rounded-full ring-1 ring-white dark:ring-gray-800 flex-shrink-0"
-                                        style={{ marginLeft: i > 0 ? '-6px' : 0 }}
+                                        className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 py-0.5 pl-1 pr-1.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-200"
                                         title={`${person.first_name} ${person.last_name}`}
                                       >
                                         {person.avatar_url ? (
-                                          <img src={getFileUrl(person.avatar_url) || ''} alt="" className="h-6 w-6 rounded-full object-cover" />
+                                          <img
+                                            src={getFileUrl(person.avatar_url) || ''}
+                                            alt=""
+                                            className="h-4 w-4 rounded-full object-cover"
+                                          />
                                         ) : (
-                                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-[9px] font-bold text-white">
+                                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-[8px] font-bold text-white">
                                             {getInitials(person.first_name, person.last_name)}
-                                          </div>
+                                          </span>
                                         )}
-                                      </div>
+                                        <span className="truncate">
+                                          {person.first_name} {person.last_name}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onMouseDown={event => event.stopPropagation()}
+                                          onClick={event =>
+                                            handleRemoveTaskAssignee(event, task, person.id)
+                                          }
+                                          disabled={assigningTaskId === task.id}
+                                          className="ml-0.5 rounded-full p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-600 dark:hover:text-red-300"
+                                          title={`Odepnij: ${person.first_name} ${person.last_name}`}
+                                          aria-label={`Odepnij: ${person.first_name} ${person.last_name}`}
+                                        >
+                                          <X className="h-2.5 w-2.5" />
+                                        </button>
+                                      </span>
                                     ))}
-                                    {people.length > 3 && (
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[8px] font-bold text-gray-600 dark:text-gray-300 ring-1 ring-white dark:ring-gray-800" style={{ marginLeft: '-6px' }}>
-                                        +{people.length - 3}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                                      Odpowiedzialny
-                                    </span>
-                                    <span className="block truncate text-xs font-medium text-gray-700 dark:text-gray-200">
-                                      {people.length === 1 ? `${people[0].first_name} ${people[0].last_name}` : `${people.length} osoby`}
-                                    </span>
                                   </div>
                                 </div>
                               ) : (
@@ -1411,7 +1506,7 @@ const ProjectDetail = () => {
                                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                                     <Users className="h-3 w-3" />
                                   </div>
-                                  Brak przypisanej osoby
+                                  Brak przypisanych osób
                                 </div>
                               );
                             })()}
@@ -1444,7 +1539,15 @@ const ProjectDetail = () => {
                             ? 'Brak zadań pasujących do wyszukiwania'
                             : t('tasks.noTasks')}
                         </span>
-                        {!searchQuery && (
+                        {searchQuery ? (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="mt-2 rounded-md px-2 py-1 text-[11px] font-semibold text-[#F7941D] transition-colors hover:bg-[#F7941D]/10"
+                          >
+                            Wyczyść wyszukiwanie
+                          </button>
+                        ) : (
                           <span className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
                             Dodaj pierwsze zadanie w tym etapie.
                           </span>

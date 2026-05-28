@@ -41,7 +41,7 @@ export interface Task {
   created_by: string;
   estimated_hours?: number;
   actual_hours?: number;
-  due_date?: string;
+  due_date?: string | null;
   completed_at?: string;
   parent_task_id?: string;
   order_index: number;
@@ -67,7 +67,7 @@ export interface CreateTaskRequest {
   assigned_to?: string;
   assignee_ids?: string[];
   estimated_hours?: number;
-  due_date?: string;
+  due_date?: string | null;
   parent_task_id?: string;
 }
 
@@ -80,7 +80,7 @@ export interface UpdateTaskRequest {
   assignee_ids?: string[];
   estimated_hours?: number;
   actual_hours?: number;
-  due_date?: string;
+  due_date?: string | null;
   order_index?: number;
   stage_id?: string;
 }

@@ -69,7 +69,11 @@ const ProjectForm = () => {
     try {
       setIsLoading(true);
       const project = await projectApi.getProjectById(id!);
-      const hasTargetEndDate = Boolean(project.target_end_date);
+      const targetEndDate =
+        typeof project.target_end_date === 'string'
+          ? project.target_end_date.trim()
+          : project.target_end_date;
+      const hasTargetEndDate = Boolean(targetEndDate);
       const projectPriority = project.priority || ProjectPriority.MEDIUM;
       setFormData({
         name: project.name,
@@ -78,7 +82,7 @@ const ProjectForm = () => {
         status: project.status,
         priority: hasTargetEndDate ? projectPriority : ProjectPriority.MEDIUM,
         start_date: project.start_date ? project.start_date.split('T')[0] : '',
-        target_end_date: hasTargetEndDate ? project.target_end_date!.split('T')[0] : '',
+        target_end_date: hasTargetEndDate ? String(targetEndDate).split('T')[0] : '',
         budget: project.budget,
         manager_id: project.manager_id,
       });
@@ -108,10 +112,12 @@ const ProjectForm = () => {
 
     try {
       setIsSaving(true);
+      const targetEndDate = formData.target_end_date?.trim();
+      const shouldSaveAsOngoingProject = isOngoingProject || !targetEndDate;
       const projectPayload = {
         ...formData,
-        priority: isOngoingProject ? ProjectPriority.MEDIUM : formData.priority,
-        target_end_date: isOngoingProject ? '' : formData.target_end_date,
+        priority: shouldSaveAsOngoingProject ? ProjectPriority.MEDIUM : formData.priority,
+        target_end_date: shouldSaveAsOngoingProject ? null : targetEndDate,
       };
 
       if (isEdit && id) {
@@ -186,6 +192,14 @@ const ProjectForm = () => {
     );
   };
 
+  const selectAllMembers = () => {
+    setSelectedMemberIds(availableMembers.map(member => member.id));
+  };
+
+  const clearMemberSelection = () => {
+    setSelectedMemberIds([]);
+  };
+
   const getMemberName = (member: AdminUser) =>
     `${member.first_name} ${member.last_name}`.trim() || member.email;
 
@@ -216,6 +230,9 @@ const ProjectForm = () => {
       .includes(query);
   });
   const selectedMembers = availableMembers.filter(member => selectedMemberIds.includes(member.id));
+  const areAllMembersSelected =
+    availableMembers.length > 0 &&
+    availableMembers.every(member => selectedMemberIds.includes(member.id));
 
   if (isLoading) {
     return (
@@ -454,7 +471,7 @@ const ProjectForm = () => {
                 type="date"
                 id="target_end_date"
                 name="target_end_date"
-                value={formData.target_end_date}
+                value={formData.target_end_date || ''}
                 onChange={handleChange}
                 disabled={isOngoingProject}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
@@ -548,6 +565,29 @@ const ProjectForm = () => {
                               className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                               placeholder="Szukaj po imieniu, nazwisku, e-mailu, stanowisku..."
                             />
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Dostępni użytkownicy: {availableMembers.length}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={selectAllMembers}
+                                disabled={availableMembers.length === 0 || areAllMembersSelected}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                              >
+                                Zaznacz wszystkich
+                              </button>
+                              <button
+                                type="button"
+                                onClick={clearMemberSelection}
+                                disabled={selectedMemberIds.length === 0}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                              >
+                                Wyczyść
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <div className="max-h-64 overflow-y-auto p-2">

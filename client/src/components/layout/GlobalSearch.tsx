@@ -61,6 +61,34 @@ const TYPE_CONFIG: Record<ResultType, { label: string; icon: typeof Folder; colo
   },
 };
 
+// Helper function to translate project status
+const getTranslatedProjectStatus = (subtitle: string): string => {
+  const statusMap: Record<string, string> = {
+    active: 'Aktywny',
+    planning: 'Planowanie',
+    on_hold: 'Wstrzymany',
+    completed: 'Ukończony',
+    cancelled: 'Anulowany',
+  };
+
+  // Normalize and check if subtitle is a status value
+  const normalized = subtitle.toLowerCase().trim();
+  const translated = statusMap[normalized];
+  
+  if (translated) {
+    return translated;
+  }
+
+  // Fallback: try to extract status from format like "Status: active"
+  const match = subtitle.match(/Status:\s*(\w+)/i);
+  if (match) {
+    const status = match[1].toLowerCase();
+    return statusMap[status] || subtitle;
+  }
+
+  return subtitle;
+};
+
 const GlobalSearch = () => {
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -211,7 +239,7 @@ const GlobalSearch = () => {
                             {result.title}
                           </span>
                           <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-                            {result.subtitle}
+                            {result.type === 'project' ? getTranslatedProjectStatus(result.subtitle) : result.subtitle}
                           </span>
                         </span>
                         <ArrowRight className="h-4 w-4 shrink-0 text-gray-300" />

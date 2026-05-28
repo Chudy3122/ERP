@@ -25,6 +25,7 @@ import {
   Plus,
   Timer,
   Edit2,
+  Search,
 } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
@@ -49,6 +50,7 @@ const TaskForm = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [isLoadingProjectMembers, setIsLoadingProjectMembers] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState('');
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [formData, setFormData] = useState<CreateTaskRequest & UpdateTaskRequest>({
     title: '',
@@ -95,6 +97,10 @@ const TaskForm = () => {
   const [deleteWorkLogId, setDeleteWorkLogId] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  const selectedProject = projects.find(project => project.id === formData.project_id);
+  const isSelectedProjectOngoing = Boolean(
+    formData.project_id && selectedProject && !selectedProject.target_end_date
+  );
 
   const getProjectMemberDisplayName = (member: ProjectMember) => {
     if (!member.user) return 'Użytkownik projektu';
@@ -119,9 +125,15 @@ const TaskForm = () => {
       loadProjectMembers(formData.project_id);
     } else {
       setProjectMembers([]);
-      setFormData(prev => ({ ...prev, assigned_to: undefined }));
+      setFormData(prev => ({ ...prev, assigned_to: undefined, assignee_ids: [] }));
     }
   }, [formData.project_id]);
+
+  useEffect(() => {
+    if (isSelectedProjectOngoing && formData.due_date) {
+      setFormData(prev => ({ ...prev, due_date: '' }));
+    }
+  }, [isSelectedProjectOngoing, formData.due_date]);
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -157,12 +169,21 @@ const TaskForm = () => {
       );
       setProjectMembers(sortedMembers);
       setFormData(prev => {
-        if (!prev.assigned_to) {
-          return prev;
-        }
+        const currentAssigneeIds =
+          prev.assignee_ids && prev.assignee_ids.length > 0
+            ? prev.assignee_ids
+            : prev.assigned_to
+              ? [prev.assigned_to]
+              : [];
+        const validAssigneeIds = currentAssigneeIds.filter(assigneeId =>
+          sortedMembers.some(member => member.user_id === assigneeId)
+        );
 
-        const isAssignedToProjectMember = sortedMembers.some(member => member.user_id === prev.assigned_to);
-        return isAssignedToProjectMember ? prev : { ...prev, assigned_to: undefined };
+        return {
+          ...prev,
+          assignee_ids: validAssigneeIds,
+          assigned_to: validAssigneeIds[0],
+        };
       });
     } catch (error) {
       console.error('Failed to load project members:', error);
@@ -298,10 +319,18 @@ const TaskForm = () => {
 
     try {
       setIsSaving(true);
+      const assigneeIds = formData.assignee_ids || [];
+      const dueDate = formData.due_date?.trim();
+      const payload = {
+        ...formData,
+        assignee_ids: assigneeIds,
+        assigned_to: assigneeIds[0],
+        due_date: isSelectedProjectOngoing || !dueDate ? null : dueDate,
+      };
       if (isEdit && id) {
-        await taskApi.updateTask(id, formData);
+        await taskApi.updateTask(id, payload);
       } else {
-        await taskApi.createTask(formData as CreateTaskRequest);
+        await taskApi.createTask(payload as CreateTaskRequest);
       }
       navigate('/tasks');
     } catch (error: any) {
@@ -332,7 +361,7 @@ const TaskForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      ...(name === 'project_id' ? { assigned_to: undefined } : {}),
+      ...(name === 'project_id' ? { assigned_to: undefined, assignee_ids: [] } : {}),
       [name]: name === 'estimated_hours' || name === 'actual_hours'
         ? (value ? parseFloat(value) : undefined)
         : value || undefined,
@@ -342,10 +371,52 @@ const TaskForm = () => {
   const toggleAssignee = (userId: string) => {
     setFormData(prev => {
       const ids = prev.assignee_ids || [];
-      const next = ids.includes(userId) ? ids.filter(id => id !== userId) : [...ids, userId];
+      const next = ids.includes(userId)
+        ? ids.filter(id => id !== userId)
+        : [...ids, userId];
       return { ...prev, assignee_ids: next, assigned_to: next[0] };
     });
   };
+
+  const selectVisibleAssignees = () => {
+    setFormData(prev => {
+      const currentIds = prev.assignee_ids || [];
+      const visibleIds = filteredProjectMembers.map(member => member.user_id);
+      const next = Array.from(new Set([...currentIds, ...visibleIds]));
+
+      return { ...prev, assignee_ids: next, assigned_to: next[0] };
+    });
+  };
+
+  const clearAssignees = () => {
+    setFormData(prev => ({ ...prev, assignee_ids: [], assigned_to: undefined }));
+  };
+
+  const selectedAssigneeIds = formData.assignee_ids || [];
+  const filteredProjectMembers = projectMembers.filter(member => {
+    const query = assigneeSearch.trim().toLowerCase();
+
+    if (!query) {
+      return true;
+    }
+
+    return [
+      member.user?.first_name,
+      member.user?.last_name,
+      member.user?.email,
+      getProjectMemberDisplayName(member),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  });
+  const selectedProjectMembers = projectMembers.filter(member =>
+    selectedAssigneeIds.includes(member.user_id)
+  );
+  const areAllVisibleAssigneesSelected =
+    filteredProjectMembers.length > 0 &&
+    filteredProjectMembers.every(member => selectedAssigneeIds.includes(member.user_id));
 
   const handleQuickStatusChange = async (newStatus: TaskStatus) => {
     if (!id || !task) return;
@@ -576,7 +647,7 @@ const TaskForm = () => {
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {/* Project */}
-                <div>
+                <div className="md:col-span-2">
                   <label htmlFor="project_id" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Projekt *
                   </label>
@@ -595,6 +666,31 @@ const TaskForm = () => {
                       </option>
                     ))}
                   </select>
+                  {selectedProject && (
+                    <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-200">
+                          <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
+                          {selectedProject.code}
+                        </span>
+                        {isSelectedProjectOngoing ? (
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                            Projekt ciągły
+                          </span>
+                        ) : selectedProject.target_end_date ? (
+                          <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Termin projektu:{' '}
+                            {new Date(selectedProject.target_end_date).toLocaleDateString('pl-PL', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Assignees (multi-select) */}
@@ -602,6 +698,9 @@ const TaskForm = () => {
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Przypisane osoby
                   </label>
+                  <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    Możesz wybrać dowolne osoby z zespołu projektu.
+                  </p>
                   <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                     {!formData.project_id ? (
                       <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Najpierw wybierz projekt</div>
@@ -610,27 +709,72 @@ const TaskForm = () => {
                     ) : projectMembers.length === 0 ? (
                       <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Brak osób w zespole projektu</div>
                     ) : (
-                      <div className="max-h-36 overflow-y-auto">
-                        {projectMembers.map((member) => {
-                          const selected = (formData.assignee_ids || []).includes(member.user_id);
-                          return (
-                            <label
-                              key={member.user_id}
-                              className={`flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-xs hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={() => toggleAssignee(member.user_id)}
-                                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 flex-shrink-0">
-                                {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
-                              </div>
-                              <span className="text-gray-700 dark:text-gray-300 truncate">{getProjectMemberDisplayName(member)}</span>
-                            </label>
-                          );
-                        })}
+                      <div>
+                        <div className="border-b border-gray-200 p-2 dark:border-gray-700">
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                            <input
+                              type="text"
+                              value={assigneeSearch}
+                              onChange={event => setAssigneeSearch(event.target.value)}
+                              className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-8 pr-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              placeholder="Szukaj osoby w zespole projektu..."
+                            />
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Widoczne: {filteredProjectMembers.length}
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={selectVisibleAssignees}
+                                disabled={
+                                  filteredProjectMembers.length === 0 || areAllVisibleAssigneesSelected
+                                }
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                              >
+                                Zaznacz widocznych
+                              </button>
+                              <button
+                                type="button"
+                                onClick={clearAssignees}
+                                disabled={selectedAssigneeIds.length === 0}
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                              >
+                                Wyczyść
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="max-h-40 overflow-y-auto">
+                          {filteredProjectMembers.length > 0 ? (
+                            filteredProjectMembers.map((member) => {
+                              const selected = selectedAssigneeIds.includes(member.user_id);
+                              return (
+                                <label
+                                  key={member.user_id}
+                                  className={`flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() => toggleAssignee(member.user_id)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 flex-shrink-0">
+                                    {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
+                                  </div>
+                                  <span className="text-gray-700 dark:text-gray-300 truncate">{getProjectMemberDisplayName(member)}</span>
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <div className="px-2.5 py-3 text-xs text-gray-400 dark:text-gray-500">
+                              Brak osób pasujących do wyszukiwania
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -639,10 +783,25 @@ const TaskForm = () => {
                       Dodaj osoby w zakładce zespół projektu, aby można było przypisać zadanie.
                     </p>
                   )}
-                  {(formData.assignee_ids || []).length > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Wybrano: {(formData.assignee_ids || []).length} os.
-                    </p>
+                  {selectedProjectMembers.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {selectedProjectMembers.map(member => (
+                        <span
+                          key={member.user_id}
+                          className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                        >
+                          <span className="truncate">{getProjectMemberDisplayName(member)}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleAssignee(member.user_id)}
+                            className="rounded-full p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-red-600 dark:hover:bg-gray-600 dark:hover:text-red-300"
+                            aria-label={`Usuń przypisanie: ${getProjectMemberDisplayName(member)}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -696,10 +855,16 @@ const TaskForm = () => {
                     type="date"
                     id="due_date"
                     name="due_date"
-                    value={formData.due_date}
+                    value={formData.due_date || ''}
                     onChange={handleChange}
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    disabled={isSelectedProjectOngoing}
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
                   />
+                  {isSelectedProjectOngoing && (
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      Projekt ciągły - zadanie bez terminu zakończenia.
+                    </p>
+                  )}
                 </div>
 
                 {/* Estimated Hours */}
@@ -972,7 +1137,7 @@ const TaskForm = () => {
               {/* Assignees */}
               {((task.assignees && task.assignees.length > 0) || task.assignee) && (
                 <div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1">Przypisano</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1">Przypisane osoby</p>
                   <div className="space-y-1">
                     {(task.assignees && task.assignees.length > 0 ? task.assignees : task.assignee ? [task.assignee] : []).map(person => (
                       <div key={person.id} className="flex items-center gap-2">

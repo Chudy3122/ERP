@@ -18,6 +18,7 @@ import { Project, ProjectStatus, ProjectPriority, ProjectStatistics } from '../t
 import { getFileUrl } from '../api/axios-config';
 
 type ViewFilter = 'all' | 'active' | 'completed' | 'planning';
+type ProjectTypeFilter = 'all' | 'ongoing' | 'deadline';
 
 const Projects = () => {
   const { t } = useTranslation('projects');
@@ -27,6 +28,7 @@ const Projects = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [priorityFilter, setPriorityFilter] = useState<ProjectPriority | ''>('');
+  const [projectTypeFilter, setProjectTypeFilter] = useState<ProjectTypeFilter>('all');
   const [projectPage, setProjectPage] = useState(1);
   const [projectPageSize, setProjectPageSize] = useState<10 | 30 | 50>(10);
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ const Projects = () => {
 
   useEffect(() => {
     setProjectPage(1);
-  }, [viewFilter, priorityFilter, projectPageSize]);
+  }, [viewFilter, priorityFilter, projectTypeFilter, projectPageSize]);
 
   const loadProjects = async (overrideFilters?: {
     search?: string;
@@ -95,6 +97,7 @@ const Projects = () => {
   const handleClearFilters = () => {
     setSearchQuery('');
     setPriorityFilter('');
+    setProjectTypeFilter('all');
     setViewFilter('all');
     setProjectPage(1);
     loadProjects({ search: '', priority: '' });
@@ -185,11 +188,17 @@ const Projects = () => {
 
   // Filter projects based on view
   const filteredProjects = projects.filter(project => {
-    if (viewFilter === 'all') return true;
-    if (viewFilter === 'active') return project.status === 'active';
-    if (viewFilter === 'completed') return project.status === 'completed';
-    if (viewFilter === 'planning') return project.status === 'planning';
-    return true;
+    const matchesView =
+      viewFilter === 'all' ||
+      (viewFilter === 'active' && project.status === 'active') ||
+      (viewFilter === 'completed' && project.status === 'completed') ||
+      (viewFilter === 'planning' && project.status === 'planning');
+    const matchesType =
+      projectTypeFilter === 'all' ||
+      (projectTypeFilter === 'ongoing' && !project.target_end_date) ||
+      (projectTypeFilter === 'deadline' && Boolean(project.target_end_date));
+
+    return matchesView && matchesType;
   });
   const projectTotalPages = Math.max(1, Math.ceil(filteredProjects.length / projectPageSize));
   const projectStartIndex = (projectPage - 1) * projectPageSize;
@@ -221,7 +230,7 @@ const Projects = () => {
     { key: 'planning', label: t('statusPlanning'), count: planningProjects },
     { key: 'completed', label: t('statusCompleted'), count: completedProjects },
   ];
-  const hasProjectFilters = Boolean(searchQuery || priorityFilter);
+  const hasProjectFilters = Boolean(searchQuery || priorityFilter || projectTypeFilter !== 'all');
 
   useEffect(() => {
     if (projectPage > projectTotalPages) {
@@ -331,7 +340,7 @@ const Projects = () => {
           </div>
 
           {/* Search & Filters */}
-          <div className="flex flex-wrap items-end gap-3 bg-gray-50/70 p-4 dark:bg-gray-800/60">
+          <div className="flex flex-wrap items-start gap-3 bg-gray-50/70 p-4 dark:bg-gray-800/60">
             <div className="min-w-[260px] flex-1">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Szukaj projektu
@@ -344,7 +353,7 @@ const Projects = () => {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                 />
                 {searchQuery && (
                   <button
@@ -357,19 +366,19 @@ const Projects = () => {
                   </button>
                 )}
               </div>
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              <p className="mt-1 min-h-[16px] text-xs text-gray-400 dark:text-gray-500">
                 Wyniki odświeżają się automatycznie po wpisaniu frazy.
               </p>
             </div>
 
-            <div>
+            <div className="min-w-[180px]">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Priorytet
               </label>
               <select
                 value={priorityFilter}
                 onChange={e => setPriorityFilter(e.target.value as ProjectPriority | '')}
-                className="min-w-[180px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">{t('allPriorities')}</option>
                 <option value="low">{t('priorityLow')}</option>
@@ -379,23 +388,40 @@ const Projects = () => {
               </select>
             </div>
 
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
-            >
-              Szukaj
-            </button>
+            <div className="min-w-[180px]">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Typ projektu
+              </label>
+              <select
+                value={projectTypeFilter}
+                onChange={e => setProjectTypeFilter(e.target.value as ProjectTypeFilter)}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="all">Wszystkie typy</option>
+                <option value="ongoing">Projekty ciągłe</option>
+                <option value="deadline">Z terminem zakończenia</option>
+              </select>
+            </div>
 
-            {hasProjectFilters && (
+            <div className="flex items-center gap-2 pt-5">
               <button
                 type="button"
-                onClick={handleClearFilters}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-gray-300 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                onClick={handleSearch}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
               >
-                Wyczyść
+                Szukaj
               </button>
-            )}
+
+              {hasProjectFilters && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 px-4 text-sm font-semibold text-gray-600 transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-gray-300 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Wyczyść
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

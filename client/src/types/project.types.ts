@@ -29,7 +29,7 @@ export interface Project {
   status: ProjectStatus;
   priority: ProjectPriority;
   start_date?: string;
-  target_end_date?: string;
+  target_end_date?: string | null;
   actual_end_date?: string;
   budget?: number;
   created_by: string;
@@ -60,7 +60,7 @@ export interface CreateProjectRequest {
   status: ProjectStatus;
   priority: ProjectPriority;
   start_date?: string;
-  target_end_date?: string;
+  target_end_date?: string | null;
   budget?: number;
   manager_id?: string;
   template_id?: string;
@@ -72,7 +72,7 @@ export interface UpdateProjectRequest {
   status?: ProjectStatus;
   priority?: ProjectPriority;
   start_date?: string;
-  target_end_date?: string;
+  target_end_date?: string | null;
   actual_end_date?: string;
   budget?: number;
   manager_id?: string;
