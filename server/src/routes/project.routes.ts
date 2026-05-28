@@ -40,6 +40,7 @@ router.delete('/:id', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), project
 // Project members
 router.get('/:id/members', projectController.getProjectMembers.bind(projectController));
 router.post('/:id/members', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), projectController.addProjectMember.bind(projectController));
+router.put('/:id/members/:userId/role', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), projectController.updateMemberRole.bind(projectController));
 router.delete('/:id/members/:userId', requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]), projectController.removeProjectMember.bind(projectController));
 
 // Project statistics

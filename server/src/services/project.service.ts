@@ -284,6 +284,15 @@ export class ProjectService {
     return savedMember;
   }
 
+  async updateMemberRole(projectId: string, userId: string, role: ProjectMemberRole): Promise<ProjectMember> {
+    const member = await this.projectMemberRepository.findOne({
+      where: { project_id: projectId, user_id: userId, left_at: IsNull() },
+    });
+    if (!member) throw new Error('Project member not found');
+    member.role = role;
+    return this.projectMemberRepository.save(member);
+  }
+
   /**
    * Remove project member
    */

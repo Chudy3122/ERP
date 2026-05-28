@@ -38,7 +38,8 @@ import {
   User,
   GitBranch,
   Receipt,
-
+  Building2,
+  Shield,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -215,6 +216,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: t('nav.organization'), href: '/organization', icon: GitBranch },
 
     { type: 'divider' },
+    { type: 'header', name: 'Kontrahenci' },
+    { name: 'Kontrahenci', href: '/clients', icon: Building2 },
+
+    { type: 'divider' },
     { type: 'header', name: t('nav.invoices') },
     { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt },
 
@@ -232,6 +237,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
+    { name: 'Panel admina', href: '/admin', icon: Shield, roles: [UserRole.ADMIN] },
   ];
 
   const getInitials = (firstName: string, lastName: string) => {

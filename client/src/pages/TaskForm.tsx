@@ -23,27 +23,18 @@ import {
   Download,
   Eye,
   Plus,
-  Timer,
-  Edit2,
-  Search,
 } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
-import * as workLogApi from '../api/worklog.api';
 import { Task, TaskAttachment, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority } from '../types/task.types';
-import { WorkLogType, WorkLogTypeLabels } from '../types/worklog.types';
-import type { WorkLog, CreateWorkLogRequest } from '../types/worklog.types';
 import { Project, ProjectMember } from '../types/project.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
-import { useTranslation } from 'react-i18next';
-import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const TaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useTranslation();
   const isEdit = !!id;
 
   const [task, setTask] = useState<Task | null>(null);
@@ -82,19 +73,6 @@ const TaskForm = () => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Work logs
-  const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
-  const [showWorkLogForm, setShowWorkLogForm] = useState(false);
-  const [workLogFormData, setWorkLogFormData] = useState<CreateWorkLogRequest>({
-    work_date: new Date().toISOString().split('T')[0],
-    hours: 1,
-    description: '',
-    is_billable: true,
-    work_type: WorkLogType.REGULAR,
-  });
-  const [isSavingWorkLog, setIsSavingWorkLog] = useState(false);
-  const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
-  const [deleteWorkLogId, setDeleteWorkLogId] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
   const selectedProject = projects.find(project => project.id === formData.project_id);
@@ -116,7 +94,6 @@ const TaskForm = () => {
     if (isEdit && id) {
       loadTask();
       loadAttachments();
-      loadWorkLogs();
     }
   }, [id, isEdit]);
 
@@ -224,82 +201,6 @@ const TaskForm = () => {
       setAttachments(data);
     } catch (error) {
       console.error('Failed to load attachments:', error);
-    }
-  };
-
-  const loadWorkLogs = async () => {
-    try {
-      const data = await workLogApi.getTaskWorkLogs(id!);
-      setWorkLogs(data);
-    } catch (error) {
-      console.error('Failed to load work logs:', error);
-    }
-  };
-
-  const handleSaveWorkLog = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-
-    try {
-      setIsSavingWorkLog(true);
-
-      if (editingWorkLog) {
-        await workLogApi.updateWorkLog(editingWorkLog.id, {
-          work_date: workLogFormData.work_date,
-          hours: workLogFormData.hours,
-          description: workLogFormData.description,
-          is_billable: workLogFormData.is_billable,
-        });
-      } else {
-        await workLogApi.createWorkLog({
-          ...workLogFormData,
-          task_id: id,
-        });
-      }
-
-      setShowWorkLogForm(false);
-      setEditingWorkLog(null);
-      setWorkLogFormData({
-        work_date: new Date().toISOString().split('T')[0],
-        hours: 1,
-        description: '',
-        is_billable: false,
-        work_type: WorkLogType.REGULAR,
-      });
-      await loadWorkLogs();
-      await loadTask(); // Refresh task to get updated actual_hours
-    } catch (error: any) {
-      console.error('Failed to save work log:', error);
-      setError(error.response?.data?.message || 'Nie udało się zapisać wpisu czasu');
-    } finally {
-      setIsSavingWorkLog(false);
-    }
-  };
-
-  const handleEditWorkLog = (log: WorkLog) => {
-    setEditingWorkLog(log);
-    setWorkLogFormData({
-      work_date: log.work_date.split('T')[0],
-      hours: log.hours,
-      description: log.description || '',
-      is_billable: log.is_billable,
-      work_type: log.work_type || WorkLogType.REGULAR,
-    });
-    setShowWorkLogForm(true);
-  };
-
-  const handleConfirmDeleteWorkLog = async () => {
-    if (!deleteWorkLogId) return;
-
-    try {
-      await workLogApi.deleteWorkLog(deleteWorkLogId);
-      await loadWorkLogs();
-      await loadTask();
-    } catch (error: any) {
-      console.error('Failed to delete work log:', error);
-      setError(error.response?.data?.message || t('tasks.deleteWorkLogError'));
-    } finally {
-      setDeleteWorkLogId(null);
     }
   };
 
@@ -1213,103 +1114,6 @@ const TaskForm = () => {
               </div>
             </div>
 
-            {/* Work Logs Card - Compact */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-blue-200 dark:border-gray-700 shadow-sm p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                  <Timer className="w-3.5 h-3.5" />
-                  Czas pracy
-                </h3>
-                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  {workLogs.reduce((sum, log) => sum + Number(log.hours), 0).toFixed(1)}h
-                </span>
-              </div>
-
-              {/* Quick add buttons */}
-              <div className="flex gap-1 mb-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    setWorkLogFormData({ ...workLogFormData, work_date: today });
-                    setShowWorkLogForm(true);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-gray-300"
-                >
-                  <Plus className="w-3 h-3" />
-                  Dzisiaj
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    setWorkLogFormData({ ...workLogFormData, work_date: yesterday.toISOString().split('T')[0] });
-                    setShowWorkLogForm(true);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-gray-300"
-                >
-                  <Plus className="w-3 h-3" />
-                  Wczoraj
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowWorkLogForm(true)}
-                className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-              >
-                <Timer className="w-3.5 h-3.5" />
-                Raportuj czas
-              </button>
-
-              {/* Recent logs - compact list */}
-              {workLogs.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-blue-200 dark:border-gray-600 space-y-1 max-h-32 overflow-y-auto">
-                  {workLogs.slice(0, 5).map((log) => {
-                    const dateObj = new Date(log.work_date);
-                    const isToday = log.work_date.split('T')[0] === new Date().toISOString().split('T')[0];
-                    const isYesterday = log.work_date.split('T')[0] === new Date(Date.now() - 86400000).toISOString().split('T')[0];
-                    const dayLabel = isToday ? 'Dziś' : isYesterday ? 'Wcz.' : dateObj.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
-
-                    return (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between px-2 py-1 rounded bg-white/60 dark:bg-gray-700/50 group"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 w-10 shrink-0">{dayLabel}</span>
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">{log.hours}h</span>
-                          {log.description && (
-                            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[80px]">{log.description}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => handleEditWorkLog(log)}
-                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                          >
-                            <Edit2 className="w-3 h-3 text-gray-400" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteWorkLogId(log.id)}
-                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3 text-red-400" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {workLogs.length > 5 && (
-                    <p className="text-[10px] text-center text-gray-500 dark:text-gray-400">+{workLogs.length - 5} więcej wpisów</p>
-                  )}
-                </div>
-              )}
-            </div>
-
             {/* Delete Card */}
             {isAdmin && (
               <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-red-200 dark:border-gray-700 shadow-sm p-3">
@@ -1376,172 +1180,6 @@ const TaskForm = () => {
         </div>
       )}
 
-      {/* Work Log Modal */}
-      {showWorkLogForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-lg mx-4">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Timer className="w-5 h-5 text-blue-600" />
-                {editingWorkLog ? 'Edytuj wpis czasu' : 'Raportuj czas'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowWorkLogForm(false);
-                  setEditingWorkLog(null);
-                  setWorkLogFormData({
-                    work_date: new Date().toISOString().split('T')[0],
-                    hours: 1,
-                    description: '',
-                    is_billable: false,
-                    work_type: WorkLogType.REGULAR,
-                  });
-                }}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleSaveWorkLog} className="p-4 space-y-4">
-              {/* Time and Date row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Czas *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="0.25"
-                      max="24"
-                      value={workLogFormData.hours}
-                      onChange={(e) => setWorkLogFormData({ ...workLogFormData, hours: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="1"
-                      required
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">h</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Data *
-                  </label>
-                  <input
-                    type="date"
-                    value={workLogFormData.work_date}
-                    onChange={(e) => setWorkLogFormData({ ...workLogFormData, work_date: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Type dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Typ *
-                </label>
-                <select
-                  value={workLogFormData.work_type}
-                  onChange={(e) => setWorkLogFormData({ ...workLogFormData, work_type: e.target.value as WorkLogType })}
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white"
-                  required
-                >
-                  {Object.entries(WorkLogTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Opis pracy
-                </label>
-                <textarea
-                  value={workLogFormData.description}
-                  onChange={(e) => setWorkLogFormData({ ...workLogFormData, description: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  rows={3}
-                  placeholder="Co zostało zrobione..."
-                />
-              </div>
-
-              {/* Billable checkbox */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="work_log_billable_modal"
-                  checked={workLogFormData.is_billable}
-                  onChange={(e) => setWorkLogFormData({ ...workLogFormData, is_billable: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="work_log_billable_modal" className="text-sm text-gray-700 dark:text-gray-300">
-                  Godziny rozliczeniowe (fakturowane)
-                </label>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowWorkLogForm(false);
-                    setEditingWorkLog(null);
-                    setWorkLogFormData({
-                      work_date: new Date().toISOString().split('T')[0],
-                      hours: 1,
-                      description: '',
-                      is_billable: false,
-                      work_type: WorkLogType.REGULAR,
-                    });
-                  }}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Anuluj
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingWorkLog}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {isSavingWorkLog ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Zapisywanie...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      {editingWorkLog ? 'Zapisz zmiany' : 'Dodaj wpis'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Work Log Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={deleteWorkLogId !== null}
-        onClose={() => setDeleteWorkLogId(null)}
-        onConfirm={handleConfirmDeleteWorkLog}
-        title={t('tasks.deleteWorkLogTitle')}
-        message={t('tasks.deleteWorkLogConfirm')}
-        confirmText={t('common.delete')}
-        cancelText={t('common.cancel')}
-        variant="danger"
-        icon="delete"
-      />
     </MainLayout>
   );
 };

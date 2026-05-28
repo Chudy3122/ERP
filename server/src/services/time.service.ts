@@ -407,7 +407,7 @@ export class TimeService {
           status: entry?.status ?? null,
         };
       });
-      return { id: user.id, first_name: user.first_name, last_name: user.last_name, days: daysData };
+      return { id: user.id, first_name: user.first_name, last_name: user.last_name, avatar_url: user.avatar_url, days: daysData };
     });
 
     return { users: result, dates };

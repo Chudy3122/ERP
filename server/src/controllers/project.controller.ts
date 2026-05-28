@@ -129,6 +129,22 @@ export class ProjectController {
   }
 
   /**
+   * Update project member role
+   * PUT /api/projects/:id/members/:userId/role
+   */
+  async updateMemberRole(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, userId } = req.params;
+      const { role } = req.body;
+      if (!role) { res.status(400).json({ message: 'Role is required' }); return; }
+      const member = await projectService.updateMemberRole(id, userId, role as ProjectMemberRole);
+      res.json(member);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  /**
    * Remove project member
    * DELETE /api/projects/:id/members/:userId
    */

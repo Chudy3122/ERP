@@ -13,7 +13,7 @@ interface OrgNodeProps {
   isRoot?: boolean;
 }
 
-const MAX_VISIBLE_EMPLOYEES = 5;
+const MAX_VISIBLE_EMPLOYEES = Infinity;
 
 function EmployeeAvatar({ emp, size = 'sm' }: { emp: DepartmentEmployee; size?: 'sm' | 'xs' }) {
   const [error, setError] = useState(false);

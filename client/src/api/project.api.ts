@@ -61,6 +61,11 @@ export const removeProjectMember = async (projectId: string, userId: string): Pr
   await client.delete(`/projects/${projectId}/members/${userId}`);
 };
 
+export const updateMemberRole = async (projectId: string, userId: string, role: string): Promise<ProjectMember> => {
+  const response = await client.put(`/projects/${projectId}/members/${userId}/role`, { role });
+  return response.data;
+};
+
 export const getProjectStatistics = async (projectId: string): Promise<ProjectStatistics> => {
   const response = await client.get(`/projects/${projectId}/statistics`);
   return response.data;

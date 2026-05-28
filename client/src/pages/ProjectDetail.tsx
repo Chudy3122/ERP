@@ -28,6 +28,9 @@ import {
   UserPlus,
   FolderOpen,
   MessageSquare,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import * as workLogApi from '../api/worklog.api';
@@ -82,6 +85,7 @@ const ProjectDetail = () => {
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
+  const [columnSort, setColumnSort] = useState<Record<string, 'manual' | 'date_asc' | 'date_desc'>>({});
   const isDraggingRef = useRef(false);
   const mouseStartPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -113,16 +117,6 @@ const ProjectDetail = () => {
   // Confirm dialogs
   const [showDeleteStageConfirm, setShowDeleteStageConfirm] = useState(false);
   const [showDeleteFileConfirm, setShowDeleteFileConfirm] = useState<string | null>(null);
-
-  // Work log modal
-  const [workLogTask, setWorkLogTask] = useState<Task | null>(null);
-  const [workLogForm, setWorkLogForm] = useState({
-    work_date: '',
-    hours: '',
-    description: '',
-    work_type: 'regular',
-  });
-  const [isSubmittingWorkLog, setIsSubmittingWorkLog] = useState(false);
 
   const { t } = useTranslation();
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
@@ -249,7 +243,7 @@ const ProjectDetail = () => {
     const labels = {
       [ProjectMemberRole.LEAD]: 'Lider',
       [ProjectMemberRole.MEMBER]: 'Członek',
-      [ProjectMemberRole.OBSERVER]: 'Obserwator',
+      [ProjectMemberRole.OBSERVER]: 'Kierownik',
     };
     return labels[role] || 'Członek';
   };
@@ -393,17 +387,6 @@ const ProjectDetail = () => {
     navigate(`/tasks/${taskId}/edit`);
   };
 
-  const handleOpenWorkLog = (e: React.MouseEvent, task: Task) => {
-    e.stopPropagation();
-    setWorkLogTask(task);
-    setWorkLogForm({
-      work_date: new Date().toISOString().split('T')[0],
-      hours: '',
-      description: '',
-      work_type: 'regular',
-    });
-  };
-
   const handleAssignTask = async (event: React.ChangeEvent<HTMLSelectElement>, task: Task) => {
     event.stopPropagation();
     const assigneeId = event.target.value;
@@ -465,28 +448,6 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleSubmitWorkLog = async () => {
-    if (!workLogTask || !workLogForm.hours || parseFloat(workLogForm.hours) <= 0) return;
-    setIsSubmittingWorkLog(true);
-    try {
-      await workLogApi.createWorkLog({
-        task_id: workLogTask.id,
-        project_id: workLogTask.project_id,
-        work_date: workLogForm.work_date,
-        hours: parseFloat(workLogForm.hours),
-        description: workLogForm.description || undefined,
-        work_type: workLogForm.work_type as any,
-        is_billable: workLogForm.work_type === 'regular',
-      });
-      setWorkLogTask(null);
-      loadTasksByStages();
-      if (activeTab === 'dashboard') loadProject();
-    } catch (err) {
-      console.error('Work log error', err);
-    } finally {
-      setIsSubmittingWorkLog(false);
-    }
-  };
 
   const handleStageDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -530,6 +491,50 @@ const ProjectDetail = () => {
       loadTasksByStages();
     } catch (error) {
       console.error('Failed to move task:', error);
+    } finally {
+      setIsUpdatingTask(null);
+    }
+  };
+
+  const cycleColumnSort = (stageId: string | null) => {
+    const key = stageId ?? 'null';
+    setColumnSort(prev => {
+      const cur = prev[key] || 'manual';
+      const next = cur === 'manual' ? 'date_asc' : cur === 'date_asc' ? 'date_desc' : 'manual';
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const getSortedTasks = (tasks: Task[], stageId: string | null) => {
+    const key = stageId ?? 'null';
+    const sort = columnSort[key] || 'manual';
+    if (sort === 'manual') return tasks;
+    return [...tasks].sort((a, b) => {
+      const da = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+      const db = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+      return sort === 'date_asc' ? da - db : db - da;
+    });
+  };
+
+  const handleMoveTask = async (task: Task, allStageTasks: Task[], direction: 'up' | 'down') => {
+    const sorted = [...allStageTasks].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const idx = sorted.findIndex(t => t.id === task.id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+
+    const other = sorted[swapIdx];
+    const myIndex = task.order_index ?? idx;
+    const otherIndex = other.order_index ?? swapIdx;
+
+    try {
+      setIsUpdatingTask(task.id);
+      await Promise.all([
+        taskApi.updateTask(task.id, { order_index: otherIndex }),
+        taskApi.updateTask(other.id, { order_index: myIndex }),
+      ]);
+      loadTasksByStages();
+    } catch (error) {
+      console.error('Failed to reorder task:', error);
     } finally {
       setIsUpdatingTask(null);
     }
@@ -1262,8 +1267,10 @@ const ProjectDetail = () => {
           `}</style>
           <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-2 px-2 kanban-scrollbar">
             {tasksByStages.map(({ stage, tasks }) => {
-              const filteredTasks = filterTasks(tasks);
               const stageId = stage?.id || null;
+              const sortedTasks = getSortedTasks(tasks, stageId);
+              const filteredTasks = filterTasks(sortedTasks);
+              const curSort = columnSort[stageId ?? 'null'] || 'manual';
               const isOver = dragOverStage === stageId;
               const stageColor = stage?.color || '#6B7280';
               const isUnassignedStage = !stage;
@@ -1311,16 +1318,26 @@ const ProjectDetail = () => {
                         )}
                       </div>
                     </div>
-                    {stage && (
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleOpenEditStage(stage)}
-                        className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200"
-                        aria-label="Opcje etapu"
+                        onClick={() => cycleColumnSort(stageId)}
+                        title={curSort === 'manual' ? 'Sortuj po dacie ↑' : curSort === 'date_asc' ? 'Sortuj po dacie ↓' : 'Kolejność manualna'}
+                        className={`rounded-lg p-1.5 transition-all hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200 ${curSort !== 'manual' ? 'text-[#F7941D]' : 'text-gray-400'}`}
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        <ArrowUpDown className="h-3.5 w-3.5" />
                       </button>
-                    )}
+                      {stage && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditStage(stage)}
+                          className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200"
+                          aria-label="Opcje etapu"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Tasks container */}
@@ -1332,7 +1349,7 @@ const ProjectDetail = () => {
                         : undefined,
                     }}
                   >
-                    {filteredTasks.map(task => {
+                    {filteredTasks.map((task, taskIdx) => {
                       const priorityConfig = getPriorityConfig(task.priority);
                       const isDragging = draggedTask?.id === task.id;
                       const priorityAccent = getTaskPriorityAccent(task.priority);
@@ -1361,6 +1378,29 @@ const ProjectDetail = () => {
                             isUpdatingTask === task.id ? 'opacity-60' : ''
                           } ${isDragging ? 'opacity-50 scale-[1.02] shadow-lg ring-2 ring-blue-400' : 'hover:-translate-y-0.5'}`}
                         >
+                          {/* Manual sort buttons (visible on hover, only in manual mode) */}
+                          {curSort === 'manual' && (
+                            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); handleMoveTask(task, tasks, 'up'); }}
+                                disabled={taskIdx === 0 || !!isUpdatingTask}
+                                className="p-0.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Przesuń wyżej"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); handleMoveTask(task, tasks, 'down'); }}
+                                disabled={taskIdx === filteredTasks.length - 1 || !!isUpdatingTask}
+                                className="p-0.5 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Przesuń niżej"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
                           {/* Priority indicator bar */}
                           <div
                             className="absolute left-3 right-3 top-0 h-1 rounded-b-full"
@@ -1511,15 +1551,6 @@ const ProjectDetail = () => {
                               );
                             })()}
 
-                            <button
-                              type="button"
-                              onClick={e => handleOpenWorkLog(e, task)}
-                              title="Zaloguj czas"
-                              className="inline-flex items-center gap-1 rounded-lg bg-[#F7941D]/10 px-2 py-1 text-[10px] font-semibold text-[#F7941D] opacity-0 transition-all hover:bg-[#F7941D]/15 group-hover:opacity-100"
-                            >
-                              <Plus className="h-3 w-3" />
-                              czas
-                            </button>
                           </div>
 
                           {isUpdatingTask === task.id && (
@@ -1729,11 +1760,27 @@ const ProjectDetail = () => {
                     </div>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${getProjectMemberRoleClass(member.role)}`}
-                    >
-                      {getProjectMemberRoleLabel(member.role)}
-                    </span>
+                    {isAdmin && member.id !== 'project-creator-fallback' ? (
+                      <select
+                        value={member.role}
+                        onChange={async (e) => {
+                          const newRole = e.target.value as ProjectMemberRole;
+                          try {
+                            await projectApi.updateMemberRole(id!, member.user_id, newRole);
+                            loadMembers();
+                          } catch {}
+                        }}
+                        className="px-2 py-1 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#F7941D]"
+                      >
+                        <option value={ProjectMemberRole.MEMBER}>Członek</option>
+                        <option value={ProjectMemberRole.LEAD}>Lider</option>
+                        <option value={ProjectMemberRole.OBSERVER}>Kierownik</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getProjectMemberRoleClass(member.role)}`}>
+                        {getProjectMemberRoleLabel(member.role)}
+                      </span>
+                    )}
                     {isAdmin && member.id !== 'project-creator-fallback' && (
                       <button
                         type="button"
@@ -2123,101 +2170,6 @@ const ProjectDetail = () => {
         loading={isDeletingFile !== null}
       />
 
-      {/* Work Log Modal */}
-      {workLogTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                  Zaloguj czas pracy
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-xs">
-                  {workLogTask.title}
-                </p>
-              </div>
-              <button
-                onClick={() => setWorkLogTask(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Data
-                  </label>
-                  <input
-                    type="date"
-                    value={workLogForm.work_date}
-                    onChange={e => setWorkLogForm({ ...workLogForm, work_date: e.target.value })}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Godziny
-                  </label>
-                  <input
-                    type="number"
-                    min="0.5"
-                    max="24"
-                    step="0.5"
-                    value={workLogForm.hours}
-                    onChange={e => setWorkLogForm({ ...workLogForm, hours: e.target.value })}
-                    placeholder="np. 2.5"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Typ pracy
-                </label>
-                <select
-                  value={workLogForm.work_type}
-                  onChange={e => setWorkLogForm({ ...workLogForm, work_type: e.target.value })}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="regular">Zwykłe</option>
-                  <option value="overtime">Nadgodziny</option>
-                  <option value="unpaid">Niepłatne</option>
-                  <option value="business_trip">Wyjście służbowe</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Opis (opcjonalnie)
-                </label>
-                <textarea
-                  value={workLogForm.description}
-                  onChange={e => setWorkLogForm({ ...workLogForm, description: e.target.value })}
-                  rows={3}
-                  placeholder="Co zrobiłeś w tym czasie..."
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-700">
-              <button
-                onClick={() => setWorkLogTask(null)}
-                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                Anuluj
-              </button>
-              <button
-                onClick={handleSubmitWorkLog}
-                disabled={isSubmittingWorkLog || !workLogForm.hours}
-                className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium disabled:opacity-60"
-              >
-                {isSubmittingWorkLog ? 'Zapisywanie...' : 'Zapisz czas'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </MainLayout>
   );
 };

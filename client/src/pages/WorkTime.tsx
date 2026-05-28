@@ -5,6 +5,7 @@ import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil } fr
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import type { TimeEntry, DayStatus, DayState } from '../types/time.types';
+import { getFileUrl } from '../api/axios-config';
 
 // ─── Attendance types ───────────────────────────────────────────────────────
 interface AttendanceDay {
@@ -18,6 +19,7 @@ interface AttendanceUser {
   id: string;
   first_name: string;
   last_name: string;
+  avatar_url: string | null;
   days: AttendanceDay[];
 }
 interface AttendanceData {
@@ -1121,8 +1123,12 @@ export default function WorkTime() {
                             : 'bg-gray-50 dark:bg-gray-800'
                         }`}>
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-[#F7941D]/10 text-[#F7941D] flex items-center justify-center text-xs font-bold flex-shrink-0">
-                              {u.first_name[0]}{u.last_name[0]}
+                            <div className="w-7 h-7 rounded-full bg-[#F7941D]/10 text-[#F7941D] flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">
+                              {u.avatar_url ? (
+                                <img src={getFileUrl(u.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                              ) : (
+                                <span>{u.first_name[0]}{u.last_name[0]}</span>
+                              )}
                             </div>
                             <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
                               {u.first_name} {u.last_name}

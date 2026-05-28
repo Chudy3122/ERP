@@ -245,6 +245,18 @@ class NotificationService {
     });
   }
 
+  private leaveTypeLabel(leaveType: string): string {
+    const labels: Record<string, string> = {
+      vacation: 'Urlop wypoczynkowy',
+      sick_leave: 'Zwolnienie lekarskie',
+      personal: 'Urlop na żądanie',
+      unpaid: 'Urlop bezpłatny',
+      parental: 'Urlop rodzicielski',
+      other: 'Inny',
+    };
+    return labels[leaveType] ?? leaveType;
+  }
+
   /**
    * Notify about leave request status
    */
@@ -272,7 +284,7 @@ class NotificationService {
       userId,
       type,
       title,
-      message: `Twój wniosek urlopowy (${leaveType}) od ${startDate} do ${endDate} został ${
+      message: `Twój wniosek (${this.leaveTypeLabel(leaveType)}) od ${startDate} do ${endDate} został ${
         status === 'approved' ? 'zatwierdzony' : 'odrzucony'
       }`,
       actionUrl: '/time-tracking/leave',
@@ -298,7 +310,7 @@ class NotificationService {
       userId: managerId,
       type: NotificationType.LEAVE_REQUEST_PENDING,
       title: 'Nowy wniosek urlopowy',
-      message: `${employeeName} złożył wniosek urlopowy (${leaveType}) od ${startDate} do ${endDate}`,
+      message: `${employeeName} złożył wniosek (${this.leaveTypeLabel(leaveType)}) od ${startDate} do ${endDate}`,
       actionUrl: '/time-tracking/leave',
       priority: NotificationPriority.NORMAL,
       relatedUserId: employeeId,

@@ -11,6 +11,17 @@ import { User, UserRole } from '../models/User.model';
 
 const PER_TYPE = 5;
 
+const PROJECT_STATUS_PL: Record<string, string> = {
+  active: 'Aktywny', planning: 'Planowanie', completed: 'Zakończony',
+  on_hold: 'Wstrzymany', cancelled: 'Anulowany',
+};
+const TICKET_STATUS_PL: Record<string, string> = {
+  open: 'Otwarte', in_progress: 'W toku', resolved: 'Rozwiązane', closed: 'Zamknięte',
+};
+const CONTRACT_STATUS_PL: Record<string, string> = {
+  active: 'Aktywna', expired: 'Wygasła', terminated: 'Rozwiązana', draft: 'Szkic',
+};
+
 interface SearchResult {
   id: string;
   type: string;
@@ -62,7 +73,7 @@ export class SearchController {
           id: p.id,
           type: 'project',
           title: p.name,
-          subtitle: `${p.code} · ${p.status}`,
+          subtitle: `${p.code} · ${PROJECT_STATUS_PL[p.status] ?? p.status}`,
           href: `/projects/${p.id}`,
         }));
       })());
@@ -113,7 +124,7 @@ export class SearchController {
           id: t.id,
           type: 'ticket',
           title: `${t.ticket_number}: ${t.title}`,
-          subtitle: `${t.status} · ${t.priority}`,
+          subtitle: `${TICKET_STATUS_PL[t.status] ?? t.status} · ${t.priority}`,
           href: `/tickets/${t.id}/edit`,
         }));
       })());
@@ -157,7 +168,7 @@ export class SearchController {
             id: c.id,
             type: 'contract',
             title: c.title,
-            subtitle: `${c.contract_number} · ${c.status}`,
+            subtitle: `${c.contract_number} · ${CONTRACT_STATUS_PL[c.status] ?? c.status}`,
             href: `/contracts/${c.id}`,
           }));
         })());
