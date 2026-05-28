@@ -22,7 +22,7 @@ import {
   X,
   Download,
   Eye,
-  Plus,
+  Search,
 } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';

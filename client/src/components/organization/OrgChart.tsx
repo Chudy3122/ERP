@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Users, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import type { DepartmentTreeNode, DepartmentEmployee } from '../../types/department.types';
+import type { DepartmentTreeNode } from '../../types/department.types';
 import { getFileUrl } from '../../api/axios-config';
 
 interface OrgChartProps {
