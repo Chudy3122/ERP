@@ -4,7 +4,7 @@ import MainLayout from '../components/layout/MainLayout';
 import {
   Users, Clock, CalendarDays, MessageSquare, Shield, Plus, Search,
   RefreshCw, Edit2, Trash2, KeyRound, CheckCircle, XCircle,
-  Building2, BarChart3, Activity, UserPlus, Eye,
+  Building2, BarChart3, Activity, UserPlus, Eye, Tv2,
 } from 'lucide-react';
 import * as adminApi from '../api/admin.api';
 import * as departmentApi from '../api/department.api';
@@ -38,7 +38,7 @@ const initials = (u: AdminUser) => `${u.first_name[0] ?? ''}${u.last_name[0] ?? 
 
 const DEPT_COLORS = ['#F7941D','#0d6efd','#198754','#dc3545','#6f42c1','#0dcaf0','#fd7e14','#20c997','#d63384','#6c757d'];
 
-type Tab = 'dashboard' | 'users' | 'departments';
+type Tab = 'dashboard' | 'users' | 'departments' | 'fun';
 
 const EMPTY_USER: CreateUserData = { email: '', password: '', firstName: '', lastName: '', role: 'employee', department: '', phone: '' };
 const EMPTY_DEPT: CreateDepartmentData = { name: '', code: '', color: '#F7941D' };
@@ -206,6 +206,7 @@ const Admin = () => {
     { id: 'dashboard', label: 'Pulpit', icon: BarChart3 },
     { id: 'users', label: 'Użytkownicy', icon: Users },
     { id: 'departments', label: 'Działy', icon: Building2 },
+    { id: 'fun', label: 'Rozrywka', icon: Tv2 },
   ];
 
   return (
@@ -495,6 +496,26 @@ const Admin = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── FUN TAB ──────────────────────────────────────────────────────── */}
+        {tab === 'fun' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+              <Tv2 className="w-4 h-4 text-[#F7941D]" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Live stream</span>
+              <span className="ml-auto text-xs text-gray-400">youtube.com</span>
+            </div>
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/UI9i_fzkLa0?autoplay=1"
+                title="Live stream"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
             </div>
           </div>
         )}
