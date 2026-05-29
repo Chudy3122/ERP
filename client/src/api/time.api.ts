@@ -133,6 +133,14 @@ export const rejectTimeEntry = async (entryId: string): Promise<TimeEntry> => {
   return response.data.data;
 };
 
+/**
+ * Update notes/description on a time entry (owner only)
+ */
+export const updateEntryNotes = async (entryId: string, notes: string): Promise<TimeEntry> => {
+  const response = await apiClient.put(`/time/entries/${entryId}/notes`, { notes });
+  return response.data.data;
+};
+
 // ===== LEAVE REQUESTS =====
 
 /**

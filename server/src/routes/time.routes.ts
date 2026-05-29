@@ -40,6 +40,9 @@ router.get(
   timeController.getAllTimeEntries
 );
 
+// Update entry notes (owner)
+router.put('/entries/:id/notes', timeController.updateEntryNotes.bind(timeController));
+
 // Approve/reject time entries (admin/kierownik only)
 router.put(
   '/entries/:id/approve',

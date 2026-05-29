@@ -250,6 +250,22 @@ export class TimeController {
   }
 
   /**
+   * Update time entry notes (owner only)
+   * PUT /api/time/entries/:id/notes
+   */
+  async updateEntryNotes(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const userId = req.user!.userId;
+      const timeEntry = await timeService.updateEntryNotes(id, userId, notes ?? '');
+      res.status(200).json({ success: true, data: timeEntry });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to update notes' });
+    }
+  }
+
+  /**
    * Reject time entry (admin/team leader only)
    * PUT /api/time/entries/:id/reject
    */

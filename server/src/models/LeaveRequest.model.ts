@@ -10,13 +10,22 @@ import {
 import { User } from './User.model';
 
 export enum LeaveType {
-  VACATION = 'vacation',
-  SICK_LEAVE = 'sick_leave',
-  PERSONAL = 'personal',
-  UNPAID = 'unpaid',
-  PARENTAL = 'parental',
-  OTHER = 'other',
+  VACATION = 'vacation',          // Urlop wypoczynkowy — odlicza dni
+  PERSONAL = 'personal',          // Urlop na żądanie — odlicza dni
+  SICK_LEAVE = 'sick_leave',      // Zwolnienie lekarskie
+  UNPAID = 'unpaid',              // Urlop bezpłatny
+  PARENTAL = 'parental',          // Urlop rodzicielski
+  MATERNITY = 'maternity',        // Urlop macierzyński
+  PATERNITY = 'paternity',        // Urlop ojcowski
+  CHILDCARE_188 = 'childcare_188',// Opieka nad dzieckiem do 14 lat (art. 188)
+  CARE = 'care',                  // Urlop opiekuńczy (art. 173¹)
+  OCCASIONAL = 'occasional',      // Urlop okolicznościowy
+  REMOTE_WORK = 'remote_work',    // Praca zdalna (art. 67³³)
+  OTHER = 'other',                // Inne
 }
+
+// Tylko te typy odliczają dni z rocznej puli urlopowej
+export const DEDUCTING_LEAVE_TYPES: LeaveType[] = [LeaveType.VACATION, LeaveType.PERSONAL];
 
 export enum LeaveStatus {
   PENDING = 'pending',

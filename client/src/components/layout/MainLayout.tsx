@@ -150,12 +150,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   useEffect(() => {
     const loadNotifications = async () => {
       try {
+        const MESSAGE_TYPES = ['chat_message', 'chat_mention', 'channel_invite'];
         const [notifData, count] = await Promise.all([
           notificationApi.getNotifications(1, 10),
           notificationApi.getUnreadCount()
         ]);
-        setNotifications(notifData.notifications);
-        setUnreadCount(count);
+        const filtered = notifData.notifications.filter(
+          (n: NotificationItem) => !MESSAGE_TYPES.includes(n.type || '')
+        );
+        setNotifications(filtered);
+        // Unread count excludes message notifications too
+        const filteredUnread = filtered.filter((n: NotificationItem) => !n.is_read).length;
+        setUnreadCount(Math.max(count - (notifData.notifications.length - filtered.length), filteredUnread));
       } catch (error) {
         console.error('Failed to load notifications:', error);
       }

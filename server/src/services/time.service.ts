@@ -1,7 +1,7 @@
 import { Between, Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
-import { LeaveRequest, LeaveStatus, LeaveType } from '../models/LeaveRequest.model';
+import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../models/LeaveRequest.model';
 import { User } from '../models/User.model';
 
 function roundToNearest15Min(date: Date): Date {
@@ -231,7 +231,7 @@ export class TimeService {
         select: ['id', 'working_hours_per_day'],
       });
 
-      const maxHours = user?.working_hours_per_day ?? 8;
+      const maxHours = Number(user?.working_hours_per_day) || 8;
       const maxMs = maxHours * 60 * 60 * 1000;
 
       if (now >= entry.clock_in.getTime() + maxMs) {
@@ -277,6 +277,17 @@ export class TimeService {
       },
       relations: ['user'],
     });
+  }
+
+  /**
+   * Update the notes/description on a time entry (owner only)
+   */
+  async updateEntryNotes(entryId: string, userId: string, notes: string): Promise<TimeEntry> {
+    const entry = await this.timeEntryRepository.findOne({ where: { id: entryId } });
+    if (!entry) throw new Error('Wpis nie istnieje');
+    if (entry.user_id !== userId) throw new Error('Brak uprawnień do edycji tego wpisu');
+    entry.notes = notes || null;
+    return await this.timeEntryRepository.save(entry);
   }
 
   /**
@@ -561,8 +572,14 @@ export class TimeService {
       },
     });
 
-    const usedDays = approvedRequests.reduce((sum, req) => sum + req.total_days, 0);
-    const annualLeave = 20; // Default 20 days per year
+    // Only vacation + on-demand leave deducts from the annual pool
+    const usedDays = approvedRequests
+      .filter((req) => DEDUCTING_LEAVE_TYPES.includes(req.leave_type))
+      .reduce((sum, req) => sum + req.total_days, 0);
+
+    // Pull the annual allowance from the user's configured value
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const annualLeave = user?.annual_leave_days ?? 20;
     const remaining = annualLeave - usedDays;
 
     return {

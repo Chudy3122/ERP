@@ -530,8 +530,8 @@ const ProjectDetail = () => {
     const sort = columnSort[key] || 'manual';
     if (sort === 'manual') return tasks;
     return [...tasks].sort((a, b) => {
-      const da = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-      const db = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+      const da = new Date(a.created_at).getTime();
+      const db = new Date(b.created_at).getTime();
       return sort === 'date_asc' ? da - db : db - da;
     });
   };

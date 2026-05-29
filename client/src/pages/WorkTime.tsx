@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
-import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil } from 'lucide-react';
+import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import type { TimeEntry, DayStatus, DayState } from '../types/time.types';
@@ -288,6 +288,9 @@ export default function WorkTime() {
   const [historyPageSize, setHistoryPageSize] = useState<10 | 30 | 50>(10);
   const [historyDateFilter, setHistoryDateFilter] = useState<HistoryDateFilter>('all');
   const [historyTypeFilter, setHistoryTypeFilter] = useState<HistoryTypeFilter>('all');
+  const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
+  const [editNotesValue, setEditNotesValue] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Attendance state
@@ -353,6 +356,22 @@ export default function WorkTime() {
       toast.error('Błąd ładowania danych');
     } finally {
       setLoadingMy(false);
+    }
+  }
+
+  async function handleSaveNotes() {
+    if (!editNotesEntry) return;
+    setSavingNotes(true);
+    try {
+      await timeApi.updateEntryNotes(editNotesEntry.id, editNotesValue);
+      toast.success('Opis zapisany');
+      setEditNotesEntry(null);
+      setEditNotesValue('');
+      await loadMyData();
+    } catch {
+      toast.error('Nie udało się zapisać opisu');
+    } finally {
+      setSavingNotes(false);
     }
   }
 
@@ -490,7 +509,8 @@ export default function WorkTime() {
   // ── Render helpers ────────────────────────────────────────────────────────
   function renderClockPanel() {
     if (state === 'working' && currentEntry) {
-      const autoEndTime = new Date(new Date(currentEntry.clock_in).getTime() + 8 * 60 * 60 * 1000).toLocaleTimeString('pl-PL', {
+      const planHours = Number(user?.working_hours_per_day) || 8;
+      const autoEndTime = new Date(new Date(currentEntry.clock_in).getTime() + planHours * 60 * 60 * 1000).toLocaleTimeString('pl-PL', {
         hour: '2-digit',
         minute: '2-digit',
       });
@@ -663,6 +683,33 @@ export default function WorkTime() {
     <MainLayout title="Czas pracy">
       {showManualEntry && (
         <ManualEntryModal onClose={() => setShowManualEntry(false)} onSaved={loadMyData} />
+      )}
+
+      {editNotesEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditNotesEntry(null)}>
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <h3 className="mb-1 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
+              <Pencil className="h-4 w-4 text-[#F7941D]" /> Opis wpisu
+            </h3>
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              {new Date(editNotesEntry.clock_in).toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+            <textarea
+              value={editNotesValue}
+              onChange={e => setEditNotesValue(e.target.value)}
+              rows={4}
+              autoFocus
+              placeholder="Rozpisz co było robione w tych godzinach..."
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setEditNotesEntry(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
+              <button onClick={handleSaveNotes} disabled={savingNotes} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
+                {savingNotes && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="mx-auto max-w-[1600px] space-y-6">
@@ -914,6 +961,7 @@ export default function WorkTime() {
                         <th className="px-4 py-3 text-center">Czas pracy</th>
                         <th className="px-4 py-3 text-center">Typ</th>
                         <th className="px-4 py-3 text-center">Status</th>
+                        <th className="px-4 py-3 text-left">Opis</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -970,6 +1018,21 @@ export default function WorkTime() {
                                 : entry.status === 'rejected' ? 'Odrzucone'
                                 : 'Zakończone'}
                             </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 group">
+                              <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[180px]" title={entry.notes || ''}>
+                                {entry.notes || <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => { setEditNotesEntry(entry); setEditNotesValue(entry.notes || ''); }}
+                                className="p-1 rounded text-gray-400 opacity-0 group-hover:opacity-100 hover:text-[#F7941D] hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                                title="Edytuj opis"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

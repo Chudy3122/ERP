@@ -9,10 +9,16 @@ export enum TimeEntryStatus {
 
 export enum LeaveType {
   VACATION = 'vacation',
-  SICK_LEAVE = 'sick_leave',
   PERSONAL = 'personal',
+  SICK_LEAVE = 'sick_leave',
   UNPAID = 'unpaid',
   PARENTAL = 'parental',
+  MATERNITY = 'maternity',
+  PATERNITY = 'paternity',
+  CHILDCARE_188 = 'childcare_188',
+  CARE = 'care',
+  OCCASIONAL = 'occasional',
+  REMOTE_WORK = 'remote_work',
   OTHER = 'other',
 }
 

@@ -23,7 +23,13 @@ import type { AdminUser } from '../types/admin.types';
 import type { LeaveRequest, LeaveBalance } from '../types/time.types';
 import type { TeamAvailability } from '../api/calendar.api';
 
-type LeaveType = 'vacation' | 'sick_leave' | 'remote_work' | 'other';
+type LeaveType =
+  | 'vacation' | 'personal' | 'sick_leave' | 'unpaid' | 'parental'
+  | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
+  | 'remote_work' | 'other';
+
+// Tylko te typy odliczają dni z puli urlopowej
+const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal'];
 
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> =
   {
@@ -32,10 +38,50 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
       icon: <Umbrella className="w-4 h-4" />,
       color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/30',
     },
+    personal: {
+      label: 'Urlop na żądanie',
+      icon: <Calendar className="w-4 h-4" />,
+      color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/30',
+    },
     sick_leave: {
-      label: 'L4 / Zwolnienie lekarskie',
+      label: 'Zwolnienie lekarskie',
       icon: <Heart className="w-4 h-4" />,
       color: 'text-red-500 bg-red-50 dark:bg-red-900/30',
+    },
+    unpaid: {
+      label: 'Urlop bezpłatny',
+      icon: <MoreHorizontal className="w-4 h-4" />,
+      color: 'text-gray-500 bg-gray-100 dark:bg-gray-700',
+    },
+    parental: {
+      label: 'Urlop rodzicielski',
+      icon: <Heart className="w-4 h-4" />,
+      color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/30',
+    },
+    maternity: {
+      label: 'Urlop macierzyński',
+      icon: <Heart className="w-4 h-4" />,
+      color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/30',
+    },
+    paternity: {
+      label: 'Urlop ojcowski',
+      icon: <Heart className="w-4 h-4" />,
+      color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30',
+    },
+    childcare_188: {
+      label: 'Opieka nad dzieckiem do 14 lat (art. 188)',
+      icon: <Heart className="w-4 h-4" />,
+      color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/30',
+    },
+    care: {
+      label: 'Urlop opiekuńczy (art. 173¹)',
+      icon: <Heart className="w-4 h-4" />,
+      color: 'text-teal-500 bg-teal-50 dark:bg-teal-900/30',
+    },
+    occasional: {
+      label: 'Urlop okolicznościowy',
+      icon: <Calendar className="w-4 h-4" />,
+      color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
     },
     remote_work: {
       label: 'Praca zdalna',
@@ -77,6 +123,7 @@ const Absences = () => {
   const [managementError, setManagementError] = useState('');
   const [managementSuccess, setManagementSuccess] = useState('');
 
+  const [oneDayLeave, setOneDayLeave] = useState(false);
   const [formData, setFormData] = useState({
     leave_type: 'vacation' as LeaveType,
     start_date: '',
@@ -228,10 +275,11 @@ const Absences = () => {
       await timeApi.createLeaveRequest({
         leaveType: formData.leave_type as any,
         startDate: formData.start_date,
-        endDate: formData.end_date,
+        endDate: oneDayLeave ? formData.start_date : formData.end_date,
         reason: formData.reason,
       });
       setShowForm(false);
+      setOneDayLeave(false);
       setFormData({ leave_type: 'vacation', start_date: '', end_date: '', reason: '' });
       loadData();
     } catch (error: any) {
@@ -961,17 +1009,31 @@ const Absences = () => {
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     required
                   >
-                    <option value="vacation">Urlop wypoczynkowy</option>
-                    <option value="sick_leave">L4 / Zwolnienie lekarskie</option>
-                    <option value="remote_work">Praca zdalna</option>
-                    <option value="other">Inne</option>
+                    {(Object.keys(leaveTypeConfig) as LeaveType[]).map(type => (
+                      <option key={type} value={type}>
+                        {leaveTypeConfig[type].label}{DEDUCTING_TYPES.includes(type) ? ' (odlicza dni)' : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={oneDayLeave}
+                    onChange={e => {
+                      setOneDayLeave(e.target.checked);
+                      if (e.target.checked) setFormData(prev => ({ ...prev, end_date: '' }));
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Urlop 1-dniowy</span>
+                </label>
+
+                <div className={`grid grid-cols-1 gap-4 ${oneDayLeave ? '' : 'sm:grid-cols-2'}`}>
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Data początkowa *
+                      {oneDayLeave ? 'Data urlopu *' : 'Data początkowa *'}
                     </label>
                     <input
                       type="date"
@@ -981,18 +1043,20 @@ const Absences = () => {
                       required
                     />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Data końcowa *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.end_date}
-                      onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
+                  {!oneDayLeave && (
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Data końcowa *
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.end_date}
+                        onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
