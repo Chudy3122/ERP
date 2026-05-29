@@ -23,6 +23,7 @@ import {
   Download,
   Eye,
   Search,
+  CheckSquare,
 } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
@@ -459,8 +460,13 @@ const TaskForm = () => {
   if (isLoading) {
     return (
       <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <div className="mx-auto flex max-w-[1200px] items-center justify-center py-16">
+          <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#F7941D]"></div>
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+              Ładowanie formularza zadania...
+            </p>
+          </div>
         </div>
       </MainLayout>
     );
@@ -468,54 +474,81 @@ const TaskForm = () => {
 
   return (
     <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
-      {/* Header - Compact */}
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate('/tasks')}
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 text-gray-500" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">
-              {isEdit ? (task?.title || 'Edytuj zadanie') : 'Nowe zadanie'}
-            </h1>
-            {isEdit && task && (
-              <span className="px-2 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full shrink-0">
-                {task.project?.code || 'Zadanie'}
-              </span>
-            )}
+      <div className="mx-auto max-w-[1200px]">
+        {/* Header */}
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-wrap items-start gap-4">
+            <button
+              onClick={() => navigate('/tasks')}
+              className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-300 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10"
+              aria-label="Wróć do listy zadań"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#F7941D]/10 text-[#F7941D]">
+                <CheckSquare className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                  {isEdit ? 'Edycja zadania' : 'Nowe zadanie'}
+                </p>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h1 className="truncate text-2xl font-bold text-gray-900 dark:text-white">
+                    {isEdit ? (task?.title || 'Edytuj zadanie') : 'Nowe zadanie'}
+                  </h1>
+                  {isEdit && task && (
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                      {task.project?.code || 'Zadanie'}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                  {isEdit
+                    ? 'Zaktualizuj zakres, przypisane osoby, termin i parametry zadania.'
+                    : 'Utwórz zadanie w wybranym projekcie i przypisz je do osób z zespołu.'}
+                </p>
+              </div>
+            </div>
           </div>
           {isEdit && task?.project && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-              <FolderOpen className="w-3 h-3" />
-              {task.project.name}
-            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-700/50 dark:text-gray-300">
+              <FolderOpen className="h-4 w-4 text-gray-400" />
+              <span className="font-medium">{task.project.name}</span>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
-          <p className="text-xs text-red-800 dark:text-red-400">{error}</p>
-        </div>
-      )}
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className={`${isEdit ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}>
           {/* Basic Info Card */}
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Informacje podstawowe</h2>
+          <form onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Informacje podstawowe</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Najważniejsze dane zadania, projekt, osoby odpowiedzialne i termin.
+              </p>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="space-y-5 p-5">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Zakres zadania</h3>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Zacznij od nazwy i opisu, żeby zadanie było czytelne na liście oraz w projekcie.
+                </p>
+              </div>
+
               {/* Task Title */}
               <div>
-                <label htmlFor="title" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="title" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Tytuł zadania *
                 </label>
                 <input
@@ -525,14 +558,14 @@ const TaskForm = () => {
                   value={formData.title}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   placeholder="np. Implementacja modułu logowania"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="description" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Opis zadania
                 </label>
                 <textarea
@@ -541,15 +574,22 @@ const TaskForm = () => {
                   value={formData.description}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   placeholder="Opisz szczegóły zadania..."
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="border-t border-gray-100 pt-5 dark:border-gray-700">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Projekt i zespół</h3>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Po wyborze projektu możesz przypisać zadanie do osób z jego zespołu.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {/* Project */}
-                <div className="md:col-span-2">
-                  <label htmlFor="project_id" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="md:col-span-3">
+                  <label htmlFor="project_id" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Projekt *
                   </label>
                   <select
@@ -558,7 +598,7 @@ const TaskForm = () => {
                     value={formData.project_id}
                     onChange={handleChange}
                     required
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Wybierz projekt</option>
                     {projects.map((project) => (
@@ -568,7 +608,7 @@ const TaskForm = () => {
                     ))}
                   </select>
                   {selectedProject && (
-                    <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
+                    <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-200">
                           <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
@@ -595,97 +635,18 @@ const TaskForm = () => {
                 </div>
 
                 {/* Assignees (multi-select) */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Przypisane osoby
+                <div className="md:col-span-3">
+                  <label className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    <span>Przypisane osoby</span>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] normal-case tracking-normal text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                      Wybrano: {selectedAssigneeIds.length}
+                    </span>
                   </label>
                   <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
                     Możesz wybrać dowolne osoby z zespołu projektu.
                   </p>
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                    {!formData.project_id ? (
-                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Najpierw wybierz projekt</div>
-                    ) : isLoadingProjectMembers ? (
-                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Ładowanie zespołu...</div>
-                    ) : projectMembers.length === 0 ? (
-                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Brak osób w zespole projektu</div>
-                    ) : (
-                      <div>
-                        <div className="border-b border-gray-200 p-2 dark:border-gray-700">
-                          <div className="relative">
-                            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                            <input
-                              type="text"
-                              value={assigneeSearch}
-                              onChange={event => setAssigneeSearch(event.target.value)}
-                              className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-8 pr-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                              placeholder="Szukaj osoby w zespole projektu..."
-                            />
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                              Widoczne: {filteredProjectMembers.length}
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={selectVisibleAssignees}
-                                disabled={
-                                  filteredProjectMembers.length === 0 || areAllVisibleAssigneesSelected
-                                }
-                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                              >
-                                Zaznacz widocznych
-                              </button>
-                              <button
-                                type="button"
-                                onClick={clearAssignees}
-                                disabled={selectedAssigneeIds.length === 0}
-                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                              >
-                                Wyczyść
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="max-h-40 overflow-y-auto">
-                          {filteredProjectMembers.length > 0 ? (
-                            filteredProjectMembers.map((member) => {
-                              const selected = selectedAssigneeIds.includes(member.user_id);
-                              return (
-                                <label
-                                  key={member.user_id}
-                                  className={`flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selected}
-                                    onChange={() => toggleAssignee(member.user_id)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                  />
-                                  <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 flex-shrink-0">
-                                    {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
-                                  </div>
-                                  <span className="text-gray-700 dark:text-gray-300 truncate">{getProjectMemberDisplayName(member)}</span>
-                                </label>
-                              );
-                            })
-                          ) : (
-                            <div className="px-2.5 py-3 text-xs text-gray-400 dark:text-gray-500">
-                              Brak osób pasujących do wyszukiwania
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {formData.project_id && projectMembers.length === 0 && !isLoadingProjectMembers && (
-                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                      Dodaj osoby w zakładce zespół projektu, aby można było przypisać zadanie.
-                    </p>
-                  )}
                   {selectedProjectMembers.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="mb-3 flex flex-wrap gap-1.5">
                       {selectedProjectMembers.map(member => (
                         <span
                           key={member.user_id}
@@ -704,11 +665,110 @@ const TaskForm = () => {
                       ))}
                     </div>
                   )}
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800">
+                    {!formData.project_id ? (
+                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Najpierw wybierz projekt</div>
+                    ) : isLoadingProjectMembers ? (
+                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Ładowanie zespołu...</div>
+                    ) : projectMembers.length === 0 ? (
+                      <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Brak osób w zespole projektu</div>
+                    ) : (
+                      <div>
+                        <div className="border-b border-gray-100 bg-gray-50/70 p-3 dark:border-gray-700 dark:bg-gray-800/60">
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <input
+                              type="text"
+                              value={assigneeSearch}
+                              onChange={event => setAssigneeSearch(event.target.value)}
+                              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                              placeholder="Szukaj osoby w zespole projektu..."
+                            />
+                            {assigneeSearch && (
+                              <button
+                                type="button"
+                                onClick={() => setAssigneeSearch('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                                aria-label="Wyczyść wyszukiwanie osób"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Widoczne: {filteredProjectMembers.length} z {projectMembers.length}
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={selectVisibleAssignees}
+                                disabled={
+                                  filteredProjectMembers.length === 0 || areAllVisibleAssigneesSelected
+                                }
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                              >
+                                Zaznacz widocznych
+                              </button>
+                              <button
+                                type="button"
+                                onClick={clearAssignees}
+                                disabled={selectedAssigneeIds.length === 0}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                              >
+                                Wyczyść
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="max-h-52 overflow-y-auto">
+                          {filteredProjectMembers.length > 0 ? (
+                            filteredProjectMembers.map((member) => {
+                              const selected = selectedAssigneeIds.includes(member.user_id);
+                              return (
+                                <label
+                                  key={member.user_id}
+                                  className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() => toggleAssignee(member.user_id)}
+                                    className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
+                                  />
+                                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-200">
+                                    {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
+                                  </div>
+                                  <span className="truncate text-gray-700 dark:text-gray-300">{getProjectMemberDisplayName(member)}</span>
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <div className="px-2.5 py-3 text-xs text-gray-400 dark:text-gray-500">
+                              Brak osób pasujących do wyszukiwania
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {formData.project_id && projectMembers.length === 0 && !isLoadingProjectMembers && (
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      Dodaj osoby w zakładce zespół projektu, aby można było przypisać zadanie.
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100 pt-4 dark:border-gray-700 md:col-span-3">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Parametry zadania</h3>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Ustaw priorytet, termin oraz szacowany czas pracy.
+                  </p>
                 </div>
 
                 {/* Priority */}
                 <div>
-                  <label htmlFor="priority" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="priority" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Priorytet
                   </label>
                   <select
@@ -716,7 +776,7 @@ const TaskForm = () => {
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="low">Niski</option>
                     <option value="medium">Średni</option>
@@ -728,7 +788,7 @@ const TaskForm = () => {
                 {/* Status (only visible when not editing - in edit mode it's in sidebar) */}
                 {!isEdit && (
                   <div>
-                    <label htmlFor="status" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="status" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Status
                     </label>
                     <select
@@ -736,7 +796,7 @@ const TaskForm = () => {
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     >
                       {allStatuses.map((status) => (
                         <option key={status} value={status}>
@@ -749,7 +809,7 @@ const TaskForm = () => {
 
                 {/* Due Date */}
                 <div>
-                  <label htmlFor="due_date" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="due_date" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Termin
                   </label>
                   <input
@@ -759,7 +819,7 @@ const TaskForm = () => {
                     value={formData.due_date || ''}
                     onChange={handleChange}
                     disabled={isSelectedProjectOngoing}
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
                   />
                   {isSelectedProjectOngoing && (
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
@@ -770,7 +830,7 @@ const TaskForm = () => {
 
                 {/* Estimated Hours */}
                 <div>
-                  <label htmlFor="estimated_hours" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="estimated_hours" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Szacowany (h)
                   </label>
                   <input
@@ -781,7 +841,7 @@ const TaskForm = () => {
                     onChange={handleChange}
                     step="0.5"
                     min="0"
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                     placeholder="8"
                   />
                 </div>
@@ -789,27 +849,27 @@ const TaskForm = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 rounded-b-xl">
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
               <button
                 type="button"
                 onClick={() => navigate('/tasks')}
-                className="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Anuluj
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Zapisywanie...
                   </>
                 ) : (
                   <>
-                    <Save className="w-3.5 h-3.5" />
+                    <Save className="h-4 w-4" />
                     {isEdit ? 'Zapisz zmiany' : 'Utwórz zadanie'}
                   </>
                 )}
@@ -819,13 +879,13 @@ const TaskForm = () => {
 
           {/* Attachments Section - only in edit mode */}
           {isEdit && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Paperclip className="w-4 h-4" />
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
+                  <Paperclip className="h-4 w-4 text-[#F7941D]" />
                   Załączniki
                   {attachments.length > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                       {attachments.length}
                     </span>
                   )}
@@ -833,7 +893,7 @@ const TaskForm = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors font-medium"
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   Dodaj
@@ -847,13 +907,13 @@ const TaskForm = () => {
                 />
               </div>
 
-              <div className="p-3">
+              <div className="p-5">
                 {/* Upload area - compact */}
                 <div
-                  className={`border border-dashed rounded-lg p-3 text-center transition-colors ${
+                  className={`rounded-xl border border-dashed p-4 text-center transition-colors ${
                     dragActive
-                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                      ? 'border-[#F7941D] bg-[#F7941D]/10'
+                      : 'border-gray-300 hover:border-[#F7941D]/60 dark:border-gray-600'
                   }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
@@ -862,17 +922,17 @@ const TaskForm = () => {
                 >
                   {isUploadingFiles ? (
                     <div className="space-y-2">
-                      <Loader2 className="w-5 h-5 mx-auto animate-spin text-gray-400" />
+                      <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#F7941D]" />
                       <p className="text-xs text-gray-600 dark:text-gray-400">Przesyłanie...</p>
                       <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 max-w-[120px] mx-auto">
                         <div
-                          className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                          className="h-1.5 rounded-full bg-[#F7941D] transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Upload className="w-4 h-4" />
                       <span>Przeciągnij pliki lub kliknij &quot;Dodaj&quot;</span>
                     </div>
@@ -881,7 +941,7 @@ const TaskForm = () => {
 
                 {/* Attachments list - compact */}
                 {attachments.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-3 space-y-2">
                     {attachments.map((attachment) => {
                       const FileIcon = getFileIcon(attachment.file_type);
                       const isImage = attachment.file_type.startsWith('image/');
@@ -889,7 +949,7 @@ const TaskForm = () => {
                       return (
                         <div
                           key={attachment.id}
-                          className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="group flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 transition-colors hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700"
                         >
                           {isImage ? (
                             <img
@@ -940,10 +1000,10 @@ const TaskForm = () => {
 
         {/* Sidebar */}
         {isEdit && task && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {/* Status Card with dropdown */}
-            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-3">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Status</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</h3>
               <div className="relative" ref={statusDropdownRef}>
                 <button
                   onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -954,14 +1014,14 @@ const TaskForm = () => {
                     const statusConfig = getStatusConfig(task.status);
                     const StatusIcon = statusConfig.icon;
                     return (
-                      <div className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg ${statusConfig.bgColor} ${statusConfig.color} hover:opacity-90 transition-opacity cursor-pointer text-sm`}>
+                      <div className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 ${statusConfig.bgColor} ${statusConfig.color} cursor-pointer text-sm transition-opacity hover:opacity-90`}>
                         <div className="flex items-center gap-1.5">
                           {isChangingStatus ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
                             <StatusIcon className="w-3.5 h-3.5" />
                           )}
-                          <span className="font-medium">{statusConfig.label}</span>
+                          <span className="font-semibold">{statusConfig.label}</span>
                         </div>
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
                       </div>
@@ -971,7 +1031,7 @@ const TaskForm = () => {
 
                 {/* Status Dropdown */}
                 {showStatusDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                  <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                     <div className="px-2.5 py-1.5 border-b border-gray-100 dark:border-gray-700">
                       <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Zmień na:</p>
                     </div>
@@ -1007,12 +1067,12 @@ const TaskForm = () => {
             </div>
 
             {/* Priority Card */}
-            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-3">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Priorytet</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Priorytet</h3>
               {(() => {
                 const priorityConfig = getPriorityConfig(task.priority);
                 return (
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${priorityConfig.bgColor} text-sm`}>
+                  <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 ${priorityConfig.bgColor} text-sm`}>
                     <div className={`w-2 h-2 rounded-full ${priorityConfig.dotColor}`} />
                     <span className={`font-medium ${priorityConfig.color}`}>{priorityConfig.label}</span>
                   </div>
@@ -1021,8 +1081,8 @@ const TaskForm = () => {
             </div>
 
             {/* Details Card */}
-            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-3 space-y-3">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Szczegóły</h3>
+            <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Szczegóły</h3>
 
               {/* Project */}
               {task.project && (
@@ -1116,12 +1176,12 @@ const TaskForm = () => {
 
             {/* Delete Card */}
             {isAdmin && (
-              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-gray-800 dark:to-gray-800/80 rounded-xl border border-red-200 dark:border-gray-700 shadow-sm p-3">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Strefa niebezpieczeństwa</h3>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm dark:border-red-900/50 dark:bg-red-900/10">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Strefa niebezpieczeństwa</h3>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={isDeleting}
-                  className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-900/20"
                 >
                   {isDeleting ? (
                     <>
@@ -1139,6 +1199,7 @@ const TaskForm = () => {
             )}
           </div>
         )}
+      </div>
       </div>
 
       {/* Delete Confirmation Modal */}

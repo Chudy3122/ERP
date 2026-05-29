@@ -5,15 +5,52 @@ import MainLayout from '../components/layout/MainLayout';
 import * as notificationApi from '../api/notification.api';
 import { Notification } from '../types/notification.types';
 
-const PAGE_SIZE = 20;
-
 const cleanMsg = (msg: string) =>
   msg.replace(/\s*\((vacation|sick_leave|personal|unpaid|parental|other|Urlop wypoczynkowy|Zwolnienie lekarskie|Urlop na żądanie|Urlop bezpłatny|Urlop rodzicielski|Inny)\)/gi, '').trim();
+
+const getNotificationTargetUrl = (notification: Notification) => {
+  const requestId =
+    notification.related_entity_id ||
+    notification.data?.requestId ||
+    notification.data?.leaveRequestId ||
+    notification.data?.leave_request_id ||
+    notification.data?.id ||
+    null;
+
+  if (notification.action_url) {
+    const path = notification.action_url.split('?')[0];
+    const leaveDetailMatch = path.match(
+      /^\/(?:time\/leave|time-tracking\/leave|absences)\/([^/]+)$/,
+    );
+    if (leaveDetailMatch) {
+      return `/absences/${leaveDetailMatch[1]}`;
+    }
+
+    if (path === '/time-tracking/leave' || path === '/time/leave') {
+      return requestId ? `/absences/${requestId}` : '/absences';
+    }
+
+    return notification.action_url;
+  }
+
+  if (
+    notification.related_entity_id &&
+    ['leave_request_pending', 'leave_request_approved', 'leave_request_rejected'].includes(
+      notification.type,
+    )
+  ) {
+    return requestId ? `/absences/${requestId}` : '/absences';
+  }
+
+  return null;
+};
 
 const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<10 | 30 | 50>(10);
+  const [totalNotifications, setTotalNotifications] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,15 +59,16 @@ const Notifications = () => {
 
   useEffect(() => {
     loadNotifications();
-  }, [page, unreadOnly]);
+  }, [page, pageSize, unreadOnly]);
 
   const loadNotifications = async () => {
     try {
       setIsLoading(true);
       setError('');
 
-      const data = await notificationApi.getNotifications(page, PAGE_SIZE, unreadOnly);
+      const data = await notificationApi.getNotifications(page, pageSize, unreadOnly);
       setNotifications(data.notifications);
+      setTotalNotifications(data.total || data.notifications.length);
       setTotalPages(data.totalPages || 1);
     } catch {
       setError('Nie udało się pobrać powiadomień.');
@@ -57,8 +95,9 @@ const Notifications = () => {
       );
     }
 
-    if (notification.action_url) {
-      navigate(notification.action_url);
+    const targetUrl = getNotificationTargetUrl(notification);
+    if (targetUrl) {
+      navigate(targetUrl);
     }
   };
 
@@ -71,6 +110,9 @@ const Notifications = () => {
       setIsMarkingAll(false);
     }
   };
+
+  const rangeStart = totalNotifications > 0 ? (page - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(page * pageSize, totalNotifications);
 
   return (
     <MainLayout title="Powiadomienia">
@@ -199,29 +241,54 @@ const Notifications = () => {
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-gray-700">
+          {!isLoading && !error && totalNotifications > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 dark:border-gray-700">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Wyświetlane:{' '}
+                  <span className="font-semibold text-gray-700 dark:text-gray-200">
+                    {rangeStart}-{rangeEnd} z {totalNotifications}
+                  </span>
+                </p>
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <span>Na stronie</span>
+                  <select
+                    value={pageSize}
+                    onChange={event => {
+                      setPageSize(Number(event.target.value) as 10 | 30 | 50);
+                      setPage(1);
+                    }}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                  >
+                    <option value={10}>10</option>
+                    <option value={30}>30</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                onClick={() => setPage(current => Math.max(1, current - 1))}
                 disabled={page === 1}
-                className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Poprzednia
               </button>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Strona {page} z {totalPages}
+              <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                {page} / {totalPages}
               </span>
               <button
                 type="button"
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                onClick={() => setPage(current => Math.min(totalPages, current + 1))}
                 disabled={page === totalPages}
-                className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 Następna
                 <ChevronRight className="h-4 w-4" />
               </button>
+              </div>
             </div>
           )}
         </div>

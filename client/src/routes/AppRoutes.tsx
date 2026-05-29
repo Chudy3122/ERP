@@ -23,6 +23,7 @@ import TaskForm from '../pages/TaskForm';
 import Tickets from '../pages/Tickets';
 import TicketForm from '../pages/TicketForm';
 import Absences from '../pages/Absences';
+import AbsenceDetail from '../pages/AbsenceDetail';
 import Employees from '../pages/Employees';
 import EmployeeDetail from '../pages/EmployeeDetail';
 import Organization from '../pages/Organization';
@@ -70,7 +71,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
-            <Route
+      <Route
         path="/meeting"
         element={
           <PrivateRoute>
@@ -110,6 +111,31 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
+      <Route
+        path="/absences/:id"
+        element={
+          <PrivateRoute>
+            <AbsenceDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/time/leave/:id"
+        element={
+          <PrivateRoute>
+            <AbsenceDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/time-tracking/leave/:id"
+        element={
+          <PrivateRoute>
+            <AbsenceDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/time-tracking/leave" element={<Navigate to="/absences" replace />} />
       <Route
         path="/projects"
         element={
@@ -390,10 +416,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
-      <Route
-        path="/team-calendar"
-        element={<Navigate to="/absences" replace />}
-      />
+      <Route path="/team-calendar" element={<Navigate to="/absences" replace />} />
       <Route
         path="/settings"
         element={
@@ -418,7 +441,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
-<Route
+      <Route
         path="/profile"
         element={
           <PrivateRoute>
@@ -430,9 +453,7 @@ const AppRoutes = () => {
       {/* Default: landing page for guests, dashboard for authenticated */}
       <Route
         path="/"
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
-        }
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />}
       />
 
       {/* 404 - Not Found */}

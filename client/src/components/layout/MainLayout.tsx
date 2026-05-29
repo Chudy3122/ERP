@@ -19,6 +19,45 @@ import { unlockAudio } from '../../utils/audio';
 const cleanNotifMsg = (msg: string) =>
   msg.replace(/\s*\((vacation|sick_leave|personal|unpaid|parental|other)\)/gi, '').trim();
 
+const getNotificationLeaveRequestId = (notification: NotificationItem) =>
+  notification.related_entity_id ||
+  notification.data?.requestId ||
+  notification.data?.leaveRequestId ||
+  notification.data?.leave_request_id ||
+  notification.data?.id ||
+  null;
+
+const getNotificationTargetUrl = (notification: NotificationItem) => {
+  const actionUrl = notification.action_url;
+
+  if (actionUrl) {
+    const path = actionUrl.split('?')[0];
+    const leaveDetailMatch = path.match(/^\/(?:time\/leave|time-tracking\/leave|absences)\/([^/]+)$/);
+    if (leaveDetailMatch) {
+      return `/absences/${leaveDetailMatch[1]}`;
+    }
+
+    if (path === '/time-tracking/leave' || path === '/time/leave') {
+      const requestId = getNotificationLeaveRequestId(notification);
+      return requestId ? `/absences/${requestId}` : '/absences';
+    }
+
+    return actionUrl;
+  }
+
+  if (
+    notification.related_entity_id &&
+    ['leave_request_pending', 'leave_request_approved', 'leave_request_rejected'].includes(
+      notification.type || '',
+    )
+  ) {
+    const requestId = getNotificationLeaveRequestId(notification);
+    return requestId ? `/absences/${requestId}` : '/absences';
+  }
+
+  return null;
+};
+
 import {
   Home,
   MessageSquare,
@@ -77,6 +116,9 @@ interface NotificationItem {
   is_read: boolean;
   created_at: string;
   action_url: string | null;
+  type?: string;
+  related_entity_id?: string | null;
+  data?: Record<string, any> | null;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
@@ -455,8 +497,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                               if (!notification.is_read) {
                                 handleMarkAsRead(notification.id);
                               }
-                              if (notification.action_url) {
-                                navigate(notification.action_url);
+                              const targetUrl = getNotificationTargetUrl(notification);
+                              if (targetUrl) {
+                                navigate(targetUrl);
                                 setNotificationDropdownOpen(false);
                               }
                             }}

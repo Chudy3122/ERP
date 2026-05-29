@@ -55,13 +55,63 @@ interface ScheduledMeeting {
 }
 
 type VideoCall = meetingApi.Meeting;
-type MeetingListItem = { _kind: 'scheduled'; data: ScheduledMeeting } | { _kind: 'videocall'; data: VideoCall };
+type MeetingListItem =
+  | { _kind: 'scheduled'; data: ScheduledMeeting }
+  | { _kind: 'videocall'; data: VideoCall };
 
-const platformConfig: Record<MeetingPlatform, { name: string; color: string; bgColor: string; icon: string; darkBg: string }> = {
-  internal: { name: 'System ERP', color: 'text-gray-700', bgColor: 'bg-gray-100', icon: '🖥️', darkBg: 'dark:bg-gray-700' },
-  teams: { name: 'Microsoft Teams', color: 'text-indigo-700', bgColor: 'bg-indigo-100', icon: '🟣', darkBg: 'dark:bg-indigo-900/40' },
-  zoom: { name: 'Zoom', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: '🔵', darkBg: 'dark:bg-blue-900/40' },
-  google_meet: { name: 'Google Meet', color: 'text-green-700', bgColor: 'bg-green-100', icon: '🟢', darkBg: 'dark:bg-green-900/40' },
+const platformConfig: Record<
+  MeetingPlatform,
+  { name: string; color: string; bgColor: string; icon: string; darkBg: string; logoSrc?: string }
+> = {
+  internal: {
+    name: 'System ERP',
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-100',
+    icon: 'ERP',
+    darkBg: 'dark:bg-gray-700',
+  },
+  teams: {
+    name: 'Microsoft Teams',
+    color: 'text-indigo-700',
+    bgColor: 'bg-indigo-100',
+    icon: 'MS',
+    darkBg: 'dark:bg-indigo-900/40',
+    logoSrc: '/meeting-platforms/teams.png',
+  },
+  zoom: {
+    name: 'Zoom',
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-100',
+    icon: 'Z',
+    darkBg: 'dark:bg-blue-900/40',
+    logoSrc: '/meeting-platforms/zoom.png',
+  },
+  google_meet: {
+    name: 'Google Meet',
+    color: 'text-green-700',
+    bgColor: 'bg-green-100',
+    icon: 'GM',
+    darkBg: 'dark:bg-green-900/40',
+    logoSrc: '/meeting-platforms/google-meet.png',
+  },
+};
+
+const PlatformLogo = ({ platform }: { platform: MeetingPlatform }) => {
+  const [logoFailed, setLogoFailed] = useState(false);
+  const config = platformConfig[platform];
+
+  if (config.logoSrc && !logoFailed) {
+    return (
+      <img
+        src={config.logoSrc}
+        alt=""
+        className="h-7 w-7 object-contain"
+        onError={() => setLogoFailed(true)}
+      />
+    );
+  }
+
+  return <span className="text-xs font-bold">{config.icon}</span>;
 };
 
 const ChatMeet: React.FC = () => {
@@ -445,15 +495,60 @@ const ChatMeet: React.FC = () => {
 
   return (
     <MainLayout title="Chat & Meet">
-      <div className="flex h-[calc(100vh-64px)] -m-3 lg:-m-4 overflow-hidden">
+      <div className="mx-auto flex h-[calc(100vh-96px)] max-w-[1600px] flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+              Komunikacja
+            </p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chat & Meet</h1>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+              Rozmowy zespołowe, szybkie połączenia i zaplanowane spotkania w jednym miejscu.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                loadUsers();
+                setShowNewConv(true);
+                setSidebarTab('chat');
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Nowa rozmowa
+            </button>
+            <button
+              onClick={() => {
+                loadUsers();
+                resetIntForm();
+                setShowInternalModal(true);
+                setSidebarTab('meetings');
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+            >
+              <Video className="h-4 w-4" />
+              Spotkanie
+            </button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
 
         {/* ── LEFT SIDEBAR ── */}
         <div className="w-80 flex-shrink-0 flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
 
           {/* Sidebar header */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">Chat & Meet</h1>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                  Centrum
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Rozmowy i spotkania
+                </p>
+              </div>
               <button
                 onClick={() => {
                   if (sidebarTab === 'chat') {
@@ -465,10 +560,10 @@ const ChatMeet: React.FC = () => {
                     resetExtForm();
                   }
                 }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 transition-colors"
+                className="rounded-lg bg-[#F7941D] p-2 text-white transition-colors hover:bg-[#d87f16]"
                 title={sidebarTab === 'chat' ? 'Nowa rozmowa' : 'Zaplanuj spotkanie'}
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="h-4 w-4" />
               </button>
             </div>
 
@@ -478,7 +573,7 @@ const ChatMeet: React.FC = () => {
                 onClick={() => setSidebarTab('chat')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-sm font-medium transition-all ${
                   sidebarTab === 'chat'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    ? 'bg-[#F7941D] text-white shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
@@ -489,7 +584,7 @@ const ChatMeet: React.FC = () => {
                 onClick={() => { setSidebarTab('meetings'); setActiveChannel(null); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-sm font-medium transition-all ${
                   sidebarTab === 'meetings'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    ? 'bg-[#F7941D] text-white shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
@@ -510,7 +605,7 @@ const ChatMeet: React.FC = () => {
                     value={chatSearch}
                     onChange={(e) => setChatSearch(e.target.value)}
                     placeholder="Szukaj rozmowy..."
-                    className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:text-white"
                   />
                 </div>
               </div>
@@ -526,7 +621,7 @@ const ChatMeet: React.FC = () => {
                     {!chatSearch && (
                       <button
                         onClick={() => { loadUsers(); setShowNewConv(true); }}
-                        className="mt-3 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+                        className="mt-3 px-3 py-1.5 text-sm bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg font-medium"
                       >
                         Nowa rozmowa
                       </button>
@@ -548,14 +643,14 @@ const ChatMeet: React.FC = () => {
                           onKeyDown={(e) => e.key === 'Enter' && handleChannelClick(channel)}
                           className={`w-full px-3 py-3 flex items-center gap-3 cursor-pointer transition-all ${
                             isActive
-                              ? 'bg-blue-50 dark:bg-blue-900/30 border-l-2 border-blue-600'
+                              ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/15 border-l-2 border-[#F7941D]'
                               : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2 border-transparent'
                           }`}
                         >
                           {/* Avatar */}
                           <div className="relative flex-shrink-0">
                             <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ${
-                              isActive ? 'bg-blue-600 text-white' : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 text-gray-700 dark:text-gray-200'
+                              isActive ? 'bg-[#F7941D] text-white' : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 text-gray-700 dark:text-gray-200'
                             }`}>
                               {channel.type === 'direct' && other?.user?.avatar_url && !avatarErrors.has(channel.id) ? (
                                 <img src={getFileUrl(other.user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" onError={() => setAvatarErrors((p) => new Set(p).add(channel.id))} />
@@ -573,7 +668,7 @@ const ChatMeet: React.FC = () => {
                           {/* Info */}
                           <div className="flex-1 min-w-0 text-left">
                             <div className="flex items-center justify-between gap-2">
-                              <span className={`font-medium text-sm truncate ${isActive ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                              <span className={`font-medium text-sm truncate ${isActive ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
                                 {getChannelName(channel)}
                               </span>
                               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -581,7 +676,7 @@ const ChatMeet: React.FC = () => {
                                   <span className="text-xs text-gray-400">{formatTime(channel.last_message_at)}</span>
                                 )}
                                 {unread > 0 && (
-                                  <span className="min-w-5 h-5 px-1.5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                                  <span className="min-w-5 h-5 px-1.5 bg-[#F7941D] text-white text-xs rounded-full flex items-center justify-center font-semibold">
                                     {unread > 9 ? '9+' : unread}
                                   </span>
                                 )}
@@ -629,7 +724,7 @@ const ChatMeet: React.FC = () => {
                 </button>
                 <button
                   onClick={() => { loadUsers(); resetExtForm(); setShowExternalModal(true); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   <CalendarPlus className="w-4 h-4 flex-shrink-0" />
                   Zaplanuj spotkanie zewnętrzne
@@ -644,7 +739,7 @@ const ChatMeet: React.FC = () => {
                     onClick={() => setMeetingsTab(tab)}
                     className={`flex-1 py-2 text-xs font-medium transition-colors ${
                       meetingsTab === tab
-                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600'
+                        ? 'text-[#F7941D] border-b-2 border-[#F7941D]'
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
@@ -681,7 +776,7 @@ const ChatMeet: React.FC = () => {
                           onKeyDown={(e) => e.key === 'Enter' && setSelectedMeeting(meeting)}
                           className={`w-full px-3 py-3 flex items-start gap-3 cursor-pointer transition-all border-l-2 ${
                             isSelected
-                              ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-600'
+                              ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/15 border-[#F7941D]'
                               : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'
                           }`}
                         >
@@ -689,7 +784,7 @@ const ChatMeet: React.FC = () => {
                             {platform.icon}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
                               {meeting.title}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -714,15 +809,15 @@ const ChatMeet: React.FC = () => {
                           onKeyDown={(e) => e.key === 'Enter' && setSelectedVideoCall(call)}
                           className={`w-full px-3 py-3 flex items-start gap-3 cursor-pointer transition-all border-l-2 ${
                             isSelected
-                              ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-600'
+                              ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/15 border-[#F7941D]'
                               : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'
                           }`}
                         >
-                          <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-base flex-shrink-0">
-                            🖥️
+                          <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                            ERP
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
                               {call.title}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -773,6 +868,58 @@ const ChatMeet: React.FC = () => {
 
         {/* ── MAIN AREA ── */}
         <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900">
+          {(activeChannel || selectedMeeting || selectedVideoCall) && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                  Chat & Meet
+                </p>
+                <p className="truncate text-sm text-gray-500 dark:text-gray-400">
+                  Szybkie akcje są dostępne także podczas rozmowy.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadUsers();
+                    setShowNewConv(true);
+                    setSidebarTab('chat');
+                  }}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Nowa rozmowa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadUsers();
+                    resetIntForm();
+                    setShowInternalModal(true);
+                    setSidebarTab('meetings');
+                  }}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-gray-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                  <Video className="h-3.5 w-3.5" />
+                  Spotkanie
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveChannel(null);
+                    setSelectedMeeting(null);
+                    setSelectedVideoCall(null);
+                  }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                  aria-label="Zamknij aktywny widok"
+                  title="Zamknij aktywny widok"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Empty state */}
           {!activeChannel && !selectedMeeting && !selectedVideoCall && (
@@ -789,8 +936,8 @@ const ChatMeet: React.FC = () => {
                   onClick={() => { loadUsers(); setShowNewConv(true); setSidebarTab('chat'); }}
                   className="flex flex-col items-center gap-3 p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all group"
                 >
-                  <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                    <MessageSquare className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-[#F7941D]/10 rounded-xl flex items-center justify-center group-hover:bg-[#F7941D]/15 transition-colors">
+                    <MessageSquare className="w-6 h-6 text-[#F7941D]" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">Nowa rozmowa</p>
@@ -815,8 +962,8 @@ const ChatMeet: React.FC = () => {
                   onClick={() => { loadUsers(); resetExtForm(); setShowExternalModal(true); setSidebarTab('meetings'); }}
                   className="flex flex-col items-center gap-3 p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all group"
                 >
-                  <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                    <Globe className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-[#F7941D]/10 rounded-xl flex items-center justify-center group-hover:bg-[#F7941D]/15 transition-colors">
+                    <Globe className="w-6 h-6 text-[#F7941D]" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">Zaplanuj spotkanie</p>
@@ -841,7 +988,7 @@ const ChatMeet: React.FC = () => {
                 {/* Chat header */}
                 <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-[#F7941D] flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
                       {activeOtherUser?.avatar_url && !chatAvatarError ? (
                         <img src={getFileUrl(activeOtherUser.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={() => setChatAvatarError(true)} />
                       ) : activeOtherUser ? (
@@ -879,7 +1026,7 @@ const ChatMeet: React.FC = () => {
                       title="Uczestnicy"
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         showMembers
-                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                          ? 'bg-[#F7941D]/10 text-[#F7941D]'
                           : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
                       }`}
                     >
@@ -894,6 +1041,15 @@ const ChatMeet: React.FC = () => {
                     title="Rozpocznij spotkanie wideo"
                   >
                     <PhoneCall className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveChannel(null)}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+                    title="Zamknij konwersację"
+                    aria-label="Zamknij konwersację"
+                  >
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
 
@@ -1028,8 +1184,8 @@ const ChatMeet: React.FC = () => {
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Termin</h3>
                     <div className="flex flex-wrap gap-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                          <Calendar className="w-4 h-4 text-blue-600" />
+                        <div className="w-9 h-9 bg-[#F7941D]/10 rounded-lg flex items-center justify-center">
+                          <Calendar className="w-4 h-4 text-[#F7941D]" />
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">Data</p>
@@ -1079,7 +1235,7 @@ const ChatMeet: React.FC = () => {
                           href={selectedMeeting.meeting_link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg text-sm font-medium transition-colors"
                         >
                           <ExternalLink className="w-4 h-4" />
                           Dołącz
@@ -1149,8 +1305,8 @@ const ChatMeet: React.FC = () => {
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Termin</h3>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-blue-600" />
+                      <div className="w-9 h-9 bg-[#F7941D]/10 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-[#F7941D]" />
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Data</p>
@@ -1196,6 +1352,7 @@ const ChatMeet: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
 
@@ -1251,7 +1408,7 @@ const ChatMeet: React.FC = () => {
                   onChange={(e) => setConvSearch(e.target.value)}
                   placeholder="Szukaj użytkownika..."
                   autoFocus
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-64 overflow-y-auto">
@@ -1405,7 +1562,7 @@ const ChatMeet: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-9 h-9 bg-[#F7941D] rounded-lg flex items-center justify-center">
                   <CalendarPlus className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -1424,35 +1581,37 @@ const ChatMeet: React.FC = () => {
                     <button
                       key={pl}
                       onClick={() => setExtPlatform(pl)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${extPlatform === pl ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${extPlatform === pl ? 'border-[#F7941D] bg-[#F7941D]/10' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
                     >
-                      <span className="text-xl">{platformConfig[pl].icon}</span>
-                      <span className={`text-xs font-medium ${extPlatform === pl ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>{platformConfig[pl].name}</span>
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm dark:bg-gray-700 dark:text-gray-200">
+                        <PlatformLogo platform={pl} />
+                      </span>
+                      <span className={`text-xs font-medium ${extPlatform === pl ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-600 dark:text-gray-400'}`}>{platformConfig[pl].name}</span>
                     </button>
                   ))}
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Tytuł *</label>
-                <input type="text" value={extTitle} onChange={(e) => setExtTitle(e.target.value)} placeholder="np. Spotkanie projektowe" className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                <input type="text" value={extTitle} onChange={(e) => setExtTitle(e.target.value)} placeholder="np. Spotkanie projektowe" className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Opis (opcjonalnie)</label>
-                <textarea value={extDesc} onChange={(e) => setExtDesc(e.target.value)} rows={2} placeholder="Dodaj opis..." className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                <textarea value={extDesc} onChange={(e) => setExtDesc(e.target.value)} rows={2} placeholder="Dodaj opis..." className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Data *</label>
-                  <input type="date" value={extDate} onChange={(e) => setExtDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                  <input type="date" value={extDate} onChange={(e) => setExtDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Godzina *</label>
-                  <input type="time" value={extTime} onChange={(e) => setExtTime(e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                  <input type="time" value={extTime} onChange={(e) => setExtTime(e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Czas trwania</label>
-                <select value={extDuration} onChange={(e) => setExtDuration(Number(e.target.value))} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                <select value={extDuration} onChange={(e) => setExtDuration(Number(e.target.value))} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white">
                   {[15, 30, 45, 60, 90, 120].map((d) => <option key={d} value={d}>{d < 60 ? `${d} minut` : `${d / 60} godzin${d === 60 ? 'a' : 'y'}`}</option>)}
                 </select>
               </div>
@@ -1460,18 +1619,18 @@ const ChatMeet: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   <div className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link do spotkania (opcjonalnie)</div>
                 </label>
-                <input type="url" value={extLink} onChange={(e) => setExtLink(e.target.value)} placeholder={`https://${extPlatform === 'teams' ? 'teams.microsoft.com/...' : extPlatform === 'zoom' ? 'zoom.us/j/...' : 'meet.google.com/...'}`} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                <input type="url" value={extLink} onChange={(e) => setExtLink(e.target.value)} placeholder={`https://${extPlatform === 'teams' ? 'teams.microsoft.com/...' : extPlatform === 'zoom' ? 'zoom.us/j/...' : 'meet.google.com/...'}`} className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Uczestnicy ({extParticipants.length} wybrano)</label>
                 <div className="relative mb-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input value={extSearch} onChange={(e) => setExtSearch(e.target.value)} placeholder="Szukaj..." className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                  <input value={extSearch} onChange={(e) => setExtSearch(e.target.value)} placeholder="Szukaj..." className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
                 </div>
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-36 overflow-y-auto">
                   {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(extSearch.toLowerCase())).map((u) => (
                     <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                      <input type="checkbox" checked={extParticipants.includes(u.id)} onChange={() => setExtParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 text-blue-600 rounded" />
+                      <input type="checkbox" checked={extParticipants.includes(u.id)} onChange={() => setExtParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 accent-[#F7941D] rounded" />
                       <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium">{u.first_name[0]}{u.last_name[0]}</div>
                       <p className="text-sm text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
                     </label>
@@ -1484,7 +1643,7 @@ const ChatMeet: React.FC = () => {
               <button
                 onClick={handleScheduleExternalMeeting}
                 disabled={isSaving || !extTitle.trim() || !extDate || !extTime}
-                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
                 {isSaving ? 'Zapisywanie...' : 'Zaplanuj'}

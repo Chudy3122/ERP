@@ -504,6 +504,27 @@ const ProjectDetail = () => {
     });
   };
 
+  const getColumnSortMeta = (sort: 'manual' | 'date_asc' | 'date_desc') => {
+    if (sort === 'date_asc') {
+      return {
+        label: 'Data ↑',
+        title: 'Sortowanie po dacie rosnąco. Kliknij, aby sortować malejąco.',
+      };
+    }
+
+    if (sort === 'date_desc') {
+      return {
+        label: 'Data ↓',
+        title: 'Sortowanie po dacie malejąco. Kliknij, aby wrócić do kolejności ręcznej.',
+      };
+    }
+
+    return {
+      label: 'Ręcznie',
+      title: 'Kolejność ręczna. Kliknij, aby sortować po dacie.',
+    };
+  };
+
   const getSortedTasks = (tasks: Task[], stageId: string | null) => {
     const key = stageId ?? 'null';
     const sort = columnSort[key] || 'manual';
@@ -1286,6 +1307,7 @@ const ProjectDetail = () => {
               const sortedTasks = getSortedTasks(tasks, stageId);
               const filteredTasks = filterTasks(sortedTasks);
               const curSort = columnSort[stageId ?? 'null'] || 'manual';
+              const sortMeta = getColumnSortMeta(curSort);
               const isOver = dragOverStage === stageId;
               const stageColor = stage?.color || '#6B7280';
               const isUnassignedStage = !stage;
@@ -1337,10 +1359,15 @@ const ProjectDetail = () => {
                       <button
                         type="button"
                         onClick={() => cycleColumnSort(stageId)}
-                        title={curSort === 'manual' ? 'Sortuj po dacie ↑' : curSort === 'date_asc' ? 'Sortuj po dacie ↓' : 'Kolejność manualna'}
-                        className={`rounded-lg p-1.5 transition-all hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200 ${curSort !== 'manual' ? 'text-[#F7941D]' : 'text-gray-400'}`}
+                        title={sortMeta.title}
+                        className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all hover:bg-white/80 dark:hover:bg-gray-700/80 ${
+                          curSort !== 'manual'
+                            ? 'border-[#F7941D]/40 bg-white/80 text-[#F7941D] shadow-sm dark:bg-gray-800/80'
+                            : 'border-white/70 bg-white/60 text-gray-500 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300'
+                        }`}
                       >
                         <ArrowUpDown className="h-3.5 w-3.5" />
+                        <span>{sortMeta.label}</span>
                       </button>
                       {stage && (
                         <button
@@ -1760,14 +1787,18 @@ const ProjectDetail = () => {
                     {isAdmin && member.id !== 'project-creator-fallback' ? (
                       <select
                         value={member.role}
+                        disabled={memberActionUserId === member.user_id}
                         onChange={async (e) => {
                           const newRole = e.target.value as ProjectMemberRole;
                           try {
+                            setMemberActionUserId(member.user_id);
                             await projectApi.updateMemberRole(id!, member.user_id, newRole);
                             loadMembers();
-                          } catch {}
+                          } finally {
+                            setMemberActionUserId(null);
+                          }
                         }}
-                        className="px-2 py-1 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#F7941D]"
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm outline-none transition-all focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-wait disabled:opacity-60 ${getProjectMemberRoleClass(member.role)} border-gray-200 dark:border-gray-600`}
                       >
                         <option value={ProjectMemberRole.MEMBER}>Członek</option>
                         <option value={ProjectMemberRole.LEAD}>Lider</option>
