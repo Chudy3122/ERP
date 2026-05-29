@@ -58,6 +58,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_URL || 'http://localhost:5173');
+  // Allow embedding uploaded files (e.g. PDF preview) in an iframe from the frontend.
+  // Override helmet's default frame-ancestors 'self' / X-Frame-Options for these assets.
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost:5173 https://*.vercel.app");
   next();
 }, express.static(path.join(__dirname, '../uploads')));
 
