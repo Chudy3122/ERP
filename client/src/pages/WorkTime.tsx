@@ -1019,19 +1019,19 @@ export default function WorkTime() {
                                 : 'Zakończone'}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 max-w-[260px]">
                             <div className="flex items-center gap-1.5 group">
-                              <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[180px]" title={entry.notes || ''}>
-                                {entry.notes || <span className="text-gray-300 dark:text-gray-600">—</span>}
-                              </span>
                               <button
                                 type="button"
                                 onClick={() => { setEditNotesEntry(entry); setEditNotesValue(entry.notes || ''); }}
-                                className="p-1 rounded text-gray-400 opacity-0 group-hover:opacity-100 hover:text-[#F7941D] hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                                title="Edytuj opis"
+                                title={entry.notes ? 'Kliknij, aby zobaczyć / edytować pełny opis' : 'Dodaj opis'}
+                                className="flex-1 min-w-0 text-left text-xs text-gray-600 dark:text-gray-400 hover:text-[#F7941D] transition-colors"
                               >
-                                <Pencil className="w-3 h-3" />
+                                <span className="block truncate">
+                                  {entry.notes || <span className="text-gray-300 dark:text-gray-600">— dodaj opis</span>}
+                                </span>
                               </button>
+                              <Pencil className="w-3 h-3 flex-shrink-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity dark:text-gray-600" />
                             </div>
                           </td>
                         </tr>
