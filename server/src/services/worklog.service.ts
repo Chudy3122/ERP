@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { WorkLog, WorkLogType } from '../models/WorkLog.model';
 import { Task } from '../models/Task.model';
 import { ActivityLog } from '../models/ActivityLog.model';
+import { User } from '../models/User.model';
 
 interface CreateWorkLogDto {
   task_id?: string;
@@ -371,10 +372,11 @@ export class WorkLogService {
   /**
    * Get overtime summary for all users
    */
-  async getOvertimeSummary(): Promise<Array<{
+  async getOvertimeSummary(viewerId?: string, viewerRole?: string): Promise<Array<{
     user_id: string;
     first_name: string;
     last_name: string;
+    department: string | null;
     total_overtime: number;
     overtime_this_month: number;
     total_collected: number;
@@ -385,7 +387,28 @@ export class WorkLogService {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    const overtimeRows = await this.workLogRepository
+    // Determine which users the viewer is allowed to see
+    let allowedUserIds: string[] | null = null; // null = all users
+    if (viewerId && viewerRole) {
+      const userRepo = AppDataSource.getRepository(User);
+      const seesEveryone = ['admin', 'ksiegowosc', 'szef'].includes(viewerRole);
+      if (seesEveryone) {
+        allowedUserIds = null;
+      } else if (viewerRole === 'kierownik') {
+        const viewer = await userRepo.findOne({ where: { id: viewerId }, select: ['id', 'department_id'] });
+        if (viewer?.department_id) {
+          const deptUsers = await userRepo.find({ where: { department_id: viewer.department_id }, select: ['id'] });
+          allowedUserIds = deptUsers.map((u) => u.id);
+        } else {
+          allowedUserIds = [viewerId];
+        }
+      } else {
+        // employee, sekretariat — only own
+        allowedUserIds = [viewerId];
+      }
+    }
+
+    const qb = this.workLogRepository
       .createQueryBuilder('wl')
       .select('wl.user_id', 'user_id')
       .addSelect('SUM(CASE WHEN wl.work_type = :ot THEN wl.hours ELSE 0 END)', 'total_overtime')
@@ -401,12 +424,20 @@ export class WorkLogService {
       .leftJoin('wl.user', 'u')
       .addSelect('u.first_name', 'first_name')
       .addSelect('u.last_name', 'last_name')
+      .addSelect('u.department', 'department')
       .where('wl.work_type IN (:...types)', { types: [WorkLogType.OVERTIME, WorkLogType.OVERTIME_COMP] })
       .setParameters({ ot: WorkLogType.OVERTIME, oc: WorkLogType.OVERTIME_COMP, ms: monthStart, me: monthEnd })
       .groupBy('wl.user_id')
       .addGroupBy('u.first_name')
       .addGroupBy('u.last_name')
-      .getRawMany();
+      .addGroupBy('u.department');
+
+    if (allowedUserIds !== null) {
+      if (allowedUserIds.length === 0) return [];
+      qb.andWhere('wl.user_id IN (:...allowed)', { allowed: allowedUserIds });
+    }
+
+    const overtimeRows = await qb.getRawMany();
 
     return overtimeRows.map((row) => {
       const total = parseFloat(row.total_overtime) || 0;
@@ -417,6 +448,7 @@ export class WorkLogService {
         user_id: row.user_id,
         first_name: row.first_name,
         last_name: row.last_name,
+        department: row.department ?? null,
         total_overtime: total,
         overtime_this_month: overtimeThisMonth,
         total_collected: collected,

@@ -49,6 +49,17 @@ export default function Overtime() {
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
 
+  // Admin / księgowość / szef see everyone grouped by department
+  const groupByDept = ['admin', 'ksiegowosc', 'szef'].includes(user?.role || '');
+  const groupedSummary: Record<string, OvertimeSummaryEntry[]> = {};
+  if (groupByDept) {
+    for (const entry of summary) {
+      const key = entry.department || 'Bez działu';
+      (groupedSummary[key] ||= []).push(entry);
+    }
+  }
+  const deptKeys = Object.keys(groupedSummary).sort((a, b) => a.localeCompare(b, 'pl'));
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -129,6 +140,51 @@ export default function Overtime() {
 
   const selectClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white';
   const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+
+  const renderOvertimeRow = (entry: OvertimeSummaryEntry) => (
+    <tr
+      key={entry.user_id}
+      className={`transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+        entry.user_id === user?.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+      }`}
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-200">
+            {entry.first_name[0]}{entry.last_name[0]}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-gray-900 dark:text-white">
+              {entry.first_name} {entry.last_name}
+            </p>
+            {entry.user_id === user?.id && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">To Ty</p>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
+        {entry.total_overtime.toFixed(1)}h
+      </td>
+      <td className="px-4 py-3 text-right font-medium text-blue-600 dark:text-blue-400">
+        {entry.overtime_this_month.toFixed(1)}h
+      </td>
+      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+        {entry.total_collected.toFixed(1)}h
+      </td>
+      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+        {entry.collected_this_month.toFixed(1)}h
+      </td>
+      <td className="px-4 py-3 text-right">
+        <span className={`font-semibold ${balanceColor(entry.balance)}`}>
+          {entry.balance > 0 ? '+' : ''}{entry.balance.toFixed(1)}h
+        </span>
+        {entry.balance < 0 && (
+          <span className="ml-1 block text-xs text-red-500">zaległe</span>
+        )}
+      </td>
+    </tr>
+  );
 
   return (
     <MainLayout title="Nadgodziny">
@@ -298,50 +354,16 @@ export default function Overtime() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {summary.map((entry) => (
-                    <tr
-                      key={entry.user_id}
-                      className={`transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                        entry.user_id === user?.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-200">
-                            {entry.first_name[0]}{entry.last_name[0]}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-gray-900 dark:text-white">
-                              {entry.first_name} {entry.last_name}
-                            </p>
-                            {entry.user_id === user?.id && (
-                              <p className="text-xs text-blue-600 dark:text-blue-400">To Ty</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
-                        {entry.total_overtime.toFixed(1)}h
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-blue-600 dark:text-blue-400">
-                        {entry.overtime_this_month.toFixed(1)}h
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-                        {entry.total_collected.toFixed(1)}h
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-                        {entry.collected_this_month.toFixed(1)}h
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`font-semibold ${balanceColor(entry.balance)}`}>
-                          {entry.balance > 0 ? '+' : ''}{entry.balance.toFixed(1)}h
-                        </span>
-                        {entry.balance < 0 && (
-                          <span className="ml-1 block text-xs text-red-500">zaległe</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {groupByDept
+                    ? deptKeys.flatMap((dept) => [
+                        <tr key={`dept-${dept}`} className="bg-gray-100/70 dark:bg-gray-700/40">
+                          <td colSpan={6} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            {dept} · {groupedSummary[dept].length} os.
+                          </td>
+                        </tr>,
+                        ...groupedSummary[dept].map((entry) => renderOvertimeRow(entry)),
+                      ])
+                    : summary.map((entry) => renderOvertimeRow(entry))}
                 </tbody>
               </table>
             </div>

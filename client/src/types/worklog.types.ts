@@ -100,6 +100,7 @@ export interface OvertimeSummaryEntry {
   user_id: string;
   first_name: string;
   last_name: string;
+  department?: string | null;
   total_overtime: number;
   overtime_this_month: number;
   total_collected: number;
