@@ -54,6 +54,9 @@ export class Procedure extends BaseEntity {
   @Column({ length: 20, default: '1.0' })
   version: string;
 
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  attachments: Array<{ name: string; url: string; size: number; uploaded_at: string }>;
+
   @Column({ type: 'uuid' })
   created_by: string;
 

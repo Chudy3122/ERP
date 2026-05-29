@@ -24,3 +24,17 @@ export const updateProcedure = async (id: string, data: UpdateProcedureRequest):
 export const deleteProcedure = async (id: string): Promise<void> => {
   await client.delete(`/procedures/${id}`);
 };
+
+export const uploadProcedureAttachments = async (id: string, files: File[]): Promise<Procedure> => {
+  const formData = new FormData();
+  files.forEach((f) => formData.append('files', f));
+  const response = await client.post(`/procedures/${id}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const deleteProcedureAttachment = async (id: string, url: string): Promise<Procedure> => {
+  const response = await client.delete(`/procedures/${id}/attachments`, { data: { url } });
+  return response.data;
+};

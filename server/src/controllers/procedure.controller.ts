@@ -64,6 +64,43 @@ export class ProcedureController {
       res.status(500).json({ message: 'Błąd podczas usuwania procedury' });
     }
   }
+
+  async uploadAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const files = (req.files as Express.Multer.File[]) || [];
+      if (files.length === 0) {
+        res.status(400).json({ message: 'Brak plików' });
+        return;
+      }
+      const mapped = files.map((f) => ({
+        name: f.originalname,
+        url: `/uploads/attachments/${f.filename}`,
+        size: f.size,
+      }));
+      const procedure = await procedureService.addAttachments(req.params.id, mapped);
+      if (!procedure) {
+        res.status(404).json({ message: 'Procedura nie znaleziona' });
+        return;
+      }
+      res.json(procedure);
+    } catch (error) {
+      res.status(500).json({ message: 'Błąd podczas dodawania załącznika' });
+    }
+  }
+
+  async deleteAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const { url } = req.body;
+      const procedure = await procedureService.removeAttachment(req.params.id, url);
+      if (!procedure) {
+        res.status(404).json({ message: 'Procedura nie znaleziona' });
+        return;
+      }
+      res.json(procedure);
+    } catch (error) {
+      res.status(500).json({ message: 'Błąd podczas usuwania załącznika' });
+    }
+  }
 }
 
 export default new ProcedureController();

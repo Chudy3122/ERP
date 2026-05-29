@@ -4,6 +4,13 @@ export enum ProcedureStatus {
   ARCHIVED = 'archived',
 }
 
+export interface ProcedureAttachment {
+  name: string;
+  url: string;
+  size: number;
+  uploaded_at: string;
+}
+
 export interface Procedure {
   id: string;
   title: string;
@@ -12,6 +19,7 @@ export interface Procedure {
   category: string | null;
   status: ProcedureStatus;
   version: string;
+  attachments?: ProcedureAttachment[];
   created_by: string;
   updated_by: string | null;
   created_at: string;

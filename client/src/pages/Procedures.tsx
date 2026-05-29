@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Plus, Search, X, ChevronRight, Edit2, Trash2, Tag, Clock, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { BookOpen, Plus, Search, X, ChevronRight, Edit2, Trash2, Tag, Clock, User, Paperclip, FileText, Upload, Eye, Loader2 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as procedureApi from '../api/procedure.api';
 import { Procedure, ProcedureStatus, CreateProcedureRequest } from '../types/procedure.types';
+import { getFileUrl } from '../api/axios-config';
 
 const CATEGORIES = ['Wszystkie', 'IT', 'HR', 'Finanse', 'Operacje', 'BHP', 'Jakość', 'Sprzedaż', 'Inne'];
 
@@ -43,10 +44,40 @@ export default function Procedures() {
   const [form, setForm] = useState<CreateProcedureRequest>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ name: string; url: string } | null>(null);
+  const attachInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     load();
   }, [activeCategory, activeStatus]);
+
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !selected) return;
+    try {
+      setUploadingAttachment(true);
+      const updated = await procedureApi.uploadProcedureAttachments(selected.id, Array.from(files));
+      setSelected(updated);
+      setProcedures((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch {
+      setError('Nie udało się dodać załącznika');
+    } finally {
+      setUploadingAttachment(false);
+      if (attachInputRef.current) attachInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (url: string) => {
+    if (!selected) return;
+    try {
+      const updated = await procedureApi.deleteProcedureAttachment(selected.id, url);
+      setSelected(updated);
+      setProcedures((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch {
+      setError('Nie udało się usunąć załącznika');
+    }
+  };
 
   const load = async () => {
     try {
@@ -439,11 +470,108 @@ export default function Procedures() {
                 <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-sans leading-relaxed">
                   {selected.content}
                 </pre>
+
+                {/* Attachments */}
+                <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      <Paperclip className="w-4 h-4" />
+                      Załączniki ({selected.attachments?.length || 0})
+                    </h3>
+                    {isEditor && (
+                      <>
+                        <input
+                          ref={attachInputRef}
+                          type="file"
+                          accept="application/pdf"
+                          multiple
+                          onChange={handleUploadAttachment}
+                          className="hidden"
+                        />
+                        <button
+                          onClick={() => attachInputRef.current?.click()}
+                          disabled={uploadingAttachment}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D]/10 px-3 py-1.5 text-xs font-medium text-[#F7941D] hover:bg-[#F7941D]/20 disabled:opacity-60"
+                        >
+                          {uploadingAttachment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          Dodaj PDF
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {(!selected.attachments || selected.attachments.length === 0) ? (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Brak załączników</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selected.attachments.map((att) => (
+                        <div key={att.url} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                          <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <span className="flex-1 min-w-0 truncate text-sm text-gray-700 dark:text-gray-300" title={att.name}>{att.name}</span>
+                          <span className="text-xs text-gray-400">{(att.size / 1024).toFixed(0)} KB</span>
+                          <button
+                            onClick={() => setPdfPreview({ name: att.name, url: att.url })}
+                            className="p-1.5 rounded text-gray-400 hover:text-[#F7941D] hover:bg-gray-100 dark:hover:bg-gray-700"
+                            title="Podgląd"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <a
+                            href={getFileUrl(att.url) || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            title="Otwórz w nowej karcie"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </a>
+                          {isEditor && (
+                            <button
+                              onClick={() => handleDeleteAttachment(att.url)}
+                              className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              title="Usuń"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* PDF preview modal */}
+      {pdfPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPdfPreview(null)}>
+          <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <FileText className="h-4 w-4 text-red-500" />
+                {pdfPreview.name}
+              </h3>
+              <div className="flex items-center gap-2">
+                <a
+                  href={getFileUrl(pdfPreview.url) || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Otwórz w nowej karcie
+                </a>
+                <button onClick={() => setPdfPreview(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <iframe src={getFileUrl(pdfPreview.url) || ''} title={pdfPreview.name} className="flex-1 w-full" />
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }

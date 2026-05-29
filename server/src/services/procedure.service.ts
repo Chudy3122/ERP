@@ -64,6 +64,25 @@ export class ProcedureService {
     const result = await this.procedureRepository.delete(id);
     return (result.affected ?? 0) > 0;
   }
+
+  async addAttachments(
+    id: string,
+    files: Array<{ name: string; url: string; size: number }>,
+  ): Promise<Procedure | null> {
+    const procedure = await this.procedureRepository.findOne({ where: { id } });
+    if (!procedure) return null;
+    const existing = procedure.attachments || [];
+    const added = files.map((f) => ({ ...f, uploaded_at: new Date().toISOString() }));
+    procedure.attachments = [...existing, ...added];
+    return this.procedureRepository.save(procedure);
+  }
+
+  async removeAttachment(id: string, url: string): Promise<Procedure | null> {
+    const procedure = await this.procedureRepository.findOne({ where: { id } });
+    if (!procedure) return null;
+    procedure.attachments = (procedure.attachments || []).filter((a) => a.url !== url);
+    return this.procedureRepository.save(procedure);
+  }
 }
 
 export default new ProcedureService();
