@@ -146,12 +146,12 @@ const ClockInWidget = () => {
 
   const isClockedIn = currentEntry && currentEntry.status === TimeEntryStatus.IN_PROGRESS;
   const clockInTime = currentEntry ? new Date(currentEntry.clock_in).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
-  const autoEndTime = currentEntry ? new Date(new Date(currentEntry.clock_in).getTime() + 8 * 60 * 60 * 1000).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
+  const workingHoursPerDay = Number(user?.working_hours_per_day) || 8;
+  const autoEndTime = currentEntry ? new Date(new Date(currentEntry.clock_in).getTime() + workingHoursPerDay * 60 * 60 * 1000).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
   const expectedClockInTime = currentEntry?.expected_clock_in
     ? currentEntry.expected_clock_in.slice(0, 5)
     : null;
   const isLate = currentEntry?.is_late;
-  const workingHoursPerDay = Number(user?.working_hours_per_day) || 8;
   const expectedMinutes = workingHoursPerDay * 60;
   const completedTodayMinutes = todayEntries.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
   const activeSessionMinutes = isClockedIn && currentEntry

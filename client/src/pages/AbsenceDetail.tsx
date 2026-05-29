@@ -74,7 +74,7 @@ const AbsenceDetail = () => {
   const [error, setError] = useState('');
   const [isReviewing, setIsReviewing] = useState(false);
 
-  const canReview = user?.role === 'admin' || user?.role === 'kierownik';
+  const canReview = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
   const canCancel = request?.status === 'pending' && request.user_id === user?.id;
 
   useEffect(() => {
@@ -93,10 +93,11 @@ const AbsenceDetail = () => {
 
       if (canReview) {
         try {
-          const pendingRequests = await timeApi.getPendingLeaveRequests();
-          allRequests = [...ownRequests, ...pendingRequests];
+          // Manageable = pending + approved + rejected (within reviewer's scope)
+          const manageable = await timeApi.getManageableLeaveRequests();
+          allRequests = [...ownRequests, ...manageable];
         } catch {
-          // Brak uprawnień albo brak listy oczekujących nie blokuje własnego podglądu.
+          // Brak uprawnień albo brak listy nie blokuje własnego podglądu.
         }
       }
 
@@ -143,6 +144,28 @@ const AbsenceDetail = () => {
     try {
       setIsReviewing(true);
       const updatedRequest = await timeApi.cancelLeaveRequest(request.id);
+      setRequest(updatedRequest);
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  const handleRevert = async () => {
+    if (!request) return;
+    try {
+      setIsReviewing(true);
+      const updatedRequest = await timeApi.revertLeaveRequest(request.id);
+      setRequest(updatedRequest);
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  const handleAdminCancel = async () => {
+    if (!request) return;
+    try {
+      setIsReviewing(true);
+      const updatedRequest = await timeApi.adminCancelLeaveRequest(request.id);
       setRequest(updatedRequest);
     } finally {
       setIsReviewing(false);
@@ -321,6 +344,32 @@ const AbsenceDetail = () => {
                         Anuluj wniosek
                       </button>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {(request.status === 'approved' || request.status === 'rejected') && canReview && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Akcje
+                  </h3>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleRevert}
+                      disabled={isReviewing}
+                      className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-60 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                    >
+                      Cofnij do oczekujących
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAdminCancel}
+                      disabled={isReviewing}
+                      className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-60 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300"
+                    >
+                      Anuluj wniosek
+                    </button>
                   </div>
                 </div>
               )}
