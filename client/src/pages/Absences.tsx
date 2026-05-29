@@ -114,6 +114,7 @@ const Absences = () => {
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const canManageLeavePlans = user?.role === 'admin';
+  const canReviewLeave = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
 
   const [managementUsers, setManagementUsers] = useState<AdminUser[]>([]);
   const [managementSearch, setManagementSearch] = useState('');
@@ -258,9 +259,9 @@ const Absences = () => {
       setLeaveRequests(requests);
       setBalance(leaveBalance);
 
-      if (user?.role === 'admin' || user?.role === 'kierownik') {
-        const pending = await timeApi.getPendingLeaveRequests();
-        setPendingRequests(pending);
+      if (['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '')) {
+        const manageable = await timeApi.getManageableLeaveRequests();
+        setPendingRequests(manageable);
       }
     } catch (error) {
       console.error('Failed to load leave data:', error);
@@ -302,6 +303,25 @@ const Absences = () => {
       loadData();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Nie udało się odrzucić wniosku');
+    }
+  };
+
+  const handleRevert = async (requestId: string) => {
+    try {
+      await timeApi.revertLeaveRequest(requestId);
+      loadData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Nie udało się cofnąć wniosku');
+    }
+  };
+
+  const handleAdminCancel = async (requestId: string) => {
+    if (!confirm('Czy na pewno anulować ten wniosek?')) return;
+    try {
+      await timeApi.adminCancelLeaveRequest(requestId);
+      loadData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Nie udało się anulować wniosku');
     }
   };
 
@@ -445,7 +465,7 @@ const Absences = () => {
               >
                 Moje wnioski
               </button>
-              {(user?.role === 'admin' || user?.role === 'kierownik') && (
+              {canReviewLeave && (
                 <button
                   onClick={() => setActiveTab('pending')}
                   className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
@@ -454,12 +474,12 @@ const Absences = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
-                  Do zatwierdzenia
-                  {pendingRequests.length > 0 && (
+                  Zarządzaj wnioskami
+                  {pendingRequests.filter(r => r.status === 'pending').length > 0 && (
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${activeTab === 'pending' ? 'bg-white/20 text-white' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}
                     >
-                      {pendingRequests.length}
+                      {pendingRequests.filter(r => r.status === 'pending').length}
                     </span>
                   )}
                 </button>
@@ -609,6 +629,29 @@ const Absences = () => {
                                 className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                               >
                                 Odrzuć
+                              </button>
+                            </div>
+                          )}
+
+                          {activeTab === 'pending' && (request.status === 'approved' || request.status === 'rejected') && (
+                            <div className="flex flex-shrink-0 gap-2">
+                              <button
+                                onClick={event => {
+                                  event.stopPropagation();
+                                  handleRevert(request.id);
+                                }}
+                                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                              >
+                                Cofnij do oczekujących
+                              </button>
+                              <button
+                                onClick={event => {
+                                  event.stopPropagation();
+                                  handleAdminCancel(request.id);
+                                }}
+                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+                              >
+                                Anuluj
                               </button>
                             </div>
                           )}

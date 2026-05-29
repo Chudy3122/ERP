@@ -494,6 +494,21 @@ export class TimeService {
   }
 
   /**
+   * Get all manageable leave requests (pending + reviewed, excludes cancelled)
+   */
+  async getManageableLeaveRequests(): Promise<LeaveRequest[]> {
+    return await this.leaveRequestRepository.find({
+      where: [
+        { status: LeaveStatus.PENDING },
+        { status: LeaveStatus.APPROVED },
+        { status: LeaveStatus.REJECTED },
+      ],
+      relations: ['user'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  /**
    * Approve leave request
    */
   async approveLeaveRequest(
@@ -554,6 +569,29 @@ export class TimeService {
     }
 
     request.cancel();
+    return await this.leaveRequestRepository.save(request);
+  }
+
+  /**
+   * Revert a reviewed (approved/rejected) request back to pending (manager action)
+   */
+  async revertLeaveRequest(requestId: string): Promise<LeaveRequest> {
+    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
+    if (!request) throw new Error('Wniosek nie znaleziony');
+    request.status = LeaveStatus.PENDING;
+    request.reviewed_by = null;
+    request.reviewed_at = null;
+    request.review_notes = null;
+    return await this.leaveRequestRepository.save(request);
+  }
+
+  /**
+   * Force-cancel any leave request regardless of owner (manager action)
+   */
+  async forceCancelLeaveRequest(requestId: string): Promise<LeaveRequest> {
+    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
+    if (!request) throw new Error('Wniosek nie znaleziony');
+    request.status = LeaveStatus.CANCELLED;
     return await this.leaveRequestRepository.save(request);
   }
 

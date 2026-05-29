@@ -168,6 +168,14 @@ export const getPendingLeaveRequests = async (): Promise<LeaveRequest[]> => {
 };
 
 /**
+ * Get all manageable leave requests — pending + reviewed (managers only)
+ */
+export const getManageableLeaveRequests = async (): Promise<LeaveRequest[]> => {
+  const response = await apiClient.get('/time/leave/manageable');
+  return response.data.data;
+};
+
+/**
  * Get user's leave balance
  */
 export const getUserLeaveBalance = async (year?: number): Promise<LeaveBalance> => {
@@ -199,10 +207,26 @@ export const rejectLeaveRequest = async (
 };
 
 /**
- * Cancel leave request
+ * Cancel leave request (owner)
  */
 export const cancelLeaveRequest = async (requestId: string): Promise<LeaveRequest> => {
   const response = await apiClient.delete(`/time/leave/${requestId}`);
+  return response.data.data;
+};
+
+/**
+ * Revert a reviewed leave request back to pending (managers only)
+ */
+export const revertLeaveRequest = async (requestId: string): Promise<LeaveRequest> => {
+  const response = await apiClient.put(`/time/leave/${requestId}/revert`);
+  return response.data.data;
+};
+
+/**
+ * Force-cancel any leave request (managers only)
+ */
+export const adminCancelLeaveRequest = async (requestId: string): Promise<LeaveRequest> => {
+  const response = await apiClient.put(`/time/leave/${requestId}/cancel`);
   return response.data.data;
 };
 

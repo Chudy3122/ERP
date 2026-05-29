@@ -400,6 +400,33 @@ export class TimeController {
   }
 
   /**
+   * Get all manageable leave requests (pending + reviewed) for managers
+   * GET /api/time/leave/manageable
+   */
+  async getManageableLeaveRequests(req: Request, res: Response): Promise<void> {
+    try {
+      let requests = await timeService.getManageableLeaveRequests();
+
+      if (req.user!.role === UserRole.KIEROWNIK) {
+        const userRepo = AppDataSource.getRepository(User);
+        const manager = await userRepo.findOne({ where: { id: req.user!.userId }, select: ['id', 'department_id'] });
+        if (manager?.department_id) {
+          const deptUsers = await userRepo.find({ where: { department_id: manager.department_id, is_active: true }, select: ['id'] });
+          const deptUserIds = new Set(deptUsers.map((u) => u.id));
+          requests = requests.filter((r) => deptUserIds.has(r.user_id));
+        } else {
+          requests = [];
+        }
+      }
+
+      res.status(200).json({ success: true, data: requests });
+    } catch (error: any) {
+      console.error('Get manageable leave requests error:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to get manageable leave requests' });
+    }
+  }
+
+  /**
    * Approve leave request (admin/team leader only)
    * PUT /api/time/leave/:id/approve
    */
@@ -539,6 +566,34 @@ export class TimeController {
         success: false,
         message: error.message || 'Failed to cancel leave request',
       });
+    }
+  }
+
+  /**
+   * Revert a reviewed leave request back to pending (managers only)
+   * PUT /api/time/leave/:id/revert
+   */
+  async revertLeaveRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const leaveRequest = await timeService.revertLeaveRequest(id);
+      res.status(200).json({ success: true, data: leaveRequest });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to revert leave request' });
+    }
+  }
+
+  /**
+   * Force-cancel any leave request (managers only)
+   * PUT /api/time/leave/:id/cancel
+   */
+  async adminCancelLeaveRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const leaveRequest = await timeService.forceCancelLeaveRequest(id);
+      res.status(200).json({ success: true, data: leaveRequest });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to cancel leave request' });
     }
   }
 

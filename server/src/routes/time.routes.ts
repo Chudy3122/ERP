@@ -69,23 +69,45 @@ router.get('/leave/balance', timeController.getUserLeaveBalance);
 // Cancel leave request
 router.delete('/leave/:id', timeController.cancelLeaveRequest);
 
-// Get pending leave requests (admin/kierownik only)
+// Roles allowed to manage (approve/reject/revert) leave requests
+const LEAVE_MANAGER_ROLES = [UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SZEF];
+
+// Get pending leave requests (managers only)
 router.get(
   '/leave/pending',
-  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
+  roleMiddleware(LEAVE_MANAGER_ROLES),
   timeController.getPendingLeaveRequests
 );
 
-// Approve/reject leave requests (admin/kierownik only)
+// Get all manageable leave requests — pending + reviewed (managers only)
+router.get(
+  '/leave/manageable',
+  roleMiddleware(LEAVE_MANAGER_ROLES),
+  timeController.getManageableLeaveRequests.bind(timeController)
+);
+
+// Approve/reject leave requests (managers only)
 router.put(
   '/leave/:id/approve',
-  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
+  roleMiddleware(LEAVE_MANAGER_ROLES),
   timeController.approveLeaveRequest
 );
 router.put(
   '/leave/:id/reject',
-  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
+  roleMiddleware(LEAVE_MANAGER_ROLES),
   timeController.rejectLeaveRequest
+);
+// Revert a reviewed request back to pending (managers only)
+router.put(
+  '/leave/:id/revert',
+  roleMiddleware(LEAVE_MANAGER_ROLES),
+  timeController.revertLeaveRequest
+);
+// Force-cancel any leave request (managers only)
+router.put(
+  '/leave/:id/cancel',
+  roleMiddleware(LEAVE_MANAGER_ROLES),
+  timeController.adminCancelLeaveRequest
 );
 
 export default router;
