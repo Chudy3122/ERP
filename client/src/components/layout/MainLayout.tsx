@@ -151,17 +151,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     const loadNotifications = async () => {
       try {
         const MESSAGE_TYPES = ['chat_message', 'chat_mention', 'channel_invite'];
-        const [notifData, count] = await Promise.all([
-          notificationApi.getNotifications(1, 10),
-          notificationApi.getUnreadCount()
-        ]);
+        // Fetch a larger page so the bell count of non-message notifications is accurate
+        const notifData = await notificationApi.getNotifications(1, 50);
         const filtered = notifData.notifications.filter(
           (n: NotificationItem) => !MESSAGE_TYPES.includes(n.type || '')
         );
-        setNotifications(filtered);
-        // Unread count excludes message notifications too
-        const filteredUnread = filtered.filter((n: NotificationItem) => !n.is_read).length;
-        setUnreadCount(Math.max(count - (notifData.notifications.length - filtered.length), filteredUnread));
+        setNotifications(filtered.slice(0, 10));
+        // Bell badge counts only unread non-message notifications
+        setUnreadCount(filtered.filter((n: NotificationItem) => !n.is_read).length);
       } catch (error) {
         console.error('Failed to load notifications:', error);
       }
@@ -170,10 +167,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     loadNotifications();
     const interval = setInterval(loadNotifications, 30000);
 
-    // Real-time bump when a chat/meeting notification arrives via socket
+    // Chat/meeting notifications go to the chat bubble + Chat & Meet badge,
+    // not the bell — just refresh the filtered list (which excludes message types)
     const handleNewNotif = () => {
-      setUnreadCount((prev) => prev + 1);
-      // Refresh the list after a short delay so the new notification is saved
       setTimeout(loadNotifications, 800);
     };
     window.addEventListener('chatmeet:notification', handleNewNotif);
