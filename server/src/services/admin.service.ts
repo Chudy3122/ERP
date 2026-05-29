@@ -66,11 +66,15 @@ class AdminService {
         'user.last_name',
         'user.role',
         'user.department',
+        'user.department_id',
+        'user.position',
         'user.phone',
         'user.is_active',
         'user.last_login',
         'user.created_at',
         'user.avatar_url',
+        'user.annual_leave_days',
+        'user.working_hours_per_day',
       ])
       .orderBy('user.created_at', 'DESC')
       .skip(skip)
