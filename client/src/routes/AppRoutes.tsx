@@ -44,6 +44,8 @@ import CrmDashboard from '../pages/CrmDashboard';
 import LandingPage from '../pages/LandingPage';
 import Procedures from '../pages/Procedures';
 import BossCalendar from '../pages/BossCalendar';
+import Supply from '../pages/Supply';
+import PrivateZone from '../pages/PrivateZone';
 import PrivateRoute from './PrivateRoute';
 import { UserRole } from '../types/auth.types';
 
@@ -373,6 +375,22 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Procedures />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/supply"
+        element={
+          <PrivateRoute>
+            <Supply />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/private-zone"
+        element={
+          <PrivateRoute>
+            <PrivateZone />
           </PrivateRoute>
         }
       />

@@ -82,6 +82,8 @@ import {
   Receipt,
   Building2,
   Shield,
+  Package,
+  ListTodo,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -256,6 +258,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'header', name: t('nav.projects') },
     { name: t('nav.projectList'), href: '/projects', icon: Folder },
     { name: t('nav.myTasks'), href: '/tasks', icon: CheckSquare },
+    { name: 'Strefa prywatna', href: '/private-zone', icon: ListTodo },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.employees') },
@@ -271,6 +274,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Procedury' },
     { name: 'Procedury', href: '/procedures', icon: BookOpen },
+
+    { type: 'divider' },
+    { type: 'header', name: 'Zaopatrzenie' },
+    { name: 'Zaopatrzenie', href: '/supply', icon: Package },
 
     { type: 'divider' },
     { type: 'header', name: 'Kalendarz Szefa' },
