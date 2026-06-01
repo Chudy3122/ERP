@@ -11,7 +11,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Circle,
-  Loader2,
   FolderOpen,
   ExternalLink,
   Trash2,
@@ -21,10 +20,8 @@ import {
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
-import * as worklogApi from '../api/worklog.api';
 import { Task, TaskStatus, TaskPriority } from '../types/task.types';
 import { Project } from '../types/project.types';
-import { WorkLogType, WorkLogTypeLabels } from '../types/worklog.types';
 import { useAuth } from '../contexts/AuthContext';
 
 type FilterTab = 'my' | 'all' | 'today' | 'tomorrow' | 'week' | 'twoweeks' | 'overdue';
@@ -93,16 +90,6 @@ const Tasks = () => {
   const [deleteTask, setDeleteTask] = useState<{ id: string; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  // Time logging state
-  const [logTimeTask, setLogTimeTask] = useState<Task | null>(null);
-  const [logTimeForm, setLogTimeForm] = useState({
-    hours: '',
-    work_date: new Date().toISOString().split('T')[0],
-    work_type: WorkLogType.REGULAR as WorkLogType,
-    description: '',
-  });
-  const [isLoggingTime, setIsLoggingTime] = useState(false);
 
   // Load projects on mount
   useEffect(() => {
@@ -206,50 +193,6 @@ const Tasks = () => {
       console.error('Failed to delete task:', error);
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleOpenLogTime = (e: React.MouseEvent, task: Task) => {
-    e.stopPropagation();
-    setLogTimeTask(task);
-    setLogTimeForm({
-      hours: '',
-      work_date: new Date().toISOString().split('T')[0],
-      work_type: WorkLogType.REGULAR,
-      description: '',
-    });
-  };
-
-  const handleLogTime = async () => {
-    if (!logTimeTask || !logTimeForm.hours) return;
-
-    const hours = parseFloat(logTimeForm.hours.replace(',', '.'));
-    if (isNaN(hours) || hours <= 0) return;
-
-    try {
-      setIsLoggingTime(true);
-      await worklogApi.createWorkLog({
-        task_id: logTimeTask.id,
-        project_id: logTimeTask.project_id || undefined,
-        work_date: logTimeForm.work_date,
-        hours: hours,
-        work_type: logTimeForm.work_type,
-        description: logTimeForm.description || undefined,
-        is_billable: logTimeForm.work_type === WorkLogType.REGULAR,
-      });
-
-      // Update local task with new hours
-      setTasks(tasks.map(t =>
-        t.id === logTimeTask.id
-          ? { ...t, actual_hours: (t.actual_hours || 0) + hours }
-          : t
-      ));
-
-      setLogTimeTask(null);
-    } catch (error) {
-      console.error('Failed to log time:', error);
-    } finally {
-      setIsLoggingTime(false);
     }
   };
 
@@ -690,15 +633,8 @@ const Tasks = () => {
                   className="group grid min-w-[1080px] cursor-pointer grid-cols-[70px_minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   onClick={() => navigate(`/tasks/${task.id}/edit`)}
                 >
-                  {/* Time logging button + actual hours */}
+                  {/* Actual hours */}
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => handleOpenLogTime(e, task)}
-                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
-                      title={t('logTime')}
-                    >
-                      <Clock className="w-4 h-4" />
-                    </button>
                     <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
                       {task.actual_hours ? `${task.actual_hours}h` : '-'}
                     </span>
@@ -895,104 +831,6 @@ const Tasks = () => {
         loading={isDeleting}
       />
 
-      {/* Log Time Modal */}
-      {logTimeTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setLogTimeTask(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('logTime')}</h3>
-              <button
-                onClick={() => setLogTimeTask(null)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Task name */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 truncate">
-              {logTimeTask.title}
-            </p>
-
-            <div className="space-y-4">
-              {/* Hours input */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('hours')}*
-                </label>
-                <input
-                  type="text"
-                  value={logTimeForm.hours}
-                  onChange={(e) => setLogTimeForm({ ...logTimeForm, hours: e.target.value })}
-                  placeholder="1.5"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  autoFocus
-                />
-              </div>
-
-              {/* Date */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('date')}
-                </label>
-                <input
-                  type="date"
-                  value={logTimeForm.work_date}
-                  onChange={(e) => setLogTimeForm({ ...logTimeForm, work_date: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              {/* Type */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('type')}
-                </label>
-                <select
-                  value={logTimeForm.work_type}
-                  onChange={(e) => setLogTimeForm({ ...logTimeForm, work_type: e.target.value as WorkLogType })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  {Object.entries(WorkLogTypeLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('description')}
-                </label>
-                <textarea
-                  value={logTimeForm.description}
-                  onChange={(e) => setLogTimeForm({ ...logTimeForm, description: e.target.value })}
-                  placeholder={t('descriptionPlaceholder')}
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button
-                onClick={() => setLogTimeTask(null)}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={handleLogTime}
-                disabled={!logTimeForm.hours || isLoggingTime}
-                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-              >
-                {isLoggingTime && <Loader2 className="w-4 h-4 animate-spin" />}
-                {t('save')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </MainLayout>
   );
 };
