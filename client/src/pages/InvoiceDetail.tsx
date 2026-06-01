@@ -15,6 +15,7 @@ import {
   CreditCard,
   Loader2,
   Download,
+  StickyNote,
 } from 'lucide-react';
 import * as invoiceApi from '../api/invoice.api';
 import { Invoice, InvoiceStatus } from '../types/invoice.types';
@@ -105,12 +106,12 @@ const InvoiceDetail = () => {
 
   const getStatusConfig = (status: InvoiceStatus) => {
     const configs = {
-      draft: { label: t('statusDraft'), color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
-      sent: { label: t('statusSent'), color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-      paid: { label: t('statusPaid'), color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-      partially_paid: { label: t('statusPartiallyPaid'), color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-      overdue: { label: t('statusOverdue'), color: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-      cancelled: { label: t('statusCancelled'), color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' },
+      draft: { label: t('statusDraft'), color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' },
+      sent: { label: t('statusSent'), color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', dot: 'bg-blue-500' },
+      paid: { label: t('statusPaid'), color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', dot: 'bg-emerald-500' },
+      partially_paid: { label: t('statusPartiallyPaid'), color: 'bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300', dot: 'bg-[#F7941D]' },
+      overdue: { label: t('statusOverdue'), color: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300', dot: 'bg-red-500' },
+      cancelled: { label: t('statusCancelled'), color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500', dot: 'bg-gray-400' },
     };
     return configs[status];
   };
@@ -134,8 +135,11 @@ const InvoiceDetail = () => {
   if (isLoading) {
     return (
       <MainLayout title={t('invoiceDetails')}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-gray-400" />
+        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
+            <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
+            <span className="text-sm font-medium">Ladowanie faktury...</span>
+          </div>
         </div>
       </MainLayout>
     );
@@ -144,9 +148,11 @@ const InvoiceDetail = () => {
   if (!invoice) {
     return (
       <MainLayout title={t('invoiceDetails')}>
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('notFound')}</h3>
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+            <FileText className="h-8 w-8" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-950 dark:text-white">{t('notFound')}</h3>
         </div>
       </MainLayout>
     );
@@ -154,44 +160,59 @@ const InvoiceDetail = () => {
 
   const statusConfig = getStatusConfig(invoice.status);
   const canModify = invoice.status !== InvoiceStatus.PAID && invoice.status !== InvoiceStatus.CANCELLED;
+  const remainingAmount = Math.max(0, Number(invoice.gross_total) - Number(invoice.paid_amount || 0));
 
   return (
     <MainLayout title={invoice.invoice_number}>
+      <div className="mx-auto max-w-[1600px] space-y-6">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 items-start gap-4">
           <button
+            type="button"
             onClick={() => navigate('/invoices')}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            aria-label="Powrot do listy faktur"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {invoice.invoice_number}
-              </h1>
-              <span className={`px-3 py-1 text-sm font-medium rounded-full ${statusConfig.color}`}>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+              Szczegoly faktury
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-semibold text-gray-950 dark:text-white">
+                  {invoice.invoice_number}
+                </h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {t('createdOn', { date: formatDate(invoice.created_at) })}
+                </p>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${statusConfig.color}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
                 {statusConfig.label}
               </span>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">
-              {t('createdOn', { date: formatDate(invoice.created_at) })}
-            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Download PDF - dostępny dla wszystkich */}
           <button
+            type="button"
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             {isDownloadingPdf ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
             )}
             {t('downloadPdf')}
           </button>
@@ -199,29 +220,32 @@ const InvoiceDetail = () => {
           {canEdit && canModify && (
             <>
               <button
+                type="button"
                 onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               >
-                <Edit className="w-4 h-4" />
+                <Edit className="h-4 w-4" />
                 {t('edit')}
               </button>
                 {invoice.status === InvoiceStatus.DRAFT && (
                   <button
+                    type="button"
                     onClick={() => handleStatusChange(InvoiceStatus.SENT)}
                     disabled={isUpdating}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="h-4 w-4" />
                     {t('markAsSent')}
                   </button>
                 )}
                 {(invoice.status === InvoiceStatus.SENT || invoice.status === InvoiceStatus.OVERDUE || invoice.status === InvoiceStatus.PARTIALLY_PAID) && (
                   <button
+                    type="button"
                     onClick={handleMarkAsPaid}
                     disabled={isUpdating}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
                   >
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="h-4 w-4" />
                     {t('markAsPaid')}
                   </button>
                 )}
@@ -229,38 +253,68 @@ const InvoiceDetail = () => {
           )}
           {canEdit && canModify && (
             <button
+              type="button"
               onClick={() => handleStatusChange(InvoiceStatus.CANCELLED)}
               disabled={isUpdating}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className="h-4 w-4" />
               {t('cancel')}
             </button>
           )}
           {canEdit && invoice.status !== InvoiceStatus.PAID && (
             <button
+              type="button"
               onClick={handleDelete}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-red-50 px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
               {t('delete')}
             </button>
           )}
         </div>
-      </div>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('grossTotal')}</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">
+            {formatCurrency(Number(invoice.gross_total), invoice.currency)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('paidAmount')}</p>
+          <p className="mt-1 text-2xl font-semibold text-emerald-600 dark:text-emerald-300">
+            {formatCurrency(Number(invoice.paid_amount || 0), invoice.currency)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('remaining')}</p>
+          <p className="mt-1 text-2xl font-semibold text-[#F7941D]">
+            {formatCurrency(remainingAmount, invoice.currency)}
+          </p>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Invoice Items */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('items')}</h3>
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-950 dark:text-white">{t('items')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Pozycje i podsumowanie faktury.</p>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+              <table className="min-w-[900px] w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-900/40">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     <th className="px-6 py-3">{t('description')}</th>
                     <th className="px-4 py-3 text-right">{t('quantity')}</th>
                     <th className="px-4 py-3 text-right">{t('unitPrice')}</th>
@@ -269,10 +323,10 @@ const InvoiceDetail = () => {
                     <th className="px-6 py-3 text-right">{t('grossAmount')}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {invoice.items?.map((item, index) => (
-                    <tr key={item.id || index} className="border-b border-gray-100 dark:border-gray-700">
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">{item.description}</td>
+                    <tr key={item.id || index} className="transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-700/30">
+                      <td className="px-6 py-4 font-medium text-gray-950 dark:text-white">{item.description}</td>
                       <td className="px-4 py-4 text-right text-gray-600 dark:text-gray-400">
                         {item.quantity} {item.unit}
                       </td>
@@ -283,7 +337,7 @@ const InvoiceDetail = () => {
                       <td className="px-4 py-4 text-right text-gray-600 dark:text-gray-400">
                         {formatCurrency(Number(item.net_amount), invoice.currency)}
                       </td>
-                      <td className="px-6 py-4 text-right font-medium text-gray-900 dark:text-white">
+                      <td className="px-6 py-4 text-right font-semibold text-gray-950 dark:text-white">
                         {formatCurrency(Number(item.gross_amount), invoice.currency)}
                       </td>
                     </tr>
@@ -343,17 +397,23 @@ const InvoiceDetail = () => {
 
           {/* Notes */}
           {(invoice.notes || invoice.internal_notes) && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                  <StickyNote className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-950 dark:text-white">{t('additionalInfo')}</h3>
+              </div>
               {invoice.notes && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('notes')}</h4>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{invoice.notes}</p>
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('notes')}</h4>
+                  <p className="whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">{invoice.notes}</p>
                 </div>
               )}
               {invoice.internal_notes && canEdit && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('internalNotes')}</h4>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{invoice.internal_notes}</p>
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('internalNotes')}</h4>
+                  <p className="whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">{invoice.internal_notes}</p>
                 </div>
               )}
             </div>
@@ -374,14 +434,16 @@ const InvoiceDetail = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Client Info */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="w-5 h-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('client')}</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-950 dark:text-white">{t('client')}</h3>
             </div>
             {invoice.client && (
               <div className="space-y-2">
-                <p className="font-medium text-gray-900 dark:text-white">{invoice.client.name}</p>
+                <p className="font-semibold text-gray-950 dark:text-white">{invoice.client.name}</p>
                 {invoice.client.nip && (
                   <p className="text-sm text-gray-500 dark:text-gray-400">NIP: {invoice.client.nip}</p>
                 )}
@@ -398,10 +460,12 @@ const InvoiceDetail = () => {
           </div>
 
           {/* Dates */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('dates')}</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-950 dark:text-white">{t('dates')}</h3>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -434,10 +498,12 @@ const InvoiceDetail = () => {
           </div>
 
           {/* Payment Info */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard className="w-5 h-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('payment')}</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-950 dark:text-white">{t('payment')}</h3>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -446,7 +512,8 @@ const InvoiceDetail = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('status')}:</span>
-                <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${statusConfig.color}`}>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusConfig.color}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
                   {statusConfig.label}
                 </span>
               </div>
@@ -455,13 +522,14 @@ const InvoiceDetail = () => {
 
           {/* Project Info */}
           {invoice.project && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('project')}</h3>
-              <p className="font-medium text-gray-900 dark:text-white">{invoice.project.name}</p>
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-4 text-lg font-semibold text-gray-950 dark:text-white">{t('project')}</h3>
+              <p className="font-semibold text-gray-950 dark:text-white">{invoice.project.name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{invoice.project.code}</p>
             </div>
           )}
         </div>
+      </div>
       </div>
     </MainLayout>
   );

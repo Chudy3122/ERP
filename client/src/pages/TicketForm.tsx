@@ -97,6 +97,12 @@ const TicketForm = () => {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  const fieldClass =
+    'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const textareaClass =
+    'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const labelClass =
+    'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
 
   useEffect(() => {
     loadProjects();
@@ -446,8 +452,11 @@ const TicketForm = () => {
   if (isLoading) {
     return (
       <MainLayout title={isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
+            <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
+            <span className="text-sm font-medium">Ladowanie zgloszenia...</span>
+          </div>
         </div>
       </MainLayout>
     );
@@ -455,56 +464,78 @@ const TicketForm = () => {
 
   return (
     <MainLayout title={isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}>
+      <div className="mx-auto max-w-[1500px] space-y-6">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
           <button
+            type="button"
             onClick={() => navigate('/tickets')}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            aria-label="Powrot do zgloszen"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+              <Inbox className="h-5 w-5" />
+            </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Zgloszenia</p>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
               {isEdit && ticket && (
-                <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{ticket.ticket_number}</span>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 font-mono text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300">{ticket.ticket_number}</span>
               )}
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h1 className="truncate text-2xl font-semibold text-gray-950 dark:text-white">
                 {isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}
               </h1>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {isEdit ? 'Zaktualizuj informacje o zgłoszeniu' : 'Utwórz nowe zgłoszenie problemu lub prośby'}
             </p>
+          </div>
           </div>
         </div>
 
         {isEdit && isAdmin && (
           <button
+            type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-red-50 px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="h-4 w-4" />
             Usuń
           </button>
         )}
       </div>
+      </section>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{error}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Form */}
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-            <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-950 dark:text-white">Dane zgłoszenia</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Opisz problem, typ oraz kontekst zgłoszenia.</p>
+              </div>
+            </div>
+            <div className="space-y-6 p-5">
               {/* Ticket Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="title" className={labelClass}>
                   Tytuł zgłoszenia *
                 </label>
                 <input
@@ -514,15 +545,15 @@ const TicketForm = () => {
                   value={formData.title}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                  className={fieldClass}
                   placeholder="np. Błąd przy logowaniu użytkownika"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Type */}
                 <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="type" className={labelClass}>
                     Typ zgłoszenia *
                   </label>
                   <select
@@ -531,7 +562,7 @@ const TicketForm = () => {
                     value={formData.type}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className={fieldClass}
                   >
                     <option value="bug">Błąd</option>
                     <option value="feature_request">Nowa funkcja</option>
@@ -543,7 +574,7 @@ const TicketForm = () => {
 
                 {/* Priority */}
                 <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="priority" className={labelClass}>
                     Priorytet
                   </label>
                   <select
@@ -551,7 +582,7 @@ const TicketForm = () => {
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className={fieldClass}
                   >
                     <option value="low">Niski</option>
                     <option value="normal">Normalny</option>
@@ -562,7 +593,7 @@ const TicketForm = () => {
 
                 {/* Category */}
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="category" className={labelClass}>
                     Kategoria
                   </label>
                   <input
@@ -571,14 +602,14 @@ const TicketForm = () => {
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className={fieldClass}
                     placeholder="np. Logowanie, Płatności"
                   />
                 </div>
 
                 {/* Project */}
                 <div>
-                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="project_id" className={labelClass}>
                     Projekt (opcjonalne)
                   </label>
                   <select
@@ -586,7 +617,7 @@ const TicketForm = () => {
                     name="project_id"
                     value={formData.project_id || ''}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                    className={fieldClass}
                   >
                     <option value="">Brak projektu</option>
                     {projects.map((project) => (
@@ -600,9 +631,9 @@ const TicketForm = () => {
 
               {/* Status (only for edit and admin) */}
               {isEdit && isAdmin && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="status" className={labelClass}>
                       Status
                     </label>
                     <select
@@ -610,7 +641,7 @@ const TicketForm = () => {
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                      className={fieldClass}
                     >
                       <option value="open">Nowe</option>
                       <option value="in_progress">W trakcie</option>
@@ -622,7 +653,7 @@ const TicketForm = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="assigned_to" className={labelClass}>
                       Przypisane do
                     </label>
                     <select
@@ -630,7 +661,7 @@ const TicketForm = () => {
                       name="assigned_to"
                       value={formData.assigned_to || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                      className={fieldClass}
                     >
                       <option value="">Nieprzypisane</option>
                       {users.map((u) => (
@@ -645,7 +676,7 @@ const TicketForm = () => {
 
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="description" className={labelClass}>
                   Opis zgłoszenia *
                 </label>
                 <textarea
@@ -655,7 +686,7 @@ const TicketForm = () => {
                   onChange={handleChange}
                   required
                   rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                  className={textareaClass}
                   placeholder="Opisz szczegółowo problem lub prośbę..."
                 />
               </div>
@@ -663,7 +694,7 @@ const TicketForm = () => {
               {/* Attachments for new ticket */}
               {!isEdit && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className={labelClass}>
                     Załączniki (opcjonalne)
                   </label>
 
@@ -675,10 +706,10 @@ const TicketForm = () => {
                         return (
                           <div
                             key={index}
-                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700"
+                            className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/30"
                           >
-                            <div className="p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                              <FileIcon className="w-5 h-5 text-gray-500" />
+                            <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+                              <FileIcon className="h-5 w-5 text-gray-500" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
@@ -687,9 +718,9 @@ const TicketForm = () => {
                             <button
                               type="button"
                               onClick={() => handleRemovePendingFile(index)}
-                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="h-4 w-4" />
                             </button>
                           </div>
                         );
@@ -698,9 +729,9 @@ const TicketForm = () => {
                   )}
 
                   {/* Upload area */}
-                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <label className="flex h-28 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 transition-colors hover:border-[#F7941D]/50 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10">
                     <div className="flex flex-col items-center justify-center">
-                      <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                      <Upload className="mb-1 h-6 w-6 text-[#F7941D]" />
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         <span className="font-medium text-gray-700">Kliknij, aby dodać pliki</span>
                       </p>
@@ -719,27 +750,27 @@ const TicketForm = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="mt-6 flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
               <button
                 type="button"
                 onClick={() => navigate('/tickets')}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Anuluj
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Zapisywanie...
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <Save className="h-4 w-4" />
                     {isEdit ? 'Zapisz zmiany' : 'Utwórz zgłoszenie'}
                   </>
                 )}
@@ -749,10 +780,10 @@ const TicketForm = () => {
 
           {/* Attachments Section (only for edit) */}
           {isEdit && (
-            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Paperclip className="w-5 h-5 text-gray-500" />
+            <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 p-4 dark:border-gray-700">
+                <h3 className="flex items-center gap-2 font-semibold text-gray-950 dark:text-white">
+                  <Paperclip className="h-5 w-5 text-[#F7941D]" />
                   Załączniki ({attachments.length})
                 </h3>
               </div>
@@ -838,7 +869,7 @@ const TicketForm = () => {
                   <button
                     onClick={handleUploadFiles}
                     disabled={isUploadingFiles}
-                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-white transition-colors hover:bg-[#e08317] disabled:opacity-50"
                   >
                     {isUploadingFiles ? (
                       <>
@@ -857,9 +888,9 @@ const TicketForm = () => {
 
               {/* Upload area */}
               <div className="p-4">
-                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <label className="flex h-28 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 transition-colors hover:border-[#F7941D]/50 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10">
                   <div className="flex flex-col items-center justify-center">
-                    <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                    <Upload className="mb-1 h-6 w-6 text-[#F7941D]" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       <span className="font-medium text-gray-700">Kliknij, aby dodać pliki</span>
                     </p>
@@ -879,10 +910,10 @@ const TicketForm = () => {
 
           {/* Comments Section (only for edit) */}
           {isEdit && (
-            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-gray-500" />
+            <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 p-4 dark:border-gray-700">
+                <h3 className="flex items-center gap-2 font-semibold text-gray-950 dark:text-white">
+                  <MessageSquare className="h-5 w-5 text-[#F7941D]" />
                   Komentarze ({comments.length})
                 </h3>
               </div>
@@ -939,13 +970,13 @@ const TicketForm = () => {
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Napisz komentarz..."
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm"
+                      className={textareaClass}
                     />
                   </div>
                   <button
                     onClick={handleAddComment}
                     disabled={!newComment.trim() || isAddingComment}
-                    className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed h-fit"
+                    className="inline-flex h-10 items-center justify-center rounded-lg bg-[#F7941D] px-4 text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isAddingComment ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -963,7 +994,7 @@ const TicketForm = () => {
         {isEdit && ticket && (
           <div className="space-y-4">
             {/* Status Card with dropdown */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Status zgłoszenia</h3>
               <div className="relative" ref={statusDropdownRef}>
                 <button
@@ -1028,13 +1059,13 @@ const TicketForm = () => {
             </div>
 
             {/* Quick Actions Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Szybkie akcje</h3>
               <div className="space-y-2">
                 <button
                   onClick={() => setShowCreateTaskModal(true)}
                   disabled={!ticket.project_id}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full items-center gap-2 rounded-lg bg-[#F7941D]/10 px-3 py-2 text-left text-sm font-semibold text-[#F7941D] transition-colors hover:bg-[#F7941D]/15 disabled:cursor-not-allowed disabled:opacity-50"
                   title={!ticket.project_id ? 'Przypisz zgłoszenie do projektu, aby utworzyć zadanie' : 'Utwórz zadanie ze zgłoszenia'}
                 >
                   <ListTodo className="w-4 h-4" />
@@ -1049,7 +1080,7 @@ const TicketForm = () => {
             </div>
 
             {/* Details Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-4">
+            <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Szczegóły</h3>
 
               {/* Creator */}
@@ -1132,7 +1163,7 @@ const TicketForm = () => {
             </div>
 
             {/* Type & Priority Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+            <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Typ</div>
                 {(() => {
@@ -1243,7 +1274,7 @@ const TicketForm = () => {
               <button
                 onClick={handleCreateTask}
                 disabled={isCreatingTask}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-white transition-colors hover:bg-[#e08317] disabled:opacity-50"
               >
                 {isCreatingTask ? (
                   <>
@@ -1261,6 +1292,7 @@ const TicketForm = () => {
           </div>
         </div>
       )}
+      </div>
     </MainLayout>
   );
 };

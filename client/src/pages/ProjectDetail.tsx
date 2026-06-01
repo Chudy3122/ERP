@@ -1526,21 +1526,6 @@ const ProjectDetail = () => {
                                 {formatDate(task.due_date)}
                               </span>
                             )}
-                            {(task.actual_hours !== undefined ||
-                              task.estimated_hours !== undefined) && (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300"
-                                title={`${task.actual_hours || 0}h zalogowanych / ${task.estimated_hours || '?'}h szacowanych`}
-                              >
-                                <Clock className="h-3 w-3" />
-                                {task.actual_hours || 0}h
-                                {task.estimated_hours && (
-                                  <span className="text-gray-400 dark:text-gray-500">
-                                    /{task.estimated_hours}h
-                                  </span>
-                                )}
-                              </span>
-                            )}
                           </div>
 
                           <div className="mt-3 flex items-start justify-between gap-2 border-t border-gray-100 pt-2.5 dark:border-gray-700/50">

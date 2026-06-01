@@ -608,8 +608,7 @@ const Tasks = () => {
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
           {/* Table header */}
-          <div className="grid min-w-[1080px] grid-cols-[70px_minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
-            <div>{t('time')}</div>
+          <div className="grid min-w-[1010px] grid-cols-[minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
             <div>{t('taskName')}</div>
             <div>{t('project')}</div>
             <div>Osoby</div>
@@ -630,16 +629,9 @@ const Tasks = () => {
               return (
                 <div
                   key={task.id}
-                  className="group grid min-w-[1080px] cursor-pointer grid-cols-[70px_minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  className="group grid min-w-[1010px] cursor-pointer grid-cols-[minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   onClick={() => navigate(`/tasks/${task.id}/edit`)}
                 >
-                  {/* Actual hours */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
-                      {task.actual_hours ? `${task.actual_hours}h` : '-'}
-                    </span>
-                  </div>
-
                   {/* Title & description */}
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold text-gray-900 dark:text-white">

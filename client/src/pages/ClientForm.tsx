@@ -2,7 +2,19 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  BadgeCheck,
+  Building2,
+  ClipboardList,
+  FileText,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+} from 'lucide-react';
 import * as clientApi from '../api/client.api';
 import { CreateClientRequest, ClientType } from '../types/client.types';
 
@@ -31,6 +43,15 @@ const ClientForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const fieldClass =
+    'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const textareaClass =
+    'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const labelClass =
+    'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const sectionClass =
+    'rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800';
 
   useEffect(() => {
     if (isEdit && id) {
@@ -110,8 +131,11 @@ const ClientForm = () => {
   if (isLoading) {
     return (
       <MainLayout title={isEdit ? t('editClient') : t('newClient')}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-gray-400" />
+        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
+            <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
+            <span className="text-sm font-medium">Ladowanie kontrahenta...</span>
+          </div>
         </div>
       </MainLayout>
     );
@@ -119,275 +143,338 @@ const ClientForm = () => {
 
   return (
     <MainLayout title={isEdit ? t('editClient') : t('newClient')}>
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <button
-          onClick={() => navigate('/clients')}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {isEdit ? t('editClient') : t('newClient')}
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            {isEdit ? t('editClientDesc') : t('newClientDesc')}
-          </p>
-        </div>
+      <div className="mx-auto max-w-[1400px] space-y-6">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/clients')}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                aria-label="Powrot do listy kontrahentow"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                    Kontrahenci
+                  </p>
+                  <h1 className="truncate text-2xl font-semibold text-gray-950 dark:text-white">
+                    {isEdit ? t('editClient') : t('newClient')}
+                  </h1>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {isEdit ? t('editClientDesc') : t('newClientDesc')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${formData.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`}
+              />
+              {formData.is_active ? t('isActive') : t('inactive')}
+            </div>
+          </div>
+        </section>
+
+        {error && (
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <section className={sectionClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <ClipboardList className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('basicInfo')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Dane identyfikacyjne kontrahenta.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="md:col-span-2 xl:col-span-4">
+                <label htmlFor="name" className={labelClass}>
+                  {t('name')} *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className={fieldClass}
+                  placeholder={t('namePlaceholder')}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="nip" className={labelClass}>
+                  NIP
+                </label>
+                <input
+                  type="text"
+                  id="nip"
+                  name="nip"
+                  value={formData.nip}
+                  onChange={handleChange}
+                  className={fieldClass}
+                  placeholder="0000000000"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="regon" className={labelClass}>
+                  REGON
+                </label>
+                <input
+                  type="text"
+                  id="regon"
+                  name="regon"
+                  value={formData.regon}
+                  onChange={handleChange}
+                  className={fieldClass}
+                  placeholder="000000000"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="client_type" className={labelClass}>
+                  {t('clientType')}
+                </label>
+                <select
+                  id="client_type"
+                  name="client_type"
+                  value={formData.client_type}
+                  onChange={handleChange}
+                  className={fieldClass}
+                >
+                  <option value={ClientType.CLIENT}>{t('typeClient')}</option>
+                  <option value={ClientType.SUPPLIER}>{t('typeSupplier')}</option>
+                  <option value={ClientType.BOTH}>{t('typeBoth')}</option>
+                </select>
+              </div>
+
+              <div>
+                <span className={labelClass}>{t('isActive')}</span>
+                <label className="flex h-10 cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                  <span>{formData.is_active ? t('isActive') : t('inactive')}</span>
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className={sectionClass}>
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('address')}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Adres i lokalizacja firmy.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label htmlFor="street" className={labelClass}>
+                    {t('street')}
+                  </label>
+                  <input
+                    type="text"
+                    id="street"
+                    name="street"
+                    value={formData.street}
+                    onChange={handleChange}
+                    className={fieldClass}
+                    placeholder={t('streetPlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="postal_code" className={labelClass}>
+                    {t('postalCode')}
+                  </label>
+                  <input
+                    type="text"
+                    id="postal_code"
+                    name="postal_code"
+                    value={formData.postal_code}
+                    onChange={handleChange}
+                    className={fieldClass}
+                    placeholder="00-000"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="city" className={labelClass}>
+                    {t('city')}
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    className={fieldClass}
+                    placeholder={t('cityPlaceholder')}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label htmlFor="country" className={labelClass}>
+                    {t('country')}
+                  </label>
+                  <input
+                    type="text"
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleChange}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className={sectionClass}>
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                  <Phone className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('contactInfo')}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Osoba kontaktowa i dane komunikacyjne.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label htmlFor="contact_person" className={labelClass}>
+                    {t('contactPerson')}
+                  </label>
+                  <input
+                    type="text"
+                    id="contact_person"
+                    name="contact_person"
+                    value={formData.contact_person}
+                    onChange={handleChange}
+                    className={fieldClass}
+                    placeholder={t('contactPersonPlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="email" className={labelClass}>
+                    {t('email')}
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`${fieldClass} pl-9`}
+                      placeholder="email@firma.pl"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className={labelClass}>
+                    {t('phone')}
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`${fieldClass} pl-9`}
+                      placeholder="+48 000 000 000"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('notes')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Dodatkowe informacje widoczne przy kontrahencie.</p>
+              </div>
+            </div>
+
+            <textarea
+              id="notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={4}
+              className={textareaClass}
+              placeholder={t('notesPlaceholder')}
+            />
+          </section>
+
+          <section className="sticky bottom-4 z-10 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <BadgeCheck className="h-4 w-4 text-[#F7941D]" />
+                <span>{isEdit ? t('editClient') : t('newClient')}</span>
+              </div>
+              <div className="flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/clients')}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {isEdit ? t('save') : t('create')}
+                </button>
+              </div>
+            </div>
+          </section>
+        </form>
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
-        </div>
-      )}
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        {/* Basic Info */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('basicInfo')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Name */}
-          <div className="md:col-span-2">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('name')} *
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder={t('namePlaceholder')}
-            />
-          </div>
-
-          {/* NIP */}
-          <div>
-            <label htmlFor="nip" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              NIP
-            </label>
-            <input
-              type="text"
-              id="nip"
-              name="nip"
-              value={formData.nip}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder="0000000000"
-            />
-          </div>
-
-          {/* REGON */}
-          <div>
-            <label htmlFor="regon" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              REGON
-            </label>
-            <input
-              type="text"
-              id="regon"
-              name="regon"
-              value={formData.regon}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder="000000000"
-            />
-          </div>
-
-          {/* Client Type */}
-          <div>
-            <label htmlFor="client_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('clientType')}
-            </label>
-            <select
-              id="client_type"
-              name="client_type"
-              value={formData.client_type}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-            >
-              <option value={ClientType.CLIENT}>{t('typeClient')}</option>
-              <option value={ClientType.SUPPLIER}>{t('typeSupplier')}</option>
-              <option value={ClientType.BOTH}>{t('typeBoth')}</option>
-            </select>
-          </div>
-
-          {/* Active */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="is_active"
-              name="is_active"
-              checked={formData.is_active}
-              onChange={handleChange}
-              className="w-4 h-4 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
-            />
-            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-              {t('isActive')}
-            </label>
-          </div>
-        </div>
-
-        {/* Address */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('address')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Street */}
-          <div className="md:col-span-2">
-            <label htmlFor="street" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('street')}
-            </label>
-            <input
-              type="text"
-              id="street"
-              name="street"
-              value={formData.street}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder={t('streetPlaceholder')}
-            />
-          </div>
-
-          {/* City */}
-          <div>
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('city')}
-            </label>
-            <input
-              type="text"
-              id="city"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder={t('cityPlaceholder')}
-            />
-          </div>
-
-          {/* Postal Code */}
-          <div>
-            <label htmlFor="postal_code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('postalCode')}
-            </label>
-            <input
-              type="text"
-              id="postal_code"
-              name="postal_code"
-              value={formData.postal_code}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder="00-000"
-            />
-          </div>
-
-          {/* Country */}
-          <div>
-            <label htmlFor="country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('country')}
-            </label>
-            <input
-              type="text"
-              id="country"
-              name="country"
-              value={formData.country}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-        </div>
-
-        {/* Contact */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('contactInfo')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Contact Person */}
-          <div>
-            <label htmlFor="contact_person" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('contactPerson')}
-            </label>
-            <input
-              type="text"
-              id="contact_person"
-              name="contact_person"
-              value={formData.contact_person}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder={t('contactPersonPlaceholder')}
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('email')}
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder="email@firma.pl"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('phone')}
-            </label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-              placeholder="+48 000 000 000"
-            />
-          </div>
-        </div>
-
-        {/* Notes */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('notes')}</h3>
-        <div className="mb-8">
-          <textarea
-            id="notes"
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
-            placeholder={t('notesPlaceholder')}
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            type="button"
-            onClick={() => navigate('/clients')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isEdit ? t('save') : t('create')}
-          </button>
-        </div>
-      </form>
     </MainLayout>
   );
 };

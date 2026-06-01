@@ -54,7 +54,6 @@ const TaskForm = () => {
     assignee_ids: [],
     due_date: '',
     estimated_hours: undefined,
-    actual_hours: undefined,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -186,7 +185,6 @@ const TaskForm = () => {
         assignee_ids: taskData.assignees?.map(a => a.id) || (taskData.assigned_to ? [taskData.assigned_to] : []),
         due_date: taskData.due_date ? taskData.due_date.split('T')[0] : '',
         estimated_hours: taskData.estimated_hours,
-        actual_hours: taskData.actual_hours,
       });
     } catch (error) {
       console.error('Failed to load task:', error);
@@ -229,6 +227,7 @@ const TaskForm = () => {
         assigned_to: assigneeIds[0],
         due_date: isSelectedProjectOngoing || !dueDate ? null : dueDate,
       };
+      delete payload.actual_hours;
       if (isEdit && id) {
         await taskApi.updateTask(id, payload);
       } else {
@@ -264,7 +263,7 @@ const TaskForm = () => {
     setFormData(prev => ({
       ...prev,
       ...(name === 'project_id' ? { assigned_to: undefined, assignee_ids: [] } : {}),
-      [name]: name === 'estimated_hours' || name === 'actual_hours'
+      [name]: name === 'estimated_hours'
         ? (value ? parseFloat(value) : undefined)
         : value || undefined,
     }));

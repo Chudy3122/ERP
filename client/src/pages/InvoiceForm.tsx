@@ -2,7 +2,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
-import { ArrowLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calculator,
+  Calendar,
+  FileText,
+  Loader2,
+  Plus,
+  Save,
+  StickyNote,
+  Trash2,
+} from 'lucide-react';
 import * as invoiceApi from '../api/invoice.api';
 import * as clientApi from '../api/client.api';
 import { getProjects } from '../api/project.api';
@@ -46,6 +57,17 @@ const InvoiceForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const fieldClass =
+    'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const compactFieldClass =
+    'h-9 w-full rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const textareaClass =
+    'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+  const labelClass =
+    'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const sectionClass =
+    'rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800';
 
   useEffect(() => {
     loadClients();
@@ -216,8 +238,11 @@ const InvoiceForm = () => {
   if (isLoading) {
     return (
       <MainLayout title={isEdit ? t('editInvoice') : t('newInvoice')}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-gray-400" />
+        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
+            <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
+            <span className="text-sm font-medium">Ladowanie faktury...</span>
+          </div>
         </div>
       </MainLayout>
     );
@@ -225,39 +250,71 @@ const InvoiceForm = () => {
 
   return (
     <MainLayout title={isEdit ? t('editInvoice') : t('newInvoice')}>
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <button
-          onClick={() => navigate('/invoices')}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {isEdit ? t('editInvoice') : t('newInvoice')}
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            {isEdit ? t('editInvoiceDesc') : t('newInvoiceDesc')}
-          </p>
-        </div>
-      </div>
+      <div className="mx-auto max-w-[1500px] space-y-6">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/invoices')}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                aria-label="Powrot do listy faktur"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                    Finanse i rozliczenia
+                  </p>
+                  <h1 className="truncate text-2xl font-semibold text-gray-950 dark:text-white">
+                    {isEdit ? t('editInvoice') : t('newInvoice')}
+                  </h1>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {isEdit ? t('editInvoiceDesc') : t('newInvoiceDesc')}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
-        </div>
-      )}
+            <div className="rounded-xl border border-[#F7941D]/20 bg-[#F7941D]/10 px-4 py-2 text-right dark:bg-[#F7941D]/15">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D] dark:text-orange-300">
+                Wartosc brutto
+              </p>
+              <p className="text-xl font-semibold text-gray-950 dark:text-white">
+                {formatCurrency(totals.gross)}
+              </p>
+            </div>
+          </div>
+        </section>
 
-      <form onSubmit={handleSubmit}>
-        {/* Invoice Details */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('invoiceDetails')}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {error && (
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Invoice Details */}
+          <section className={sectionClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('invoiceDetails')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Kontrahent, projekt oraz terminy dokumentu.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {/* Client */}
             <div>
-              <label htmlFor="client_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="client_id" className={labelClass}>
                 {t('client')} *
               </label>
               <select
@@ -266,7 +323,7 @@ const InvoiceForm = () => {
                 value={formData.client_id}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
               >
                 <option value="">{t('selectClient')}</option>
                 {clients.map(client => (
@@ -277,7 +334,7 @@ const InvoiceForm = () => {
 
             {/* Project */}
             <div>
-              <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="project_id" className={labelClass}>
                 {t('project')}
               </label>
               <select
@@ -285,7 +342,7 @@ const InvoiceForm = () => {
                 name="project_id"
                 value={formData.project_id}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
               >
                 <option value="">{t('noProject')}</option>
                 {projects.map(project => (
@@ -296,7 +353,7 @@ const InvoiceForm = () => {
 
             {/* Currency */}
             <div>
-              <label htmlFor="currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="currency" className={labelClass}>
                 {t('currency')}
               </label>
               <select
@@ -304,7 +361,7 @@ const InvoiceForm = () => {
                 name="currency"
                 value={formData.currency}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
               >
                 <option value="PLN">PLN</option>
                 <option value="EUR">EUR</option>
@@ -314,7 +371,7 @@ const InvoiceForm = () => {
 
             {/* Issue Date */}
             <div>
-              <label htmlFor="issue_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="issue_date" className={labelClass}>
                 {t('issueDate')} *
               </label>
               <input
@@ -324,13 +381,13 @@ const InvoiceForm = () => {
                 value={formData.issue_date}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
               />
             </div>
 
             {/* Sale Date */}
             <div>
-              <label htmlFor="sale_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="sale_date" className={labelClass}>
                 {t('saleDate')}
               </label>
               <input
@@ -339,13 +396,13 @@ const InvoiceForm = () => {
                 name="sale_date"
                 value={formData.sale_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
               />
             </div>
 
             {/* Due Date */}
             <div>
-              <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="due_date" className={labelClass}>
                 {t('dueDate')} *
               </label>
               <input
@@ -355,13 +412,13 @@ const InvoiceForm = () => {
                 value={formData.due_date}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
               />
             </div>
 
             {/* Payment Terms */}
             <div>
-              <label htmlFor="payment_terms" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="payment_terms" className={labelClass}>
                 {t('paymentTerms')}
               </label>
               <input
@@ -370,112 +427,121 @@ const InvoiceForm = () => {
                 name="payment_terms"
                 value={formData.payment_terms}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={fieldClass}
                 placeholder="14 dni"
               />
             </div>
           </div>
-        </div>
+          </section>
 
         {/* Invoice Items */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('items')}</h3>
+          <section className={sectionClass}>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                <Calculator className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('items')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Pozycje faktury i automatyczne przeliczenie wartosci.</p>
+              </div>
+            </div>
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               {t('addItem')}
             </button>
           </div>
 
           {/* Items Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                  <th className="pb-2 pr-2" style={{ minWidth: '200px' }}>{t('description')}</th>
-                  <th className="pb-2 px-2 text-right" style={{ width: '80px' }}>{t('quantity')}</th>
-                  <th className="pb-2 px-2" style={{ width: '80px' }}>{t('unit')}</th>
-                  <th className="pb-2 px-2 text-right" style={{ width: '120px' }}>{t('unitPrice')}</th>
-                  <th className="pb-2 px-2 text-right" style={{ width: '80px' }}>{t('vatRate')}</th>
-                  <th className="pb-2 px-2 text-right" style={{ width: '120px' }}>{t('netAmount')}</th>
-                  <th className="pb-2 px-2 text-right" style={{ width: '120px' }}>{t('grossAmount')}</th>
-                  <th className="pb-2 pl-2" style={{ width: '40px' }}></th>
+          <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
+            <table className="min-w-[980px] w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900/40">
+                <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-3 py-3" style={{ minWidth: '240px' }}>{t('description')}</th>
+                  <th className="px-3 py-3 text-right" style={{ width: '90px' }}>{t('quantity')}</th>
+                  <th className="px-3 py-3" style={{ width: '90px' }}>{t('unit')}</th>
+                  <th className="px-3 py-3 text-right" style={{ width: '130px' }}>{t('unitPrice')}</th>
+                  <th className="px-3 py-3 text-right" style={{ width: '90px' }}>{t('vatRate')}</th>
+                  <th className="px-3 py-3 text-right" style={{ width: '130px' }}>{t('netAmount')}</th>
+                  <th className="px-3 py-3 text-right" style={{ width: '140px' }}>{t('grossAmount')}</th>
+                  <th className="px-3 py-3" style={{ width: '48px' }}></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {items.map((item, index) => {
                   const amounts = calculateItemAmounts(item);
                   return (
-                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
-                      <td className="py-2 pr-2">
+                    <tr key={index} className="transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-700/30">
+                      <td className="px-3 py-3">
                         <input
                           type="text"
                           value={item.description}
                           onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm"
+                          className={compactFieldClass}
                           placeholder={t('itemDescription')}
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="px-3 py-3">
                         <input
                           type="number"
                           step="0.001"
                           min="0"
                           value={item.quantity}
                           onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm text-right"
+                          className={`${compactFieldClass} text-right`}
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="px-3 py-3">
                         <select
                           value={item.unit}
                           onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
-                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm"
+                          className={compactFieldClass}
                         >
                           {UNITS.map(unit => (
                             <option key={unit} value={unit}>{unit}</option>
                           ))}
                         </select>
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="px-3 py-3">
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           value={item.unit_price_net}
                           onChange={(e) => handleItemChange(index, 'unit_price_net', e.target.value)}
-                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm text-right"
+                          className={`${compactFieldClass} text-right`}
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="px-3 py-3">
                         <select
                           value={item.vat_rate}
                           onChange={(e) => handleItemChange(index, 'vat_rate', e.target.value)}
-                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white text-sm"
+                          className={compactFieldClass}
                         >
                           {VAT_RATES.map(rate => (
                             <option key={rate} value={rate}>{rate}%</option>
                           ))}
                         </select>
                       </td>
-                      <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300">
+                      <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
                         {formatCurrency(amounts.net_amount)}
                       </td>
-                      <td className="py-2 px-2 text-right font-medium text-gray-900 dark:text-white">
+                      <td className="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">
                         {formatCurrency(amounts.gross_amount)}
                       </td>
-                      <td className="py-2 pl-2">
+                      <td className="px-3 py-3">
                         <button
                           type="button"
                           onClick={() => removeItem(index)}
                           disabled={items.length === 1}
-                          className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                          aria-label="Usun pozycje"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
                     </tr>
@@ -487,7 +553,7 @@ const InvoiceForm = () => {
 
           {/* Totals */}
           <div className="mt-6 flex justify-end">
-            <div className="w-64 space-y-2">
+            <div className="w-full rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30 sm:w-80">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">{t('netTotal')}:</span>
                 <span className="text-gray-900 dark:text-white">{formatCurrency(totals.net)}</span>
@@ -496,21 +562,30 @@ const InvoiceForm = () => {
                 <span className="text-gray-500 dark:text-gray-400">{t('vatTotal')}:</span>
                 <span className="text-gray-900 dark:text-white">{formatCurrency(totals.vat)}</span>
               </div>
-              <div className="flex justify-between text-lg font-semibold border-t border-gray-200 dark:border-gray-700 pt-2">
+              <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-lg font-semibold dark:border-gray-700">
                 <span className="text-gray-900 dark:text-white">{t('grossTotal')}:</span>
                 <span className="text-gray-900 dark:text-white">{formatCurrency(totals.gross)}</span>
               </div>
             </div>
           </div>
-        </div>
+          </section>
 
         {/* Notes */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('additionalInfo')}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <section className={sectionClass}>
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              <StickyNote className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('additionalInfo')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Uwagi widoczne na fakturze oraz notatki wewnetrzne.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Notes (visible on invoice) */}
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="notes" className={labelClass}>
                 {t('notes')}
               </label>
               <textarea
@@ -519,14 +594,14 @@ const InvoiceForm = () => {
                 value={formData.notes}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={textareaClass}
                 placeholder={t('notesPlaceholder')}
               />
             </div>
 
             {/* Internal Notes */}
             <div>
-              <label htmlFor="internal_notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="internal_notes" className={labelClass}>
                 {t('internalNotes')}
               </label>
               <textarea
@@ -535,36 +610,44 @@ const InvoiceForm = () => {
                 value={formData.internal_notes}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
+                className={textareaClass}
                 placeholder={t('internalNotesPlaceholder')}
               />
             </div>
           </div>
-        </div>
+          </section>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/invoices')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isEdit ? t('save') : t('create')}
-          </button>
-        </div>
-      </form>
+          <section className="sticky bottom-4 z-10 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {t('grossTotal')}: <span className="font-semibold text-gray-950 dark:text-white">{formatCurrency(totals.gross)}</span>
+              </div>
+              <div className="flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/invoices')}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {isEdit ? t('save') : t('create')}
+                </button>
+              </div>
+            </div>
+          </section>
+        </form>
+      </div>
     </MainLayout>
   );
 };
