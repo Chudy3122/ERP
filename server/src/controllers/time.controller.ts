@@ -350,6 +350,35 @@ export class TimeController {
   }
 
   /**
+   * Get comments for a leave request
+   * GET /api/time/leave/:id/comments
+   */
+  async getLeaveComments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const comments = await timeService.getLeaveComments(id);
+      res.status(200).json({ success: true, data: comments });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to get comments' });
+    }
+  }
+
+  /**
+   * Add a comment to a leave request (owner or manager)
+   * POST /api/time/leave/:id/comments
+   */
+  async addLeaveComment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+      const comment = await timeService.addLeaveComment(id, req.user!.userId, content);
+      res.status(201).json({ success: true, data: comment });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to add comment' });
+    }
+  }
+
+  /**
    * Get user's leave requests
    * GET /api/time/leave
    */

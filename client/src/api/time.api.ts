@@ -175,6 +175,27 @@ export const getManageableLeaveRequests = async (): Promise<LeaveRequest[]> => {
   return response.data.data;
 };
 
+export interface LeaveComment {
+  id: string;
+  leave_request_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  user?: { id: string; first_name: string; last_name: string; avatar_url: string | null };
+}
+
+/** Get comments for a leave request */
+export const getLeaveComments = async (requestId: string): Promise<LeaveComment[]> => {
+  const response = await apiClient.get(`/time/leave/${requestId}/comments`);
+  return response.data.data;
+};
+
+/** Add a comment to a leave request */
+export const addLeaveComment = async (requestId: string, content: string): Promise<LeaveComment> => {
+  const response = await apiClient.post(`/time/leave/${requestId}/comments`, { content });
+  return response.data.data;
+};
+
 /**
  * Get user's leave balance
  */

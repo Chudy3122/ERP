@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
-import { ArrowLeft, Calendar, CheckCircle2, Clock, Home, MoreHorizontal, Umbrella, XCircle, Heart, User } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Clock, Home, MoreHorizontal, Umbrella, XCircle, Heart, User, MessageSquare, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as timeApi from '../api/time.api';
+import type { LeaveComment } from '../api/time.api';
 import type { LeaveRequest } from '../types/time.types';
+import { getFileUrl } from '../api/axios-config';
 
 type LeaveType = 'vacation' | 'sick_leave' | 'remote_work' | 'other';
 
@@ -73,13 +75,42 @@ const AbsenceDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isReviewing, setIsReviewing] = useState(false);
+  const [comments, setComments] = useState<LeaveComment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
 
   const canReview = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
   const canCancel = request?.status === 'pending' && request.user_id === user?.id;
+  const canComment = canReview || request?.user_id === user?.id;
 
   useEffect(() => {
     loadRequest();
+    loadComments();
   }, [id]);
+
+  const loadComments = async () => {
+    if (!id) return;
+    try {
+      const data = await timeApi.getLeaveComments(id);
+      setComments(data);
+    } catch {
+      // brak komentarzy / brak uprawnień — nie blokuje widoku
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!id || !newComment.trim()) return;
+    try {
+      setIsPostingComment(true);
+      const comment = await timeApi.addLeaveComment(id, newComment.trim());
+      setComments(prev => [...prev, comment]);
+      setNewComment('');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Nie udało się dodać komentarza');
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
 
   const loadRequest = async () => {
     if (!id) return;
@@ -265,6 +296,62 @@ const AbsenceDetail = () => {
                 <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
                   {request.reason || 'Brak dodatkowego uzasadnienia.'}
                 </p>
+              </div>
+
+              {/* Comments */}
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
+                  <MessageSquare className="h-4 w-4 text-[#F7941D]" />
+                  Komentarze {comments.length > 0 && <span className="text-sm font-normal text-gray-400">({comments.length})</span>}
+                </h3>
+
+                <div className="mt-4 space-y-3">
+                  {comments.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500">Brak komentarzy.</p>
+                  ) : (
+                    comments.map(c => (
+                      <div key={c.id} className="flex gap-3">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F7941D]/10 text-xs font-bold text-[#F7941D]">
+                          {c.user?.avatar_url
+                            ? <img src={getFileUrl(c.user.avatar_url) || ''} alt="" className="h-full w-full object-cover" />
+                            : `${c.user?.first_name?.[0] ?? ''}${c.user?.last_name?.[0] ?? ''}`}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {c.user ? `${c.user.first_name} ${c.user.last_name}` : 'Użytkownik'}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(c.created_at).toLocaleString('pl-PL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-300">{c.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {canComment && (
+                  <div className="mt-4 flex gap-2 border-t border-gray-100 pt-4 dark:border-gray-700">
+                    <input
+                      type="text"
+                      value={newComment}
+                      onChange={e => setNewComment(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                      placeholder="Napisz komentarz..."
+                      className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddComment}
+                      disabled={isPostingComment || !newComment.trim()}
+                      className="flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#e08317] disabled:opacity-60"
+                    >
+                      {isPostingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

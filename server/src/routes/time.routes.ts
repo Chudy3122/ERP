@@ -69,6 +69,10 @@ router.get('/leave/balance', timeController.getUserLeaveBalance);
 // Cancel leave request
 router.delete('/leave/:id', timeController.cancelLeaveRequest);
 
+// Leave request comments (owner or manager — enforced in service)
+router.get('/leave/:id/comments', timeController.getLeaveComments.bind(timeController));
+router.post('/leave/:id/comments', timeController.addLeaveComment.bind(timeController));
+
 // Roles allowed to manage (approve/reject/revert) leave requests
 const LEAVE_MANAGER_ROLES = [UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SZEF];
 

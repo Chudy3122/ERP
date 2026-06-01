@@ -2,6 +2,7 @@ import { Between, Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../models/LeaveRequest.model';
+import { LeaveRequestComment } from '../models/LeaveRequestComment.model';
 import { User } from '../models/User.model';
 
 function roundToNearest15Min(date: Date): Date {
@@ -29,12 +30,53 @@ export type DayState = 'not_started' | 'working' | 'paused' | 'ended';
 export class TimeService {
   private timeEntryRepository: Repository<TimeEntry>;
   private leaveRequestRepository: Repository<LeaveRequest>;
+  private leaveCommentRepository: Repository<LeaveRequestComment>;
   private userRepository: Repository<User>;
 
   constructor() {
     this.timeEntryRepository = AppDataSource.getRepository(TimeEntry);
     this.leaveRequestRepository = AppDataSource.getRepository(LeaveRequest);
+    this.leaveCommentRepository = AppDataSource.getRepository(LeaveRequestComment);
     this.userRepository = AppDataSource.getRepository(User);
+  }
+
+  // ===== LEAVE REQUEST COMMENTS =====
+
+  /** List comments for a leave request (oldest first) */
+  async getLeaveComments(leaveRequestId: string): Promise<LeaveRequestComment[]> {
+    return this.leaveCommentRepository.find({
+      where: { leave_request_id: leaveRequestId },
+      relations: ['user'],
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  /**
+   * Add a comment. Allowed for the request owner or a manager
+   * (admin/kierownik/ksiegowosc/szef). Returns the saved comment with user.
+   */
+  async addLeaveComment(leaveRequestId: string, userId: string, content: string): Promise<LeaveRequestComment> {
+    const trimmed = (content || '').trim();
+    if (!trimmed) throw new Error('Komentarz nie może być pusty');
+
+    const request = await this.leaveRequestRepository.findOne({ where: { id: leaveRequestId } });
+    if (!request) throw new Error('Wniosek nie znaleziony');
+
+    const author = await this.userRepository.findOne({ where: { id: userId }, select: ['id', 'role'] });
+    const managerRoles = ['admin', 'kierownik', 'ksiegowosc', 'szef'];
+    const isOwner = request.user_id === userId;
+    const isManager = author ? managerRoles.includes(author.role) : false;
+    if (!isOwner && !isManager) {
+      throw new Error('Brak uprawnień do komentowania tego wniosku');
+    }
+
+    const comment = this.leaveCommentRepository.create({
+      leave_request_id: leaveRequestId,
+      user_id: userId,
+      content: trimmed,
+    });
+    const saved = await this.leaveCommentRepository.save(comment);
+    return (await this.leaveCommentRepository.findOne({ where: { id: saved.id }, relations: ['user'] }))!;
   }
 
   // ===== TIME ENTRIES =====
