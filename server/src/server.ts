@@ -10,6 +10,7 @@ import { setupNotificationHandlers } from './sockets/notification.socket';
 import { setupMeetingHandlers } from './sockets/meeting.socket';
 import { TimeService } from './services/time.service';
 import { seedDepartments } from './database/seeds/seedDepartments';
+import userStatusService from './services/userStatus.service';
 
 const PORT = process.env.PORT || 5000;
 
@@ -19,6 +20,15 @@ const startServer = async () => {
     // Connect to database
     await initializeDatabase();
     await seedDepartments();
+
+    // Reset stale user statuses to offline — nobody is connected right after boot
+    // (handles crashes / Render spin-down where no disconnect event fired)
+    try {
+      const reset = await userStatusService.resetAllOffline();
+      if (reset > 0) console.log(`🔄 Reset ${reset} stale user status(es) to offline on startup`);
+    } catch (err) {
+      console.error('Failed to reset stale statuses on startup:', err);
+    }
 
     // Create HTTP server
     const httpServer = createServer(app);

@@ -80,6 +80,21 @@ class UserStatusService {
   }
 
   /**
+   * Reset every user to offline. Called on server startup so stale statuses
+   * (left over after a crash / Render spin-down where no disconnect fired)
+   * don't show people as available/away when they aren't connected.
+   */
+  async resetAllOffline(): Promise<number> {
+    const result = await this.userStatusRepository
+      .createQueryBuilder()
+      .update(UserStatus)
+      .set({ status: StatusType.OFFLINE, last_seen: () => 'NOW()' })
+      .where('status != :offline', { offline: StatusType.OFFLINE })
+      .execute();
+    return result.affected ?? 0;
+  }
+
+  /**
    * Set user away
    */
   async setAway(userId: string, customMessage?: string): Promise<UserStatus> {
