@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Loader2 } from 'lucide-react';
+import { Building2, X, Loader2 } from 'lucide-react';
 import type { Department, CreateDepartmentData, UpdateDepartmentData } from '../../types/department.types';
 import * as adminApi from '../../api/admin.api';
 import type { AdminUser } from '../../types/admin.types';
@@ -13,6 +13,7 @@ interface DepartmentFormProps {
 }
 
 const COLORS = [
+  '#F7941D', // brand orange
   '#3B82F6', // blue
   '#10B981', // green
   '#F59E0B', // amber
@@ -20,7 +21,6 @@ const COLORS = [
   '#8B5CF6', // purple
   '#EC4899', // pink
   '#06B6D4', // cyan
-  '#F97316', // orange
   '#6366F1', // indigo
   '#84CC16', // lime
 ];
@@ -109,32 +109,43 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
   const availableParents = getAvailableParents();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {isEditing ? t('organization.editDepartment') : t('organization.newDepartment')}
-          </h2>
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5 dark:border-gray-700">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#F7941D]">
+                Struktura organizacyjna
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-gray-950 dark:text-white">
+                {isEditing ? t('organization.editDepartment') : t('organization.newDepartment')}
+              </h2>
+            </div>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <form onSubmit={handleSubmit} className="max-h-[calc(90vh-150px)] space-y-5 overflow-y-auto p-6">
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
               {error}
             </div>
           )}
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('organization.departmentName')} *
             </label>
             <input
@@ -142,14 +153,14 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               placeholder="np. Dział IT"
             />
           </div>
 
           {/* Code */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('organization.departmentCode')} *
             </label>
             <input
@@ -159,34 +170,34 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
               required
               maxLength={20}
               disabled={isEditing}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:dark:bg-gray-800 disabled:cursor-not-allowed"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:dark:bg-gray-800"
               placeholder={t('organization.codePlaceholder')}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('organization.description')}
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               placeholder={t('organization.descriptionPlaceholder')}
             />
           </div>
 
           {/* Parent Department */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('organization.parentDepartment')}
             </label>
             <select
               value={formData.parent_id}
               onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
               <option value="">{t('organization.noParent')}</option>
               {availableParents.map((dept) => (
@@ -199,19 +210,19 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
 
           {/* Department Head */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('organization.departmentHead')}
             </label>
             {isLoadingUsers ? (
-              <div className="flex items-center gap-2 text-gray-500 py-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
+                <Loader2 className="w-4 h-4 animate-spin text-[#F7941D]" />
                 {t('organization.loading')}
               </div>
             ) : (
               <select
                 value={formData.head_id}
                 onChange={(e) => setFormData({ ...formData, head_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">{t('organization.selectHead')}</option>
                 {users.map((user) => (
@@ -225,37 +236,38 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
 
           {/* Color */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('organization.color')}
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
               {COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => setFormData({ ...formData, color })}
-                  className={`w-8 h-8 rounded-lg transition-transform ${
-                    formData.color === color ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'hover:scale-105'
+                  className={`h-8 w-8 rounded-lg transition-transform ${
+                    formData.color === color ? 'scale-110 ring-2 ring-[#F7941D] ring-offset-2 dark:ring-offset-gray-800' : 'hover:scale-105'
                   }`}
                   style={{ backgroundColor: color }}
+                  aria-label={`Kolor ${color}`}
                 />
               ))}
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               {t('organization.cancel')}
             </button>
             <button
               type="submit"
               disabled={isLoading || !formData.name || !formData.code}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:bg-[#F7941D]/50"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isEditing ? t('organization.save') : t('organization.create')}

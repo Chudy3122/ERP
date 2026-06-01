@@ -53,6 +53,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useTranslation } from 'react-i18next';
 
 type TabType = 'dashboard' | 'tasks' | 'members' | 'files' | 'activity' | 'settings';
+type MemberSortMode = 'name' | 'role';
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +69,7 @@ const ProjectDetail = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [showAddMemberPanel, setShowAddMemberPanel] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [memberSortMode, setMemberSortMode] = useState<MemberSortMode>('name');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(ProjectMemberRole.MEMBER);
   const [memberActionUserId, setMemberActionUserId] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<ProjectStatistics | null>(null);
@@ -258,6 +260,15 @@ const ProjectDetail = () => {
     return classes[role] || classes[ProjectMemberRole.MEMBER];
   };
 
+  const getProjectMemberRoleSortRank = (role: ProjectMemberRole) => {
+    const ranks = {
+      [ProjectMemberRole.LEAD]: 0,
+      [ProjectMemberRole.MEMBER]: 1,
+      [ProjectMemberRole.OBSERVER]: 2,
+    };
+    return ranks[role] ?? 99;
+  };
+
   const getUserDisplayName = (userItem?: {
     first_name?: string;
     last_name?: string;
@@ -286,6 +297,24 @@ const ProjectDetail = () => {
             } satisfies ProjectMember,
           ]
         : [];
+
+  const sortedVisibleMembers = [...visibleMembers].sort((firstMember, secondMember) => {
+    if (memberSortMode === 'role') {
+      const roleDiff =
+        getProjectMemberRoleSortRank(firstMember.role) -
+        getProjectMemberRoleSortRank(secondMember.role);
+
+      if (roleDiff !== 0) return roleDiff;
+    }
+
+    return getUserDisplayName(firstMember.user).localeCompare(
+      getUserDisplayName(secondMember.user),
+      'pl',
+      {
+        sensitivity: 'base',
+      }
+    );
+  });
 
   const assignableProjectMembers = [...visibleMembers].sort((firstMember, secondMember) =>
     getUserDisplayName(firstMember.user).localeCompare(
@@ -1341,18 +1370,13 @@ const ProjectDetail = () => {
                           <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {stage?.name || t('projects.noStage') || 'Bez etapu'}
                           </span>
-                          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">
+                          <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">
                             {searchQuery ? `${filteredTasks.length}/${tasks.length}` : tasks.length}
                           </span>
                         </div>
                         <p className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
                           {isUnassignedStage ? 'Zadania bez przypisanego etapu' : 'Etap projektu'}
                         </p>
-                        {stage?.is_completed_stage && (
-                          <span className="mt-1 inline-flex rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                            Etap końcowy
-                          </span>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1671,9 +1695,26 @@ const ProjectDetail = () => {
 
       {activeTab === 'members' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="font-medium text-gray-900 dark:text-white">Członkowie zespołu</h3>
-            {isAdmin && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4 dark:border-gray-700">
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">Członkowie zespołu</h3>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                {visibleMembers.length} osób w projekcie
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <span>Sortuj</span>
+                <select
+                  value={memberSortMode}
+                  onChange={event => setMemberSortMode(event.target.value as MemberSortMode)}
+                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  <option value="name">Alfabetycznie po imieniu</option>
+                  <option value="role">Po roli w zespole</option>
+                </select>
+              </label>
+              {isAdmin && (
               <button
                 type="button"
                 onClick={() => setShowAddMemberPanel(isOpen => !isOpen)}
@@ -1682,7 +1723,8 @@ const ProjectDetail = () => {
                 <Plus className="w-4 h-4" />
                 {showAddMemberPanel ? 'Zamknij' : 'Dodaj członka'}
               </button>
-            )}
+              )}
+            </div>
           </div>
           {isAdmin && showAddMemberPanel && (
             <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
@@ -1752,7 +1794,7 @@ const ProjectDetail = () => {
                 Brak członków w projekcie
               </div>
             ) : (
-              visibleMembers.map(member => (
+              sortedVisibleMembers.map(member => (
                 <div
                   key={member.id}
                   className="p-4 flex items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"

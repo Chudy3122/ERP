@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Search, UserPlus, Loader2 } from 'lucide-react';
+import { X, Search, UserPlus, Loader2, Users } from 'lucide-react';
 import * as adminApi from '../../api/admin.api';
 import type { AdminUser } from '../../types/admin.types';
 
@@ -61,28 +61,34 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('organization.assignEmployee')}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {departmentName}
-            </p>
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5 dark:border-gray-700">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#F7941D]">
+                {departmentName}
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-gray-950 dark:text-white">
+                {t('organization.assignEmployee')}
+              </h2>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search */}
-        <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-700">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -90,7 +96,7 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('employees.search')}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 py-2.5 pl-9 pr-3 text-sm transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
           </div>
         </div>
@@ -99,10 +105,10 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-[#F7941D]" />
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
               {searchQuery ? t('employees.noMatch') : t('chat.noUsersAvailable')}
             </div>
           ) : (
@@ -110,9 +116,9 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
               {filteredUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/10"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F7941D]/10 text-sm font-semibold text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
                     {user.first_name[0]}{user.last_name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -131,7 +137,7 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
                   <button
                     onClick={() => handleAssign(user.id)}
                     disabled={assigningUserId === user.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:bg-[#F7941D]/50"
                   >
                     {assigningUserId === user.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -147,10 +153,11 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="border-t border-gray-100 px-6 py-4 dark:border-gray-700">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             {t('organization.cancel')}
           </button>

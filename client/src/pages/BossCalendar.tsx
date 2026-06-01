@@ -1,26 +1,64 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../api/boss-calendar.api';
 import { BossCalendarEntry, CreateEntryPayload, EntryType } from '../types/boss-calendar.types';
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, MapPin, AlignLeft } from 'lucide-react';
+import {
+  AlignLeft,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MapPin,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const HOUR_START = 7;
 const HOUR_END = 20;
 const TOTAL_MINUTES = (HOUR_END - HOUR_START) * 60;
-const SLOT_PX = 60; // px per hour
+const SLOT_PX = 60;
 
 const DAYS_PL = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const MONTHS_PL = [
-  'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
-  'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia',
+  'stycznia',
+  'lutego',
+  'marca',
+  'kwietnia',
+  'maja',
+  'czerwca',
+  'lipca',
+  'sierpnia',
+  'września',
+  'października',
+  'listopada',
+  'grudnia',
 ];
 
 const TYPE_CONFIG: Record<EntryType, { label: string; bg: string; border: string; text: string; dot: string }> = {
-  meeting:   { label: 'Spotkanie',    bg: 'bg-orange-50',  border: 'border-orange-400', text: 'text-orange-800',  dot: 'bg-orange-400' },
-  available: { label: 'Dostępny',     bg: 'bg-green-50',   border: 'border-green-400',  text: 'text-green-800',   dot: 'bg-green-400' },
-  blocked:   { label: 'Niedostępny',  bg: 'bg-gray-100',   border: 'border-gray-400',   text: 'text-gray-600',    dot: 'bg-gray-400' },
+  meeting: {
+    label: 'Spotkanie',
+    bg: 'bg-[#F7941D]/10 dark:bg-[#F7941D]/15',
+    border: 'border-[#F7941D]',
+    text: 'text-[#b76612] dark:text-orange-200',
+    dot: 'bg-[#F7941D]',
+  },
+  available: {
+    label: 'Dostępny',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    border: 'border-emerald-400',
+    text: 'text-emerald-800 dark:text-emerald-200',
+    dot: 'bg-emerald-400',
+  },
+  blocked: {
+    label: 'Niedostępny',
+    bg: 'bg-gray-100 dark:bg-gray-700/60',
+    border: 'border-gray-400',
+    text: 'text-gray-700 dark:text-gray-200',
+    dot: 'bg-gray-400',
+  },
 };
 
 function toMinutes(time: string): number {
@@ -89,7 +127,9 @@ export default function BossCalendar() {
     }
   }, [from, to]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const openCreate = (date?: string) => {
     setEditingEntry(null);
@@ -117,9 +157,18 @@ export default function BossCalendar() {
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) { toast.warning('Tytuł jest wymagany'); return; }
-    if (!form.date || !form.start_time || !form.end_time) { toast.warning('Uzupełnij datę i godziny'); return; }
-    if (toMinutes(form.start_time) >= toMinutes(form.end_time)) { toast.warning('Godzina końca musi być późniejsza niż start'); return; }
+    if (!form.title.trim()) {
+      toast.warning('Tytuł jest wymagany');
+      return;
+    }
+    if (!form.date || !form.start_time || !form.end_time) {
+      toast.warning('Uzupełnij datę i godziny');
+      return;
+    }
+    if (toMinutes(form.start_time) >= toMinutes(form.end_time)) {
+      toast.warning('Godzina końca musi być późniejsza niż start');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -156,218 +205,275 @@ export default function BossCalendar() {
   };
 
   const entriesByDay = (dayStr: string) =>
-    entries
-      .filter(e => e.date === dayStr)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    entries.filter((entry) => entry.date === dayStr).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
   const weekLabel = () => {
-    const s = weekDays[0];
-    const e = weekDays[6];
-    if (s.getMonth() === e.getMonth()) {
-      return `${s.getDate()}–${e.getDate()} ${MONTHS_PL[s.getMonth()]} ${s.getFullYear()}`;
+    const start = weekDays[0];
+    const end = weekDays[6];
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.getDate()}-${end.getDate()} ${MONTHS_PL[start.getMonth()]} ${start.getFullYear()}`;
     }
-    return `${s.getDate()} ${MONTHS_PL[s.getMonth()]} – ${e.getDate()} ${MONTHS_PL[e.getMonth()]} ${e.getFullYear()}`;
+    return `${start.getDate()} ${MONTHS_PL[start.getMonth()]} - ${end.getDate()} ${MONTHS_PL[end.getMonth()]} ${end.getFullYear()}`;
   };
 
   const todayStr = formatDate(new Date());
+  const meetingsCount = entries.filter((entry) => entry.type === 'meeting').length;
+  const availableCount = entries.filter((entry) => entry.type === 'available').length;
+  const blockedCount = entries.filter((entry) => entry.type === 'blocked').length;
+
+  const statCards = [
+    { label: 'Wpisy w tygodniu', value: entries.length, dot: 'bg-[#F7941D]' },
+    { label: 'Spotkania', value: meetingsCount, dot: 'bg-[#F7941D]' },
+    { label: 'Dostępność', value: availableCount, dot: 'bg-emerald-400' },
+    { label: 'Blokady', value: blockedCount, dot: 'bg-gray-400' },
+  ];
 
   return (
     <MainLayout title="Kalendarz Szefa">
-      <div className="flex flex-col h-full gap-4">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setWeekStart(w => addDays(w, -7))}
-              className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="font-semibold text-gray-900 dark:text-white min-w-[260px] text-center">
-              {weekLabel()}
-            </span>
-            <button
-              onClick={() => setWeekStart(w => addDays(w, 7))}
-              className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setWeekStart(getMondayOf(new Date()))}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-            >
-              Dziś
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Legend */}
-            <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500">
-              {(Object.entries(TYPE_CONFIG) as [EntryType, typeof TYPE_CONFIG[EntryType]][]).map(([type, cfg]) => (
-                <span key={type} className="flex items-center gap-1">
-                  <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
-                  {cfg.label}
-                </span>
-              ))}
+      <div className="mx-auto flex max-w-[1600px] flex-col space-y-6">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Plan tygodnia</p>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-950 dark:text-white">Kalendarz Szefa</h1>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Widok tygodniowy spotkań, dostępności i blokad czasowych.
+                  </p>
+                </div>
+              </div>
             </div>
+
             {canEdit && (
               <button
+                type="button"
                 onClick={() => openCreate()}
-                className="flex items-center gap-2 px-4 py-2 bg-[#F7941D] hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" />
                 Dodaj wpis
               </button>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Calendar grid */}
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-64 text-gray-400">Ładowanie…</div>
-          ) : (
-            <div className="min-w-[700px]">
-              {/* Day headers */}
-              <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-                <div className="border-r border-gray-200 dark:border-gray-700" />
-                {weekDays.map((day, i) => {
-                  const isToday = formatDate(day) === todayStr;
-                  return (
-                    <div
-                      key={i}
-                      className={`py-3 text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${isToday ? 'bg-orange-50 dark:bg-orange-900/10' : ''}`}
-                    >
-                      <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{DAYS_PL[i]}</div>
-                      <div className={`text-lg font-semibold mt-0.5 ${isToday ? 'text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
-                        {day.getDate()}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Time grid */}
-              <div className="grid grid-cols-[56px_repeat(7,1fr)]">
-                {/* Hour labels */}
-                <div className="border-r border-gray-200 dark:border-gray-700">
-                  {hours.map(h => (
-                    <div
-                      key={h}
-                      style={{ height: SLOT_PX }}
-                      className="flex items-start justify-end pr-2 pt-1 text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700/50"
-                    >
-                      {String(h).padStart(2, '0')}:00
-                    </div>
-                  ))}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((card) => (
+            <div
+              key={card.label}
+              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="flex items-center gap-3">
+                <span className={`h-3 w-3 rounded-full ${card.dot}`} />
+                <div>
+                  <p className="text-2xl font-semibold text-gray-950 dark:text-white">{card.value}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
                 </div>
-
-                {/* Day columns */}
-                {weekDays.map((day, di) => {
-                  const dayStr = formatDate(day);
-                  const isToday = dayStr === todayStr;
-                  const dayEntries = entriesByDay(dayStr);
-
-                  return (
-                    <div
-                      key={di}
-                      className={`relative border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${isToday ? 'bg-orange-50/30 dark:bg-orange-900/5' : ''}`}
-                      style={{ height: SLOT_PX * (HOUR_END - HOUR_START) }}
-                    >
-                      {/* Hour lines */}
-                      {hours.map(h => (
-                        <div
-                          key={h}
-                          style={{ top: (h - HOUR_START) * SLOT_PX }}
-                          className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-700/50"
-                        />
-                      ))}
-
-                      {/* Half-hour lines */}
-                      {hours.map(h => (
-                        <div
-                          key={`half-${h}`}
-                          style={{ top: (h - HOUR_START) * SLOT_PX + SLOT_PX / 2 }}
-                          className="absolute left-0 right-0 border-b border-dashed border-gray-100 dark:border-gray-700/30"
-                        />
-                      ))}
-
-                      {/* Add click target (only for editors) */}
-                      {canEdit && (
-                        <div
-                          className="absolute inset-0 cursor-pointer"
-                          onClick={() => openCreate(dayStr)}
-                        />
-                      )}
-
-                      {/* Events */}
-                      {dayEntries.map(entry => {
-                        const startMin = toMinutes(entry.start_time) - HOUR_START * 60;
-                        const endMin = toMinutes(entry.end_time) - HOUR_START * 60;
-                        const clampedStart = Math.max(0, startMin);
-                        const clampedEnd = Math.min(TOTAL_MINUTES, endMin);
-                        if (clampedEnd <= clampedStart) return null;
-
-                        const top = (clampedStart / 60) * SLOT_PX;
-                        const height = ((clampedEnd - clampedStart) / 60) * SLOT_PX;
-                        const cfg = TYPE_CONFIG[entry.type];
-
-                        return (
-                          <div
-                            key={entry.id}
-                            style={{ top, height: Math.max(height, 22), left: 2, right: 2 }}
-                            className={`absolute rounded border-l-4 px-1.5 py-1 overflow-hidden cursor-pointer select-none z-10 ${cfg.bg} ${cfg.border} hover:brightness-95 transition-all`}
-                            onClick={e => { e.stopPropagation(); canEdit ? openEdit(entry) : undefined; }}
-                          >
-                            <div className={`text-xs font-semibold truncate ${cfg.text}`}>{entry.title}</div>
-                            {height >= 36 && (
-                              <div className={`text-xs truncate ${cfg.text} opacity-75`}>
-                                {entry.start_time}–{entry.end_time}
-                              </div>
-                            )}
-                            {height >= 52 && entry.location && (
-                              <div className={`text-xs truncate ${cfg.text} opacity-60`}>{entry.location}</div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          ))}
+        </section>
 
-      {/* Add/Edit Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editingEntry ? 'Edytuj wpis' : 'Nowy wpis'}
-              </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                <X className="w-5 h-5" />
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setWeekStart((week) => addDays(week, -7))}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                aria-label="Poprzedni tydzień"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="flex h-10 min-w-[260px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                {weekLabel()}
+              </div>
+              <button
+                type="button"
+                onClick={() => setWeekStart((week) => addDays(week, 7))}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                aria-label="Następny tydzień"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeekStart(getMondayOf(new Date()))}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                Dziś
               </button>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
-              {/* Type */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              {(Object.entries(TYPE_CONFIG) as [EntryType, (typeof TYPE_CONFIG)[EntryType]][]).map(([type, cfg]) => (
+                <span key={type} className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 dark:bg-gray-900/40">
+                  <span className={`h-2.5 w-2.5 rounded-full ${cfg.dot}`} />
+                  {cfg.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-auto">
+            {loading ? (
+              <div className="flex h-80 items-center justify-center">
+                <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
+                  <Loader2 className="h-9 w-9 animate-spin text-[#F7941D]" />
+                  <span className="text-sm font-medium">Ładowanie kalendarza...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-[900px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,1fr)] border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                  <div className="border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40" />
+                  {weekDays.map((day, index) => {
+                    const isToday = formatDate(day) === todayStr;
+                    return (
+                      <div
+                        key={index}
+                        className={`border-r border-gray-200 py-3 text-center last:border-r-0 dark:border-gray-700 ${
+                          isToday ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10' : 'bg-white dark:bg-gray-800'
+                        }`}
+                      >
+                        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          {DAYS_PL[index]}
+                        </div>
+                        <div className={`mt-0.5 text-lg font-semibold ${isToday ? 'text-[#F7941D]' : 'text-gray-950 dark:text-white'}`}>
+                          {day.getDate()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-[64px_repeat(7,1fr)]">
+                  <div className="border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
+                    {hours.map((hour) => (
+                      <div
+                        key={hour}
+                        style={{ height: SLOT_PX }}
+                        className="flex items-start justify-end border-b border-gray-100 pr-2 pt-1 text-xs text-gray-400 dark:border-gray-700/50 dark:text-gray-500"
+                      >
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                    ))}
+                  </div>
+
+                  {weekDays.map((day, dayIndex) => {
+                    const dayStr = formatDate(day);
+                    const isToday = dayStr === todayStr;
+                    const dayEntries = entriesByDay(dayStr);
+
+                    return (
+                      <div
+                        key={dayIndex}
+                        className={`relative border-r border-gray-200 last:border-r-0 dark:border-gray-700 ${
+                          isToday ? 'bg-[#F7941D]/5 dark:bg-[#F7941D]/5' : 'bg-white dark:bg-gray-800'
+                        }`}
+                        style={{ height: SLOT_PX * (HOUR_END - HOUR_START) }}
+                      >
+                        {hours.map((hour) => (
+                          <div
+                            key={hour}
+                            style={{ top: (hour - HOUR_START) * SLOT_PX }}
+                            className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-700/50"
+                          />
+                        ))}
+
+                        {hours.map((hour) => (
+                          <div
+                            key={`half-${hour}`}
+                            style={{ top: (hour - HOUR_START) * SLOT_PX + SLOT_PX / 2 }}
+                            className="absolute left-0 right-0 border-b border-dashed border-gray-100 dark:border-gray-700/30"
+                          />
+                        ))}
+
+                        {canEdit && (
+                          <div className="absolute inset-0 cursor-pointer" onClick={() => openCreate(dayStr)} />
+                        )}
+
+                        {dayEntries.map((entry) => {
+                          const startMin = toMinutes(entry.start_time) - HOUR_START * 60;
+                          const endMin = toMinutes(entry.end_time) - HOUR_START * 60;
+                          const clampedStart = Math.max(0, startMin);
+                          const clampedEnd = Math.min(TOTAL_MINUTES, endMin);
+                          if (clampedEnd <= clampedStart) return null;
+
+                          const top = (clampedStart / 60) * SLOT_PX;
+                          const height = ((clampedEnd - clampedStart) / 60) * SLOT_PX;
+                          const cfg = TYPE_CONFIG[entry.type];
+
+                          return (
+                            <div
+                              key={entry.id}
+                              style={{ top, height: Math.max(height, 26), left: 4, right: 4 }}
+                              className={`absolute z-10 cursor-pointer select-none overflow-hidden rounded-lg border-l-4 px-2 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${cfg.bg} ${cfg.border}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (canEdit) openEdit(entry);
+                              }}
+                            >
+                              <div className={`truncate text-xs font-semibold ${cfg.text}`}>{entry.title}</div>
+                              {height >= 36 && (
+                                <div className={`truncate text-xs ${cfg.text} opacity-75`}>
+                                  {entry.start_time}-{entry.end_time}
+                                </div>
+                              )}
+                              {height >= 52 && entry.location && (
+                                <div className={`truncate text-xs ${cfg.text} opacity-60`}>{entry.location}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Typ</label>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Wpis kalendarza</p>
+                <h2 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                  {editingEntry ? 'Edytuj wpis' : 'Nowy wpis'}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Typ</label>
                 <div className="flex gap-2">
-                  {(Object.entries(TYPE_CONFIG) as [EntryType, typeof TYPE_CONFIG[EntryType]][]).map(([type, cfg]) => (
+                  {(Object.entries(TYPE_CONFIG) as [EntryType, (typeof TYPE_CONFIG)[EntryType]][]).map(([type, cfg]) => (
                     <button
                       key={type}
-                      onClick={() => setForm(f => ({ ...f, type }))}
-                      className={`flex-1 py-1.5 text-sm rounded-lg border-2 font-medium transition-all ${
+                      type="button"
+                      onClick={() => setForm((current) => ({ ...current, type }))}
+                      className={`flex-1 rounded-lg border-2 py-1.5 text-sm font-medium transition-all ${
                         form.type === type
                           ? `${cfg.border} ${cfg.bg} ${cfg.text}`
-                          : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                          : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-gray-600 dark:text-gray-400'
                       }`}
                     >
                       {cfg.label}
@@ -376,98 +482,101 @@ export default function BossCalendar() {
                 </div>
               </div>
 
-              {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tytuł *</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Tytuł *</label>
                 <input
                   type="text"
                   value={form.title}
-                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                   placeholder="Np. Spotkanie z klientem"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D]"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
-              {/* Date + times */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data *</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Data *</label>
                   <input
                     type="date"
                     value={form.date}
-                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D]"
+                    onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Od *</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Od *</label>
                   <input
                     type="time"
                     value={form.start_time}
-                    onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D]"
+                    onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Do *</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Do *</label>
                   <input
                     type="time"
                     value={form.end_time}
-                    onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D]"
+                    onChange={(event) => setForm((current) => ({ ...current, end_time: event.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
               </div>
 
-              {/* Location */}
               <div>
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <MapPin className="w-3.5 h-3.5" /> Miejsce
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <MapPin className="h-3.5 w-3.5" /> Miejsce
                 </label>
                 <input
                   type="text"
                   value={form.location ?? ''}
-                  onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
                   placeholder="Np. Sala konferencyjna A"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D]"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
-              {/* Description */}
               <div>
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <AlignLeft className="w-3.5 h-3.5" /> Opis
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <AlignLeft className="h-3.5 w-3.5" /> Opis
                 </label>
                 <textarea
                   value={form.description ?? ''}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                   rows={2}
-                  placeholder="Dodatkowe informacje…"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D] resize-none"
+                  placeholder="Dodatkowe informacje..."
+                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
 
-            <div className="px-6 pb-5 flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 px-6 pb-5">
               {editingEntry && (
                 <button
+                  type="button"
                   onClick={() => setDeleteConfirm(editingEntry.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="h-4 w-4" />
                   Usuń
                 </button>
               )}
-              <div className="flex gap-2 ml-auto">
-                <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <div className="ml-auto flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
                   Anuluj
                 </button>
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-2 text-sm font-medium bg-[#F7941D] hover:bg-orange-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:opacity-50"
                 >
-                  {saving ? 'Zapisywanie…' : editingEntry ? 'Zapisz zmiany' : 'Dodaj'}
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {saving ? 'Zapisywanie...' : editingEntry ? 'Zapisz zmiany' : 'Dodaj'}
                 </button>
               </div>
             </div>
@@ -475,22 +584,25 @@ export default function BossCalendar() {
         </div>
       )}
 
-      {/* Delete confirmation */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Usuń wpis</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Czy na pewno chcesz usunąć ten wpis? Operacja jest nieodwracalna.</p>
-            <div className="flex gap-3 justify-end">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Usuń wpis</h3>
+            <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
+              Czy na pewno chcesz usunąć ten wpis? Operacja jest nieodwracalna.
+            </p>
+            <div className="flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 Anuluj
               </button>
               <button
+                type="button"
                 onClick={() => handleDelete(deleteConfirm)}
-                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
                 Usuń
               </button>

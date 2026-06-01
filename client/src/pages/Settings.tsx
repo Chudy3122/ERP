@@ -165,17 +165,17 @@ const Settings: React.FC = () => {
                 onClick={() => setTheme(option.value as any)}
                 className={`relative p-4 rounded-xl border-2 transition-all text-left ${
                   isSelected
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 {isSelected && (
-                  <div className="absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="absolute top-3 right-3 w-5 h-5 bg-[#F7941D] rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                   </div>
                 )}
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-                  isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                  isSelected ? 'bg-[#F7941D] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                 }`}>
                   <Icon className="w-5 h-5" />
                 </div>
@@ -220,7 +220,7 @@ const Settings: React.FC = () => {
     if (notifLoading) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F7941D]"></div>
         </div>
       );
     }
@@ -232,7 +232,7 @@ const Settings: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400">{t('settings.notifications.loadError')}</p>
           <button
             onClick={loadNotifPreferences}
-            className="mt-3 text-blue-600 dark:text-blue-400 hover:underline text-sm"
+            className="mt-3 text-[#F7941D] hover:text-[#e08317] hover:underline text-sm"
           >
             {t('settings.notifications.retry')}
           </button>
@@ -261,7 +261,7 @@ const Settings: React.FC = () => {
                     value={notifPrefs.sound_type}
                     onChange={(e) => handleNotifUpdate({ sound_type: e.target.value })}
                     disabled={notifSaving}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D]"
                   >
                     <option value="default">{t('settings.notifications.soundDefault')}</option>
                     <option value="chime">{t('settings.notifications.soundChime')}</option>
@@ -282,7 +282,7 @@ const Settings: React.FC = () => {
                     value={notifPrefs.sound_volume}
                     onChange={(e) => handleNotifUpdate({ sound_volume: parseInt(e.target.value) })}
                     disabled={notifSaving}
-                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-[#F7941D]"
                   />
                 </div>
               </>
@@ -380,7 +380,7 @@ const Settings: React.FC = () => {
                     value={notifPrefs.dnd_start_time || ''}
                     onChange={(e) => handleNotifUpdate({ dnd_start_time: e.target.value + ':00' })}
                     disabled={notifSaving}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D]"
                   />
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
@@ -390,7 +390,7 @@ const Settings: React.FC = () => {
                     value={notifPrefs.dnd_end_time || ''}
                     onChange={(e) => handleNotifUpdate({ dnd_end_time: e.target.value + ':00' })}
                     disabled={notifSaving}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D]"
                   />
                 </div>
               </div>
@@ -535,14 +535,14 @@ const Settings: React.FC = () => {
               onClick={() => updateSetting('language', lang.value)}
               className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                 settings.language === lang.value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <span className="text-2xl">{lang.flag}</span>
               <span className="font-medium text-gray-900 dark:text-white">{lang.label}</span>
               {settings.language === lang.value && (
-                <Check className="w-5 h-5 text-blue-500 ml-auto" />
+                <Check className="w-5 h-5 text-[#F7941D] ml-auto" />
               )}
             </button>
           ))}
@@ -558,7 +558,7 @@ const Settings: React.FC = () => {
               onClick={() => updateSetting('dateFormat', format.value)}
               className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
                 settings.dateFormat === format.value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
@@ -568,7 +568,7 @@ const Settings: React.FC = () => {
                 <span className="text-sm text-gray-500 dark:text-gray-400">({format.example})</span>
               </div>
               {settings.dateFormat === format.value && (
-                <Check className="w-5 h-5 text-blue-500" />
+                <Check className="w-5 h-5 text-[#F7941D]" />
               )}
             </button>
           ))}
@@ -582,7 +582,7 @@ const Settings: React.FC = () => {
             onClick={() => updateSetting('timeFormat', '24h')}
             className={`p-4 rounded-xl border-2 transition-all ${
               settings.timeFormat === '24h'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
@@ -593,7 +593,7 @@ const Settings: React.FC = () => {
             onClick={() => updateSetting('timeFormat', '12h')}
             className={`p-4 rounded-xl border-2 transition-all ${
               settings.timeFormat === '12h'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
@@ -610,7 +610,7 @@ const Settings: React.FC = () => {
             onClick={() => updateSetting('firstDayOfWeek', 'monday')}
             className={`p-4 rounded-xl border-2 transition-all ${
               settings.firstDayOfWeek === 'monday'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
@@ -620,7 +620,7 @@ const Settings: React.FC = () => {
             onClick={() => updateSetting('firstDayOfWeek', 'sunday')}
             className={`p-4 rounded-xl border-2 transition-all ${
               settings.firstDayOfWeek === 'sunday'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                ? 'border-[#F7941D] bg-[#F7941D]/10 dark:bg-[#F7941D]/15'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
@@ -650,15 +650,43 @@ const Settings: React.FC = () => {
 
   return (
     <MainLayout title={t('settings.title')}>
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="font-semibold text-gray-900 dark:text-white">{t('settings.title')}</h2>
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                Preferencje systemu
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                  <SettingsIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-950 dark:text-white">{t('settings.title')}</h1>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Dostosuj wygląd, powiadomienia i sposób pracy platformy.
+                  </p>
+                </div>
               </div>
-              <nav className="p-2">
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+              Aktywna sekcja:{' '}
+              <span className="font-semibold text-gray-950 dark:text-white">
+                {sections.find((section) => section.id === activeSection)?.name}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+          <aside>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 p-4 dark:border-gray-700">
+                <h2 className="font-semibold text-gray-950 dark:text-white">{t('settings.title')}</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Wybierz obszar konfiguracji</p>
+              </div>
+              <nav className="space-y-1 p-2">
                 {sections.map((section) => {
                   const Icon = section.icon;
                   const isActive = activeSection === section.id;
@@ -666,33 +694,50 @@ const Settings: React.FC = () => {
                     <button
                       key={section.id}
                       onClick={() => setActiveSection(section.id as SettingsSection)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors ${
                         isActive
-                          ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                          ? 'bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300'
+                          : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700/50'
                       }`}
                     >
-                      <Icon className="w-5 h-5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{section.name}</p>
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                          isActive
+                            ? 'bg-[#F7941D] text-white'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">{section.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{section.description}</p>
                       </div>
+                      <ChevronRight
+                        className={`h-4 w-4 shrink-0 transition-colors ${
+                          isActive ? 'text-[#F7941D] dark:text-orange-300' : 'text-gray-300'
+                        }`}
+                      />
                     </button>
                   );
                 })}
               </nav>
             </div>
-          </div>
+          </aside>
 
-          {/* Content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-                {sections.find(s => s.id === activeSection)?.name}
-              </h2>
+          <section className="min-w-0">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-6 border-b border-gray-100 pb-4 dark:border-gray-700">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                  {sections.find((section) => section.id === activeSection)?.description}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-gray-950 dark:text-white">
+                  {sections.find((section) => section.id === activeSection)?.name}
+                </h2>
+              </div>
               {renderSection()}
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </MainLayout>
@@ -729,7 +774,7 @@ const SettingToggle: React.FC<SettingToggleProps> = ({ label, description, check
           onChange={(e) => onChange(e.target.checked)}
           className="sr-only peer"
         />
-        <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full peer peer-checked:bg-blue-500 peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 transition-colors"></div>
+        <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full peer peer-checked:bg-[#F7941D] peer-focus:ring-2 peer-focus:ring-[#F7941D]/30 transition-colors"></div>
         <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
       </div>
     </label>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, ChevronDown, Search, MoreVertical, Edit, Trash2, Users } from 'lucide-react';
 import type { Department, DepartmentTreeNode } from '../../types/department.types';
@@ -63,9 +63,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   return (
     <div>
       <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+        className={`flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
           isSelected
-            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+            ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/15 text-[#F7941D] dark:text-orange-300'
             : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300'
         }`}
         style={{ paddingLeft: `${level * 16 + 12}px` }}
@@ -77,7 +77,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             e.stopPropagation();
             toggleExpanded(node.id);
           }}
-          className={`p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${
+          className={`shrink-0 rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 ${
             !hasChildren ? 'invisible' : ''
           }`}
         >
@@ -89,26 +89,27 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         </button>
 
         {/* Color Indicator */}
-        <div
-          className="w-3 h-3 rounded-full flex-shrink-0"
-          style={{ backgroundColor: node.color || '#6B7280' }}
-        />
+        <div className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: node.color || '#6B7280' }} />
 
         {/* Name & Code */}
-        <div className="flex-1 min-w-0">
-          <span className="font-medium truncate">{node.name}</span>
-          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{node.code}</span>
+        <div className="min-w-0 flex-1 leading-tight">
+          <span className="block max-w-full truncate font-medium" title={node.name}>
+            {node.name}
+          </span>
+          <span className="mt-0.5 block max-w-full truncate text-xs text-gray-400 dark:text-gray-500" title={node.code}>
+            {node.code}
+          </span>
         </div>
 
         {/* Employee Count */}
-        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="ml-2 flex shrink-0 items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
           <Users className="w-3.5 h-3.5" />
           {node.employeeCount}
         </div>
 
         {/* Actions Menu */}
         {(onEdit || onDelete) && (
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -192,6 +193,14 @@ const DepartmentTree: React.FC<DepartmentTreeProps> = ({
 }) => {
   const { t } = useTranslation();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const didInitializeExpansion = useRef(false);
+
+  useEffect(() => {
+    if (didInitializeExpansion.current || tree.length === 0) return;
+
+    setExpandedIds(new Set(tree.map((node) => node.id)));
+    didInitializeExpansion.current = true;
+  }, [tree]);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
@@ -217,7 +226,7 @@ const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       {/* Search Header */}
       <div className="p-3 border-b border-gray-200 dark:border-gray-700">
         <div className="relative">
@@ -227,19 +236,19 @@ const DepartmentTree: React.FC<DepartmentTreeProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t('organization.search')}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           />
         </div>
         <div className="flex gap-2 mt-2">
           <button
             onClick={expandAll}
-            className="flex-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="flex-1 rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:text-gray-400 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300"
           >
             {t('organization.expandAll')}
           </button>
           <button
             onClick={collapseAll}
-            className="flex-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="flex-1 rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:text-gray-400 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300"
           >
             {t('organization.collapseAll')}
           </button>
@@ -247,7 +256,7 @@ const DepartmentTree: React.FC<DepartmentTreeProps> = ({
       </div>
 
       {/* Tree */}
-      <div className="p-2 max-h-[500px] overflow-y-auto">
+      <div className="max-h-[640px] overflow-y-auto p-2">
         {tree.length === 0 ? (
           <p className="text-center text-gray-500 dark:text-gray-400 py-8">
             {t('organization.noDepartments')}

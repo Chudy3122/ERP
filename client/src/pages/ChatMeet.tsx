@@ -506,31 +506,6 @@ const ChatMeet: React.FC = () => {
               Rozmowy zespołowe, szybkie połączenia i zaplanowane spotkania w jednym miejscu.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => {
-                loadUsers();
-                setShowNewConv(true);
-                setSidebarTab('chat');
-              }}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Nowa rozmowa
-            </button>
-            <button
-              onClick={() => {
-                loadUsers();
-                resetIntForm();
-                setShowInternalModal(true);
-                setSidebarTab('meetings');
-              }}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
-            >
-              <Video className="h-4 w-4" />
-              Spotkanie
-            </button>
-          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -904,19 +879,7 @@ const ChatMeet: React.FC = () => {
                   <Video className="h-3.5 w-3.5" />
                   Spotkanie
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveChannel(null);
-                    setSelectedMeeting(null);
-                    setSelectedVideoCall(null);
-                  }}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                  aria-label="Zamknij aktywny widok"
-                  title="Zamknij aktywny widok"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                
               </div>
             </div>
           )}

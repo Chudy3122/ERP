@@ -1,10 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
-import { BookOpen, Plus, Search, X, ChevronRight, Edit2, Trash2, Tag, Clock, User, Paperclip, FileText, Upload, Eye, Loader2 } from 'lucide-react';
+import {
+  Archive,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Edit2,
+  Eye,
+  FileText,
+  Loader2,
+  Paperclip,
+  Plus,
+  Search,
+  Tag,
+  Trash2,
+  Upload,
+  User,
+  X,
+} from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as procedureApi from '../api/procedure.api';
 import { Procedure, ProcedureStatus, CreateProcedureRequest } from '../types/procedure.types';
 import { getFileUrl } from '../api/axios-config';
+
+const PAGE_SIZE_OPTIONS = [10, 30, 50];
 
 const CATEGORIES = ['Wszystkie', 'IT', 'HR', 'Finanse', 'Operacje', 'BHP', 'Jakość', 'Sprzedaż', 'Inne'];
 
@@ -46,6 +67,8 @@ export default function Procedures() {
   const [error, setError] = useState('');
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ name: string; url: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const attachInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -86,6 +109,7 @@ export default function Procedures() {
       const status = activeStatus || undefined;
       const data = await procedureApi.getProcedures(cat, status);
       setProcedures(data);
+      setCurrentPage(1);
     } catch {
       setError('Nie udało się załadować procedur');
     } finally {
@@ -98,6 +122,42 @@ export default function Procedures() {
     p.title.toLowerCase().includes(search.toLowerCase()) ||
     (p.description ?? '').toLowerCase().includes(search.toLowerCase()),
   );
+  const totalProcedures = procedures.length;
+  const activeProcedures = procedures.filter((p) => p.status === ProcedureStatus.ACTIVE).length;
+  const draftProcedures = procedures.filter((p) => p.status === ProcedureStatus.DRAFT).length;
+  const archivedProcedures = procedures.filter((p) => p.status === ProcedureStatus.ARCHIVED).length;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStart = filtered.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const pageEnd = Math.min(safeCurrentPage * pageSize, filtered.length);
+  const paginatedProcedures = filtered.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+  const statCards = [
+    {
+      label: 'Wszystkie procedury',
+      value: totalProcedures,
+      icon: BookOpen,
+      iconClass: 'bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300',
+    },
+    {
+      label: 'Aktywne',
+      value: activeProcedures,
+      icon: CheckCircle2,
+      iconClass: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300',
+    },
+    {
+      label: 'Szkice',
+      value: draftProcedures,
+      icon: FileText,
+      iconClass: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
+    },
+    {
+      label: 'Archiwum',
+      value: archivedProcedures,
+      icon: Archive,
+      iconClass: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300',
+    },
+  ];
 
   const openNew = () => {
     setEditingId(null);
@@ -157,28 +217,56 @@ export default function Procedures() {
 
   return (
     <MainLayout title="Procedury">
-      <div className="flex flex-col h-full">
+      <div className="mx-auto flex max-w-[1600px] flex-col space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-[#F7941D]" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Wiedza firmowa</p>
+            <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold text-gray-950 dark:text-white">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                <BookOpen className="h-5 w-5" />
+              </span>
               Procedury
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Baza procedur, norm i standardów firmowych
             </p>
           </div>
           {isEditor && (
             <button
               onClick={openNew}
-              className="flex items-center gap-2 px-4 py-2 bg-[#F7941D] hover:bg-[#e08317] text-white rounded-lg text-sm font-medium transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Nowa procedura
             </button>
           )}
         </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <div
+                key={card.label}
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.iconClass}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-semibold text-gray-950 dark:text-white">{card.value}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
 
         {error && (
           <div className="mb-3 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">
@@ -290,19 +378,22 @@ export default function Procedures() {
           </div>
         )}
 
-        <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex min-h-[520px] flex-col gap-4 xl:flex-row">
           {/* Left panel — list */}
-          <div className={`flex flex-col ${selected ? 'w-80 flex-shrink-0' : 'flex-1'}`}>
+          <div className={`flex min-w-0 flex-col ${selected ? 'xl:w-[390px] xl:flex-shrink-0' : 'flex-1'}`}>
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-3 mb-3 space-y-3">
+            <div className="mb-3 space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Szukaj procedur..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D]"
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                 />
               </div>
 
@@ -310,7 +401,10 @@ export default function Procedures() {
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => setActiveCategory(cat)}
+                    onClick={() => {
+                      setActiveCategory(cat);
+                      setCurrentPage(1);
+                    }}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                       activeCategory === cat
                         ? 'bg-[#F7941D] text-white'
@@ -326,10 +420,13 @@ export default function Procedures() {
                 {[{ val: '', label: 'Wszystkie' }, { val: 'active', label: 'Aktywne' }, { val: 'draft', label: 'Szkice' }, { val: 'archived', label: 'Archiwum' }].map((s) => (
                   <button
                     key={s.val}
-                    onClick={() => setActiveStatus(s.val)}
+                    onClick={() => {
+                      setActiveStatus(s.val);
+                      setCurrentPage(1);
+                    }}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                       activeStatus === s.val
-                        ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
+                        ? 'bg-[#F7941D] text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
@@ -343,7 +440,7 @@ export default function Procedures() {
             <div className="flex-1 overflow-y-auto space-y-2">
               {isLoading ? (
                 <div className="flex justify-center py-12">
-                  <div className="w-6 h-6 border-2 border-gray-300 border-t-[#F7941D] rounded-full animate-spin" />
+                  <Loader2 className="h-7 w-7 animate-spin text-[#F7941D]" />
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="text-center py-12 text-gray-400 dark:text-gray-500">
@@ -351,7 +448,7 @@ export default function Procedures() {
                   <p className="text-sm">Brak procedur</p>
                 </div>
               ) : (
-                filtered.map((p) => (
+                paginatedProcedures.map((p) => (
                   <div
                     key={p.id}
                     onClick={() => setSelected(selected?.id === p.id ? null : p)}
@@ -398,6 +495,55 @@ export default function Procedures() {
                 ))
               )}
             </div>
+
+            {!isLoading && filtered.length > 0 && (
+              <div className="mt-3 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                <div>
+                  Pokazano {pageStart}-{pageEnd} z {filtered.length} procedur
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <label className="flex items-center gap-2">
+                    <span>Na stronie</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={safeCurrentPage === 1}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="px-2 font-medium text-gray-700 dark:text-gray-200">
+                      {safeCurrentPage} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                      disabled={safeCurrentPage === totalPages}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right panel — detail */}

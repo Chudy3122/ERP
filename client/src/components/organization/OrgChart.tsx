@@ -165,7 +165,7 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
     <div className="flex flex-col items-center">
       <div
         className={`relative bg-white dark:bg-gray-800 border-2 rounded-xl shadow-md transition-all hover:shadow-lg ${
-          isRoot ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
+          isRoot ? 'border-[#F7941D]' : 'border-gray-200 dark:border-gray-700'
         }`}
         style={{ borderLeftColor: node.color || undefined, borderLeftWidth: '4px' }}
       >
@@ -237,7 +237,7 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
             {hasChildren && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                className="flex items-center gap-1 text-[#F7941D] transition-colors hover:text-[#e08317] dark:text-orange-300 dark:hover:text-orange-200"
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4" />
@@ -319,24 +319,27 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
 
   if (tree.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-        <p className="text-gray-500 dark:text-gray-400">{t('organization.noDepartments')}</p>
+      <div className="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+          <Users className="h-7 w-7" />
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('organization.noDepartments')}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="flex flex-col bg-white dark:bg-gray-800">
       {/* Zoom controls */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-        <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">{Math.round(scale * 100)}%</span>
-        <button onClick={handleZoomOut} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" title="Pomniejsz"><ZoomOut className="w-4 h-4" /></button>
-        <button onClick={handleZoomIn} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" title="Powiększ"><ZoomIn className="w-4 h-4" /></button>
-        <button onClick={handleReset} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" title="Dopasuj"><RotateCcw className="w-4 h-4" /></button>
+      <div className="flex items-center justify-end gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <span className="mr-2 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300">{Math.round(scale * 100)}%</span>
+        <button onClick={handleZoomOut} className="rounded-lg border border-gray-200 p-1.5 text-gray-600 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-400 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300" title="Pomniejsz"><ZoomOut className="w-4 h-4" /></button>
+        <button onClick={handleZoomIn} className="rounded-lg border border-gray-200 p-1.5 text-gray-600 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-400 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300" title="Powiększ"><ZoomIn className="w-4 h-4" /></button>
+        <button onClick={handleReset} className="rounded-lg border border-gray-200 p-1.5 text-gray-600 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-400 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300" title="Dopasuj"><RotateCcw className="w-4 h-4" /></button>
       </div>
 
       {/* Chart */}
-      <div ref={containerRef} className="p-4 flex justify-center overflow-hidden" style={{ height: 'calc(100vh - 340px)' }}>
+      <div ref={containerRef} className="flex justify-center overflow-hidden bg-gray-50/60 p-4 dark:bg-gray-900/20" style={{ height: 'calc(100vh - 340px)' }}>
         <div
           ref={contentRef}
           className="flex flex-col items-center gap-4"

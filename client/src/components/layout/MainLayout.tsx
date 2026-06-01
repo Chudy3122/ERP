@@ -278,7 +278,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
-    { name: t('nav.myTickets'), href: '/tickets?filter=my', icon: AlertCircle },
+    { name: 'Zgłoszenia', href: '/tickets?filter=my', icon: AlertCircle },
 
     { type: 'divider' },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
@@ -652,7 +652,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-3 lg:p-4">
+        <main className="flex-1 overflow-auto p-3 pb-28 scroll-pb-28 lg:p-4 lg:pb-32 lg:scroll-pb-32">
           {children}
         </main>
       </div>
