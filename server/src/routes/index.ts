@@ -28,6 +28,8 @@ import crmRoutes from './crm.routes';
 import procedureRoutes from './procedure.routes';
 import bossCalendarRoutes from './boss-calendar.routes';
 import searchRoutes from './search.routes';
+import supplyRoutes from './supply.routes';
+import personalTaskRoutes from './personalTask.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -118,6 +120,12 @@ router.use('/boss-calendar', bossCalendarRoutes);
 
 // Global search
 router.use('/search', searchRoutes);
+
+// Supply requests (Zaopatrzenie)
+router.use('/supply', supplyRoutes);
+
+// Personal tasks / private zone (Strefa prywatna)
+router.use('/personal-tasks', personalTaskRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);
