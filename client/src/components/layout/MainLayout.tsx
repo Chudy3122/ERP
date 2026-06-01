@@ -266,6 +266,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: t('nav.organization'), href: '/organization', icon: GitBranch },
 
     { type: 'divider' },
+    { type: 'header', name: 'Zaopatrzenie' },
+    { name: 'Zaopatrzenie', href: '/supply', icon: Package },
+
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },
     { name: 'Kontrahenci', href: '/clients', icon: Building2 },
@@ -274,10 +277,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Procedury' },
     { name: 'Procedury', href: '/procedures', icon: BookOpen },
-
-    { type: 'divider' },
-    { type: 'header', name: 'Zaopatrzenie' },
-    { name: 'Zaopatrzenie', href: '/supply', icon: Package },
 
     { type: 'divider' },
     { type: 'header', name: 'Kalendarz Szefa' },

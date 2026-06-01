@@ -15,7 +15,9 @@ import {
   Search,
   Users,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as adminApi from '../api/admin.api';
 import * as timeApi from '../api/time.api';
 import * as calendarApi from '../api/calendar.api';
@@ -125,6 +127,7 @@ const Absences = () => {
   const [managementSuccess, setManagementSuccess] = useState('');
 
   const [oneDayLeave, setOneDayLeave] = useState(false);
+  const [cancelId, setCancelId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     leave_type: 'vacation' as LeaveType,
     start_date: '',
@@ -284,44 +287,50 @@ const Absences = () => {
       setFormData({ leave_type: 'vacation', start_date: '', end_date: '', reason: '' });
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się utworzyć wniosku');
+      toast.error(error.response?.data?.message || 'Nie udało się utworzyć wniosku');
     }
   };
 
   const handleApprove = async (requestId: string) => {
     try {
       await timeApi.approveLeaveRequest(requestId);
+      toast.success('Wniosek zatwierdzony');
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się zatwierdzić wniosku');
+      toast.error(error.response?.data?.message || 'Nie udało się zatwierdzić wniosku');
     }
   };
 
   const handleReject = async (requestId: string) => {
     try {
       await timeApi.rejectLeaveRequest(requestId);
+      toast.success('Wniosek odrzucony');
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się odrzucić wniosku');
+      toast.error(error.response?.data?.message || 'Nie udało się odrzucić wniosku');
     }
   };
 
   const handleRevert = async (requestId: string) => {
     try {
       await timeApi.revertLeaveRequest(requestId);
+      toast.success('Cofnięto do oczekujących');
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się cofnąć wniosku');
+      toast.error(error.response?.data?.message || 'Nie udało się cofnąć wniosku');
     }
   };
 
-  const handleAdminCancel = async (requestId: string) => {
-    if (!confirm('Czy na pewno anulować ten wniosek?')) return;
+  const handleAdminCancel = async () => {
+    if (!cancelId) return;
     try {
-      await timeApi.adminCancelLeaveRequest(requestId);
+      await timeApi.adminCancelLeaveRequest(cancelId);
+      toast.success('Wniosek anulowany');
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się anulować wniosku');
+      toast.error(error.response?.data?.message || 'Nie udało się anulować wniosku');
+    } finally {
+      setCancelId(null);
     }
   };
 
@@ -647,7 +656,7 @@ const Absences = () => {
                               <button
                                 onClick={event => {
                                   event.stopPropagation();
-                                  handleAdminCancel(request.id);
+                                  setCancelId(request.id);
                                 }}
                                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
                               >
@@ -1135,6 +1144,18 @@ const Absences = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={cancelId !== null}
+        onClose={() => setCancelId(null)}
+        onConfirm={handleAdminCancel}
+        title="Anuluj wniosek"
+        message="Czy na pewno chcesz anulować ten wniosek urlopowy?"
+        confirmText="Anuluj wniosek"
+        cancelText="Wróć"
+        variant="danger"
+        icon="warning"
+      />
     </MainLayout>
   );
 };

@@ -5,6 +5,7 @@ import {
   Package, Plus, X, Check, XCircle, Clock, CheckCircle2, Trash2, Loader2, Search,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as supplyApi from '../api/supply.api';
 import {
   SupplyRequest, CreateSupplyRequest, SupplyCategory, SupplyPriority,
@@ -36,6 +37,7 @@ export default function Supply() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateSupplyRequest>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => { load(); }, [tab]);
 
@@ -81,10 +83,11 @@ export default function Supply() {
     try { await supplyApi.rejectSupplyRequest(id); toast.success('Odrzucono'); load(); }
     catch { toast.error('Nie udało się odrzucić'); }
   };
-  const handleDelete = async (id: string) => {
-    if (!confirm('Usunąć zgłoszenie?')) return;
-    try { await supplyApi.deleteSupplyRequest(id); toast.success('Usunięto'); load(); }
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try { await supplyApi.deleteSupplyRequest(deleteId); toast.success('Usunięto'); load(); }
     catch { toast.error('Nie udało się usunąć'); }
+    finally { setDeleteId(null); }
   };
 
   const filtered = requests.filter(r =>
@@ -195,7 +198,7 @@ export default function Supply() {
                               </>
                             )}
                             {(isManager || (isOwner && r.status === 'pending')) && (
-                              <button onClick={() => handleDelete(r.id)} title="Usuń" className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                              <button onClick={() => setDeleteId(r.id)} title="Usuń" className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
                             )}
                           </div>
                         </td>
@@ -256,6 +259,18 @@ export default function Supply() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Usuń zgłoszenie"
+        message="Czy na pewno chcesz usunąć to zgłoszenie zapotrzebowania?"
+        confirmText="Usuń"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="delete"
+      />
     </MainLayout>
   );
 }
