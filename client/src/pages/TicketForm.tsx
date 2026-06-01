@@ -134,7 +134,12 @@ const TicketForm = () => {
   const loadUsers = async () => {
     try {
       const result = await adminApi.getUsers();
-      setUsers(result.filter(u => u.is_active));
+      // Tickets can only be assigned to IT department members or system admins
+      const isIT = (u: typeof result[number]) => {
+        const dept = (u.department || '').toLowerCase();
+        return dept === 'it' || dept === 'dział it' || dept === 'dzial it' || u.role === 'admin';
+      };
+      setUsers(result.filter(u => u.is_active && isIT(u)));
     } catch (error) {
       console.error('Failed to load users:', error);
     }
