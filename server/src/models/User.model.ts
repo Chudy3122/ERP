@@ -24,6 +24,10 @@ export enum UserRole {
 
 @Entity('users')
 export class User {
+  // bcrypt cost factor — 10 is the secure default and ~3-4x faster than 12
+  // on low-power hosts (Render free tier), which speeds up login noticeably.
+  static readonly SALT_ROUNDS = 10;
+
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -113,7 +117,7 @@ export class User {
   @BeforeInsert()
   async hashPasswordBeforeInsert() {
     if (this.password) {
-      this.password_hash = await bcrypt.hash(this.password, 12);
+      this.password_hash = await bcrypt.hash(this.password, User.SALT_ROUNDS);
       delete this.password;
     }
   }
@@ -122,7 +126,7 @@ export class User {
   @BeforeUpdate()
   async hashPasswordBeforeUpdate() {
     if (this.password) {
-      this.password_hash = await bcrypt.hash(this.password, 12);
+      this.password_hash = await bcrypt.hash(this.password, User.SALT_ROUNDS);
       delete this.password;
     }
   }

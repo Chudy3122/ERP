@@ -29,6 +29,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
+      // Render immediately from the cached session — no white screen while the
+      // backend (possibly cold-starting) responds. Validate in the background.
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        /* corrupted cache — will be replaced by the fetch below */
+      }
+      setIsLoading(false);
+
       try {
         const currentUser = await getCurrentUserApi();
         setUser(currentUser);
@@ -41,12 +50,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           setUser(null);
-        } else {
-          // Network error or server sleeping — trust the stored session
-          setUser(JSON.parse(storedUser));
         }
-      } finally {
-        setIsLoading(false);
+        // Network error / server sleeping — keep the cached session already set
       }
     };
 

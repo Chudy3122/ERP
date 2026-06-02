@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
 import { RefreshToken } from '../models/RefreshToken.model';
@@ -105,9 +106,14 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
-    // Update last login
-    user.last_login = new Date();
-    await this.userRepository.save(user);
+    // Targeted update of last_login (avoids rewriting the whole row / entity hooks).
+    // Opportunistically downgrade legacy high-cost hashes so future logins are faster.
+    const patch: Partial<User> = { last_login: new Date() };
+    const currentCost = parseInt(user.password_hash.split('$')[2] ?? '0', 10);
+    if (currentCost > User.SALT_ROUNDS) {
+      patch.password_hash = await bcrypt.hash(data.password, User.SALT_ROUNDS);
+    }
+    await this.userRepository.update(user.id, patch);
 
     // Generate tokens
     const tokens = generateTokenPair(user);
