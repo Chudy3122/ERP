@@ -253,7 +253,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
-      <div className="flex items-end gap-3">
+      <div className={`flex items-end ${compact ? 'gap-1.5' : 'gap-3'}`}>
         {/* File Upload Button */}
         <div className="flex-shrink-0">
           <FileUpload
@@ -268,7 +268,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             type="button"
             onClick={() => setShowEmojiPicker((prev) => !prev)}
             disabled={disabled || isUploading}
-            className="w-10 h-10 flex items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-yellow-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xl"
+            className={`flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-yellow-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${compact ? 'w-9 h-9 text-lg' : 'w-10 h-10 text-xl'}`}
             title="Emotikony"
           >
             😊
@@ -288,7 +288,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
 
         {/* Textarea */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <textarea
             ref={textareaRef}
             value={content}
@@ -297,8 +297,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             placeholder={placeholder}
             disabled={disabled || isUploading}
             rows={1}
-            className="w-full resize-none border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed max-h-32 overflow-y-auto"
-            style={{ minHeight: '48px' }}
+            className={`w-full resize-none border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed overflow-y-auto scrollbar-thin ${
+              compact ? 'rounded-xl px-3 py-2 text-sm max-h-24 leading-snug' : 'rounded-md px-4 py-3 max-h-32'
+            }`}
+            style={{ minHeight: compact ? '40px' : '48px' }}
           />
         </div>
 
@@ -306,8 +308,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <button
           onClick={handleSend}
           disabled={(!content.trim() && selectedFiles.length === 0) || disabled || isUploading}
-          className={`bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center ${
-            compact ? 'px-3 py-2 min-w-[60px]' : 'px-6 py-3 min-w-[100px]'
+          className={`bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center flex-shrink-0 ${
+            compact ? 'rounded-xl px-3 py-2 h-10' : 'rounded-md px-6 py-3 min-w-[100px]'
           }`}
         >
           {isUploading ? (

@@ -195,7 +195,7 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
       <MessageInput
         onSendMessage={sendMessage}
         onTyping={sendTypingIndicator}
-        placeholder={t('chat.messageTo', { name: getChannelName() })}
+        placeholder="Napisz wiadomość…"
         compact
       />
     </div>
