@@ -214,14 +214,16 @@ const Admin = () => {
       <div className="max-w-7xl mx-auto">
 
         {/* Page header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#F7941D] flex items-center justify-center shadow-sm">
-              <Shield className="w-5 h-5 text-white" />
+        <section className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+              <Shield className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Panel administracyjny</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Zarządzanie systemem</p>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Administracja</p>
+              <h1 className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">Panel administracyjny</h1>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Zarządzanie systemem</p>
             </div>
           </div>
           <button onClick={loadStats} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
@@ -229,6 +231,7 @@ const Admin = () => {
             Odśwież
           </button>
         </div>
+        </section>
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">

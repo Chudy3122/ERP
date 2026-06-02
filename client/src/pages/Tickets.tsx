@@ -52,8 +52,14 @@ const Tickets = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const activeTab = (searchParams.get('tab') as ViewTab) || 'my';
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  const requestedTab = searchParams.get('tab') as ViewTab | null;
+  const activeTab: ViewTab =
+    requestedTab === 'assigned' || requestedTab === 'my' || (requestedTab === 'all' && isAdmin)
+      ? requestedTab
+      : isAdmin
+        ? 'all'
+        : 'my';
 
   useEffect(() => {
     loadTickets();
@@ -270,9 +276,9 @@ const Tickets = () => {
   ];
 
   const tabs = [
+    ...(isAdmin ? [{ key: 'all' as ViewTab, label: t('tickets:all') }] : []),
     { key: 'my' as ViewTab, label: t('tickets:myTickets') },
     { key: 'assigned' as ViewTab, label: t('tickets:assigned') },
-    ...(isAdmin ? [{ key: 'all' as ViewTab, label: t('tickets:all') }] : []),
   ];
 
   return (

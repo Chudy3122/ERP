@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { Lock, Plus, X, Trash2, Loader2, GripVertical } from 'lucide-react';
+import { CheckCircle2, Clock3, GripVertical, ListTodo, Loader2, Lock, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import * as api from '../api/personalTask.api';
 import { PersonalTask, PersonalTaskStatus, PERSONAL_COLUMNS } from '../types/personalTask.types';
@@ -78,57 +78,126 @@ export default function PrivateZone() {
   const col = (status: PersonalTaskStatus) =>
     tasks.filter(t => t.status === status).sort((a, b) => (a.order_index - b.order_index) || a.created_at.localeCompare(b.created_at));
 
+  const totalTasks = tasks.length;
+  const doneTasks = tasks.filter(t => t.status === 'done').length;
+  const activeTasks = tasks.filter(t => t.status !== 'done').length;
+  const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+  const getColumnAccent = (status: PersonalTaskStatus) => {
+    const accents: Record<PersonalTaskStatus, { bg: string; text: string; ring: string }> = {
+      todo: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300', ring: 'border-gray-200 dark:border-gray-700' },
+      in_progress: { bg: 'bg-[#F7941D]/10 dark:bg-[#F7941D]/15', text: 'text-[#F7941D] dark:text-orange-300', ring: 'border-[#F7941D]/30' },
+      done: { bg: 'bg-emerald-50 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-300', ring: 'border-emerald-200 dark:border-emerald-800' },
+    };
+    return accents[status];
+  };
+
   return (
     <MainLayout title="Strefa prywatna">
-      <div className="mx-auto max-w-[1400px] space-y-6">
+      <div className="mx-auto max-w-[1600px] space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
             <Lock className="h-6 w-6" />
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Moduł</p>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Strefa prywatna</h1>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Prywatny obszar pracy</p>
+            <h1 className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">Strefa prywatna</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Twoja prywatna lista zadań — widoczna tylko dla Ciebie.</p>
           </div>
-        </div>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-xl border border-[#F7941D]/20 bg-[#F7941D]/5 px-4 py-3 text-sm font-semibold text-[#F7941D] dark:border-[#F7941D]/30 dark:bg-[#F7941D]/10 dark:text-orange-300">
+            <ShieldCheck className="h-4 w-4" />
+            Widoczne tylko dla Ciebie
+          </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              <ListTodo className="h-5 w-5" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Wszystkie zadania</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{totalTasks}</p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+              <Clock3 className="h-5 w-5" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Aktywne</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{activeTasks}</p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ukończone</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{completionRate}%</p>
+          </div>
+        </section>
 
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-[#F7941D]" /></div>
+          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#F7941D]" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">Ładowanie prywatnych zadań...</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {PERSONAL_COLUMNS.map(({ status, label, color }) => {
               const items = col(status);
               const isOver = dragOverCol === status;
+              const accent = getColumnAccent(status);
               return (
                 <div
                   key={status}
-                  className={`rounded-xl border bg-gray-50 shadow-sm transition-all dark:bg-gray-900/40 ${isOver ? 'border-[#F7941D] ring-2 ring-[#F7941D]/30' : 'border-gray-200 dark:border-gray-700'}`}
+                  className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all dark:bg-gray-800 ${isOver ? 'border-[#F7941D] ring-2 ring-[#F7941D]/30' : accent.ring}`}
                   onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
                   onDragLeave={() => setDragOverCol(null)}
                   onDrop={() => handleDrop(status)}
                 >
-                  <div className="flex items-center justify-between px-3 py-3" style={{ borderBottom: `2px solid ${color}40` }}>
+                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700" style={{ boxShadow: `inset 0 -2px 0 ${color}30` }}>
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
                       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{label}</span>
-                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">{items.length}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${accent.bg} ${accent.text}`}>{items.length}</span>
                     </div>
-                    <button onClick={() => { setAdding(status); setNewTitle(''); }} className="rounded-lg p-1 text-gray-400 hover:bg-white/70 hover:text-[#F7941D] dark:hover:bg-gray-700/70"><Plus className="h-4 w-4" /></button>
+                    <button
+                      type="button"
+                      onClick={() => { setAdding(status); setNewTitle(''); }}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:hover:bg-[#F7941D]/15"
+                      aria-label="Dodaj zadanie"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
 
-                  <div className="min-h-[200px] space-y-2 p-2.5">
+                  <div className="min-h-[360px] space-y-2.5 bg-gray-50/70 p-3 dark:bg-gray-900/30">
                     {adding === status && (
-                      <div className="rounded-lg border border-[#F7941D]/40 bg-white p-2 dark:bg-gray-800">
+                      <div className="rounded-xl border border-[#F7941D]/40 bg-white p-3 shadow-sm dark:bg-gray-800">
                         <input
                           autoFocus value={newTitle}
                           onChange={e => setNewTitle(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') handleAdd(status); if (e.key === 'Escape') setAdding(null); }}
                           onBlur={() => handleAdd(status)}
                           placeholder="Tytuł zadania..."
-                          className="w-full bg-transparent text-sm text-gray-900 outline-none dark:text-white"
+                          className="w-full bg-transparent text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                         />
                       </div>
+                    )}
+                    {items.length === 0 && adding !== status && (
+                      <button
+                        type="button"
+                        onClick={() => { setAdding(status); setNewTitle(''); }}
+                        className="flex min-h-[140px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white/70 p-4 text-center text-sm text-gray-500 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400"
+                      >
+                        <Plus className="mb-2 h-5 w-5 text-[#F7941D]" />
+                        Dodaj pierwsze zadanie
+                      </button>
                     )}
                     {items.map(task => (
                       <div
@@ -137,17 +206,19 @@ export default function PrivateZone() {
                         onDragStart={() => setDragged(task)}
                         onDragEnd={() => setDragged(null)}
                         onClick={() => { setEditing(task); setEditTitle(task.title); setEditDesc(task.description || ''); }}
-                        className={`group cursor-grab rounded-xl border border-gray-200/80 bg-white p-3 shadow-sm transition-all hover:shadow-md active:cursor-grabbing dark:border-gray-700/80 dark:bg-gray-800 ${dragged?.id === task.id ? 'opacity-50' : ''}`}
+                        className={`group cursor-grab rounded-xl border border-gray-200/80 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F7941D]/30 hover:shadow-md active:cursor-grabbing dark:border-gray-700/80 dark:bg-gray-800 ${dragged?.id === task.id ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-start gap-2">
-                          <GripVertical className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-300 dark:text-gray-600" />
+                          <GripVertical className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-300 dark:text-gray-600" />
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm text-gray-900 dark:text-white ${status === 'done' ? 'line-through opacity-60' : ''}`}>{task.title}</p>
-                            {task.description && <p className="mt-1 text-xs text-gray-400 line-clamp-2">{task.description}</p>}
+                            <p className={`text-sm font-semibold leading-5 text-gray-950 dark:text-white ${status === 'done' ? 'line-through opacity-60' : ''}`}>{task.title}</p>
+                            {task.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{task.description}</p>}
                           </div>
                           <button
+                            type="button"
                             onClick={e => { e.stopPropagation(); handleDelete(task.id); }}
-                            className="rounded p-1 text-gray-300 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-gray-600"
+                            className="rounded-lg p-1.5 text-gray-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:text-gray-600 dark:hover:bg-red-900/20"
+                            aria-label="Usuń zadanie"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -164,25 +235,25 @@ export default function PrivateZone() {
 
       {/* Edit modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900 dark:text-white">Edytuj zadanie</h2>
-              <button onClick={() => setEditing(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-4 w-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm" onClick={() => setEditing(null)}>
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-gray-700">
+              <h2 className="font-semibold text-gray-950 dark:text-white">Edytuj zadanie</h2>
+              <button type="button" onClick={() => setEditing(null)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"><X className="h-4 w-4" /></button>
             </div>
             <input
               value={editTitle} onChange={e => setEditTitle(e.target.value)}
               placeholder="Tytuł"
-              className="mb-3 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="mx-5 mt-5 h-10 w-[calc(100%-2.5rem)] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
             <textarea
               value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={4}
               placeholder="Opis (opcjonalnie)"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="mx-5 mt-3 w-[calc(100%-2.5rem)] resize-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
-              <button onClick={handleSaveEdit} className="rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317]">Zapisz</button>
+            <div className="mt-5 flex justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
+              <button type="button" onClick={() => setEditing(null)} className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Anuluj</button>
+              <button type="button" onClick={handleSaveEdit} className="inline-flex h-10 items-center justify-center rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]">Zapisz</button>
             </div>
           </div>
         </div>

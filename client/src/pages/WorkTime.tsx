@@ -714,14 +714,19 @@ export default function WorkTime() {
 
       <div className="mx-auto max-w-[1600px] space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+            <Clock className="h-6 w-6" />
+          </div>
+          <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
             {new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Czas pracy</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">Czas pracy</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
             Rejestracja czasu pracy — pierwsze rozpoczęcie dnia pracy zaokrąglone do 15 minut
           </p>
+          </div>
         </div>
         <button
           onClick={() => setShowManualEntry(true)}

@@ -241,6 +241,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     return date.toLocaleDateString();
   };
 
+  const canViewAllTickets = user?.role === UserRole.ADMIN || user?.role === UserRole.KIEROWNIK;
+
   const navigation: NavigationItem[] = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home },
 
@@ -284,7 +286,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
-    { name: 'Zgłoszenia', href: '/tickets?filter=my', icon: AlertCircle },
+    { name: 'Zgłoszenia', href: canViewAllTickets ? '/tickets?tab=all' : '/tickets?tab=my', icon: AlertCircle },
 
     { type: 'divider' },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
@@ -359,7 +361,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex lg:h-screen lg:overflow-hidden">
       {/* Sidebar Overlay (mobile) */}
       {sidebarOpen && (
         <div
@@ -370,7 +372,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform ${
+        className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 transition-transform duration-200 ease-in-out z-50 flex flex-col`}
       >
@@ -421,7 +423,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex min-h-screen flex-col min-w-0 lg:min-h-0">
         {/* Header */}
         <header className="relative h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 px-4 lg:px-6">
           <div className="flex min-w-0 shrink-0 items-center gap-4">
