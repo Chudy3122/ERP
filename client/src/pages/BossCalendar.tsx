@@ -67,7 +67,12 @@ function toMinutes(time: string): number {
 }
 
 function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // Use LOCAL date parts — toISOString() converts to UTC and shifts the day
+  // (e.g. local midnight in CEST becomes the previous day at 22:00 UTC).
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function getMondayOf(date: Date): Date {
