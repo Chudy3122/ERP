@@ -165,6 +165,16 @@ export class TicketService {
   }
 
   /**
+   * Whether a user may see/manage all tickets (admin or IT department member)
+   */
+  async canViewAllTickets(userId: string, role: string): Promise<boolean> {
+    if (role === 'admin') return true;
+    const user = await this.userRepository.findOne({ where: { id: userId }, select: ['id', 'department'] });
+    const dept = (user?.department || '').toLowerCase();
+    return dept === 'it' || dept === 'dział it' || dept === 'dzial it';
+  }
+
+  /**
    * Get user's tickets
    */
   async getUserTickets(userId: string): Promise<Ticket[]> {

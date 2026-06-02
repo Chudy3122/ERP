@@ -23,11 +23,16 @@ export class TicketController {
    */
   async getAllTickets(req: Request, res: Response): Promise<void> {
     try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const canViewAll = await ticketService.canViewAllTickets(userId, role);
+
       const filters = {
         type: req.query.type as TicketType,
         status: req.query.status as TicketStatus,
         priority: req.query.priority as TicketPriority,
-        createdBy: req.query.createdBy as string,
+        // Non-privileged users are forced to only their own tickets
+        createdBy: canViewAll ? (req.query.createdBy as string) : userId,
         assignedTo: req.query.assignedTo as string,
         category: req.query.category as string,
         projectId: req.query.projectId as string,
@@ -91,6 +96,16 @@ export class TicketController {
     try {
       const { id } = req.params;
       const userId = req.user!.userId;
+      const role = req.user!.role;
+
+      // Only the ticket owner, or admin/IT, may edit a ticket
+      const existing = await ticketService.getTicketById(id);
+      const canViewAll = await ticketService.canViewAllTickets(userId, role);
+      if (existing.created_by !== userId && !canViewAll) {
+        res.status(403).json({ message: 'Możesz edytować tylko swoje zgłoszenia' });
+        return;
+      }
+
       const ticket = await ticketService.updateTicket(id, req.body, userId);
       res.json(ticket);
     } catch (error: any) {

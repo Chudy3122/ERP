@@ -52,7 +52,10 @@ const Tickets = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  const userDept = (user?.department || '').toLowerCase();
+  const isITorAdmin = user?.role === 'admin' || userDept === 'it' || userDept === 'dział it' || userDept === 'dzial it';
+  // kept name `isAdmin` for existing references = who can see/manage all tickets
+  const isAdmin = isITorAdmin;
   const requestedTab = searchParams.get('tab') as ViewTab | null;
   const activeTab: ViewTab =
     requestedTab === 'assigned' || requestedTab === 'my' || (requestedTab === 'all' && isAdmin)
