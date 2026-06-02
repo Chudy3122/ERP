@@ -138,6 +138,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
   useAutoAway();
 
+  // Show unread (notifications + chat messages) count in the browser tab title
+  useEffect(() => {
+    const baseTitle = 'ERP - ITComplete';
+    const total = (unreadCount || 0) + (totalUnreadCount || 0);
+    document.title = total > 0 ? `(${total}) ${baseTitle}` : baseTitle;
+    return () => { document.title = baseTitle; };
+  }, [unreadCount, totalUnreadCount]);
+
   // Load notifications
   // Unlock audio API on first user interaction (required by browser autoplay policy)
   useEffect(() => {
