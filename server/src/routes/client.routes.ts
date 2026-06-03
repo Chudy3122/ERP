@@ -18,17 +18,17 @@ router.get('/:id', clientController.getClientById.bind(clientController));
 // Write routes (ADMIN, KSIEGOWOSC only)
 router.post(
   '/',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   clientController.createClient.bind(clientController)
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   clientController.updateClient.bind(clientController)
 );
 router.delete(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   clientController.deleteClient.bind(clientController)
 );
 

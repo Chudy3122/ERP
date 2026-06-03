@@ -18,24 +18,24 @@ router.get('/:id', paymentController.getPaymentById.bind(paymentController));
 // Write routes (ADMIN, KSIEGOWOSC only)
 router.post(
   '/',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   paymentController.createPayment.bind(paymentController)
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   paymentController.updatePayment.bind(paymentController)
 );
 router.delete(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   paymentController.deletePayment.bind(paymentController)
 );
 
 // Send reminders (ADMIN, KSIEGOWOSC only)
 router.post(
   '/send-reminders',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
   paymentController.sendOverdueReminders.bind(paymentController)
 );
 

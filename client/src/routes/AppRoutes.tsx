@@ -221,7 +221,7 @@ const AppRoutes = () => {
       <Route
         path="/employees"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC]}>
             <Employees />
           </PrivateRoute>
         }

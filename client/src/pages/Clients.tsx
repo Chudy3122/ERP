@@ -41,7 +41,7 @@ const Clients = () => {
   const [pageSize, setPageSize] = useState(10);
   const navigate = useNavigate();
 
-  const canEdit = user?.role === UserRole.ADMIN || user?.role === UserRole.KSIEGOWOSC;
+  const canEdit = user?.role === UserRole.ADMIN || user?.role === UserRole.KSIEGOWOSC || user?.role === UserRole.SEKRETARIAT;
 
   useEffect(() => {
     loadClients();
