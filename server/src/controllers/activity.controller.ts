@@ -9,7 +9,11 @@ export class ActivityController {
   async getRecentActivities(req: Request, res: Response): Promise<void> {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
-      const activities = await activityService.getRecentActivities(limit);
+      // Privileged roles see the global feed; everyone else sees only their own activity
+      const canSeeAll = ['admin', 'ksiegowosc', 'szef', 'kierownik'].includes(req.user!.role);
+      const activities = canSeeAll
+        ? await activityService.getRecentActivities(limit)
+        : await activityService.getUserActivities(req.user!.userId, limit);
       res.json(activities);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
