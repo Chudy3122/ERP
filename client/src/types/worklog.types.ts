@@ -45,6 +45,7 @@ export interface CreateWorkLogRequest {
   description?: string;
   is_billable?: boolean;
   work_type?: WorkLogType;
+  user_id?: string; // admin: log on behalf of another user
 }
 
 export interface UpdateWorkLogRequest {

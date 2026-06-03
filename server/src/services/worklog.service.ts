@@ -140,7 +140,7 @@ export class WorkLogService {
   /**
    * Delete work log
    */
-  async deleteWorkLog(id: string, userId: string): Promise<void> {
+  async deleteWorkLog(id: string, userId: string, isAdmin = false): Promise<void> {
     const workLog = await this.workLogRepository.findOne({
       where: { id },
     });
@@ -149,8 +149,8 @@ export class WorkLogService {
       throw new Error('Work log not found');
     }
 
-    // Only owner can delete
-    if (workLog.user_id !== userId) {
+    // Owner, or an admin acting on anyone's behalf
+    if (workLog.user_id !== userId && !isAdmin) {
       throw new Error('Not authorized to delete this work log');
     }
 

@@ -12,13 +12,16 @@ import {
   AlertCircle,
   ChevronDown,
 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as worklogApi from '../api/worklog.api';
 import * as projectApi from '../api/project.api';
 import * as taskApi from '../api/task.api';
-import { OvertimeSummaryEntry, WorkLogType } from '../types/worklog.types';
+import * as adminApi from '../api/admin.api';
+import { OvertimeSummaryEntry, WorkLogType, WorkLog } from '../types/worklog.types';
 import { Project } from '../types/project.types';
 import { Task } from '../types/task.types';
+import type { AdminUser } from '../types/admin.types';
 
 type ModalType = 'overtime' | 'collection' | null;
 
@@ -28,6 +31,7 @@ interface LogForm {
   description: string;
   project_id: string;
   task_id: string;
+  user_id: string;
 }
 
 export default function Overtime() {
@@ -45,7 +49,15 @@ export default function Overtime() {
     description: '',
     project_id: '',
     task_id: '',
+    user_id: '',
   });
+
+  const isAdmin = user?.role === 'admin';
+  const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
+  // Manage-entries modal (admin: view/delete a user's overtime entries)
+  const [manageUser, setManageUser] = useState<OvertimeSummaryEntry | null>(null);
+  const [manageLogs, setManageLogs] = useState<WorkLog[]>([]);
+  const [manageLoading, setManageLoading] = useState(false);
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
 
@@ -88,6 +100,9 @@ export default function Overtime() {
       ]);
       setSummary(summaryData);
       setProjects((projectsData as any).projects ?? projectsData);
+      if (isAdmin && allUsers.length === 0) {
+        adminApi.getUsers().then((u) => setAllUsers(u.filter((x) => x.is_active))).catch(() => {});
+      }
     } catch {
       toast.error('Błąd ładowania danych');
     } finally {
@@ -95,7 +110,7 @@ export default function Overtime() {
     }
   }
 
-  function openModal(type: ModalType) {
+  function openModal(type: ModalType, targetUserId?: string) {
     setTasks([]);
     setForm({
       work_date: new Date().toISOString().split('T')[0],
@@ -103,8 +118,34 @@ export default function Overtime() {
       description: '',
       project_id: '',
       task_id: '',
+      user_id: targetUserId ?? (isAdmin ? (user?.id ?? '') : ''),
     });
     setModal(type);
+  }
+
+  async function openManage(entry: OvertimeSummaryEntry) {
+    setManageUser(entry);
+    setManageLoading(true);
+    try {
+      const logs = await worklogApi.getWorkLogs({ user_id: entry.user_id });
+      setManageLogs(logs.filter((l) => l.work_type === WorkLogType.OVERTIME || l.work_type === WorkLogType.OVERTIME_COMP));
+    } catch {
+      toast.error('Nie udało się pobrać wpisów');
+      setManageLogs([]);
+    } finally {
+      setManageLoading(false);
+    }
+  }
+
+  async function handleDeleteLog(id: string) {
+    try {
+      await worklogApi.deleteWorkLog(id);
+      setManageLogs((prev) => prev.filter((l) => l.id !== id));
+      toast.success('Wpis usunięty');
+      fetchData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się usunąć');
+    }
   }
 
   async function handleSubmit() {
@@ -121,6 +162,7 @@ export default function Overtime() {
         project_id: form.project_id || undefined,
         task_id: form.task_id || undefined,
         work_type: modal === 'overtime' ? WorkLogType.OVERTIME : WorkLogType.OVERTIME_COMP,
+        user_id: isAdmin && form.user_id ? form.user_id : undefined,
       });
       toast.success(modal === 'overtime' ? 'Nadgodziny dodane' : 'Odbiór zarejestrowany');
       setModal(null);
@@ -176,12 +218,34 @@ export default function Overtime() {
         {entry.collected_this_month.toFixed(1)}h
       </td>
       <td className="px-4 py-3 text-right">
-        <span className={`font-semibold ${balanceColor(entry.balance)}`}>
-          {entry.balance > 0 ? '+' : ''}{entry.balance.toFixed(1)}h
-        </span>
-        {entry.balance < 0 && (
-          <span className="ml-1 block text-xs text-red-500">zaległe</span>
-        )}
+        <div className="flex items-center justify-end gap-2">
+          <div>
+            <span className={`font-semibold ${balanceColor(entry.balance)}`}>
+              {entry.balance > 0 ? '+' : ''}{entry.balance.toFixed(1)}h
+            </span>
+            {entry.balance < 0 && (
+              <span className="block text-xs text-red-500">zaległe</span>
+            )}
+          </div>
+          {isAdmin && (
+            <div className="flex flex-shrink-0 items-center gap-1">
+              <button
+                onClick={() => openModal('overtime', entry.user_id)}
+                title="Dodaj nadgodziny temu pracownikowi"
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => openManage(entry)}
+                title="Zarządzaj wpisami (usuń)"
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -403,7 +467,24 @@ export default function Overtime() {
               {modal === 'collection' && (
                 <div className="flex items-start gap-2 rounded-lg bg-orange-50 p-3 text-sm text-orange-700 dark:bg-orange-900/20 dark:text-orange-300">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>Rejestrujesz odbiór swoich nadgodzin. Upewnij się że uzgodniłeś to z przełożonym.</span>
+                  <span>Rejestrujesz odbiór nadgodzin. Upewnij się że uzgodniłeś to z przełożonym.</span>
+                </div>
+              )}
+
+              {/* Admin: pick whom to log for */}
+              {isAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pracownik</label>
+                  <select
+                    value={form.user_id}
+                    onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                    className={selectClass}
+                  >
+                    <option value={user?.id ?? ''}>Ja ({user?.first_name} {user?.last_name})</option>
+                    {allUsers.filter((u) => u.id !== user?.id).map((u) => (
+                      <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -517,6 +598,42 @@ export default function Overtime() {
               >
                 {submitting ? 'Zapisywanie...' : 'Zapisz'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin: manage a user's overtime entries */}
+      {manageUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setManageUser(null)}>
+          <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 p-5 dark:border-gray-700">
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Wpisy nadgodzin</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{manageUser.first_name} {manageUser.last_name}</p>
+              </div>
+              <button onClick={() => setManageUser(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {manageLoading ? (
+                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-[#F7941D]" /></div>
+              ) : manageLogs.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">Brak wpisów nadgodzin / odbiorów.</p>
+              ) : (
+                <div className="space-y-2">
+                  {manageLogs.map((log) => (
+                    <div key={log.id} className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${log.work_type === WorkLogType.OVERTIME ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-300'}`}>
+                        {log.work_type === WorkLogType.OVERTIME ? 'Nadgodziny' : 'Odbiór'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{Number(log.hours).toFixed(1)}h</span>
+                      <span className="text-xs text-gray-400">{new Date(log.work_date).toLocaleDateString('pl-PL')}</span>
+                      <span className="flex-1 truncate text-xs text-gray-500 dark:text-gray-400" title={log.description || ''}>{log.description || ''}</span>
+                      <button onClick={() => handleDeleteLog(log.id)} title="Usuń" className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

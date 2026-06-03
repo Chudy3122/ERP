@@ -8,8 +8,10 @@ export class WorkLogController {
    */
   async createWorkLog(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
-      const workLog = await workLogService.createWorkLog(userId, req.body);
+      // Admins may log time on behalf of another user via body.user_id
+      const isAdmin = req.user!.role === 'admin';
+      const targetUserId = isAdmin && req.body.user_id ? req.body.user_id : req.user!.userId;
+      const workLog = await workLogService.createWorkLog(targetUserId, req.body);
       res.status(201).json(workLog);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -22,8 +24,11 @@ export class WorkLogController {
    */
   async getWorkLogs(req: Request, res: Response): Promise<void> {
     try {
+      const isAdmin = req.user!.role === 'admin';
+      const requestedUserId = req.query.user_id as string;
       const filters = {
-        user_id: req.query.user_id as string,
+        // Non-admins can only ever see their own logs
+        user_id: isAdmin ? requestedUserId : req.user!.userId,
         task_id: req.query.task_id as string,
         project_id: req.query.project_id as string,
         start_date: req.query.start_date as string,
@@ -137,7 +142,8 @@ export class WorkLogController {
     try {
       const { id } = req.params;
       const userId = req.user!.userId;
-      await workLogService.deleteWorkLog(id, userId);
+      const isAdmin = req.user!.role === 'admin';
+      await workLogService.deleteWorkLog(id, userId, isAdmin);
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
