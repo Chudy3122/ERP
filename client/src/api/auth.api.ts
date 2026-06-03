@@ -46,3 +46,10 @@ export const getCurrentUserApi = async (): Promise<User> => {
   const response = await apiClient.get<ApiResponse<User>>('/auth/me');
   return response.data.data!;
 };
+
+/**
+ * Change own password
+ */
+export const changePasswordApi = async (currentPassword: string, newPassword: string): Promise<void> => {
+  await apiClient.post('/auth/change-password', { currentPassword, newPassword });
+};

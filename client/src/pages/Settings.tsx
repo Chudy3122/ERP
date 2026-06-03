@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import { useTheme } from '../contexts/ThemeContext';
 import * as notificationPreferenceApi from '../api/notificationPreference.api';
+import { changePasswordApi } from '../api/auth.api';
+import { toast } from 'react-hot-toast';
 import { confirmDialog } from '../utils/confirm';
 import type { NotificationPreference, UpdateNotificationPreferencesData } from '../api/notificationPreference.api';
 import {
@@ -30,9 +32,11 @@ import {
   Timer,
   Settings as SettingsIcon,
   RotateCcw,
+  KeyRound,
+  Loader2,
 } from 'lucide-react';
 
-type SettingsSection = 'appearance' | 'notifications' | 'privacy' | 'accessibility' | 'language';
+type SettingsSection = 'appearance' | 'notifications' | 'privacy' | 'security' | 'accessibility' | 'language';
 
 const Settings: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -43,6 +47,10 @@ const Settings: React.FC = () => {
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreference | null>(null);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifSaving, setNotifSaving] = useState(false);
+
+  // Change password
+  const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
+  const [pwdSaving, setPwdSaving] = useState(false);
 
   // Local settings state
   const [settings, setSettings] = useState({
@@ -130,6 +138,7 @@ const Settings: React.FC = () => {
     { id: 'appearance', name: t('settings.appearance.title'), icon: Palette, description: t('settings.appearance.description') },
     { id: 'notifications', name: t('settings.notifications.title'), icon: Bell, description: t('settings.notifications.description') },
     { id: 'privacy', name: t('settings.privacy.title'), icon: Shield, description: t('settings.privacy.description') },
+    { id: 'security', name: 'Bezpieczeństwo', icon: KeyRound, description: 'Zmiana hasła' },
     { id: 'accessibility', name: t('settings.accessibility.title'), icon: Accessibility, description: t('settings.accessibility.description') },
     { id: 'language', name: t('settings.language.title'), icon: Globe, description: t('settings.language.description') },
   ];
@@ -151,6 +160,61 @@ const Settings: React.FC = () => {
     { value: 'MM/DD/YYYY', label: '12/31/2024', example: 'MM/DD/YYYY' },
     { value: 'YYYY-MM-DD', label: '2024-12-31', example: 'YYYY-MM-DD' },
   ];
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pwd.current || !pwd.next) { toast.error('Wypełnij wszystkie pola'); return; }
+    if (pwd.next.length < 8) { toast.error('Nowe hasło musi mieć co najmniej 8 znaków'); return; }
+    if (pwd.next !== pwd.confirm) { toast.error('Hasła nie są identyczne'); return; }
+    try {
+      setPwdSaving(true);
+      await changePasswordApi(pwd.current, pwd.next);
+      toast.success('Hasło zostało zmienione');
+      setPwd({ current: '', next: '', confirm: '' });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się zmienić hasła');
+    } finally {
+      setPwdSaving(false);
+    }
+  };
+
+  const pwdInputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+
+  const renderSecuritySection = () => (
+    <div className="max-w-md space-y-5">
+      <div>
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+          <KeyRound className="h-5 w-5 text-[#F7941D]" />
+          Zmiana hasła
+        </h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Podaj obecne hasło i ustaw nowe (min. 8 znaków).
+        </p>
+      </div>
+      <form onSubmit={handleChangePassword} className="space-y-4">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Obecne hasło</label>
+          <input type="password" autoComplete="current-password" value={pwd.current} onChange={e => setPwd({ ...pwd, current: e.target.value })} className={pwdInputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nowe hasło</label>
+          <input type="password" autoComplete="new-password" value={pwd.next} onChange={e => setPwd({ ...pwd, next: e.target.value })} className={pwdInputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Powtórz nowe hasło</label>
+          <input type="password" autoComplete="new-password" value={pwd.confirm} onChange={e => setPwd({ ...pwd, confirm: e.target.value })} className={pwdInputClass} />
+        </div>
+        <button
+          type="submit"
+          disabled={pwdSaving}
+          className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:opacity-60"
+        >
+          {pwdSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+          Zmień hasło
+        </button>
+      </form>
+    </div>
+  );
 
   const renderAppearanceSection = () => (
     <div className="space-y-6">
@@ -640,6 +704,8 @@ const Settings: React.FC = () => {
         return renderNotificationsSection();
       case 'privacy':
         return renderPrivacySection();
+      case 'security':
+        return renderSecuritySection();
       case 'accessibility':
         return renderAccessibilitySection();
       case 'language':

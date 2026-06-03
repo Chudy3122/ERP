@@ -201,6 +201,37 @@ export class AuthService {
   }
 
   /**
+   * Change the logged-in user's own password.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    // Load with password_hash (select: false by default)
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id', { id: userId })
+      .addSelect('user.password_hash')
+      .getOne();
+
+    if (!user) {
+      throw new Error('Użytkownik nie znaleziony');
+    }
+
+    const isCurrentValid = await user.verifyPassword(currentPassword);
+    if (!isCurrentValid) {
+      throw new Error('Obecne hasło jest nieprawidłowe');
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('Nowe hasło musi mieć co najmniej 8 znaków');
+    }
+    if (currentPassword === newPassword) {
+      throw new Error('Nowe hasło musi różnić się od obecnego');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, User.SALT_ROUNDS);
+    await this.userRepository.update(user.id, { password_hash: newHash });
+  }
+
+  /**
    * Save refresh token to database
    */
   private async saveRefreshToken(userId: string, tokenString: string): Promise<void> {

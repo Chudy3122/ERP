@@ -132,6 +132,22 @@ export const logout = async (req: Request, res: Response) => {
  * Get current user profile
  * GET /api/auth/me
  */
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Podaj obecne i nowe hasło' });
+    }
+    await authService.changePassword(req.user.userId, currentPassword, newPassword);
+    return res.status(200).json({ message: 'Hasło zostało zmienione' });
+  } catch (error: any) {
+    return res.status(400).json({ message: error.message || 'Nie udało się zmienić hasła' });
+  }
+};
+
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
