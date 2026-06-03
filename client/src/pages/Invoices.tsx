@@ -35,6 +35,7 @@ const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const navigate = useNavigate();
@@ -431,7 +432,12 @@ const Invoices = () => {
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() => setMenuOpenId(menuOpenId === invoice.id ? null : invoice.id)}
+                                    onClick={(e) => {
+                                      if (menuOpenId === invoice.id) { setMenuOpenId(null); return; }
+                                      const r = e.currentTarget.getBoundingClientRect();
+                                      setMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+                                      setMenuOpenId(invoice.id);
+                                    }}
                                     className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                                     aria-label="Menu faktury"
                                   >
@@ -439,8 +445,11 @@ const Invoices = () => {
                                   </button>
                                   {menuOpenId === invoice.id && (
                                     <>
-                                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                                      <div className="absolute right-0 top-9 z-20 min-w-[150px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                      <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />
+                                      <div
+                                        style={{ top: menuPos.top, right: menuPos.right }}
+                                        className="fixed z-50 min-w-[150px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                                      >
                                         <button
                                           type="button"
                                           onClick={() => {
