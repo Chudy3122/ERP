@@ -17,7 +17,7 @@ import {
 import * as invoiceApi from '../api/invoice.api';
 import * as clientApi from '../api/client.api';
 import { getProjects } from '../api/project.api';
-import { CreateInvoiceRequest, CreateInvoiceItemRequest } from '../types/invoice.types';
+import { CreateInvoiceRequest, CreateInvoiceItemRequest, InvoiceKind } from '../types/invoice.types';
 import { Client } from '../types/client.types';
 import { Project } from '../types/project.types';
 
@@ -42,6 +42,7 @@ const InvoiceForm = () => {
   const [formData, setFormData] = useState<CreateInvoiceRequest>({
     client_id: '',
     project_id: '',
+    kind: InvoiceKind.INCOME,
     issue_date: new Date().toISOString().split('T')[0],
     sale_date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -102,6 +103,7 @@ const InvoiceForm = () => {
       setFormData({
         client_id: invoice.client_id,
         project_id: invoice.project_id || '',
+        kind: invoice.kind || InvoiceKind.INCOME,
         issue_date: invoice.issue_date.split('T')[0],
         sale_date: invoice.sale_date ? invoice.sale_date.split('T')[0] : '',
         due_date: invoice.due_date.split('T')[0],
@@ -299,6 +301,35 @@ const InvoiceForm = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Invoice kind toggle */}
+          <section className={sectionClass}>
+            <label className={labelClass}>Rodzaj faktury</label>
+            <div className="mt-2 inline-flex rounded-lg border border-gray-200 p-1 dark:border-gray-700">
+              {([
+                { k: InvoiceKind.INCOME, label: 'Przychodowa (sprzedaż)' },
+                { k: InvoiceKind.COST, label: 'Kosztowa (zakup)' },
+              ] as { k: InvoiceKind; label: string }[]).map(({ k, label }) => (
+                <button
+                  key={k}
+                  type="button"
+                  disabled={isEdit}
+                  onClick={() => setFormData(prev => ({ ...prev, kind: k }))}
+                  className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
+                    formData.kind === k
+                      ? (k === InvoiceKind.COST ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white')
+                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {isEdit && <p className="mt-2 text-xs text-gray-400">Rodzaju faktury nie można zmienić po utworzeniu.</p>}
+            {formData.kind === InvoiceKind.COST && (
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Faktura kosztowa — koszt, który Ty masz opłacić. Kontrahent = dostawca.</p>
+            )}
+          </section>
+
           {/* Invoice Details */}
           <section className={sectionClass}>
             <div className="mb-5 flex items-center gap-3">
@@ -315,7 +346,7 @@ const InvoiceForm = () => {
             {/* Client */}
             <div>
               <label htmlFor="client_id" className={labelClass}>
-                {t('client')} *
+                {formData.kind === InvoiceKind.COST ? 'Dostawca' : t('client')} *
               </label>
               <select
                 id="client_id"

@@ -23,6 +23,11 @@ export enum InvoiceStatus {
   CANCELLED = 'cancelled',
 }
 
+export enum InvoiceKind {
+  INCOME = 'income', // Przychodowa (sprzedażowa) — ktoś płaci nam
+  COST = 'cost',     // Kosztowa (zakupowa) — my płacimy
+}
+
 @Entity('invoices')
 export class Invoice extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -30,6 +35,9 @@ export class Invoice extends BaseEntity {
 
   @Column({ length: 50, unique: true })
   invoice_number: string;
+
+  @Column({ type: 'varchar', length: 10, default: InvoiceKind.INCOME })
+  kind: InvoiceKind;
 
   @Column({
     type: 'enum',

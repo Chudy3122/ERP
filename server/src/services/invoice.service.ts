@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/database';
-import { Invoice, InvoiceStatus } from '../models/Invoice.model';
+import { Invoice, InvoiceStatus, InvoiceKind } from '../models/Invoice.model';
 import { InvoiceItem } from '../models/InvoiceItem.model';
 import { Client } from '../models/Client.model';
 import { User } from '../models/User.model';
@@ -9,6 +9,7 @@ import { Between, LessThan } from 'typeorm';
 interface CreateInvoiceDto {
   client_id: string;
   project_id?: string;
+  kind?: InvoiceKind;
   issue_date: Date;
   sale_date?: Date;
   due_date: Date;
@@ -51,6 +52,7 @@ interface UpdateInvoiceItemDto {
 
 interface InvoiceFilters {
   status?: InvoiceStatus;
+  kind?: InvoiceKind;
   client_id?: string;
   project_id?: string;
   search?: string;
@@ -70,6 +72,10 @@ interface InvoiceStatistics {
   total_gross: number;
   total_paid: number;
   total_pending: number;
+  // Income vs cost balance (computed across the date range, both kinds)
+  income_gross: number;
+  cost_gross: number;
+  balance: number;
 }
 
 export class InvoiceService {
@@ -82,22 +88,24 @@ export class InvoiceService {
    * Generate invoice number
    * Format: FV/YYYY/MM/NNNN
    */
-  async generateInvoiceNumber(issueDate: Date): Promise<string> {
+  async generateInvoiceNumber(issueDate: Date, kind: InvoiceKind = InvoiceKind.INCOME): Promise<string> {
     const year = issueDate.getFullYear();
     const month = String(issueDate.getMonth() + 1).padStart(2, '0');
 
-    // Get count of invoices in this month
+    // Get count of invoices of this kind in this month
     const startOfMonth = new Date(year, issueDate.getMonth(), 1);
     const endOfMonth = new Date(year, issueDate.getMonth() + 1, 0, 23, 59, 59);
 
     const count = await this.invoiceRepository.count({
       where: {
+        kind,
         issue_date: Between(startOfMonth, endOfMonth),
       },
     });
 
     const sequence = String(count + 1).padStart(4, '0');
-    return `FV/${year}/${month}/${sequence}`;
+    const prefix = kind === InvoiceKind.COST ? 'FK' : 'FV';
+    return `${prefix}/${year}/${month}/${sequence}`;
   }
 
   /**
@@ -159,11 +167,13 @@ export class InvoiceService {
       throw new Error('Kontrahent nie znaleziony');
     }
 
-    // Generate invoice number
-    const invoice_number = await this.generateInvoiceNumber(new Date(data.issue_date));
+    // Generate invoice number (FV for income, FK for cost)
+    const kind = data.kind || InvoiceKind.INCOME;
+    const invoice_number = await this.generateInvoiceNumber(new Date(data.issue_date), kind);
 
     const invoice = this.invoiceRepository.create({
       invoice_number,
+      kind,
       client_id: data.client_id,
       project_id: data.project_id,
       issue_date: data.issue_date,
@@ -219,6 +229,10 @@ export class InvoiceService {
     if (filters) {
       if (filters.status) {
         queryBuilder.andWhere('invoice.status = :status', { status: filters.status });
+      }
+
+      if (filters.kind) {
+        queryBuilder.andWhere('invoice.kind = :kind', { kind: filters.kind });
       }
 
       if (filters.client_id) {
@@ -397,7 +411,7 @@ export class InvoiceService {
   /**
    * Get invoice statistics
    */
-  async getStatistics(filters?: { start_date?: Date; end_date?: Date }): Promise<InvoiceStatistics> {
+  async getStatistics(filters?: { start_date?: Date; end_date?: Date; kind?: InvoiceKind }): Promise<InvoiceStatistics> {
     const queryBuilder = this.invoiceRepository.createQueryBuilder('invoice');
 
     if (filters?.start_date) {
@@ -408,7 +422,22 @@ export class InvoiceService {
       queryBuilder.andWhere('invoice.issue_date <= :endDate', { endDate: filters.end_date });
     }
 
-    const invoices = await queryBuilder.getMany();
+    // Fetch all (both kinds) within range — kind filter only narrows the per-status counts
+    const allInvoices = await queryBuilder.getMany();
+
+    // Income vs cost balance — always computed across both kinds (non-cancelled)
+    let income_gross = 0;
+    let cost_gross = 0;
+    for (const inv of allInvoices) {
+      if (inv.status === InvoiceStatus.CANCELLED) continue;
+      if (inv.kind === InvoiceKind.COST) cost_gross += Number(inv.gross_total);
+      else income_gross += Number(inv.gross_total);
+    }
+
+    // Per-status counts/totals respect the active kind filter (if any)
+    const invoices = filters?.kind
+      ? allInvoices.filter((i) => i.kind === filters.kind)
+      : allInvoices;
 
     const stats: InvoiceStatistics = {
       total_count: invoices.length,
@@ -422,6 +451,9 @@ export class InvoiceService {
       total_gross: 0,
       total_paid: 0,
       total_pending: 0,
+      income_gross: Math.round(income_gross * 100) / 100,
+      cost_gross: Math.round(cost_gross * 100) / 100,
+      balance: Math.round((income_gross - cost_gross) * 100) / 100,
     };
 
     for (const invoice of invoices) {

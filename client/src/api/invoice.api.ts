@@ -16,7 +16,7 @@ export const getInvoices = async (filters?: InvoiceFilters): Promise<{ invoices:
   return response.data;
 };
 
-export const getInvoiceStatistics = async (filters?: { start_date?: string; end_date?: string }): Promise<InvoiceStatistics> => {
+export const getInvoiceStatistics = async (filters?: { start_date?: string; end_date?: string; kind?: string }): Promise<InvoiceStatistics> => {
   const response = await client.get('/invoices/statistics', { params: filters });
   return response.data;
 };

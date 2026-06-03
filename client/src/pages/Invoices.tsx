@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import * as invoiceApi from '../api/invoice.api';
-import { Invoice, InvoiceStatus, InvoiceStatistics } from '../types/invoice.types';
+import { Invoice, InvoiceStatus, InvoiceKind, InvoiceStatistics } from '../types/invoice.types';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/auth.types';
 import { confirmDelete } from '../utils/confirm';
@@ -36,6 +36,7 @@ const Invoices = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [kindFilter, setKindFilter] = useState<'all' | InvoiceKind>('all');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,13 +48,14 @@ const Invoices = () => {
   useEffect(() => {
     loadInvoices();
     loadStatistics();
-  }, []);
+  }, [kindFilter]);
 
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
       const result = await invoiceApi.getInvoices({
         search: searchQuery || undefined,
+        kind: kindFilter === 'all' ? undefined : kindFilter,
       });
       setInvoices(result.invoices);
       setCurrentPage(1);
@@ -66,7 +68,9 @@ const Invoices = () => {
 
   const loadStatistics = async () => {
     try {
-      const stats = await invoiceApi.getInvoiceStatistics();
+      const stats = await invoiceApi.getInvoiceStatistics({
+        kind: kindFilter === 'all' ? undefined : kindFilter,
+      });
       setStatistics(stats);
     } catch (error) {
       console.error('Failed to load statistics:', error);
@@ -236,6 +240,24 @@ const Invoices = () => {
           </div>
         </section>
 
+        {/* Income vs cost balance */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/20">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Przychody (brutto)</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(statistics?.income_gross || 0)}</p>
+          </div>
+          <div className="rounded-xl border border-red-200 bg-red-50/60 p-4 shadow-sm dark:border-red-900/40 dark:bg-red-900/20">
+            <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Koszty (brutto)</p>
+            <p className="mt-1 text-2xl font-bold text-red-700 dark:text-red-300">{formatCurrency(statistics?.cost_gross || 0)}</p>
+          </div>
+          <div className={`rounded-xl border p-4 shadow-sm ${(statistics?.balance || 0) >= 0 ? 'border-[#F7941D]/30 bg-[#F7941D]/5 dark:border-[#F7941D]/40 dark:bg-[#F7941D]/10' : 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/30'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Wynik (przychody − koszty)</p>
+            <p className={`mt-1 text-2xl font-bold ${(statistics?.balance || 0) >= 0 ? 'text-[#F7941D]' : 'text-red-600 dark:text-red-300'}`}>
+              {(statistics?.balance || 0) >= 0 ? '' : '−'}{formatCurrency(Math.abs(statistics?.balance || 0))}
+            </p>
+          </div>
+        </section>
+
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {statCards.map((card) => {
             const Icon = card.icon;
@@ -260,6 +282,28 @@ const Invoices = () => {
         </section>
 
         <section className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          {/* Kind filter: income vs cost */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-4 dark:border-gray-700">
+            {([
+              { key: 'all', label: 'Wszystkie' },
+              { key: InvoiceKind.INCOME, label: 'Przychodowe' },
+              { key: InvoiceKind.COST, label: 'Kosztowe' },
+            ] as { key: 'all' | InvoiceKind; label: string }[]).map((k) => (
+              <button
+                key={k.key}
+                type="button"
+                onClick={() => { setKindFilter(k.key); setViewFilter('all'); setCurrentPage(1); }}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  kindFilter === k.key
+                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {viewTabs.map((tab) => (

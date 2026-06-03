@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import invoiceService from '../services/invoice.service';
 import invoicePdfService from '../services/invoicePdf.service';
 import invoiceReportService from '../services/invoiceReport.service';
-import { InvoiceStatus } from '../models/Invoice.model';
+import { InvoiceStatus, InvoiceKind } from '../models/Invoice.model';
 
 export class InvoiceController {
   /**
@@ -27,6 +27,7 @@ export class InvoiceController {
     try {
       const filters = {
         status: req.query.status as InvoiceStatus,
+        kind: req.query.kind as InvoiceKind,
         client_id: req.query.client_id as string,
         project_id: req.query.project_id as string,
         search: req.query.search as string,
@@ -50,6 +51,7 @@ export class InvoiceController {
       const filters = {
         start_date: req.query.start_date ? new Date(req.query.start_date as string) : undefined,
         end_date: req.query.end_date ? new Date(req.query.end_date as string) : undefined,
+        kind: req.query.kind as InvoiceKind,
       };
 
       const stats = await invoiceService.getStatistics(filters);

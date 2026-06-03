@@ -11,6 +11,11 @@ export enum InvoiceStatus {
   CANCELLED = 'cancelled',
 }
 
+export enum InvoiceKind {
+  INCOME = 'income', // Przychodowa (sprzedażowa)
+  COST = 'cost',     // Kosztowa (zakupowa)
+}
+
 export interface InvoiceItem {
   id: string;
   invoice_id: string;
@@ -31,6 +36,7 @@ export interface Invoice {
   id: string;
   invoice_number: string;
   status: InvoiceStatus;
+  kind: InvoiceKind;
   client_id: string;
   project_id?: string;
   issue_date: string;
@@ -73,6 +79,7 @@ export interface UpdateInvoiceItemRequest {
 export interface CreateInvoiceRequest {
   client_id: string;
   project_id?: string;
+  kind?: InvoiceKind;
   issue_date: string;
   sale_date?: string;
   due_date: string;
@@ -98,6 +105,7 @@ export interface UpdateInvoiceRequest {
 
 export interface InvoiceFilters {
   status?: InvoiceStatus;
+  kind?: InvoiceKind;
   client_id?: string;
   project_id?: string;
   search?: string;
@@ -117,4 +125,7 @@ export interface InvoiceStatistics {
   total_gross: number;
   total_paid: number;
   total_pending: number;
+  income_gross: number;
+  cost_gross: number;
+  balance: number;
 }
