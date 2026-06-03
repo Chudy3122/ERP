@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDelete } from '../utils/confirm';
 import {
   ArrowLeft,
   Edit,
@@ -61,7 +63,7 @@ const InvoiceDetail = () => {
       const updated = await invoiceApi.updateInvoiceStatus(invoice.id, status);
       setInvoice(updated);
     } catch (error: any) {
-      alert(error.response?.data?.message || t('statusError'));
+      toast.error(error.response?.data?.message || t('statusError'));
     } finally {
       setIsUpdating(false);
     }
@@ -74,7 +76,7 @@ const InvoiceDetail = () => {
       const updated = await invoiceApi.markInvoiceAsPaid(invoice.id);
       setInvoice(updated);
     } catch (error: any) {
-      alert(error.response?.data?.message || t('statusError'));
+      toast.error(error.response?.data?.message || t('statusError'));
     } finally {
       setIsUpdating(false);
     }
@@ -82,13 +84,13 @@ const InvoiceDetail = () => {
 
   const handleDelete = async () => {
     if (!invoice) return;
-    if (!window.confirm(t('confirmDelete'))) return;
+    if (!(await confirmDelete(t('confirmDelete')))) return;
 
     try {
       await invoiceApi.deleteInvoice(invoice.id);
       navigate('/invoices');
     } catch (error: any) {
-      alert(error.response?.data?.message || t('deleteError'));
+      toast.error(error.response?.data?.message || t('deleteError'));
     }
   };
 
@@ -98,7 +100,7 @@ const InvoiceDetail = () => {
       setIsDownloadingPdf(true);
       await invoiceApi.downloadInvoicePdf(invoice.id, invoice.invoice_number);
     } catch (error: any) {
-      alert(error.response?.data?.message || t('pdfError'));
+      toast.error(error.response?.data?.message || t('pdfError'));
     } finally {
       setIsDownloadingPdf(false);
     }

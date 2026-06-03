@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
@@ -135,7 +136,7 @@ const Meetings = () => {
   // Internal meeting - start immediately
   const handleCreateInternalMeeting = async () => {
     if (!meetingTitle.trim() || selectedUsers.length === 0) {
-      alert('Wprowadź tytuł spotkania i wybierz co najmniej jednego uczestnika');
+      toast.error('Wprowadź tytuł spotkania i wybierz co najmniej jednego uczestnika');
       return;
     }
 
@@ -151,7 +152,7 @@ const Meetings = () => {
         state: { meetingId: meeting.id },
       });
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się utworzyć spotkania');
+      toast.error(error.response?.data?.message || 'Nie udało się utworzyć spotkania');
     } finally {
       setIsCreating(false);
     }
@@ -160,7 +161,7 @@ const Meetings = () => {
   // External meeting - schedule for later
   const handleScheduleExternalMeeting = async () => {
     if (!externalTitle.trim() || !externalDate || !externalTime) {
-      alert('Wprowadź tytuł, datę i godzinę spotkania');
+      toast.error('Wprowadź tytuł, datę i godzinę spotkania');
       return;
     }
 
@@ -181,7 +182,7 @@ const Meetings = () => {
       resetExternalForm();
       loadScheduledMeetings();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Nie udało się zaplanować spotkania');
+      toast.error(error.response?.data?.message || 'Nie udało się zaplanować spotkania');
     } finally {
       setIsSaving(false);
     }

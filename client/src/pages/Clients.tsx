@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDelete } from '../utils/confirm';
 import {
   Building2,
   ChevronLeft,
@@ -65,13 +67,13 @@ const Clients = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm(t('confirmDelete'))) return;
+    if (!(await confirmDelete(t('confirmDelete')))) return;
 
     try {
       await clientApi.deleteClient(id);
       setClients(clients.filter((client) => client.id !== id));
     } catch (error: any) {
-      alert(error.response?.data?.message || t('deleteError'));
+      toast.error(error.response?.data?.message || t('deleteError'));
     }
     setMenuOpenId(null);
   };

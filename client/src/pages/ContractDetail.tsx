@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDelete } from '../utils/confirm';
 import {
   ArrowLeft,
   Edit,
@@ -65,13 +67,14 @@ const ContractDetail = () => {
   };
 
   const handleDelete = async () => {
-    if (!contract || !confirm(t('confirmDelete'))) return;
+    if (!contract) return;
+    if (!(await confirmDelete(t('confirmDelete')))) return;
 
     try {
       await contractApi.deleteContract(contract.id);
       navigate('/contracts');
     } catch (err: any) {
-      alert(err.response?.data?.message || t('deleteError'));
+      toast.error(err.response?.data?.message || t('deleteError'));
     }
   };
 
@@ -82,7 +85,7 @@ const ContractDetail = () => {
       await contractApi.updateContractStatus(contract.id, newStatus);
       loadContract();
     } catch (err: any) {
-      alert(err.response?.data?.message || t('statusError'));
+      toast.error(err.response?.data?.message || t('statusError'));
     }
   };
 
@@ -101,7 +104,7 @@ const ContractDetail = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err.response?.data?.message || t('pdfError'));
+      toast.error(err.response?.data?.message || t('pdfError'));
     } finally {
       setIsDownloading(false);
     }
@@ -117,7 +120,7 @@ const ContractDetail = () => {
       await contractApi.uploadContractAttachment(contract.id, file);
       loadContract();
     } catch (err: any) {
-      alert(err.response?.data?.message || t('uploadError'));
+      toast.error(err.response?.data?.message || t('uploadError'));
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -125,14 +128,15 @@ const ContractDetail = () => {
   };
 
   const handleDeleteAttachment = async (attachmentId: string) => {
-    if (!contract || !confirm(t('confirmDeleteAttachment'))) return;
+    if (!contract) return;
+    if (!(await confirmDelete(t('confirmDeleteAttachment')))) return;
 
     try {
       setIsDeletingAttachment(attachmentId);
       await contractApi.deleteContractAttachment(contract.id, attachmentId);
       loadContract();
     } catch (err: any) {
-      alert(err.response?.data?.message || t('deleteAttachmentError'));
+      toast.error(err.response?.data?.message || t('deleteAttachmentError'));
     } finally {
       setIsDeletingAttachment(null);
     }

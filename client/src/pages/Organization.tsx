@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDelete } from '../utils/confirm';
 import DepartmentTree from '../components/organization/DepartmentTree';
 import DepartmentForm from '../components/organization/DepartmentForm';
 import AssignEmployeeModal from '../components/organization/AssignEmployeeModal';
@@ -70,7 +71,7 @@ const Organization = () => {
   };
 
   const handleDeleteDepartment = async (dept: Department) => {
-    if (!window.confirm(t('organization.confirmDelete', { name: dept.name }))) {
+    if (!(await confirmDelete(t('organization.confirmDelete', { name: dept.name })))) {
       return;
     }
 
@@ -121,7 +122,7 @@ const Organization = () => {
 
   const handleRemoveEmployee = async (userId: string) => {
     if (!selectedDepartment) return;
-    if (!window.confirm(t('organization.confirmRemoveEmployee'))) return;
+    if (!(await confirmDelete(t('organization.confirmRemoveEmployee')))) return;
 
     try {
       await departmentApi.removeEmployee(selectedDepartment.id, userId);

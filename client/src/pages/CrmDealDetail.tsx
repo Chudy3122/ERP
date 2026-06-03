@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDialog, confirmDelete } from '../utils/confirm';
 import {
   ArrowLeft,
   Trash2,
@@ -109,7 +111,8 @@ const CrmDealDetail = () => {
   };
 
   const handleMarkWon = async () => {
-    if (!deal || !window.confirm('Oznaczyć deal jako wygrany?')) return;
+    if (!deal) return;
+    if (!(await confirmDialog({ message: 'Oznaczyć deal jako wygrany?', variant: 'warning', icon: 'warning' }))) return;
     try {
       const updated = await crmApi.updateDealStatus(deal.id, DealStatus.WON);
       setDeal(updated);
@@ -132,19 +135,21 @@ const CrmDealDetail = () => {
   };
 
   const handleConvertToInvoice = async () => {
-    if (!deal || !window.confirm('Wygenerować fakturę dla tego deala?')) return;
+    if (!deal) return;
+    if (!(await confirmDialog({ message: 'Wygenerować fakturę dla tego deala?', variant: 'warning', icon: 'warning' }))) return;
     setIsConverting(true);
     try {
       const invoice = await crmApi.convertDealToInvoice(deal.id);
       navigate(`/invoices/${invoice.id}`);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Nie udało się wygenerować faktury');
+      toast.error(err.response?.data?.message || 'Nie udało się wygenerować faktury');
       setIsConverting(false);
     }
   };
 
   const handleDeleteDeal = async () => {
-    if (!deal || !window.confirm('Na pewno usunąć tego deala?')) return;
+    if (!deal) return;
+    if (!(await confirmDelete('Na pewno usunąć tego deala?'))) return;
     try {
       await crmApi.deleteDeal(deal.id);
       navigate('/crm');

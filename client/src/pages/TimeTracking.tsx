@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -48,7 +49,7 @@ const TimeTracking: React.FC = () => {
       setCurrentEntry(entry);
       await loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Nie udało się rozpocząć pracy');
+      toast.error(err.response?.data?.message || 'Nie udało się rozpocząć pracy');
     } finally {
       setLoading(false);
     }
@@ -61,7 +62,7 @@ const TimeTracking: React.FC = () => {
       setCurrentEntry(null);
       await loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Nie udało się zakończyć pracy');
+      toast.error(err.response?.data?.message || 'Nie udało się zakończyć pracy');
     } finally {
       setLoading(false);
     }

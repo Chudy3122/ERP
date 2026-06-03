@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import { useTheme } from '../contexts/ThemeContext';
 import * as notificationPreferenceApi from '../api/notificationPreference.api';
+import { confirmDialog } from '../utils/confirm';
 import type { NotificationPreference, UpdateNotificationPreferencesData } from '../api/notificationPreference.api';
 import {
   Sun,
@@ -94,7 +95,7 @@ const Settings: React.FC = () => {
   };
 
   const handleNotifReset = async () => {
-    if (!confirm(t('settings.notifications.confirmReset'))) return;
+    if (!(await confirmDialog({ message: t('settings.notifications.confirmReset'), variant: 'warning', icon: 'warning' }))) return;
     try {
       setNotifSaving(true);
       const reset = await notificationPreferenceApi.resetToDefault();

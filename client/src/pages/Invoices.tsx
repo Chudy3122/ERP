@@ -17,10 +17,12 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import * as invoiceApi from '../api/invoice.api';
 import { Invoice, InvoiceStatus, InvoiceStatistics } from '../types/invoice.types';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/auth.types';
+import { confirmDelete } from '../utils/confirm';
 
 type ViewFilter = 'all' | 'draft' | 'sent' | 'paid' | 'overdue';
 
@@ -76,14 +78,14 @@ const Invoices = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm(t('confirmDelete'))) return;
+    if (!(await confirmDelete('Czy na pewno chcesz usunąć tę fakturę?'))) return;
 
     try {
       await invoiceApi.deleteInvoice(id);
       setInvoices(invoices.filter((invoice) => invoice.id !== id));
       loadStatistics();
     } catch (error: any) {
-      alert(error.response?.data?.message || t('deleteError'));
+      toast.error(error.response?.data?.message || t('deleteError'));
     }
     setMenuOpenId(null);
   };

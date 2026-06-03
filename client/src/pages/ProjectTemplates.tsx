@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDelete } from '../utils/confirm';
 import {
   Plus,
   Pencil,
@@ -131,7 +132,7 @@ const ProjectTemplates = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Czy na pewno chcesz usunąć ten szablon?')) return;
+    if (!(await confirmDelete('Czy na pewno chcesz usunąć ten szablon?'))) return;
     try {
       await templateApi.deleteTemplate(id);
       await loadTemplates();

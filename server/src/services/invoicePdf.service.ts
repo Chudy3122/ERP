@@ -25,13 +25,13 @@ interface CompanyInfo {
 
 // Company information - can be moved to config/environment
 const COMPANY_INFO: CompanyInfo = {
-  name: 'Twoja Firma Sp. z o.o.',
-  nip: '0000000000',
-  address: 'ul. Przykładowa 1',
-  city: 'Warszawa',
-  postalCode: '00-000',
-  phone: '+48 123 456 789',
-  email: 'kontakt@twojafirma.pl',
+  name: 'Marsoft Marcin Rokoszewski',
+  nip: '9462304058',
+  address: 'ul. Turystyczna 36',
+  city: 'Lublin',
+  postalCode: '20-207',
+  phone: '575 099 266',
+  email: 'biuro@marsoft.eu',
   bankAccount: 'PL00 0000 0000 0000 0000 0000 0000',
 };
 
@@ -267,14 +267,14 @@ export class InvoicePdfService {
 
     // Table header
     const columns = [
-      { label: 'Lp.', width: 30, align: 'center' as const },
-      { label: 'Nazwa towaru/usługi', width: 180, align: 'left' as const },
-      { label: 'Ilość', width: 50, align: 'right' as const },
-      { label: 'J.m.', width: 40, align: 'center' as const },
-      { label: 'Cena netto', width: 70, align: 'right' as const },
-      { label: 'VAT %', width: 45, align: 'center' as const },
-      { label: 'Netto', width: 70, align: 'right' as const },
-      { label: 'Brutto', width: 70, align: 'right' as const },
+      { label: 'Lp.', width: 25, align: 'center' as const },
+      { label: 'Nazwa towaru/usługi', width: 150, align: 'left' as const },
+      { label: 'Ilość', width: 45, align: 'right' as const },
+      { label: 'J.m.', width: 35, align: 'center' as const },
+      { label: 'Cena netto', width: 60, align: 'right' as const },
+      { label: 'VAT %', width: 40, align: 'center' as const },
+      { label: 'Netto', width: 65, align: 'right' as const },
+      { label: 'Brutto', width: 65, align: 'right' as const },
     ];
 
     let x = this.margin;

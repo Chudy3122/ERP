@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import { confirmDelete } from '../utils/confirm';
 import {
   FileSignature,
   Plus,
@@ -56,13 +58,13 @@ const Contracts = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm(t('confirmDelete'))) return;
+    if (!(await confirmDelete(t('confirmDelete')))) return;
 
     try {
       await contractApi.deleteContract(id);
       setContracts(contracts.filter((c) => c.id !== id));
     } catch (err: any) {
-      alert(err.response?.data?.message || t('deleteError'));
+      toast.error(err.response?.data?.message || t('deleteError'));
     }
     setMenuOpenId(null);
   };

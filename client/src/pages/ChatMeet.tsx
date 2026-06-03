@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import Message from '../components/chat/Message';
@@ -452,7 +453,7 @@ const ChatMeet: React.FC = () => {
         navigate(`/meeting/meeting-${meeting.id}`, { state: { meetingId: meeting.id } });
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Nie udało się utworzyć spotkania');
+      toast.error(err.response?.data?.message || 'Nie udało się utworzyć spotkania');
     } finally {
       setIsCreating(false);
     }
@@ -477,7 +478,7 @@ const ChatMeet: React.FC = () => {
       resetExtForm();
       await loadScheduledMeetings();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Nie udało się zaplanować spotkania');
+      toast.error(err.response?.data?.message || 'Nie udało się zaplanować spotkania');
     } finally {
       setIsSaving(false);
     }

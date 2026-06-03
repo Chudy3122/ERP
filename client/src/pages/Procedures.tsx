@@ -22,6 +22,7 @@ import {
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as procedureApi from '../api/procedure.api';
+import { confirmDelete } from '../utils/confirm';
 import { Procedure, ProcedureStatus, CreateProcedureRequest } from '../types/procedure.types';
 import { getFileUrl } from '../api/axios-config';
 
@@ -205,7 +206,7 @@ export default function Procedures() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Czy na pewno chcesz usunąć tę procedurę?')) return;
+    if (!(await confirmDelete('Czy na pewno chcesz usunąć tę procedurę?'))) return;
     try {
       await procedureApi.deleteProcedure(id);
       if (selected?.id === id) setSelected(null);
