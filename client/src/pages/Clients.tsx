@@ -23,7 +23,6 @@ import {
 import * as clientApi from '../api/client.api';
 import { Client, ClientType } from '../types/client.types';
 import { useAuth } from '../contexts/AuthContext';
-import { UserRole } from '../types/auth.types';
 
 type ViewFilter = 'all' | 'clients' | 'suppliers' | 'inactive';
 
@@ -41,7 +40,8 @@ const Clients = () => {
   const [pageSize, setPageSize] = useState(10);
   const navigate = useNavigate();
 
-  const canEdit = user?.role === UserRole.ADMIN || user?.role === UserRole.KSIEGOWOSC || user?.role === UserRole.SEKRETARIAT;
+  // Open module: every authenticated user can add/edit clients
+  const canEdit = !!user;
 
   useEffect(() => {
     loadClients();

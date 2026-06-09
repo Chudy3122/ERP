@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import clientController from '../controllers/client.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
-import { UserRole } from '../models/User.model';
 
 const router = Router();
 
@@ -15,21 +13,9 @@ router.get('/active', clientController.getActiveClients.bind(clientController));
 router.get('/check-nip/:nip', clientController.checkNipExists.bind(clientController));
 router.get('/:id', clientController.getClientById.bind(clientController));
 
-// Write routes (ADMIN, KSIEGOWOSC only)
-router.post(
-  '/',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
-  clientController.createClient.bind(clientController)
-);
-router.put(
-  '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
-  clientController.updateClient.bind(clientController)
-);
-router.delete(
-  '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
-  clientController.deleteClient.bind(clientController)
-);
+// Write routes — any authenticated user can add/edit/manage clients
+router.post('/', clientController.createClient.bind(clientController));
+router.put('/:id', clientController.updateClient.bind(clientController));
+router.delete('/:id', clientController.deleteClient.bind(clientController));
 
 export default router;

@@ -17,7 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import * as adminApi from '../api/admin.api';
+import * as employeeApi from '../api/employee.api';
 import * as statusApi from '../api/status.api';
 import { StatusType, STATUS_COLORS, STATUS_TRANSLATION_KEYS } from '../types/status.types';
 import { useChatContext } from '../contexts/ChatContext';
@@ -62,8 +62,8 @@ const Employees = () => {
   const loadEmployees = async () => {
     try {
       setIsLoading(true);
-      const response = await adminApi.getAllUsers(1, 1000);
-      const empList = response.users.map(user => ({ ...user }));
+      const response = await employeeApi.getAllEmployees();
+      const empList = response.employees.map(user => ({ ...user }));
       setEmployees(empList);
 
       const userIds = empList.map(employee => employee.id);

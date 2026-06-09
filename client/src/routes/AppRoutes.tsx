@@ -221,7 +221,7 @@ const AppRoutes = () => {
       <Route
         path="/employees"
         element={
-          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC]}>
+          <PrivateRoute>
             <Employees />
           </PrivateRoute>
         }
@@ -277,7 +277,7 @@ const AppRoutes = () => {
       <Route
         path="/invoices"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]}>
             <Invoices />
           </PrivateRoute>
         }
@@ -285,7 +285,7 @@ const AppRoutes = () => {
       <Route
         path="/invoices/new"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]}>
             <InvoiceForm />
           </PrivateRoute>
         }
@@ -293,7 +293,7 @@ const AppRoutes = () => {
       <Route
         path="/invoices/:id/edit"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]}>
             <InvoiceForm />
           </PrivateRoute>
         }
@@ -301,7 +301,7 @@ const AppRoutes = () => {
       <Route
         path="/invoices/:id"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]}>
             <InvoiceDetail />
           </PrivateRoute>
         }

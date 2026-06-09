@@ -9,7 +9,10 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// Read routes (available to all authenticated users)
+// Invoices are hidden from regular employees entirely (read + write)
+router.use(requireRole([UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]));
+
+// Read routes (available to all roles above)
 router.get('/', invoiceController.getAllInvoices.bind(invoiceController));
 router.get('/statistics', invoiceController.getStatistics.bind(invoiceController));
 

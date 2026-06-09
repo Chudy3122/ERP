@@ -9,7 +9,10 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// Read routes (available to all authenticated users)
+// Payments are invoice data — hidden from regular employees entirely
+router.use(requireRole([UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]));
+
+// Read routes (available to all roles above)
 router.get('/overdue', paymentController.getOverdueInvoices.bind(paymentController));
 router.get('/statistics', paymentController.getStatistics.bind(paymentController));
 router.get('/invoice/:invoiceId', paymentController.getPaymentsByInvoice.bind(paymentController));

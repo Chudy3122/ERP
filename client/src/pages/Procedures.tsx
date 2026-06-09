@@ -53,7 +53,8 @@ const emptyForm: CreateProcedureRequest = {
 
 export default function Procedures() {
   const { user } = useAuth();
-  const isEditor = user?.role === 'admin' || user?.role === 'kierownik';
+  // Open knowledge base: every authenticated user can add/edit procedures (delete stays admin-only)
+  const isEditor = !!user;
 
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [isLoading, setIsLoading] = useState(true);

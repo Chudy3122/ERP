@@ -272,7 +272,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
     { type: 'divider' },
     { type: 'header', name: t('nav.employees') },
-    { name: t('nav.employeeList'), href: '/employees', icon: Users, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC] },
+    { name: t('nav.employeeList'), href: '/employees', icon: Users },
     { name: t('nav.organization'), href: '/organization', icon: GitBranch },
 
     { type: 'divider' },
@@ -282,7 +282,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },
     { name: 'Kontrahenci', href: '/clients', icon: Building2 },
-    { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt },
+    { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT] },
 
     { type: 'divider' },
     { type: 'header', name: 'Procedury' },

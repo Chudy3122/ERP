@@ -11,32 +11,23 @@ router.use(authenticate);
 
 router.get('/', procedureController.getAll.bind(procedureController));
 router.get('/:id', procedureController.getById.bind(procedureController));
-router.post(
-  '/',
-  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
-  procedureController.create.bind(procedureController),
-);
-router.put(
-  '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
-  procedureController.update.bind(procedureController),
-);
+// Any authenticated user can add and edit procedures (open knowledge base)
+router.post('/', procedureController.create.bind(procedureController));
+router.put('/:id', procedureController.update.bind(procedureController));
 router.delete(
   '/:id',
   requireRole([UserRole.ADMIN]),
   procedureController.delete.bind(procedureController),
 );
 
-// Attachments (PDF etc.)
+// Attachments (PDF etc.) — any authenticated user
 router.post(
   '/:id/attachments',
-  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   upload.array('files', 5),
   procedureController.uploadAttachments.bind(procedureController),
 );
 router.delete(
   '/:id/attachments',
-  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   procedureController.deleteAttachment.bind(procedureController),
 );
 
