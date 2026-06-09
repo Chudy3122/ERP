@@ -266,6 +266,35 @@ export class TimeController {
   }
 
   /**
+   * Edit a time entry (admin only)
+   * PUT /api/time/entries/:id
+   */
+  async updateTimeEntry(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { clock_in, clock_out, notes } = req.body;
+      const timeEntry = await timeService.updateTimeEntry(id, { clock_in, clock_out, notes });
+      res.status(200).json({ success: true, data: timeEntry });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to update time entry' });
+    }
+  }
+
+  /**
+   * Delete a time entry (admin only)
+   * DELETE /api/time/entries/:id
+   */
+  async deleteTimeEntry(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      await timeService.deleteTimeEntry(id);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to delete time entry' });
+    }
+  }
+
+  /**
    * Reject time entry (admin/team leader only)
    * PUT /api/time/entries/:id/reject
    */

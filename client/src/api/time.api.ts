@@ -142,6 +142,24 @@ export const updateEntryNotes = async (entryId: string, notes: string): Promise<
   return response.data.data;
 };
 
+/**
+ * Edit a time entry (admin only) — clock-in/out + notes
+ */
+export const updateTimeEntry = async (
+  entryId: string,
+  data: { clock_in?: string; clock_out?: string | null; notes?: string }
+): Promise<TimeEntry> => {
+  const response = await apiClient.put(`/time/entries/${entryId}`, data);
+  return response.data.data;
+};
+
+/**
+ * Delete a time entry (admin only)
+ */
+export const deleteTimeEntry = async (entryId: string): Promise<void> => {
+  await apiClient.delete(`/time/entries/${entryId}`);
+};
+
 // ===== LEAVE REQUESTS =====
 
 /**

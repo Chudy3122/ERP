@@ -333,6 +333,41 @@ export class TimeService {
   }
 
   /**
+   * Admin: edit a time entry's clock-in / clock-out / notes (recomputes duration).
+   */
+  async updateTimeEntry(
+    entryId: string,
+    data: { clock_in?: string; clock_out?: string | null; notes?: string },
+  ): Promise<TimeEntry> {
+    const entry = await this.timeEntryRepository.findOne({ where: { id: entryId } });
+    if (!entry) throw new Error('Wpis nie istnieje');
+
+    if (data.clock_in !== undefined) entry.clock_in = new Date(data.clock_in);
+    if (data.clock_out !== undefined) entry.clock_out = data.clock_out ? new Date(data.clock_out) : null;
+    if (data.notes !== undefined) entry.notes = data.notes || null;
+
+    if (entry.clock_out) {
+      if (entry.clock_out.getTime() < entry.clock_in.getTime()) {
+        throw new Error('Godzina zakończenia nie może być wcześniejsza niż rozpoczęcia');
+      }
+      entry.duration_minutes = Math.round((entry.clock_out.getTime() - entry.clock_in.getTime()) / 60000);
+      if (entry.status === TimeEntryStatus.IN_PROGRESS) entry.status = TimeEntryStatus.COMPLETED;
+    } else {
+      entry.duration_minutes = null;
+    }
+
+    return await this.timeEntryRepository.save(entry);
+  }
+
+  /**
+   * Admin: permanently delete a time entry.
+   */
+  async deleteTimeEntry(entryId: string): Promise<void> {
+    const result = await this.timeEntryRepository.delete({ id: entryId });
+    if (!result.affected) throw new Error('Wpis nie istnieje');
+  }
+
+  /**
    * Get time entries for a user within date range
    */
   async getUserTimeEntries(

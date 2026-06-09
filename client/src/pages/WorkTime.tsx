@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
-import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2 } from 'lucide-react';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import type { TimeEntry, DayStatus, DayState } from '../types/time.types';
@@ -291,6 +292,12 @@ export default function WorkTime() {
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
+  // Admin-only full edit / delete of a time entry
+  const isAdmin = user?.role === 'admin';
+  const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
+  const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
+  const [savingEntry, setSavingEntry] = useState(false);
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Attendance state
@@ -372,6 +379,58 @@ export default function WorkTime() {
       toast.error('Nie udało się zapisać opisu');
     } finally {
       setSavingNotes(false);
+    }
+  }
+
+  function openEditEntry(entry: TimeEntry) {
+    const toLocalInput = (iso: string | null) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    setEditForm({
+      clock_in: toLocalInput(entry.clock_in),
+      clock_out: toLocalInput(entry.clock_out),
+      notes: entry.notes || '',
+    });
+    setEditEntry(entry);
+  }
+
+  async function handleSaveEntry() {
+    if (!editEntry) return;
+    if (!editForm.clock_in) { toast.error('Podaj godzinę rozpoczęcia'); return; }
+    if (editForm.clock_out && new Date(editForm.clock_out) < new Date(editForm.clock_in)) {
+      toast.error('Zakończenie musi być później niż rozpoczęcie');
+      return;
+    }
+    setSavingEntry(true);
+    try {
+      await timeApi.updateTimeEntry(editEntry.id, {
+        clock_in: new Date(editForm.clock_in).toISOString(),
+        clock_out: editForm.clock_out ? new Date(editForm.clock_out).toISOString() : null,
+        notes: editForm.notes,
+      });
+      toast.success('Wpis zaktualizowany');
+      setEditEntry(null);
+      await loadMyData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się zapisać wpisu');
+    } finally {
+      setSavingEntry(false);
+    }
+  }
+
+  async function handleDeleteEntry() {
+    if (!deleteEntryId) return;
+    try {
+      await timeApi.deleteTimeEntry(deleteEntryId);
+      toast.success('Wpis usunięty');
+      await loadMyData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się usunąć wpisu');
+    } finally {
+      setDeleteEntryId(null);
     }
   }
 
@@ -712,6 +771,64 @@ export default function WorkTime() {
         </div>
       )}
 
+      {/* Admin: edit time entry */}
+      {editEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditEntry(null)}>
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
+              <Pencil className="h-4 w-4 text-[#F7941D]" /> Edytuj wpis czasu pracy
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Rozpoczęcie</label>
+                <input
+                  type="datetime-local"
+                  value={editForm.clock_in}
+                  onChange={e => setEditForm(f => ({ ...f, clock_in: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Zakończenie <span className="text-gray-400">(puste = w toku)</span></label>
+                <input
+                  type="datetime-local"
+                  value={editForm.clock_out}
+                  onChange={e => setEditForm(f => ({ ...f, clock_out: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Opis</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setEditEntry(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
+              <button onClick={handleSaveEntry} disabled={savingEntry} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
+                {savingEntry && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={deleteEntryId !== null}
+        onClose={() => setDeleteEntryId(null)}
+        onConfirm={handleDeleteEntry}
+        title="Usuń wpis czasu pracy"
+        message="Czy na pewno chcesz trwale usunąć ten wpis? Tej operacji nie można cofnąć."
+        confirmText="Usuń"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="warning"
+      />
+
       <div className="mx-auto max-w-[1600px] space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="flex min-w-0 items-center gap-4">
@@ -1037,6 +1154,26 @@ export default function WorkTime() {
                                 </span>
                               </button>
                               <Pencil className="w-3 h-3 flex-shrink-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity dark:text-gray-600" />
+                              {isAdmin && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditEntry(entry)}
+                                    title="Edytuj wpis (admin)"
+                                    className="flex-shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteEntryId(entry.id)}
+                                    title="Usuń wpis (admin)"
+                                    className="flex-shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

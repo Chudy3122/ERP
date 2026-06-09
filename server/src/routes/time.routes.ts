@@ -55,6 +55,18 @@ router.put(
   timeController.rejectTimeEntry
 );
 
+// Edit / delete a time entry (admin only)
+router.put(
+  '/entries/:id',
+  roleMiddleware([UserRole.ADMIN]),
+  timeController.updateTimeEntry.bind(timeController)
+);
+router.delete(
+  '/entries/:id',
+  roleMiddleware([UserRole.ADMIN]),
+  timeController.deleteTimeEntry.bind(timeController)
+);
+
 // ===== LEAVE REQUESTS =====
 
 // Create leave request
