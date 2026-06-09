@@ -121,6 +121,10 @@ const ProjectDetail = () => {
 
   const { t } = useTranslation();
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  // Member management is also allowed for the project's creator / manager
+  const canManageMembers =
+    isAdmin ||
+    (!!user && !!project && (project.created_by === user.id || project.manager_id === user.id));
 
   useEffect(() => {
     if (id) {
@@ -185,7 +189,9 @@ const ProjectDetail = () => {
   const loadMembers = async () => {
     try {
       const data = await projectApi.getProjectMembers(id!);
-      if (data.length === 0 && project?.created_by && isAdmin) {
+      const canAutoAddCreator =
+        isAdmin || (!!user && !!project && (project.created_by === user.id || project.manager_id === user.id));
+      if (data.length === 0 && project?.created_by && canAutoAddCreator) {
         try {
           await projectApi.addProjectMember(id!, project.created_by, ProjectMemberRole.LEAD);
           const refreshedMembers = await projectApi.getProjectMembers(id!);
@@ -1699,7 +1705,7 @@ const ProjectDetail = () => {
                   <option value="role">Po roli w zespole</option>
                 </select>
               </label>
-              {isAdmin && (
+              {canManageMembers && (
               <button
                 type="button"
                 onClick={() => setShowAddMemberPanel(isOpen => !isOpen)}
@@ -1711,7 +1717,7 @@ const ProjectDetail = () => {
               )}
             </div>
           </div>
-          {isAdmin && showAddMemberPanel && (
+          {canManageMembers && showAddMemberPanel && (
             <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
               <div className="grid gap-3 lg:grid-cols-[1fr_180px]">
                 <div className="relative">
@@ -1811,7 +1817,7 @@ const ProjectDetail = () => {
                     </div>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    {isAdmin && member.id !== 'project-creator-fallback' ? (
+                    {canManageMembers && member.id !== 'project-creator-fallback' ? (
                       <select
                         value={member.role}
                         disabled={memberActionUserId === member.user_id}
@@ -1836,7 +1842,7 @@ const ProjectDetail = () => {
                         {getProjectMemberRoleLabel(member.role)}
                       </span>
                     )}
-                    {isAdmin && member.id !== 'project-creator-fallback' && (
+                    {canManageMembers && member.id !== 'project-creator-fallback' && (
                       <button
                         type="button"
                         onClick={() => handleRemoveProjectMember(member.user_id)}

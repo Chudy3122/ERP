@@ -80,18 +80,69 @@ export class ProjectService {
   /**
    * Get all projects with filters
    */
+  /**
+   * Project IDs a user is allowed to see. Returns null = no restriction (sees all).
+   * Mirrors getUserProjects visibility: admin/szef = all, kierownik = department,
+   * everyone else = own (created/managed) + membership + tasks assigned to them.
+   */
+  private async getVisibleProjectIds(userId: string): Promise<string[] | null> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return [];
+    if (user.role === 'admin' || user.role === 'szef') return null;
+
+    const scopeUserIds = user.role === 'kierownik' && user.department_id
+      ? (await this.userRepository.find({
+          where: { department_id: user.department_id, is_active: true },
+          select: ['id'],
+        })).map(u => u.id)
+      : [userId];
+
+    const ids = new Set<string>();
+
+    const memberPMs = await this.projectMemberRepository.find({
+      where: { user_id: In(scopeUserIds), left_at: IsNull() },
+      select: ['project_id'],
+    });
+    memberPMs.forEach(pm => ids.add(pm.project_id));
+
+    const owned = await this.projectRepository.find({
+      where: [{ created_by: In(scopeUserIds) }, { manager_id: In(scopeUserIds) }],
+      select: ['id'],
+    });
+    owned.forEach(p => ids.add(p.id));
+
+    const taskRows = await this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoin('task.assignees', 'ta')
+      .select('DISTINCT task.project_id', 'pid')
+      .where('task.assigned_to IN (:...ids) OR ta.id IN (:...ids)', { ids: scopeUserIds })
+      .getRawMany();
+    taskRows.forEach(r => r.pid && ids.add(r.pid));
+
+    return Array.from(ids);
+  }
+
   async getAllProjects(filters?: {
     status?: ProjectStatus;
     priority?: ProjectPriority;
     managerId?: string;
     search?: string;
     isArchived?: boolean;
-  }): Promise<{ projects: Project[]; total: number }> {
+  }, viewerId?: string): Promise<{ projects: Project[]; total: number }> {
     const queryBuilder = this.projectRepository
       .createQueryBuilder('project')
       .leftJoinAndSelect('project.creator', 'creator')
       .leftJoinAndSelect('project.manager', 'manager')
       .orderBy('project.created_at', 'DESC');
+
+    // Restrict to projects the viewer is allowed to see
+    if (viewerId) {
+      const visibleIds = await this.getVisibleProjectIds(viewerId);
+      if (visibleIds !== null) {
+        if (visibleIds.length === 0) return { projects: [], total: 0 };
+        queryBuilder.andWhere('project.id IN (:...visibleIds)', { visibleIds });
+      }
+    }
 
     if (filters) {
       if (filters.status) {
@@ -257,6 +308,20 @@ export class ProjectService {
         { project_code: project.code }
       );
     }
+  }
+
+  /**
+   * Whether a user may manage a project's members (add/remove/change roles).
+   * Allowed: admin / kierownik / szef, or the project's creator or manager.
+   */
+  async canManageMembers(projectId: string, userId: string, role: string): Promise<boolean> {
+    if (role === 'admin' || role === 'kierownik' || role === 'szef') return true;
+    const project = await this.projectRepository.findOne({
+      where: { id: projectId },
+      select: ['id', 'created_by', 'manager_id'],
+    });
+    if (!project) return false;
+    return project.created_by === userId || project.manager_id === userId;
   }
 
   /**

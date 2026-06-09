@@ -32,7 +32,7 @@ export class ProjectController {
         isArchived: req.query.isArchived === 'true',
       };
 
-      const result = await projectService.getAllProjects(filters);
+      const result = await projectService.getAllProjects(filters, req.user!.userId);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -121,6 +121,11 @@ export class ProjectController {
       const { userId, role } = req.body;
       const addedBy = req.user!.userId;
 
+      if (!(await projectService.canManageMembers(id, addedBy, req.user!.role))) {
+        res.status(403).json({ message: 'Brak uprawnień do zarządzania członkami tego projektu' });
+        return;
+      }
+
       const member = await projectService.addProjectMember(id, userId, role as ProjectMemberRole, addedBy);
       res.status(201).json(member);
     } catch (error: any) {
@@ -137,6 +142,10 @@ export class ProjectController {
       const { id, userId } = req.params;
       const { role } = req.body;
       if (!role) { res.status(400).json({ message: 'Role is required' }); return; }
+      if (!(await projectService.canManageMembers(id, req.user!.userId, req.user!.role))) {
+        res.status(403).json({ message: 'Brak uprawnień do zarządzania członkami tego projektu' });
+        return;
+      }
       const member = await projectService.updateMemberRole(id, userId, role as ProjectMemberRole);
       res.json(member);
     } catch (error: any) {
@@ -152,6 +161,11 @@ export class ProjectController {
     try {
       const { id, userId } = req.params;
       const removedBy = req.user!.userId;
+
+      if (!(await projectService.canManageMembers(id, removedBy, req.user!.role))) {
+        res.status(403).json({ message: 'Brak uprawnień do zarządzania członkami tego projektu' });
+        return;
+      }
 
       await projectService.removeProjectMember(id, userId, removedBy);
       res.status(204).send();
