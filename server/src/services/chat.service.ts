@@ -40,9 +40,29 @@ export class ChatService {
       latestMessages.map(r => [r.channelId, r.lastAt])
     );
 
-    // Attach last_message_at and sort by it (most recent first)
+    // Unread count per channel: messages newer than this user's last_read_at,
+    // not sent by the user. Powers the chat bubble + "Chat & Meet" badge on load.
+    const unreadRaw = await this.messageRepository
+      .createQueryBuilder('msg')
+      .select('msg.channel_id', 'channelId')
+      .addSelect('COUNT(*)', 'cnt')
+      .innerJoin('channel_members', 'cm', 'cm.channel_id = msg.channel_id AND cm.user_id = :userId', { userId })
+      .where('msg.channel_id IN (:...channelIds)', { channelIds })
+      .andWhere('msg.sender_id != :userId', { userId })
+      .andWhere('(cm.last_read_at IS NULL OR msg.created_at > cm.last_read_at)')
+      .groupBy('msg.channel_id')
+      .getRawMany();
+
+    const unreadMap = new Map<string, number>(
+      unreadRaw.map(r => [r.channelId, parseInt(r.cnt, 10)])
+    );
+
+    // Attach last_message_at + unreadCount and sort by activity (most recent first)
     return channels
-      .map(c => Object.assign(c, { last_message_at: lastMessageMap.get(c.id) ?? null }))
+      .map(c => Object.assign(c, {
+        last_message_at: lastMessageMap.get(c.id) ?? null,
+        unreadCount: unreadMap.get(c.id) ?? 0,
+      }))
       .sort((a, b) => {
         const aTime = new Date((a.last_message_at as string) || a.created_at).getTime();
         const bTime = new Date((b.last_message_at as string) || b.created_at).getTime();

@@ -367,6 +367,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         return bT - aT;
       });
       setChannels(merged);
+      // Seed unread counts from the server so the chat bubble + "Chat & Meet"
+      // badge are correct right after load/refresh (not only after a live message)
+      setUnreadMessages(() => {
+        const map = new Map<string, number>();
+        merged.forEach((ch) => {
+          const count = ch.unreadCount ?? 0;
+          if (count > 0) map.set(ch.id, count);
+        });
+        return map;
+      });
       setError(null);
     } catch (err: any) {
       if (seq !== loadChannelsSeqRef.current) return;
@@ -376,6 +386,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       if (seq === loadChannelsSeqRef.current) setLoading(false);
     }
   }, []);
+
+  // Load channels (and seed the unread badge) as soon as the user is authenticated,
+  // independent of the chat panel being opened — otherwise the "Chat & Meet" badge
+  // and bubble stay empty after a refresh until a new live message arrives.
+  useEffect(() => {
+    if (user) loadChannels();
+  }, [user, loadChannels]);
 
   // Load messages for a channel
   const loadMessages = useCallback(async (channelId: string) => {
