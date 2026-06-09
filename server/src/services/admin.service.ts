@@ -159,6 +159,13 @@ class AdminService {
       is_active: true,
     });
 
+    // Auto-link department_id from the chosen department name so the user
+    // immediately shows up in the organization chart (which groups by department_id)
+    if (data.department) {
+      const dept = await AppDataSource.getRepository(Department).findOne({ where: { name: data.department } });
+      if (dept) user.department_id = dept.id;
+    }
+
     await this.userRepository.save(user);
 
     // Return user without password
@@ -195,7 +202,16 @@ class AdminService {
     if (data.firstName) user.first_name = data.firstName;
     if (data.lastName) user.last_name = data.lastName;
     if (data.role) user.role = data.role;
-    if (data.department !== undefined) user.department = data.department || null;
+    if (data.department !== undefined) {
+      user.department = data.department || null;
+      // Keep department_id in sync with the chosen name (org chart groups by department_id)
+      if (data.department) {
+        const dept = await AppDataSource.getRepository(Department).findOne({ where: { name: data.department } });
+        user.department_id = dept ? dept.id : null;
+      } else {
+        user.department_id = null;
+      }
+    }
     if (data.department_id !== undefined) {
       user.department_id = data.department_id || null;
       if (data.department_id) {
