@@ -627,6 +627,20 @@ export class TimeController {
   }
 
   /**
+   * Permanently delete a leave request (admin only)
+   * DELETE /api/time/leave/:id/hard
+   */
+  async deleteLeaveRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      await timeService.deleteLeaveRequest(id);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to delete leave request' });
+    }
+  }
+
+  /**
    * Get user's leave balance
    * GET /api/time/leave/balance?year=2025
    */

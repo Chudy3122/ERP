@@ -272,6 +272,13 @@ export const adminCancelLeaveRequest = async (requestId: string): Promise<LeaveR
   return response.data.data;
 };
 
+/**
+ * Permanently delete a leave request (admin only)
+ */
+export const deleteLeaveRequest = async (requestId: string): Promise<void> => {
+  await apiClient.delete(`/time/leave/${requestId}/hard`);
+};
+
 interface AttendanceRangeParams {
   days?: number;
   startDate?: string;

@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import * as workLogApi from '../api/worklog.api';
-import * as adminApi from '../api/admin.api';
+import * as userApi from '../api/user.api';
 import * as taskApi from '../api/task.api';
 import {
   Project,
@@ -197,7 +197,7 @@ const ProjectDetail = () => {
       } else {
         setMembers(data);
       }
-      const usersData = await adminApi.getUsers();
+      const usersData = await userApi.getDirectory();
       setUsers(usersData.filter(userItem => userItem.is_active));
     } catch (error) {
       console.error('Failed to load members:', error);

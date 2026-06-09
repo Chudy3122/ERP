@@ -638,6 +638,14 @@ export class TimeService {
   }
 
   /**
+   * Permanently delete a leave request (admin only). Comments cascade-delete via FK.
+   */
+  async deleteLeaveRequest(requestId: string): Promise<void> {
+    const result = await this.leaveRequestRepository.delete({ id: requestId });
+    if (!result.affected) throw new Error('Wniosek nie znaleziony');
+  }
+
+  /**
    * Sum of approved, pool-deducting leave days for a user in a given year.
    */
   private async getUsedLeaveDays(userId: string, year: number): Promise<number> {

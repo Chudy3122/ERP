@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import * as templateApi from '../api/projectTemplate.api';
-import * as adminApi from '../api/admin.api';
+import * as userApi from '../api/user.api';
 import {
   CreateProjectRequest,
   ProjectMemberRole,
@@ -61,7 +61,7 @@ const ProjectForm = () => {
     }
     if (!isEdit) {
       templateApi.getAllTemplates().then(setTemplates).catch(console.error);
-      adminApi.getUsers().then(setUsers).catch(console.error);
+      userApi.getDirectory().then(setUsers).catch(console.error);
     }
   }, [id, isEdit]);
 

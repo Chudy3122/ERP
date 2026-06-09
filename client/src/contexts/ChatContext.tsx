@@ -94,6 +94,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const activeChannelRef = useRef<Channel | null>(null);
   const isPanelOpenRef = useRef(false);
   const userRef = useRef(user);
+  const socketRef = useRef<Socket | null>(null);
   // Sequence counter — prevents stale loadChannels responses from overwriting fresh ones
   const loadChannelsSeqRef = useRef(0);
 
@@ -113,6 +114,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   useEffect(() => { activeChannelRef.current = activeChannel; }, [activeChannel]);
   useEffect(() => { isPanelOpenRef.current = isPanelOpen; }, [isPanelOpen]);
   useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { socketRef.current = socket; }, [socket]);
 
   // Computed total unread count
   const totalUnreadCount = useMemo(() => {
@@ -566,14 +568,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     [socket, activeChannel]
   );
 
-  // Mark channel as read
-  const markAsRead = useCallback(
-    (channelId: string) => {
-      if (!socket) return;
-      socket.emit('chat:mark_read', { channelId });
-    },
-    [socket]
-  );
+  // Mark channel as read — uses a ref so it always sees the live socket
+  // (callers like setActiveChannel capture this once; a stale null-socket
+  // closure would silently skip the emit and leave last_read_at unchanged).
+  const markAsRead = useCallback((channelId: string) => {
+    const s = socketRef.current;
+    if (s) s.emit('chat:mark_read', { channelId });
+    // Persist via REST too, so it works even if the socket isn't ready yet
+    chatApi.markChannelRead(channelId).catch(() => {});
+  }, []);
 
   // Add members to channel
   const addChannelMembers = useCallback(async (channelId: string, userIds: string[]) => {

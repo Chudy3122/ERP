@@ -128,6 +128,8 @@ const Absences = () => {
 
   const [oneDayLeave, setOneDayLeave] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const isAdmin = user?.role === 'admin';
   const [formData, setFormData] = useState({
     leave_type: 'vacation' as LeaveType,
     start_date: '',
@@ -327,6 +329,19 @@ const Absences = () => {
       toast.error(error.response?.data?.message || 'Nie udało się anulować wniosku');
     } finally {
       setCancelId(null);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!deleteId) return;
+    try {
+      await timeApi.deleteLeaveRequest(deleteId);
+      toast.success('Wniosek usunięty');
+      loadData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Nie udało się usunąć wniosku');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -662,6 +677,21 @@ const Absences = () => {
                                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
                               >
                                 Anuluj
+                              </button>
+                            </div>
+                          )}
+
+                          {activeTab === 'pending' && isAdmin && (
+                            <div className="flex flex-shrink-0">
+                              <button
+                                onClick={event => {
+                                  event.stopPropagation();
+                                  setDeleteId(request.id);
+                                }}
+                                title="Usuń wniosek całkowicie"
+                                className="rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                              >
+                                Usuń
                               </button>
                             </div>
                           )}
@@ -1133,6 +1163,18 @@ const Absences = () => {
         title="Anuluj wniosek"
         message="Czy na pewno chcesz anulować ten wniosek urlopowy?"
         confirmText="Anuluj wniosek"
+        cancelText="Wróć"
+        variant="danger"
+        icon="warning"
+      />
+
+      <ConfirmDialog
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDeleteRequest}
+        title="Usuń wniosek"
+        message="Czy na pewno chcesz trwale usunąć ten wniosek? Tej operacji nie można cofnąć."
+        confirmText="Usuń trwale"
         cancelText="Wróć"
         variant="danger"
         icon="warning"

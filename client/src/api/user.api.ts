@@ -1,4 +1,5 @@
 import apiClient from './axios-config';
+import type { AdminUser } from '../types/admin.types';
 
 export interface UpdateProfileData {
   first_name?: string;
@@ -31,6 +32,16 @@ export interface UserProfile {
 export const getProfile = async (): Promise<UserProfile> => {
   const response = await apiClient.get('/users/profile');
   return response.data.data;
+};
+
+/**
+ * Full user directory — available to every authenticated user.
+ * Use for member/participant pickers (projects, meetings) so non-admins
+ * (kierownik, etc.) can find people. Backed by GET /api/users.
+ */
+export const getDirectory = async (): Promise<AdminUser[]> => {
+  const response = await apiClient.get('/users');
+  return (response.data.employees ?? []) as AdminUser[];
 };
 
 /**

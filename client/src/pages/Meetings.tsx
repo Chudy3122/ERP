@@ -21,7 +21,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import * as meetingApi from '../api/meeting.api';
-import * as adminApi from '../api/admin.api';
+import * as userApi from '../api/user.api';
 import IncomingCallModal from '../components/meeting/IncomingCallModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { AdminUser } from '../types/admin.types';
@@ -100,8 +100,8 @@ const Meetings = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await adminApi.getAllUsers(1, 1000);
-      setUsers(response.users);
+      const users = await userApi.getDirectory();
+      setUsers(users);
     } catch (error) {
       console.error('Failed to load users:', error);
     }

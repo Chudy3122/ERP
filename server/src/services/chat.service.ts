@@ -71,6 +71,18 @@ export class ChatService {
   }
 
   /**
+   * Mark a channel as read for a user (updates last_read_at → clears unread count)
+   */
+  async markChannelRead(channelId: string, userId: string): Promise<void> {
+    const membership = await this.channelMemberRepository.findOne({
+      where: { channel_id: channelId, user_id: userId },
+    });
+    if (!membership) return;
+    membership.last_read_at = new Date();
+    await this.channelMemberRepository.save(membership);
+  }
+
+  /**
    * Create a new channel
    */
   async createChannel(data: {

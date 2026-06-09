@@ -29,6 +29,26 @@ export const getChannels = async (req: Request, res: Response) => {
 };
 
 /**
+ * Mark a channel as read (updates last_read_at)
+ * PUT /api/chat/channels/:id/read
+ */
+export const markChannelRead = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    await chatService.markChannelRead(req.params.id, req.user.userId);
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Mark channel read error:', error);
+    return res.status(500).json({
+      error: 'Server Error',
+      message: error instanceof Error ? error.message : 'Failed to mark channel read',
+    });
+  }
+};
+
+/**
  * Create new channel
  * POST /api/chat/channels
  */

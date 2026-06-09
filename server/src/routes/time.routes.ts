@@ -127,4 +127,11 @@ router.put(
   timeController.adminCancelLeaveRequest
 );
 
+// Permanently delete a leave request (admin only)
+router.delete(
+  '/leave/:id/hard',
+  roleMiddleware([UserRole.ADMIN]),
+  timeController.deleteLeaveRequest.bind(timeController)
+);
+
 export default router;

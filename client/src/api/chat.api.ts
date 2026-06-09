@@ -46,6 +46,13 @@ export const getChannelMessages = async (
 };
 
 /**
+ * Mark a channel as read (updates last_read_at → clears unread badge)
+ */
+export const markChannelRead = async (channelId: string): Promise<void> => {
+  await apiClient.put(`/chat/channels/${channelId}/read`);
+};
+
+/**
  * Create a new channel (group, public, or private)
  * @param data - Channel creation data
  * @returns Created channel

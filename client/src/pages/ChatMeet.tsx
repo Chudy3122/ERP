@@ -9,7 +9,7 @@ import { useChatContext } from '../contexts/ChatContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 import * as meetingApi from '../api/meeting.api';
-import * as adminApi from '../api/admin.api';
+import * as userApi from '../api/user.api';
 import type { Channel } from '../types/chat.types';
 import type { AdminUser } from '../types/admin.types';
 import {
@@ -236,8 +236,8 @@ const ChatMeet: React.FC = () => {
     if (allUsers.length > 0) return;
     setLoadingUsers(true);
     try {
-      const res = await adminApi.getAllUsers(1, 1000);
-      setAllUsers(res.users);
+      const users = await userApi.getDirectory();
+      setAllUsers(users);
     } catch {
       // silently fail
     } finally {
