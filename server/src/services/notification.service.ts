@@ -2,6 +2,14 @@ import { AppDataSource } from '../config/database';
 import { Notification, NotificationType, NotificationPriority } from '../models/Notification.model';
 import { User } from '../models/User.model';
 
+// Chat-related notifications are surfaced only on the chat bubble + "Chat & Meet"
+// badge, never in the general notification centre / bell.
+const CHAT_NOTIFICATION_TYPES = [
+  NotificationType.CHAT_MESSAGE,
+  NotificationType.CHAT_MENTION,
+  NotificationType.CHANNEL_INVITE,
+];
+
 interface CreateNotificationData {
   userId: string;
   type: NotificationType;
@@ -68,6 +76,9 @@ class NotificationService {
       .leftJoinAndSelect('notification.user', 'user')
       .leftJoinAndSelect('notification.related_user', 'related_user')
       .where('notification.user_id = :userId', { userId })
+      // Chat notifications live on the chat bubble + "Chat & Meet" badge only,
+      // never in the general notification centre.
+      .andWhere('notification.type NOT IN (:...chatTypes)', { chatTypes: CHAT_NOTIFICATION_TYPES })
       .orderBy('notification.created_at', 'DESC')
       .skip(skip)
       .take(limit);
@@ -90,12 +101,12 @@ class NotificationService {
    * Get unread notifications count
    */
   async getUnreadCount(userId: string): Promise<number> {
-    return this.notificationRepository.count({
-      where: {
-        user_id: userId,
-        is_read: false,
-      },
-    });
+    return this.notificationRepository
+      .createQueryBuilder('notification')
+      .where('notification.user_id = :userId', { userId })
+      .andWhere('notification.is_read = :isRead', { isRead: false })
+      .andWhere('notification.type NOT IN (:...chatTypes)', { chatTypes: CHAT_NOTIFICATION_TYPES })
+      .getCount();
   }
 
   /**

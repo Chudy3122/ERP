@@ -193,20 +193,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         });
       }
 
-      // Track unread messages if:
-      // - message is not from current user
-      // - panel is closed OR different channel is active
-      if (data.message.sender_id !== userRef.current?.id) {
-        const isCurrentChannelActive = data.channelId === activeChannelRef.current?.id && isPanelOpenRef.current;
-        if (!isCurrentChannelActive) {
-          setUnreadMessages(prev => {
-            const newMap = new Map(prev);
-            newMap.set(data.channelId, (newMap.get(data.channelId) || 0) + 1);
-            return newMap;
-          });
-          playNotificationSound();
-        }
-      }
+      // NOTE: unread count + sound are handled by the reliable per-user
+      // 'notification:chat_message' event (channel-room delivery here is not
+      // guaranteed to reach a recipient who isn't actively in the room).
 
       // Bump channel to top + update preview + persist to localStorage
       const ts = data.message.created_at || new Date().toISOString();
@@ -271,8 +260,29 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setTimeout(() => setError(null), 5000);
     });
 
-    // Chat & meet toast notifications
+    // Chat & meet toast notifications.
+    // This is the reliable per-user event (sent to the recipient's personal room),
+    // so it also drives the live unread badge + sound + channel-list bump.
     socket.on('notification:chat_message', (data: any) => {
+      const channelId = data.channelId;
+      const isActive = channelId === activeChannelRef.current?.id && isPanelOpenRef.current;
+      if (channelId && !isActive) {
+        setUnreadMessages((prev) => {
+          const m = new Map(prev);
+          m.set(channelId, (m.get(channelId) || 0) + 1);
+          return m;
+        });
+        playNotificationSound();
+        const ts = new Date().toISOString();
+        setStoredActivity(channelId, ts, data.preview, data.senderId);
+        setChannels((prev) => {
+          const idx = prev.findIndex((ch) => ch.id === channelId);
+          if (idx < 0) return prev;
+          const updated = [...prev];
+          const [ch] = updated.splice(idx, 1);
+          return [{ ...ch, last_message_at: ts, last_message_preview: data.preview, last_message_sender_id: data.senderId }, ...updated];
+        });
+      }
       window.dispatchEvent(new CustomEvent('chatmeet:notification', {
         detail: { type: 'chat_message', ...data },
       }));
