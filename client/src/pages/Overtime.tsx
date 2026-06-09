@@ -58,6 +58,7 @@ export default function Overtime() {
   const [manageUser, setManageUser] = useState<OvertimeSummaryEntry | null>(null);
   const [manageLogs, setManageLogs] = useState<WorkLog[]>([]);
   const [manageLoading, setManageLoading] = useState(false);
+  const [myLogs, setMyLogs] = useState<WorkLog[]>([]);
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
 
@@ -94,12 +95,18 @@ export default function Overtime() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [summaryData, projectsData] = await Promise.all([
+      const [summaryData, projectsData, myWorkLogs] = await Promise.all([
         worklogApi.getOvertimeSummary(),
         projectApi.getProjects(),
+        worklogApi.getMyWorkLogs(),
       ]);
       setSummary(summaryData);
       setProjects((projectsData as any).projects ?? projectsData);
+      setMyLogs(
+        myWorkLogs
+          .filter((l) => l.work_type === WorkLogType.OVERTIME || l.work_type === WorkLogType.OVERTIME_COMP)
+          .sort((a, b) => new Date(b.work_date).getTime() - new Date(a.work_date).getTime())
+      );
       if (isAdmin && allUsers.length === 0) {
         adminApi.getUsers().then((u) => setAllUsers(u.filter((x) => x.is_active))).catch(() => {});
       }
@@ -381,6 +388,42 @@ export default function Overtime() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* My overtime / time-off entries (date + comment) */}
+        {myLogs.length > 0 && (
+          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
+              <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Moje wpisy</h2>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {myLogs.map((log) => {
+                const isOvertime = log.work_type === WorkLogType.OVERTIME;
+                return (
+                  <div key={log.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      isOvertime
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                    }`}>
+                      {isOvertime ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                      {isOvertime ? 'Nadgodziny' : 'Odbiór'}
+                    </span>
+                    <span className="w-24 shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                      {Number(log.hours).toFixed(1)}h
+                    </span>
+                    <span className="w-28 shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(log.work_date).toLocaleDateString('pl-PL')}
+                    </span>
+                    <span className="flex-1 truncate text-sm text-gray-600 dark:text-gray-300" title={log.description || ''}>
+                      {log.description || <span className="text-gray-400">— bez opisu —</span>}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
