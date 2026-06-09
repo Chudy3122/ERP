@@ -22,10 +22,10 @@ interface GetAllEmployeesResponse {
 
 /**
  * Full employee directory — available to every authenticated user.
- * Backed by GET /api/employees (no role restriction).
+ * Backed by GET /api/users (no role restriction).
  */
 export const getAllEmployees = async (): Promise<GetAllEmployeesResponse> => {
-  const response = await client.get('/employees');
+  const response = await client.get('/users');
   return response.data;
 };
 

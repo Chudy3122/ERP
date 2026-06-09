@@ -43,6 +43,31 @@ export const getProfile = async (req: Request, res: Response) => {
 };
 
 /**
+ * Get the full employee directory — available to every authenticated user.
+ * GET /api/users
+ */
+export const getDirectory = async (_req: Request, res: Response) => {
+  try {
+    const users = await userRepository.find({
+      select: [
+        'id', 'first_name', 'last_name', 'email', 'phone',
+        'department', 'position', 'employee_id', 'hire_date',
+        'role', 'is_active', 'avatar_url',
+      ],
+      order: { first_name: 'ASC' },
+    });
+
+    return res.status(200).json({ employees: users, total: users.length });
+  } catch (error) {
+    console.error('Get directory error:', error);
+    return res.status(500).json({
+      error: 'Server Error',
+      message: 'Failed to get employee directory',
+    });
+  }
+};
+
+/**
  * Update user profile
  * PUT /api/users/profile
  */

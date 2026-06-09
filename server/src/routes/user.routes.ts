@@ -46,6 +46,9 @@ const avatarUpload = multer({
 // All routes require authentication
 router.use(authenticate);
 
+// Employee directory — available to every authenticated user
+router.get('/', userController.getDirectory);
+
 // Profile routes
 router.get('/profile', userController.getProfile);
 router.put('/profile', userController.updateProfile);
