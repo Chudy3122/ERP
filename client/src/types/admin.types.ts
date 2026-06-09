@@ -75,6 +75,7 @@ export interface CreateUserData {
   lastName: string;
   role: string;
   department?: string;
+  position?: string;
   phone?: string;
 }
 

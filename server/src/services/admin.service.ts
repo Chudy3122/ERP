@@ -16,6 +16,7 @@ interface CreateUserData {
   lastName: string;
   role: UserRole;
   department?: string;
+  position?: string;
   phone?: string;
 }
 
@@ -155,6 +156,7 @@ class AdminService {
       last_name: data.lastName,
       role: data.role,
       department: data.department,
+      position: data.position,
       phone: data.phone,
       is_active: true,
     });

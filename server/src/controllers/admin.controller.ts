@@ -66,7 +66,7 @@ class AdminController {
    */
   async createUser(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, firstName, lastName, role, department, phone } = req.body;
+      const { email, password, firstName, lastName, role, department, position, phone } = req.body;
 
       if (!email || !password || !firstName || !lastName || !role) {
         res.status(400).json({
@@ -83,6 +83,7 @@ class AdminController {
         lastName,
         role,
         department,
+        position,
         phone,
       });
 

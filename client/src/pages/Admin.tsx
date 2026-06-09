@@ -40,7 +40,7 @@ const DEPT_COLORS = ['#F7941D','#0d6efd','#198754','#dc3545','#6f42c1','#0dcaf0'
 
 type Tab = 'dashboard' | 'users' | 'departments' | 'fun';
 
-const EMPTY_USER: CreateUserData = { email: '', password: '', firstName: '', lastName: '', role: 'employee', department: '', phone: '' };
+const EMPTY_USER: CreateUserData = { email: '', password: '', firstName: '', lastName: '', role: 'employee', department: '', position: '', phone: '' };
 const EMPTY_DEPT: CreateDepartmentData = { name: '', code: '', color: '#F7941D' };
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ const Admin = () => {
     e.preventDefault();
     try {
       if (editingUser) {
-        await adminApi.updateUser(editingUser.id, { firstName: userForm.firstName, lastName: userForm.lastName, email: userForm.email, role: userForm.role, department: userForm.department, phone: userForm.phone });
+        await adminApi.updateUser(editingUser.id, { firstName: userForm.firstName, lastName: userForm.lastName, email: userForm.email, role: userForm.role, department: userForm.department, position: userForm.position, phone: userForm.phone });
         toast.success('Użytkownik zaktualizowany');
         setEditingUser(null);
       } else {
@@ -167,7 +167,7 @@ const Admin = () => {
 
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
-    setUserForm({ email: user.email, password: '', firstName: user.first_name, lastName: user.last_name, role: user.role, department: user.department || '', phone: user.phone || '' });
+    setUserForm({ email: user.email, password: '', firstName: user.first_name, lastName: user.last_name, role: user.role, department: user.department || '', position: user.position || '', phone: user.phone || '' });
   };
 
   // ── Department CRUD ───────────────────────────────────────────────────────
@@ -559,6 +559,7 @@ const Admin = () => {
                   </select>
                 </div>
               </div>
+              <div><label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Stanowisko</label><input type="text" className={inp} value={userForm.position} onChange={e => setUserForm({ ...userForm, position: e.target.value })} placeholder="np. Pracownik" /></div>
               <div><label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Telefon</label><input type="tel" className={inp} value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} /></div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="flex-1 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">

@@ -27,6 +27,7 @@ const AdminUsers: React.FC = () => {
     lastName: '',
     role: 'employee',
     department: '',
+    position: '',
     phone: '',
   });
 
@@ -81,6 +82,7 @@ const AdminUsers: React.FC = () => {
         email: formData.email,
         role: formData.role,
         department: formData.department,
+        position: formData.position,
         phone: formData.phone,
       });
       toast.success('Użytkownik zaktualizowany pomyślnie');
@@ -141,6 +143,7 @@ const AdminUsers: React.FC = () => {
       lastName: '',
       role: 'employee',
       department: '',
+      position: '',
       phone: '',
     });
   };
@@ -154,6 +157,7 @@ const AdminUsers: React.FC = () => {
       lastName: user.last_name,
       role: user.role,
       department: user.department || '',
+      position: user.position || '',
       phone: user.phone || '',
     });
   };
@@ -437,6 +441,17 @@ const AdminUsers: React.FC = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Stanowisko</label>
+                <input
+                  type="text"
+                  value={formData.position}
+                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  placeholder="np. Pracownik"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
               </div>
 
               <div>
