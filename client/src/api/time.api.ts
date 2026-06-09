@@ -4,6 +4,7 @@ import type {
   LeaveRequest,
   TimeStats,
   LeaveBalance,
+  LeaveOverviewRow,
   ClockInRequest,
   ClockOutRequest,
   CreateLeaveRequest,
@@ -202,6 +203,26 @@ export const addLeaveComment = async (requestId: string, content: string): Promi
 export const getUserLeaveBalance = async (year?: number): Promise<LeaveBalance> => {
   const params = year ? `?year=${year}` : '';
   const response = await apiClient.get(`/time/leave/balance${params}`);
+  return response.data.data;
+};
+
+/**
+ * Leave plan overview for all users (admin/kadry)
+ */
+export const getLeaveOverview = async (year?: number): Promise<LeaveOverviewRow[]> => {
+  const params = year ? `?year=${year}` : '';
+  const response = await apiClient.get(`/time/leave/overview${params}`);
+  return response.data.data;
+};
+
+/**
+ * Update a user's leave allocation (admin/kadry)
+ */
+export const updateLeaveAllocation = async (
+  userId: string,
+  data: { annualLeaveDays?: number; carriedOverDays?: number }
+): Promise<{ id: string; annualLeave: number; carriedOver: number }> => {
+  const response = await apiClient.put(`/time/leave/allocation/${userId}`, data);
   return response.data.data;
 };
 

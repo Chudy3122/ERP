@@ -52,6 +52,11 @@ const startServer = async () => {
     const timeService = new TimeService();
     setInterval(() => timeService.autoClockOutStale().catch(console.error), 5 * 60 * 1000);
 
+    // Leave rollover (Automat 1 stycznia) — idempotent: rolls over any missed
+    // year-boundary. Runs on boot and once a day so it fires after New Year.
+    await timeService.ensureLeaveRollover().catch(console.error);
+    setInterval(() => timeService.ensureLeaveRollover().catch(console.error), 24 * 60 * 60 * 1000);
+
     // Start HTTP server
     httpServer.listen(PORT, () => {
       console.log(`

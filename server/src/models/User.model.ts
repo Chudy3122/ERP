@@ -104,6 +104,10 @@ export class User {
   @Column({ type: 'integer', default: 20 })
   annual_leave_days: number;
 
+  // Leftover (zaległy) leave days carried over from the previous year
+  @Column({ type: 'integer', default: 0 })
+  carried_over_days: number;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

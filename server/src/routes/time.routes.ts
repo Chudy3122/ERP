@@ -76,6 +76,19 @@ router.post('/leave/:id/comments', timeController.addLeaveComment.bind(timeContr
 // Roles allowed to manage (approve/reject/revert) leave requests
 const LEAVE_MANAGER_ROLES = [UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SZEF];
 
+// Leave plan management (yearly limits + carry-over) — admin + kadry (ksiegowosc)
+const LEAVE_PLAN_ROLES = [UserRole.ADMIN, UserRole.KSIEGOWOSC];
+router.get(
+  '/leave/overview',
+  roleMiddleware(LEAVE_PLAN_ROLES),
+  timeController.getLeaveOverview.bind(timeController)
+);
+router.put(
+  '/leave/allocation/:userId',
+  roleMiddleware(LEAVE_PLAN_ROLES),
+  timeController.updateLeaveAllocation.bind(timeController)
+);
+
 // Get pending leave requests (managers only)
 router.get(
   '/leave/pending',

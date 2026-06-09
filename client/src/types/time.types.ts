@@ -98,9 +98,26 @@ export interface TimeStats {
 
 export interface LeaveBalance {
   annualLeave: number;
+  carriedOver: number;
+  total: number;
   usedDays: number;
   remaining: number;
   year: number;
+}
+
+export interface LeaveOverviewRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string | null;
+  position: string | null;
+  avatarUrl: string | null;
+  year: number;
+  annualLeave: number;
+  carriedOver: number;
+  usedDays: number;
+  available: number;
 }
 
 export interface ClockInRequest {

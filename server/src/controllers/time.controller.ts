@@ -649,6 +649,48 @@ export class TimeController {
       });
     }
   }
+
+  /**
+   * Leave plan overview for all users (admin/kadry)
+   * GET /api/time/leave/overview?year=2026
+   */
+  async getLeaveOverview(req: Request, res: Response): Promise<void> {
+    try {
+      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+      const data = await timeService.getLeaveOverview(year);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      console.error('Get leave overview error:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to get leave overview' });
+    }
+  }
+
+  /**
+   * Update a user's leave allocation (admin/kadry)
+   * PUT /api/time/leave/allocation/:userId
+   */
+  async updateLeaveAllocation(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const { annualLeaveDays, carriedOverDays } = req.body;
+      const user = await timeService.updateLeaveAllocation(userId, {
+        annualLeaveDays: annualLeaveDays !== undefined ? Number(annualLeaveDays) : undefined,
+        carriedOverDays: carriedOverDays !== undefined ? Number(carriedOverDays) : undefined,
+      });
+      res.status(200).json({
+        success: true,
+        data: {
+          id: user.id,
+          annualLeave: user.annual_leave_days,
+          carriedOver: user.carried_over_days,
+        },
+      });
+    } catch (error: any) {
+      console.error('Update leave allocation error:', error);
+      res.status(400).json({ success: false, message: error.message || 'Failed to update leave allocation' });
+    }
+  }
+
   /**
    * Get attendance overview
    * GET /api/time/attendance?days=7

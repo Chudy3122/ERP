@@ -19,11 +19,9 @@ import {
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import * as adminApi from '../api/admin.api';
 import * as timeApi from '../api/time.api';
 import * as calendarApi from '../api/calendar.api';
-import type { AdminUser } from '../types/admin.types';
-import type { LeaveRequest, LeaveBalance } from '../types/time.types';
+import type { LeaveRequest, LeaveBalance, LeaveOverviewRow } from '../types/time.types';
 import type { TeamAvailability } from '../api/calendar.api';
 
 type LeaveType =
@@ -116,14 +114,15 @@ const Absences = () => {
   const [calendarDays, setCalendarDays] = useState(7);
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
-  const canManageLeavePlans = user?.role === 'admin';
+  const canManageLeavePlans = ['admin', 'ksiegowosc'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
 
-  const [managementUsers, setManagementUsers] = useState<AdminUser[]>([]);
+  const [overviewRows, setOverviewRows] = useState<LeaveOverviewRow[]>([]);
   const [managementSearch, setManagementSearch] = useState('');
   const [isManagementLoading, setIsManagementLoading] = useState(false);
   const [savingLeaveDaysUserId, setSavingLeaveDaysUserId] = useState<string | null>(null);
-  const [leaveDaysDrafts, setLeaveDaysDrafts] = useState<Record<string, string>>({});
+  const [carriedDrafts, setCarriedDrafts] = useState<Record<string, string>>({});
+  const [annualDrafts, setAnnualDrafts] = useState<Record<string, string>>({});
   const [managementError, setManagementError] = useState('');
   const [managementSuccess, setManagementSuccess] = useState('');
 
@@ -146,7 +145,7 @@ const Absences = () => {
 
   useEffect(() => {
     if (activeTab === 'management' && canManageLeavePlans) {
-      loadManagementUsers();
+      loadLeaveOverview();
     }
   }, [activeTab, canManageLeavePlans]);
 
@@ -154,69 +153,65 @@ const Absences = () => {
     setRequestPage(1);
   }, [activeTab, requestPageSize]);
 
-  const loadManagementUsers = async () => {
+  const loadLeaveOverview = async () => {
     try {
       setIsManagementLoading(true);
       setManagementError('');
-      const users = await adminApi.getUsers();
-      const sortedUsers = [...users].sort((a, b) =>
-        `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, 'pl')
-      );
-      setManagementUsers(sortedUsers);
-      setLeaveDaysDrafts(
-        Object.fromEntries(
-          sortedUsers.map(employee => [employee.id, String(employee.annual_leave_days ?? 20)])
-        )
-      );
+      const rows = await timeApi.getLeaveOverview();
+      setOverviewRows(rows);
+      setCarriedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.carriedOver)])));
+      setAnnualDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.annualLeave)])));
     } catch {
-      setManagementError('Nie udało się pobrać listy pracowników.');
-      setManagementUsers([]);
+      setManagementError('Nie udało się pobrać planów urlopowych.');
+      setOverviewRows([]);
     } finally {
       setIsManagementLoading(false);
     }
   };
 
-  const handleLeaveDaysDraftChange = (employeeId: string, value: string) => {
-    setLeaveDaysDrafts(prev => ({ ...prev, [employeeId]: value }));
+  const handleAllocationDraftChange = (
+    employeeId: string,
+    field: 'carried' | 'annual',
+    value: string
+  ) => {
+    const setter = field === 'carried' ? setCarriedDrafts : setAnnualDrafts;
+    setter(prev => ({ ...prev, [employeeId]: value }));
     setManagementError('');
     setManagementSuccess('');
   };
 
-  const handleSaveLeaveDays = async (employee: AdminUser) => {
-    const value = Number(leaveDaysDrafts[employee.id]);
+  const handleSaveAllocation = async (row: LeaveOverviewRow) => {
+    const carriedOverDays = Number(carriedDrafts[row.id]);
+    const annualLeaveDays = Number(annualDrafts[row.id]);
 
-    if (!Number.isFinite(value) || value < 0 || value > 365) {
-      setManagementError('Podaj poprawny limit urlopu z zakresu 0-365 dni.');
+    const invalid = (v: number) => !Number.isFinite(v) || v < 0 || v > 365;
+    if (invalid(carriedOverDays) || invalid(annualLeaveDays)) {
+      setManagementError('Podaj poprawne wartości z zakresu 0–365 dni.');
       setManagementSuccess('');
       return;
     }
 
     try {
-      setSavingLeaveDaysUserId(employee.id);
+      setSavingLeaveDaysUserId(row.id);
       setManagementError('');
       setManagementSuccess('');
-      const updatedEmployee = await adminApi.updateUser(employee.id, {
-        annual_leave_days: value,
-      });
+      await timeApi.updateLeaveAllocation(row.id, { annualLeaveDays, carriedOverDays });
 
-      setManagementUsers(prev =>
-        prev.map(userItem =>
-          userItem.id === employee.id
+      setOverviewRows(prev =>
+        prev.map(item =>
+          item.id === row.id
             ? {
-                ...userItem,
-                annual_leave_days: updatedEmployee.annual_leave_days ?? value,
+                ...item,
+                carriedOver: carriedOverDays,
+                annualLeave: annualLeaveDays,
+                available: Math.max(0, carriedOverDays + annualLeaveDays - item.usedDays),
               }
-            : userItem
+            : item
         )
       );
-      setLeaveDaysDrafts(prev => ({ ...prev, [employee.id]: String(value) }));
-      setManagementSuccess(
-        `Zapisano limit urlopu dla ${employee.first_name} ${employee.last_name}.`
-      );
+      setManagementSuccess(`Zapisano plan urlopowy dla ${row.firstName} ${row.lastName}.`);
     } catch {
-      setManagementError(
-        'Nie udało się zapisać limitu urlopu. Jeśli tę zakładkę mają obsługiwać też role HR lub kierownik, backend powinien udostępnić im odpowiedni endpoint.'
-      );
+      setManagementError('Nie udało się zapisać planu urlopowego.');
     } finally {
       setSavingLeaveDaysUserId(null);
     }
@@ -360,7 +355,10 @@ const Absences = () => {
   const balanceCards = [
     {
       label: 'Przysługujące dni urlopu',
-      value: balance?.annualLeave,
+      value: balance?.total,
+      hint: balance
+        ? `${balance.annualLeave} na ten rok + ${balance.carriedOver} przeniesione`
+        : undefined,
       icon: <Calendar className="h-5 w-5 text-blue-600" />,
       iconBg: 'bg-blue-50 dark:bg-blue-900/30',
       valueColor: 'text-blue-600',
@@ -368,6 +366,7 @@ const Absences = () => {
     {
       label: 'Wykorzystane dni',
       value: balance?.usedDays,
+      hint: undefined as string | undefined,
       icon: <Clock className="h-5 w-5 text-[#F7941D]" />,
       iconBg: 'bg-[#F7941D]/10',
       valueColor: 'text-[#F7941D]',
@@ -375,6 +374,7 @@ const Absences = () => {
     {
       label: 'Pozostało dni',
       value: balance?.remaining,
+      hint: undefined as string | undefined,
       icon: <Calendar className="h-5 w-5 text-emerald-600" />,
       iconBg: 'bg-emerald-50 dark:bg-emerald-900/30',
       valueColor: 'text-emerald-600',
@@ -391,16 +391,10 @@ const Absences = () => {
       ? `${requestStartIndex + 1}-${requestEndIndex} z ${currentRequests.length}`
       : '0 z 0';
   const normalizedManagementSearch = managementSearch.trim().toLowerCase();
-  const filteredManagementUsers = managementUsers.filter(employee => {
+  const filteredManagementUsers = overviewRows.filter(row => {
     if (!normalizedManagementSearch) return true;
 
-    return [
-      employee.first_name,
-      employee.last_name,
-      employee.email,
-      employee.department,
-      employee.position,
-    ]
+    return [row.firstName, row.lastName, row.email, row.department, row.position]
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
@@ -457,6 +451,9 @@ const Absences = () => {
                   <div>
                     <p className={`text-2xl font-bold ${card.valueColor}`}>{card.value ?? '-'}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{card.label}</p>
+                    {card.hint && (
+                      <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">{card.hint}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -726,16 +723,6 @@ const Absences = () => {
         {/* Management tab content */}
         {activeTab === 'management' && canManageLeavePlans && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
-              <p className="font-semibold">Informacja dla backendu</p>
-              <p className="mt-1">
-                Ta zakładka zapisuje roczny limit urlopu w polu{' '}
-                <span className="font-mono text-xs">annual_leave_days</span> profilu pracownika. Aby
-                saldo urlopu było w pełni spójne, backend powinien liczyć balans z tej wartości, a
-                nie ze stałej liczby dni.
-              </p>
-            </div>
-
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
                 <div>
@@ -743,10 +730,11 @@ const Absences = () => {
                     Plany urlopowe
                   </p>
                   <h2 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
-                    Zarządzanie limitami dni
+                    Zarządzanie urlopami
                   </h2>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Ustaw roczny wymiar urlopu dla pracowników widocznych w systemie.
+                    Ustaw dni przeniesione z poprzedniego roku oraz limit na ten rok. Przeniesienie
+                    salda na nowy rok następuje automatycznie 1 stycznia.
                   </p>
                 </div>
                 <div className="relative w-full sm:w-80">
@@ -780,99 +768,88 @@ const Absences = () => {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">
-                        Pracownik
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">
-                        Dział / stanowisko
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">
-                        Roczny limit
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">
-                        Akcja
-                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Pracownik</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dział / stanowisko</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Rok</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Przeniesione dni</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">W tym roku</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wykorzystane</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dostępne</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Akcja</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-700 dark:bg-gray-800">
                     {isManagementLoading ? (
                       [...Array(5)].map((_, index) => (
                         <tr key={index}>
-                          <td className="px-4 py-4">
-                            <div className="h-4 w-44 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="h-4 w-36 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="h-9 w-28 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="ml-auto h-9 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                          </td>
+                          {[...Array(8)].map((__, i) => (
+                            <td key={i} className="px-4 py-4">
+                              <div className="h-4 w-full max-w-[120px] animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                            </td>
+                          ))}
                         </tr>
                       ))
                     ) : filteredManagementUsers.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={4}
-                          className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
-                        >
+                        <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                           Brak pracowników pasujących do wyszukiwania.
                         </td>
                       </tr>
                     ) : (
-                      filteredManagementUsers.map(employee => {
-                        const isSaving = savingLeaveDaysUserId === employee.id;
+                      filteredManagementUsers.map(row => {
+                        const isSaving = savingLeaveDaysUserId === row.id;
+                        const carried = Number(carriedDrafts[row.id]);
+                        const annual = Number(annualDrafts[row.id]);
+                        const liveAvailable =
+                          Number.isFinite(carried) && Number.isFinite(annual)
+                            ? Math.max(0, carried + annual - row.usedDays)
+                            : row.available;
+                        const inputCls =
+                          'h-10 w-20 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
                         return (
-                          <tr
-                            key={employee.id}
-                            className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                          >
+                          <tr key={row.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-4">
                               <div className="font-semibold text-gray-900 dark:text-white">
-                                {employee.first_name} {employee.last_name}
+                                {row.firstName} {row.lastName}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {employee.email}
-                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{row.email}</div>
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
-                              <div>{employee.department || 'Brak działu'}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {employee.position || 'Brak stanowiska'}
-                              </div>
+                              <div>{row.department || 'Brak działu'}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{row.position || 'Brak stanowiska'}</div>
                             </td>
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={365}
-                                  value={leaveDaysDrafts[employee.id] ?? ''}
-                                  onChange={event =>
-                                    handleLeaveDaysDraftChange(employee.id, event.target.value)
-                                  }
-                                  className="h-10 w-24 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                />
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                  dni
-                                </span>
-                              </div>
+                            <td className="px-4 py-4 text-center text-sm text-gray-600 dark:text-gray-300">{row.year}</td>
+                            <td className="px-4 py-4 text-center">
+                              <input
+                                type="number"
+                                min={0}
+                                max={365}
+                                value={carriedDrafts[row.id] ?? ''}
+                                onChange={e => handleAllocationDraftChange(row.id, 'carried', e.target.value)}
+                                className={inputCls}
+                              />
                             </td>
+                            <td className="px-4 py-4 text-center">
+                              <input
+                                type="number"
+                                min={0}
+                                max={365}
+                                value={annualDrafts[row.id] ?? ''}
+                                onChange={e => handleAllocationDraftChange(row.id, 'annual', e.target.value)}
+                                className={inputCls}
+                              />
+                            </td>
+                            <td className="px-4 py-4 text-center text-sm font-semibold text-[#F7941D]">{row.usedDays}</td>
+                            <td className="px-4 py-4 text-center text-sm font-bold text-emerald-600 dark:text-emerald-400">{liveAvailable}</td>
                             <td className="px-4 py-4 text-right">
                               <button
                                 type="button"
-                                onClick={() => handleSaveLeaveDays(employee)}
+                                onClick={() => handleSaveAllocation(row)}
                                 disabled={isSaving}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
                               >
-                                {isSaving ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                 Zapisz
                               </button>
                             </td>

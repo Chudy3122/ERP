@@ -638,12 +638,11 @@ export class TimeService {
   }
 
   /**
-   * Get leave balance for user (simplified - assumes fixed annual leave)
+   * Sum of approved, pool-deducting leave days for a user in a given year.
    */
-  async getUserLeaveBalance(userId: string, year: number = new Date().getFullYear()) {
+  private async getUsedLeaveDays(userId: string, year: number): Promise<number> {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
-
     const approvedRequests = await this.leaveRequestRepository.find({
       where: {
         user_id: userId,
@@ -651,22 +650,163 @@ export class TimeService {
         start_date: Between(startDate, endDate),
       },
     });
-
-    // Only vacation + on-demand leave deducts from the annual pool
-    const usedDays = approvedRequests
+    return approvedRequests
       .filter((req) => DEDUCTING_LEAVE_TYPES.includes(req.leave_type))
       .reduce((sum, req) => sum + req.total_days, 0);
+  }
 
-    // Pull the annual allowance from the user's configured value
+  /**
+   * Used days per user across all users for a given year (single query).
+   */
+  private async getUsedDaysByUser(year: number): Promise<Map<string, number>> {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+    const approved = await this.leaveRequestRepository.find({
+      where: { status: LeaveStatus.APPROVED, start_date: Between(startDate, endDate) },
+    });
+    const map = new Map<string, number>();
+    for (const req of approved) {
+      if (!DEDUCTING_LEAVE_TYPES.includes(req.leave_type)) continue;
+      map.set(req.user_id, (map.get(req.user_id) ?? 0) + req.total_days);
+    }
+    return map;
+  }
+
+  /**
+   * Get leave balance for user. Pool = carried-over (zaległy) + this year's entitlement.
+   */
+  async getUserLeaveBalance(userId: string, year: number = new Date().getFullYear()) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     const annualLeave = user?.annual_leave_days ?? 20;
-    const remaining = annualLeave - usedDays;
+    const carriedOver = user?.carried_over_days ?? 0;
+    const usedDays = await this.getUsedLeaveDays(userId, year);
+    const total = annualLeave + carriedOver;
 
     return {
       annualLeave,
+      carriedOver,
+      total,
       usedDays,
-      remaining: Math.max(0, remaining),
+      remaining: Math.max(0, total - usedDays),
       year,
     };
+  }
+
+  /**
+   * Leave plan overview for every user (management view).
+   */
+  async getLeaveOverview(year: number = new Date().getFullYear()) {
+    const users = await this.userRepository.find({
+      order: { first_name: 'ASC', last_name: 'ASC' },
+    });
+    const usedByUser = await this.getUsedDaysByUser(year);
+
+    return users.map((u) => {
+      const annualLeave = u.annual_leave_days ?? 20;
+      const carriedOver = u.carried_over_days ?? 0;
+      const usedDays = usedByUser.get(u.id) ?? 0;
+      return {
+        id: u.id,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        email: u.email,
+        department: u.department,
+        position: u.position,
+        avatarUrl: u.avatar_url,
+        year,
+        annualLeave,
+        carriedOver,
+        usedDays,
+        available: Math.max(0, annualLeave + carriedOver - usedDays),
+      };
+    });
+  }
+
+  /**
+   * Update a user's leave allocation (carried-over and/or this year's entitlement).
+   */
+  async updateLeaveAllocation(
+    userId: string,
+    data: { annualLeaveDays?: number; carriedOverDays?: number },
+  ): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new Error('User not found');
+
+    const validate = (v: number, label: string) => {
+      if (!Number.isFinite(v) || v < 0 || v > 365) {
+        throw new Error(`${label} musi być liczbą z zakresu 0–365.`);
+      }
+    };
+
+    if (data.annualLeaveDays !== undefined) {
+      validate(data.annualLeaveDays, 'Limit na ten rok');
+      user.annual_leave_days = Math.round(data.annualLeaveDays);
+    }
+    if (data.carriedOverDays !== undefined) {
+      validate(data.carriedOverDays, 'Dni przeniesione');
+      user.carried_over_days = Math.round(data.carriedOverDays);
+    }
+
+    await this.userRepository.save(user);
+    return user;
+  }
+
+  // ----- Yearly rollover (Automat 1 stycznia) -----
+
+  private async getSetting(key: string): Promise<string | null> {
+    const rows = await AppDataSource.query(
+      `SELECT value FROM system_settings WHERE key = $1`,
+      [key],
+    );
+    return rows.length ? rows[0].value : null;
+  }
+
+  private async setSetting(key: string, value: string): Promise<void> {
+    await AppDataSource.query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, now())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+      [key, value],
+    );
+  }
+
+  /**
+   * Close a single year: each user's unused days (carried + entitlement − used)
+   * become next year's carried-over balance. The yearly entitlement is left as-is.
+   */
+  private async runYearRollover(closingYear: number): Promise<void> {
+    const users = await this.userRepository.find();
+    const usedByUser = await this.getUsedDaysByUser(closingYear);
+
+    for (const u of users) {
+      const annual = u.annual_leave_days ?? 20;
+      const carried = u.carried_over_days ?? 0;
+      const used = usedByUser.get(u.id) ?? 0;
+      u.carried_over_days = Math.max(0, carried + annual - used);
+    }
+
+    if (users.length) await this.userRepository.save(users);
+    console.log(`📅 Leave rollover for ${closingYear} → ${closingYear + 1} done (${users.length} users)`);
+  }
+
+  /**
+   * Idempotent rollover guard. Runs any missed year-boundaries automatically.
+   * On first ever run it only records the current year (no historical rollover).
+   */
+  async ensureLeaveRollover(): Promise<void> {
+    const currentYear = new Date().getFullYear();
+    const marker = await this.getSetting('leave_last_rollover_year');
+
+    if (marker === null) {
+      await this.setSetting('leave_last_rollover_year', String(currentYear));
+      return;
+    }
+
+    const lastYear = parseInt(marker, 10);
+    if (!Number.isFinite(lastYear) || currentYear <= lastYear) return;
+
+    for (let closingYear = lastYear; closingYear < currentYear; closingYear++) {
+      await this.runYearRollover(closingYear);
+    }
+    await this.setSetting('leave_last_rollover_year', String(currentYear));
   }
 }
