@@ -4,6 +4,7 @@ import { BossCalendar, BossCalendarEntryType } from '../models/BossCalendar.mode
 
 interface CreateEntryDto {
   date: string;
+  end_date?: string | null;
   start_time: string;
   end_time: string;
   title: string;
@@ -15,6 +16,7 @@ interface CreateEntryDto {
 
 interface UpdateEntryDto {
   date?: string;
+  end_date?: string | null;
   start_time?: string;
   end_time?: string;
   title?: string;
@@ -32,11 +34,13 @@ export class BossCalendarService {
   }
 
   async getByDateRange(from: string, to: string): Promise<BossCalendar[]> {
+    // Overlap: entry starts on/before the range end AND ends (end_date or date)
+    // on/after the range start — so multi-day entries show on every covered day.
     return this.repo
       .createQueryBuilder('e')
       .leftJoinAndSelect('e.creator', 'creator')
-      .where('e.date >= :from', { from })
-      .andWhere('e.date <= :to', { to })
+      .where('e.date <= :to', { to })
+      .andWhere('COALESCE(e.end_date, e.date) >= :from', { from })
       .orderBy('e.date', 'ASC')
       .addOrderBy('e.start_time', 'ASC')
       .getMany();

@@ -113,6 +113,7 @@ export default function BossCalendar() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<BossCalendarEntry | null>(null);
   const [form, setForm] = useState<CreateEntryPayload>(EMPTY_FORM);
+  const [multiDay, setMultiDay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -138,14 +139,17 @@ export default function BossCalendar() {
 
   const openCreate = (date?: string) => {
     setEditingEntry(null);
+    setMultiDay(false);
     setForm({ ...EMPTY_FORM, date: date ?? formatDate(new Date()) });
     setModalOpen(true);
   };
 
   const openEdit = (entry: BossCalendarEntry) => {
     setEditingEntry(entry);
+    setMultiDay(!!entry.end_date && entry.end_date !== entry.date);
     setForm({
       date: entry.date,
+      end_date: entry.end_date ?? undefined,
       start_time: entry.start_time,
       end_time: entry.end_time,
       title: entry.title,
@@ -174,11 +178,16 @@ export default function BossCalendar() {
       toast.warning('Godzina końca musi być późniejsza niż start');
       return;
     }
+    if (multiDay && form.end_date && form.end_date < form.date) {
+      toast.warning('Data końcowa nie może być wcześniejsza niż początkowa');
+      return;
+    }
 
     setSaving(true);
     try {
       const payload: CreateEntryPayload = {
         ...form,
+        end_date: multiDay && form.end_date && form.end_date !== form.date ? form.end_date : null,
         description: form.description || undefined,
         location: form.location || undefined,
       };
@@ -210,7 +219,9 @@ export default function BossCalendar() {
   };
 
   const entriesByDay = (dayStr: string) =>
-    entries.filter((entry) => entry.date === dayStr).sort((a, b) => a.start_time.localeCompare(b.start_time));
+    entries
+      .filter((entry) => dayStr >= entry.date && dayStr <= (entry.end_date || entry.date))
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
@@ -498,7 +509,46 @@ export default function BossCalendar() {
                 />
               </div>
 
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={multiDay}
+                  onChange={(event) => {
+                    const on = event.target.checked;
+                    setMultiDay(on);
+                    setForm((current) => ({ ...current, end_date: on ? (current.end_date || current.date) : null }));
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]/30"
+                />
+                Wiele dni (przedział)
+              </label>
+
+              {multiDay && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Od dnia *</label>
+                    <input
+                      type="date"
+                      value={form.date}
+                      onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Do dnia *</label>
+                    <input
+                      type="date"
+                      value={form.end_date ?? ''}
+                      min={form.date}
+                      onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-3">
+                {!multiDay && (
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Data *</label>
                   <input
@@ -508,6 +558,7 @@ export default function BossCalendar() {
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
+                )}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Od *</label>
                   <input

@@ -23,6 +23,10 @@ export class BossCalendar {
   @Column({ type: 'date' })
   date: string;
 
+  // Optional end date — when set, the entry spans date..end_date (multi-day)
+  @Column({ type: 'date', nullable: true })
+  end_date: string | null;
+
   @Column({ type: 'varchar', length: 5 })
   start_time: string;
 
