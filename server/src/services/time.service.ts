@@ -5,6 +5,18 @@ import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../
 import { LeaveRequestComment } from '../models/LeaveRequestComment.model';
 import { User } from '../models/User.model';
 
+/** Parse an etat fraction like "1", "7/8", "3/4" → numeric (1, 0.875, 0.75). */
+function parseEmploymentFraction(s: string | null | undefined): number | null {
+  if (!s) return null;
+  const t = s.trim();
+  if (t.includes('/')) {
+    const [a, b] = t.split('/').map((x) => Number(x));
+    return b ? a / b : null;
+  }
+  const n = Number(t.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
 function roundToNearest15Min(date: Date): Date {
   const ms15 = 15 * 60 * 1000;
   return new Date(Math.floor(date.getTime() / ms15) * ms15);
@@ -767,23 +779,36 @@ export class TimeService {
    */
   async getUserLeaveBalance(userId: string, year: number = new Date().getFullYear()) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    const annualLeave = user?.annual_leave_days ?? 20;
-    const carriedOver = user?.carried_over_days ?? 0;
-    const usedDays = await this.getUsedLeaveDays(userId, year);
+    const num = (v: any, d: number) => (v === null || v === undefined ? d : Number(v));
+
+    const hoursPerDay = num(user?.working_hours_per_day, 8);
+    const annualLeave = num(user?.annual_leave_days, 20);
+    const carriedOver = num(user?.carried_over_days, 0);
+    const usedBaseline = num(user?.used_leave_days, 0);
+    const usedRequests = await this.getUsedLeaveDays(userId, year);
+    const usedDays = usedBaseline + usedRequests;
     const total = annualLeave + carriedOver;
 
-    const remoteAllowance = user?.remote_work_days ?? 24;
-    const remoteUsed = await this.getUsedRemoteDays(userId, year);
+    const remoteAllowance = num(user?.remote_work_days, 24);
+    const remoteBaseline = num(user?.used_remote_days, 0);
+    const remoteRequests = await this.getUsedRemoteDays(userId, year);
+    const remoteUsed = remoteBaseline + remoteRequests;
 
     return {
       annualLeave,
       carriedOver,
       total,
+      usedBaseline,
+      usedRequests,
       usedDays,
       remaining: Math.max(0, total - usedDays),
       remoteAllowance,
+      remoteUsedBaseline: remoteBaseline,
+      remoteUsedRequests: remoteRequests,
       remoteUsed,
       remoteRemaining: Math.max(0, remoteAllowance - remoteUsed),
+      hoursPerDay,
+      employmentFraction: user?.employment_fraction ?? null,
       year,
     };
   }
@@ -797,13 +822,20 @@ export class TimeService {
     });
     const usedByUser = await this.getUsedDaysByUser(year);
     const remoteByUser = await this.getUsedRemoteByUser(year);
+    const num = (v: any, d: number) => (v === null || v === undefined ? d : Number(v));
 
     return users.map((u) => {
-      const annualLeave = u.annual_leave_days ?? 20;
-      const carriedOver = u.carried_over_days ?? 0;
-      const usedDays = usedByUser.get(u.id) ?? 0;
-      const remoteAllowance = u.remote_work_days ?? 24;
-      const remoteUsed = remoteByUser.get(u.id) ?? 0;
+      const annualLeave = num(u.annual_leave_days, 20);
+      const carriedOver = num(u.carried_over_days, 0);
+      const usedBaseline = num(u.used_leave_days, 0);
+      const usedRequests = usedByUser.get(u.id) ?? 0;
+      const usedDays = usedBaseline + usedRequests;
+
+      const remoteAllowance = num(u.remote_work_days, 24);
+      const remoteBaseline = num(u.used_remote_days, 0);
+      const remoteRequests = remoteByUser.get(u.id) ?? 0;
+      const remoteUsed = remoteBaseline + remoteRequests;
+
       return {
         id: u.id,
         firstName: u.first_name,
@@ -813,11 +845,17 @@ export class TimeService {
         position: u.position,
         avatarUrl: u.avatar_url,
         year,
+        hoursPerDay: num(u.working_hours_per_day, 8),
+        employmentFraction: u.employment_fraction ?? null,
         annualLeave,
         carriedOver,
+        usedBaseline,
+        usedRequests,
         usedDays,
         available: Math.max(0, annualLeave + carriedOver - usedDays),
         remoteAllowance,
+        remoteUsedBaseline: remoteBaseline,
+        remoteUsedRequests: remoteRequests,
         remoteUsed,
         remoteAvailable: Math.max(0, remoteAllowance - remoteUsed),
       };
@@ -829,28 +867,55 @@ export class TimeService {
    */
   async updateLeaveAllocation(
     userId: string,
-    data: { annualLeaveDays?: number; carriedOverDays?: number; remoteWorkDays?: number },
+    data: {
+      annualLeaveDays?: number;
+      carriedOverDays?: number;
+      usedLeaveDays?: number;
+      remoteWorkDays?: number;
+      usedRemoteDays?: number;
+      employmentFraction?: string | null;
+      workingHoursPerDay?: number;
+    },
   ): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new Error('User not found');
 
     const validate = (v: number, label: string) => {
-      if (!Number.isFinite(v) || v < 0 || v > 365) {
-        throw new Error(`${label} musi być liczbą z zakresu 0–365.`);
+      if (!Number.isFinite(v) || v < 0 || v > 366) {
+        throw new Error(`${label} musi być liczbą z zakresu 0–366.`);
       }
     };
 
     if (data.annualLeaveDays !== undefined) {
       validate(data.annualLeaveDays, 'Limit na ten rok');
-      user.annual_leave_days = Math.round(data.annualLeaveDays);
+      user.annual_leave_days = data.annualLeaveDays;
     }
     if (data.carriedOverDays !== undefined) {
       validate(data.carriedOverDays, 'Dni przeniesione');
-      user.carried_over_days = Math.round(data.carriedOverDays);
+      user.carried_over_days = data.carriedOverDays;
+    }
+    if (data.usedLeaveDays !== undefined) {
+      validate(data.usedLeaveDays, 'Wykorzystane dni');
+      user.used_leave_days = data.usedLeaveDays;
     }
     if (data.remoteWorkDays !== undefined) {
       validate(data.remoteWorkDays, 'Dni pracy zdalnej');
-      user.remote_work_days = Math.round(data.remoteWorkDays);
+      user.remote_work_days = data.remoteWorkDays;
+    }
+    if (data.usedRemoteDays !== undefined) {
+      validate(data.usedRemoteDays, 'Wykorzystane dni zdalne');
+      user.used_remote_days = data.usedRemoteDays;
+    }
+    if (data.employmentFraction !== undefined) {
+      user.employment_fraction = data.employmentFraction || null;
+      // Derive daily hours from the fraction (8h × fraction) unless given explicitly
+      const frac = parseEmploymentFraction(data.employmentFraction);
+      if (data.workingHoursPerDay === undefined && frac !== null) {
+        user.working_hours_per_day = Math.round(8 * frac * 100) / 100;
+      }
+    }
+    if (data.workingHoursPerDay !== undefined && Number.isFinite(data.workingHoursPerDay)) {
+      user.working_hours_per_day = data.workingHoursPerDay;
     }
 
     await this.userRepository.save(user);

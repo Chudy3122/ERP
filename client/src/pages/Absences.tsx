@@ -125,7 +125,10 @@ const Absences = () => {
   const [savingLeaveDaysUserId, setSavingLeaveDaysUserId] = useState<string | null>(null);
   const [carriedDrafts, setCarriedDrafts] = useState<Record<string, string>>({});
   const [annualDrafts, setAnnualDrafts] = useState<Record<string, string>>({});
+  const [usedDrafts, setUsedDrafts] = useState<Record<string, string>>({});
   const [remoteDrafts, setRemoteDrafts] = useState<Record<string, string>>({});
+  const [remoteUsedDrafts, setRemoteUsedDrafts] = useState<Record<string, string>>({});
+  const [etatDrafts, setEtatDrafts] = useState<Record<string, string>>({});
   const [managementError, setManagementError] = useState('');
   const [managementSuccess, setManagementSuccess] = useState('');
 
@@ -164,7 +167,10 @@ const Absences = () => {
       setOverviewRows(rows);
       setCarriedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.carriedOver)])));
       setAnnualDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.annualLeave)])));
+      setUsedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.usedBaseline)])));
       setRemoteDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteAllowance)])));
+      setRemoteUsedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteUsedBaseline)])));
+      setEtatDrafts(Object.fromEntries(rows.map(r => [r.id, r.employmentFraction ?? ''])));
     } catch {
       setManagementError('Nie udało się pobrać planów urlopowych.');
       setOverviewRows([]);
@@ -175,11 +181,16 @@ const Absences = () => {
 
   const handleAllocationDraftChange = (
     employeeId: string,
-    field: 'carried' | 'annual' | 'remote',
+    field: 'carried' | 'annual' | 'used' | 'remote' | 'remoteUsed' | 'etat',
     value: string
   ) => {
     const setter =
-      field === 'carried' ? setCarriedDrafts : field === 'annual' ? setAnnualDrafts : setRemoteDrafts;
+      field === 'carried' ? setCarriedDrafts
+      : field === 'annual' ? setAnnualDrafts
+      : field === 'used' ? setUsedDrafts
+      : field === 'remote' ? setRemoteDrafts
+      : field === 'remoteUsed' ? setRemoteUsedDrafts
+      : setEtatDrafts;
     setter(prev => ({ ...prev, [employeeId]: value }));
     setManagementError('');
     setManagementSuccess('');
@@ -188,11 +199,14 @@ const Absences = () => {
   const handleSaveAllocation = async (row: LeaveOverviewRow) => {
     const carriedOverDays = Number(carriedDrafts[row.id]);
     const annualLeaveDays = Number(annualDrafts[row.id]);
+    const usedLeaveDays = Number(usedDrafts[row.id]);
     const remoteWorkDays = Number(remoteDrafts[row.id]);
+    const usedRemoteDays = Number(remoteUsedDrafts[row.id]);
+    const employmentFraction = (etatDrafts[row.id] ?? '').trim();
 
-    const invalid = (v: number) => !Number.isFinite(v) || v < 0 || v > 365;
-    if (invalid(carriedOverDays) || invalid(annualLeaveDays) || invalid(remoteWorkDays)) {
-      setManagementError('Podaj poprawne wartości z zakresu 0–365 dni.');
+    const invalid = (v: number) => !Number.isFinite(v) || v < 0 || v > 366;
+    if ([carriedOverDays, annualLeaveDays, usedLeaveDays, remoteWorkDays, usedRemoteDays].some(invalid)) {
+      setManagementError('Podaj poprawne wartości z zakresu 0–366 dni.');
       setManagementSuccess('');
       return;
     }
@@ -201,7 +215,11 @@ const Absences = () => {
       setSavingLeaveDaysUserId(row.id);
       setManagementError('');
       setManagementSuccess('');
-      await timeApi.updateLeaveAllocation(row.id, { annualLeaveDays, carriedOverDays, remoteWorkDays });
+      const saved = await timeApi.updateLeaveAllocation(row.id, {
+        annualLeaveDays, carriedOverDays, usedLeaveDays,
+        remoteWorkDays, usedRemoteDays,
+        employmentFraction: employmentFraction || null,
+      });
 
       setOverviewRows(prev =>
         prev.map(item =>
@@ -210,9 +228,15 @@ const Absences = () => {
                 ...item,
                 carriedOver: carriedOverDays,
                 annualLeave: annualLeaveDays,
-                available: Math.max(0, carriedOverDays + annualLeaveDays - item.usedDays),
+                usedBaseline: usedLeaveDays,
+                usedDays: usedLeaveDays + item.usedRequests,
+                available: Math.max(0, carriedOverDays + annualLeaveDays - (usedLeaveDays + item.usedRequests)),
                 remoteAllowance: remoteWorkDays,
-                remoteAvailable: Math.max(0, remoteWorkDays - item.remoteUsed),
+                remoteUsedBaseline: usedRemoteDays,
+                remoteUsed: usedRemoteDays + item.remoteUsedRequests,
+                remoteAvailable: Math.max(0, remoteWorkDays - (usedRemoteDays + item.remoteUsedRequests)),
+                employmentFraction: employmentFraction || null,
+                hoursPerDay: saved?.workingHoursPerDay != null ? Number(saved.workingHoursPerDay) : item.hoursPerDay,
               }
             : item
         )
@@ -360,12 +384,16 @@ const Absences = () => {
     return configs[status] || configs.cancelled;
   };
 
+  const hpd = balance?.hoursPerDay ?? 8;
+  const fmtD = (v?: number) => (v == null ? '—' : Number.isInteger(v) ? `${v}` : v.toFixed(1));
+  const fmtHrs = (v?: number) => (v == null ? '' : `${Math.round(v * hpd)} h`);
+
   const balanceCards = [
     {
       label: 'Przysługujące dni urlopu',
-      value: balance?.total,
+      value: fmtD(balance?.total),
       hint: balance
-        ? `${balance.annualLeave} na ten rok + ${balance.carriedOver} przeniesione`
+        ? `${fmtHrs(balance.total)} · ${fmtD(balance.annualLeave)} na rok + ${fmtD(balance.carriedOver)} przen.`
         : undefined,
       icon: <Calendar className="h-5 w-5 text-blue-600" />,
       iconBg: 'bg-blue-50 dark:bg-blue-900/30',
@@ -373,25 +401,25 @@ const Absences = () => {
     },
     {
       label: 'Wykorzystane dni',
-      value: balance?.usedDays,
-      hint: undefined as string | undefined,
+      value: fmtD(balance?.usedDays),
+      hint: balance ? fmtHrs(balance.usedDays) : undefined,
       icon: <Clock className="h-5 w-5 text-[#F7941D]" />,
       iconBg: 'bg-[#F7941D]/10',
       valueColor: 'text-[#F7941D]',
     },
     {
       label: 'Pozostało dni',
-      value: balance?.remaining,
-      hint: undefined as string | undefined,
+      value: fmtD(balance?.remaining),
+      hint: balance ? fmtHrs(balance.remaining) : undefined,
       icon: <Calendar className="h-5 w-5 text-emerald-600" />,
       iconBg: 'bg-emerald-50 dark:bg-emerald-900/30',
       valueColor: 'text-emerald-600',
     },
     {
       label: 'Praca zdalna — pozostało',
-      value: balance?.remoteRemaining,
+      value: fmtD(balance?.remoteRemaining),
       hint: balance
-        ? `${balance.remoteUsed} / ${balance.remoteAllowance} dni wykorzystane`
+        ? `${fmtHrs(balance.remoteRemaining)} · ${fmtD(balance.remoteUsed)}/${fmtD(balance.remoteAllowance)} wyk.`
         : undefined,
       icon: <Home className="h-5 w-5 text-purple-600" />,
       iconBg: 'bg-purple-50 dark:bg-purple-900/30',
@@ -826,9 +854,10 @@ const Absences = () => {
                     Zarządzanie urlopami
                   </h2>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Ustaw dni przeniesione z poprzedniego roku, limit urlopu na ten rok oraz limit
-                    pracy zdalnej (urzędowo 24 dni). Przeniesienie salda urlopowego na nowy rok
-                    następuje automatycznie 1 stycznia; praca zdalna resetuje się rocznie.
+                    Wszystkie pola edytowalne ręcznie (etat, przeniesione, limit, wykorzystane,
+                    praca zdalna) — ułatwia migrację z poprzedniego systemu. „Wykorzystane" to
+                    baza startowa; nowe zatwierdzone wnioski dodają się do niej. Wartości w dniach,
+                    godziny liczone z etatu (godz./dzień).
                   </p>
                 </div>
                 <div className="relative w-full sm:w-80">
@@ -864,11 +893,11 @@ const Absences = () => {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Pracownik</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dział / stanowisko</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Rok</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Przeniesione dni</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">W tym roku</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wykorzystane</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dostępne</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Etat</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Przeniesione</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">W tym roku</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wykorzystane</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dostępne</th>
                       <th className="border-l border-gray-200 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:border-gray-700 dark:text-purple-400">Zdalna w roku</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Zdalna wykorz.</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Zdalna dost.</th>
@@ -895,18 +924,23 @@ const Absences = () => {
                     ) : (
                       filteredManagementUsers.map(row => {
                         const isSaving = savingLeaveDaysUserId === row.id;
+                        const hpdRow = row.hoursPerDay || 8;
                         const carried = Number(carriedDrafts[row.id]);
                         const annual = Number(annualDrafts[row.id]);
-                        const liveAvailable =
-                          Number.isFinite(carried) && Number.isFinite(annual)
-                            ? Math.max(0, carried + annual - row.usedDays)
-                            : row.available;
+                        const used = Number(usedDrafts[row.id]);
                         const remote = Number(remoteDrafts[row.id]);
-                        const liveRemoteAvailable = Number.isFinite(remote)
-                          ? Math.max(0, remote - row.remoteUsed)
-                          : row.remoteAvailable;
+                        const remoteUsedV = Number(remoteUsedDrafts[row.id]);
+                        const liveAvailable =
+                          [carried, annual, used].every(Number.isFinite)
+                            ? Math.max(0, carried + annual - (used + row.usedRequests))
+                            : row.available;
+                        const liveRemoteAvailable =
+                          [remote, remoteUsedV].every(Number.isFinite)
+                            ? Math.max(0, remote - (remoteUsedV + row.remoteUsedRequests))
+                            : row.remoteAvailable;
+                        const hrs = (d: number) => `${Math.round(d * hpdRow)} h`;
                         const inputCls =
-                          'h-10 w-20 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+                          'h-10 w-16 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
                         return (
                           <tr key={row.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -920,41 +954,67 @@ const Absences = () => {
                               <div>{row.department || 'Brak działu'}</div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">{row.position || 'Brak stanowiska'}</div>
                             </td>
-                            <td className="px-4 py-4 text-center text-sm text-gray-600 dark:text-gray-300">{row.year}</td>
-                            <td className="px-4 py-4 text-center">
+                            <td className="px-3 py-4 text-center">
                               <input
-                                type="number"
-                                min={0}
-                                max={365}
+                                type="text"
+                                value={etatDrafts[row.id] ?? ''}
+                                onChange={e => handleAllocationDraftChange(row.id, 'etat', e.target.value)}
+                                placeholder="np. 1"
+                                className="h-10 w-14 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              />
+                              <div className="mt-0.5 text-[10px] text-gray-400">{hpdRow}h/dzień</div>
+                            </td>
+                            <td className="px-3 py-4 text-center">
+                              <input
+                                type="number" step="any" min={0} max={366}
                                 value={carriedDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'carried', e.target.value)}
                                 className={inputCls}
                               />
                             </td>
-                            <td className="px-4 py-4 text-center">
+                            <td className="px-3 py-4 text-center">
                               <input
-                                type="number"
-                                min={0}
-                                max={365}
+                                type="number" step="any" min={0} max={366}
                                 value={annualDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'annual', e.target.value)}
                                 className={inputCls}
                               />
                             </td>
-                            <td className="px-4 py-4 text-center text-sm font-semibold text-[#F7941D]">{row.usedDays}</td>
-                            <td className="px-4 py-4 text-center text-sm font-bold text-emerald-600 dark:text-emerald-400">{liveAvailable}</td>
-                            <td className="border-l border-gray-100 px-4 py-4 text-center dark:border-gray-700">
+                            <td className="px-3 py-4 text-center">
                               <input
-                                type="number"
-                                min={0}
-                                max={365}
+                                type="number" step="any" min={0} max={366}
+                                value={usedDrafts[row.id] ?? ''}
+                                onChange={e => handleAllocationDraftChange(row.id, 'used', e.target.value)}
+                                className={inputCls}
+                              />
+                              {row.usedRequests > 0 && (
+                                <div className="mt-0.5 text-[10px] text-gray-400">+{fmtD(row.usedRequests)} z wniosków</div>
+                              )}
+                            </td>
+                            <td className="px-3 py-4 text-center">
+                              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmtD(liveAvailable)}</div>
+                              <div className="text-[10px] text-gray-400">{hrs(liveAvailable)}</div>
+                            </td>
+                            <td className="border-l border-gray-100 px-3 py-4 text-center dark:border-gray-700">
+                              <input
+                                type="number" step="any" min={0} max={366}
                                 value={remoteDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'remote', e.target.value)}
                                 className={inputCls}
                               />
                             </td>
-                            <td className="px-4 py-4 text-center text-sm font-semibold text-purple-600 dark:text-purple-400">{row.remoteUsed}</td>
-                            <td className="px-4 py-4 text-center text-sm font-bold text-purple-600 dark:text-purple-400">{liveRemoteAvailable}</td>
+                            <td className="px-3 py-4 text-center">
+                              <input
+                                type="number" step="any" min={0} max={366}
+                                value={remoteUsedDrafts[row.id] ?? ''}
+                                onChange={e => handleAllocationDraftChange(row.id, 'remoteUsed', e.target.value)}
+                                className={inputCls}
+                              />
+                            </td>
+                            <td className="px-3 py-4 text-center">
+                              <div className="text-sm font-bold text-purple-600 dark:text-purple-400">{fmtD(liveRemoteAvailable)}</div>
+                              <div className="text-[10px] text-gray-400">{hrs(liveRemoteAvailable)}</div>
+                            </td>
                             <td className="px-4 py-4 text-right">
                               <button
                                 type="button"

@@ -100,11 +100,17 @@ export interface LeaveBalance {
   annualLeave: number;
   carriedOver: number;
   total: number;
+  usedBaseline: number;
+  usedRequests: number;
   usedDays: number;
   remaining: number;
   remoteAllowance: number;
+  remoteUsedBaseline: number;
+  remoteUsedRequests: number;
   remoteUsed: number;
   remoteRemaining: number;
+  hoursPerDay: number;
+  employmentFraction: string | null;
   year: number;
 }
 
@@ -117,11 +123,17 @@ export interface LeaveOverviewRow {
   position: string | null;
   avatarUrl: string | null;
   year: number;
+  hoursPerDay: number;
+  employmentFraction: string | null;
   annualLeave: number;
   carriedOver: number;
+  usedBaseline: number;
+  usedRequests: number;
   usedDays: number;
   available: number;
   remoteAllowance: number;
+  remoteUsedBaseline: number;
+  remoteUsedRequests: number;
   remoteUsed: number;
   remoteAvailable: number;
 }

@@ -245,8 +245,16 @@ export const getLeaveOverview = async (year?: number): Promise<LeaveOverviewRow[
  */
 export const updateLeaveAllocation = async (
   userId: string,
-  data: { annualLeaveDays?: number; carriedOverDays?: number; remoteWorkDays?: number }
-): Promise<{ id: string; annualLeave: number; carriedOver: number; remoteWork: number }> => {
+  data: {
+    annualLeaveDays?: number;
+    carriedOverDays?: number;
+    usedLeaveDays?: number;
+    remoteWorkDays?: number;
+    usedRemoteDays?: number;
+    employmentFraction?: string | null;
+    workingHoursPerDay?: number;
+  }
+): Promise<any> => {
   const response = await apiClient.put(`/time/leave/allocation/${userId}`, data);
   return response.data.data;
 };

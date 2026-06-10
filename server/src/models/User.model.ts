@@ -101,16 +101,30 @@ export class User {
   @Column({ type: 'decimal', precision: 4, scale: 2, default: 8.0 })
   working_hours_per_day: number;
 
-  @Column({ type: 'integer', default: 20 })
+  // Leave allowances are kept in DAYS (fractional allowed so part-time hour-based
+  // leave can be converted to days). Hours shown in UI = days × working_hours_per_day.
+  @Column({ type: 'double precision', default: 20 })
   annual_leave_days: number;
 
   // Leftover (zaległy) leave days carried over from the previous year
-  @Column({ type: 'integer', default: 0 })
+  @Column({ type: 'double precision', default: 0 })
   carried_over_days: number;
 
   // Yearly remote-work (praca zdalna) entitlement — official default 24 days
-  @Column({ type: 'integer', default: 24 })
+  @Column({ type: 'double precision', default: 24 })
   remote_work_days: number;
+
+  // Manual "used" baselines migrated from the previous system. Total used =
+  // baseline + approved requests created in this system afterwards.
+  @Column({ type: 'double precision', default: 0 })
+  used_leave_days: number;
+
+  @Column({ type: 'double precision', default: 0 })
+  used_remote_days: number;
+
+  // Employment fraction (etat), e.g. "1", "7/8", "1/2"
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  employment_fraction: string | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

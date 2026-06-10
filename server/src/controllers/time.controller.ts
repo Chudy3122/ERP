@@ -715,11 +715,19 @@ export class TimeController {
   async updateLeaveAllocation(req: Request, res: Response): Promise<void> {
     try {
       const { userId } = req.params;
-      const { annualLeaveDays, carriedOverDays, remoteWorkDays } = req.body;
+      const {
+        annualLeaveDays, carriedOverDays, usedLeaveDays,
+        remoteWorkDays, usedRemoteDays, employmentFraction, workingHoursPerDay,
+      } = req.body;
+      const numOrUndef = (v: any) => (v !== undefined && v !== null && v !== '' ? Number(v) : undefined);
       const user = await timeService.updateLeaveAllocation(userId, {
-        annualLeaveDays: annualLeaveDays !== undefined ? Number(annualLeaveDays) : undefined,
-        carriedOverDays: carriedOverDays !== undefined ? Number(carriedOverDays) : undefined,
-        remoteWorkDays: remoteWorkDays !== undefined ? Number(remoteWorkDays) : undefined,
+        annualLeaveDays: numOrUndef(annualLeaveDays),
+        carriedOverDays: numOrUndef(carriedOverDays),
+        usedLeaveDays: numOrUndef(usedLeaveDays),
+        remoteWorkDays: numOrUndef(remoteWorkDays),
+        usedRemoteDays: numOrUndef(usedRemoteDays),
+        employmentFraction: employmentFraction !== undefined ? employmentFraction : undefined,
+        workingHoursPerDay: numOrUndef(workingHoursPerDay),
       });
       res.status(200).json({
         success: true,
@@ -727,7 +735,11 @@ export class TimeController {
           id: user.id,
           annualLeave: user.annual_leave_days,
           carriedOver: user.carried_over_days,
+          usedLeave: user.used_leave_days,
           remoteWork: user.remote_work_days,
+          usedRemote: user.used_remote_days,
+          employmentFraction: user.employment_fraction,
+          workingHoursPerDay: user.working_hours_per_day,
         },
       });
     } catch (error: any) {
