@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, Home, MoreHorizontal, Umbrella, XCircle, Heart, User, MessageSquare, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as timeApi from '../api/time.api';
@@ -82,6 +83,8 @@ const AbsenceDetail = () => {
   const canReview = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
   const canCancel = request?.status === 'pending' && request.user_id === user?.id;
   const canComment = canReview || request?.user_id === user?.id;
+  const isAdmin = user?.role === 'admin';
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     loadRequest();
@@ -200,6 +203,18 @@ const AbsenceDetail = () => {
       setRequest(updatedRequest);
     } finally {
       setIsReviewing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!request) return;
+    try {
+      setIsReviewing(true);
+      await timeApi.deleteLeaveRequest(request.id);
+      navigate('/absences');
+    } catch {
+      setIsReviewing(false);
+      setDeleteOpen(false);
     }
   };
 
@@ -460,10 +475,38 @@ const AbsenceDetail = () => {
                   </div>
                 </div>
               )}
+
+              {isAdmin && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Administrator
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteOpen(true)}
+                    disabled={isReviewing}
+                    className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+                  >
+                    Usuń wniosek trwale
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Usuń wniosek"
+        message="Czy na pewno chcesz trwale usunąć ten wniosek? Tej operacji nie można cofnąć."
+        confirmText="Usuń trwale"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="warning"
+      />
     </MainLayout>
   );
 };
