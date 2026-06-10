@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -135,8 +135,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [navbarStatus, setNavbarStatus] = useState<StatusType>(StatusType.ONLINE);
+  const sidebarNavRef = useRef<HTMLElement | null>(null);
+  const sidebarScrollStorageKey = 'main-layout-sidebar-scroll-top';
 
   useAutoAway();
+
+  useEffect(() => {
+    const nav = sidebarNavRef.current;
+    if (!nav) return;
+
+    const storedScrollTop = Number(sessionStorage.getItem(sidebarScrollStorageKey) || 0);
+    requestAnimationFrame(() => {
+      nav.scrollTop = storedScrollTop;
+    });
+  }, [location.pathname]);
+
+  const handleSidebarScroll = () => {
+    const nav = sidebarNavRef.current;
+    if (!nav) return;
+    sessionStorage.setItem(sidebarScrollStorageKey, String(nav.scrollTop));
+  };
 
   // Show unread (notifications + chat messages) count in the browser tab title
   useEffect(() => {
@@ -398,7 +416,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3">
+        <nav ref={sidebarNavRef} onScroll={handleSidebarScroll} className="flex-1 overflow-y-auto py-3">
           {navigation.map((item, idx) => renderNavigationItem(item, idx))}
         </nav>
 

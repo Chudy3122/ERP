@@ -115,6 +115,43 @@ const PlatformLogo = ({ platform }: { platform: MeetingPlatform }) => {
   return <span className="text-xs font-bold">{config.icon}</span>;
 };
 
+const getNameInitials = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
+const formatDurationLabel = (minutes: number) => {
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes === 60) return '1 godz.';
+  const hours = minutes / 60;
+  return Number.isInteger(hours) ? `${hours} godz.` : `${minutes} min`;
+};
+
+const getVideoCallStatus = (status: VideoCall['status']) => {
+  if (status === 'ended') {
+    return {
+      label: 'Zakończone',
+      className: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    };
+  }
+
+  if (status === 'active') {
+    return {
+      label: 'Aktywne',
+      className: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+    };
+  }
+
+  return {
+    label: 'Zaplanowane',
+    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  };
+};
+
 const ChatMeet: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -406,6 +443,14 @@ const ChatMeet: React.FC = () => {
       minute: '2-digit',
     });
 
+  const getVideoCallRoomId = (meeting: VideoCall) => meeting.room_id || `meeting-${meeting.id}`;
+
+  const handleJoinVideoCall = (meeting: VideoCall) => {
+    navigate(`/meeting/${getVideoCallRoomId(meeting)}`, {
+      state: { meetingId: meeting.id, meetingTitle: meeting.title },
+    });
+  };
+
   const handleCopyLink = (link: string) => {
     navigator.clipboard.writeText(link);
     setCopiedLink(link);
@@ -450,7 +495,7 @@ const ChatMeet: React.FC = () => {
           description: intDesc,
           participant_ids: intParticipants,
         });
-        navigate(`/meeting/meeting-${meeting.id}`, { state: { meetingId: meeting.id } });
+        handleJoinVideoCall(meeting);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Nie udało się utworzyć spotkania');
@@ -517,7 +562,7 @@ const ChatMeet: React.FC = () => {
         <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
 
         {/* ── LEFT SIDEBAR ── */}
-        <div className="w-80 flex-shrink-0 flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="flex min-h-0 w-80 flex-shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
 
           {/* Sidebar header */}
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
@@ -762,23 +807,39 @@ const ChatMeet: React.FC = () => {
                           }`}
                         >
                           <div className={`w-9 h-9 ${platform.bgColor} ${platform.darkBg} rounded-lg flex items-center justify-center text-base flex-shrink-0`}>
-                            {platform.icon}
+                            <PlatformLogo platform={meeting.platform} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
-                              {meeting.title}
-                            </p>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
+                                {meeting.title}
+                              </p>
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${platform.bgColor} ${platform.color} ${platform.darkBg}`}>
+                                {platform.name}
+                              </span>
+                            </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                               {new Date(`${meeting.scheduled_date}T${meeting.scheduled_time}`).toLocaleDateString('pl-PL', {
                                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                               })}
                             </p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">
+                                <Clock className="h-3 w-3" />
+                                {formatDurationLabel(meeting.duration_minutes)}
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">
+                                <Users className="h-3 w-3" />
+                                {meeting.participants.length}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
                     } else {
                       const call = item.data;
                       const isSelected = selectedVideoCall?.id === call.id;
+                      const status = getVideoCallStatus(call.status);
                       const visibleParticipants = (call.participants || []).slice(0, 4);
                       const extraCount = Math.max(0, (call.participants?.length || 0) - 4);
                       return (
@@ -795,14 +856,18 @@ const ChatMeet: React.FC = () => {
                           }`}
                         >
                           <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 flex-shrink-0">
-                            ERP
+                            <PlatformLogo platform="internal" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
-                              {call.title}
-                            </p>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#d87f16] dark:text-[#F7941D]' : 'text-gray-900 dark:text-white'}`}>
+                                {call.title}
+                              </p>
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className}`}>
+                                {status.label}
+                              </span>
+                            </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {call.status === 'active' && <span className="text-green-600 font-medium">Aktywne • </span>}
                               {new Date(call.created_at).toLocaleDateString('pl-PL', {
                                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                               })}
@@ -848,7 +913,7 @@ const ChatMeet: React.FC = () => {
         </div>
 
         {/* ── MAIN AREA ── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
           {(activeChannel || selectedMeeting || selectedVideoCall) && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
               <div className="min-w-0">
@@ -892,7 +957,7 @@ const ChatMeet: React.FC = () => {
 
           {/* Empty state */}
           {!activeChannel && !selectedMeeting && !selectedVideoCall && (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-8 text-center">
               <div className="w-20 h-20 bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center shadow-sm mb-6">
                 <MessageSquare className="w-10 h-10 text-gray-300 dark:text-gray-600" />
               </div>
@@ -953,7 +1018,7 @@ const ChatMeet: React.FC = () => {
             });
 
             return (
-              <div className="flex flex-col h-full">
+              <div className="flex min-h-0 flex-1 flex-col">
                 {/* Chat header */}
                 <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
                   <div className="relative flex-shrink-0">
@@ -1026,7 +1091,7 @@ const ChatMeet: React.FC = () => {
                 <div className="flex flex-1 min-h-0">
 
                   {/* Messages + input */}
-                  <div className="flex flex-col flex-1 min-w-0">
+                  <div className="flex min-h-0 flex-1 flex-col min-w-0">
                     <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-1 min-h-0">
                       {messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
@@ -1056,7 +1121,7 @@ const ChatMeet: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                    <div className="shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
                       <MessageInput
                         onSendMessage={sendMessage}
                         onTyping={sendTypingIndicator}
@@ -1067,7 +1132,7 @@ const ChatMeet: React.FC = () => {
 
                   {/* Members panel */}
                   {isGroup && showMembers && (
-                    <div className="w-56 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
+                    <div className="flex min-h-0 w-56 flex-shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                       <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                           Uczestnicy — {members.length}
@@ -1123,12 +1188,12 @@ const ChatMeet: React.FC = () => {
 
           {/* Meeting detail view */}
           {selectedMeeting && !activeChannel && (
-            <div className="flex flex-col h-full">
+            <div className="flex min-h-0 flex-1 flex-col">
               {/* Meeting header */}
               <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-start gap-4">
                   <div className={`w-14 h-14 ${platformConfig[selectedMeeting.platform].bgColor} ${platformConfig[selectedMeeting.platform].darkBg} rounded-xl flex items-center justify-center text-2xl flex-shrink-0`}>
-                    {platformConfig[selectedMeeting.platform].icon}
+                    <PlatformLogo platform={selectedMeeting.platform} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedMeeting.title}</h2>
@@ -1146,7 +1211,7 @@ const ChatMeet: React.FC = () => {
               </div>
 
               {/* Meeting details */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="min-h-0 flex-1 overflow-y-auto p-6 pb-8">
                 <div className="max-w-2xl space-y-5">
                   {/* Date & time */}
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
@@ -1181,7 +1246,7 @@ const ChatMeet: React.FC = () => {
                   {selectedMeeting.description && (
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                       <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Opis</h3>
-                      <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{selectedMeeting.description}</p>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-300">{selectedMeeting.description}</p>
                     </div>
                   )}
 
@@ -1234,7 +1299,7 @@ const ChatMeet: React.FC = () => {
                         {selectedMeeting.participants.map((p) => (
                           <div key={p.id} className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
-                              {p.name.split(' ').map((n) => n[0]).join('')}
+                              {getNameInitials(p.name)}
                             </div>
                             <span className="text-sm text-gray-900 dark:text-white">{p.name}</span>
                           </div>
@@ -1249,27 +1314,21 @@ const ChatMeet: React.FC = () => {
 
           {/* Video call detail view */}
           {selectedVideoCall && !activeChannel && (
-            <div className="flex flex-col h-full">
+            <div className="flex min-h-0 flex-1 flex-col">
               <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-start gap-4">
                   <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-                    🖥️
+                    <PlatformLogo platform="internal" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedVideoCall.title}</h2>
-                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      selectedVideoCall.status === 'ended'
-                        ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                        : selectedVideoCall.status === 'active'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                    }`}>
-                      {selectedVideoCall.status === 'ended' ? 'Zakończone' : selectedVideoCall.status === 'active' ? 'Aktywne' : 'Zaplanowane'}
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${getVideoCallStatus(selectedVideoCall.status).className}`}>
+                      {getVideoCallStatus(selectedVideoCall.status).label}
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="min-h-0 flex-1 overflow-y-auto p-6 pb-8">
                 <div className="max-w-2xl space-y-5">
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Termin</h3>
@@ -1288,9 +1347,32 @@ const ChatMeet: React.FC = () => {
                     </div>
                   </div>
 
+                  {selectedVideoCall.description && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Opis</h3>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-300">{selectedVideoCall.description}</p>
+                    </div>
+                  )}
+
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Pokój spotkania</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700">
+                        <p className="truncate text-sm text-gray-600 dark:text-gray-300">{getVideoCallRoomId(selectedVideoCall)}</p>
+                      </div>
+                      <button
+                        onClick={() => handleCopyLink(`${window.location.origin}/meeting/${getVideoCallRoomId(selectedVideoCall)}`)}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        title="Kopiuj link do pokoju"
+                      >
+                        {copiedLink === `${window.location.origin}/meeting/${getVideoCallRoomId(selectedVideoCall)}` ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
                   {selectedVideoCall.status !== 'ended' && (
                     <button
-                      onClick={() => navigate(`/meeting/meeting-${selectedVideoCall.id}`)}
+                      onClick={() => handleJoinVideoCall(selectedVideoCall)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl font-medium transition-colors"
                     >
                       <Video className="w-5 h-5" />
@@ -1411,10 +1493,10 @@ const ChatMeet: React.FC = () => {
       {/* ── INTERNAL MEETING MODAL ── */}
       {showInternalModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center">
+                <div className="w-9 h-9 bg-gray-900 rounded-lg flex items-center justify-center dark:bg-gray-700">
                   <Video className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -1432,7 +1514,7 @@ const ChatMeet: React.FC = () => {
                   value={intTitle}
                   onChange={(e) => setIntTitle(e.target.value)}
                   placeholder="np. Daily Standup"
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div>
@@ -1442,11 +1524,11 @@ const ChatMeet: React.FC = () => {
                   onChange={(e) => setIntDesc(e.target.value)}
                   rows={2}
                   placeholder="Dodaj opis..."
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               {/* Optional scheduling */}
-              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 space-y-3">
+              <div className="rounded-xl border border-dashed border-[#F7941D]/40 bg-[#F7941D]/5 p-4 space-y-3 dark:bg-[#F7941D]/10">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Zaplanuj na datę (opcjonalnie — brak daty = start natychmiast)
                 </p>
@@ -1458,7 +1540,7 @@ const ChatMeet: React.FC = () => {
                       value={intDate}
                       onChange={(e) => setIntDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
                   <div>
@@ -1467,7 +1549,7 @@ const ChatMeet: React.FC = () => {
                       type="time"
                       value={intTime}
                       onChange={(e) => setIntTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
                 </div>
@@ -1476,7 +1558,7 @@ const ChatMeet: React.FC = () => {
                   <select
                     value={intDuration}
                     onChange={(e) => setIntDuration(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                   >
                     {[15, 30, 45, 60, 90, 120].map((d) => (
                       <option key={d} value={d}>{d < 60 ? `${d} minut` : `${d / 60} godzin${d === 60 ? 'a' : 'y'}`}</option>
@@ -1493,13 +1575,13 @@ const ChatMeet: React.FC = () => {
                     value={intSearch}
                     onChange={(e) => setIntSearch(e.target.value)}
                     placeholder="Szukaj..."
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-44 overflow-y-auto">
                   {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(intSearch.toLowerCase())).map((u) => (
                     <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                      <input type="checkbox" checked={intParticipants.includes(u.id)} onChange={() => setIntParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 text-gray-800 rounded" />
+                      <input type="checkbox" checked={intParticipants.includes(u.id)} onChange={() => setIntParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 accent-[#F7941D] rounded" />
                       <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium">{u.first_name[0]}{u.last_name[0]}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
@@ -1528,7 +1610,7 @@ const ChatMeet: React.FC = () => {
       {/* ── EXTERNAL MEETING MODAL ── */}
       {showExternalModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-[#F7941D] rounded-lg flex items-center justify-center">
@@ -1596,12 +1678,15 @@ const ChatMeet: React.FC = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input value={extSearch} onChange={(e) => setExtSearch(e.target.value)} placeholder="Szukaj..." className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
                 </div>
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-36 overflow-y-auto">
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-44 overflow-y-auto">
                   {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(extSearch.toLowerCase())).map((u) => (
                     <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                       <input type="checkbox" checked={extParticipants.includes(u.id)} onChange={() => setExtParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 accent-[#F7941D] rounded" />
                       <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium">{u.first_name[0]}{u.last_name[0]}</div>
-                      <p className="text-sm text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                      </div>
                     </label>
                   ))}
                 </div>

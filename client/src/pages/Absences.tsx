@@ -108,6 +108,8 @@ const Absences = () => {
   const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar' | 'management'>('my');
   const [requestPage, setRequestPage] = useState(1);
   const [requestPageSize, setRequestPageSize] = useState<10 | 30 | 50>(10);
+  const [requestSearch, setRequestSearch] = useState('');
+  const [requestStatusFilter, setRequestStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'>('all');
 
   // Calendar tab state
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -152,7 +154,7 @@ const Absences = () => {
 
   useEffect(() => {
     setRequestPage(1);
-  }, [activeTab, requestPageSize]);
+  }, [activeTab, requestPageSize, requestSearch, requestStatusFilter]);
 
   const loadLeaveOverview = async () => {
     try {
@@ -397,7 +399,27 @@ const Absences = () => {
     },
   ];
 
-  const currentRequests = activeTab === 'pending' ? pendingRequests : leaveRequests;
+  const baseRequests = activeTab === 'pending' ? pendingRequests : leaveRequests;
+  const normalizedRequestSearch = requestSearch.trim().toLowerCase();
+  const currentRequests = baseRequests.filter(request => {
+    const typeLabel = leaveTypeConfig[request.leave_type as LeaveType]?.label || '';
+    const userName = request.user ? `${request.user.first_name} ${request.user.last_name}` : '';
+    const searchable = [typeLabel, request.reason, userName, request.user?.email, request.status]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const matchesSearch = !normalizedRequestSearch || searchable.includes(normalizedRequestSearch);
+    const matchesStatus = requestStatusFilter === 'all' || request.status === requestStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+  const requestStatusCounts = baseRequests.reduce(
+    (acc, request) => {
+      acc[request.status as keyof typeof acc] += 1;
+      return acc;
+    },
+    { pending: 0, approved: 0, rejected: 0, cancelled: 0 }
+  );
   const requestTotalPages = Math.max(1, Math.ceil(currentRequests.length / requestPageSize));
   const requestStartIndex = (requestPage - 1) * requestPageSize;
   const requestEndIndex = Math.min(requestStartIndex + requestPageSize, currentRequests.length);
@@ -540,6 +562,59 @@ const Absences = () => {
         {/* Leave Requests List */}
         {activeTab !== 'calendar' && activeTab !== 'management' && (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-100 p-4 dark:border-gray-700">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                    {activeTab === 'pending' ? 'Wnioski do obsługi' : 'Historia moich wniosków'}
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {activeTab === 'pending'
+                      ? 'Przeglądaj, filtruj i obsługuj wnioski pracowników.'
+                      : 'Sprawdź status swoich wniosków oraz ich szczegóły.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={requestSearch}
+                      onChange={e => setRequestSearch(e.target.value)}
+                      placeholder={activeTab === 'pending' ? 'Szukaj pracownika lub wniosku...' : 'Szukaj wniosku...'}
+                      className="h-10 w-72 max-w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <select
+                    value={requestStatusFilter}
+                    onChange={e => setRequestStatusFilter(e.target.value as typeof requestStatusFilter)}
+                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                  >
+                    <option value="all">Wszystkie statusy</option>
+                    <option value="pending">Oczekujące</option>
+                    <option value="approved">Zatwierdzone</option>
+                    <option value="rejected">Odrzucone</option>
+                    <option value="cancelled">Anulowane</option>
+                  </select>
+                </div>
+              </div>
+
+              {activeTab === 'pending' && baseRequests.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  {[
+                    ['Oczekujące', requestStatusCounts.pending, 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300'],
+                    ['Zatwierdzone', requestStatusCounts.approved, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'],
+                    ['Odrzucone', requestStatusCounts.rejected, 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'],
+                    ['Anulowane', requestStatusCounts.cancelled, 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'],
+                  ].map(([label, count, className]) => (
+                    <div key={label} className={`rounded-lg px-3 py-2 ${className}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{label}</p>
+                      <p className="mt-1 text-xl font-bold">{count}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {isLoading ? (
               <div className="space-y-3 p-4">
                 {[...Array(3)].map((_, i) => (
@@ -566,10 +641,12 @@ const Absences = () => {
                       <Calendar className="h-7 w-7" />
                     </div>
                     <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-                      Brak wniosków
+                      {baseRequests.length === 0 ? 'Brak wniosków' : 'Brak wyników'}
                     </h3>
                     <p className="max-w-md text-sm text-gray-500 dark:text-gray-400">
-                      {activeTab === 'my'
+                      {baseRequests.length > 0
+                        ? 'Zmień wyszukiwanie lub filtr statusu, aby zobaczyć więcej pozycji.'
+                        : activeTab === 'my'
                         ? 'Nie masz żadnych wniosków urlopowych'
                         : 'Nie ma wniosków do zatwierdzenia'}
                     </p>

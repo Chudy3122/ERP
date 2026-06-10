@@ -81,6 +81,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
+      <Route path="/meetings" element={<Navigate to="/meeting" replace />} />
       <Route
         path="/meeting/:roomName"
         element={

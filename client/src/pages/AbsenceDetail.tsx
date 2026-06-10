@@ -2,14 +2,34 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import { ArrowLeft, Calendar, CheckCircle2, Clock, Home, MoreHorizontal, Umbrella, XCircle, Heart, User, MessageSquare, Send, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Home,
+  MoreHorizontal,
+  Umbrella,
+  XCircle,
+  Heart,
+  User,
+  MessageSquare,
+  Send,
+  Loader2,
+  RotateCcw,
+  ShieldAlert,
+  Trash2,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as timeApi from '../api/time.api';
 import type { LeaveComment } from '../api/time.api';
 import type { LeaveRequest } from '../types/time.types';
 import { getFileUrl } from '../api/axios-config';
 
-type LeaveType = 'vacation' | 'sick_leave' | 'remote_work' | 'other';
+type LeaveType =
+  | 'vacation' | 'personal' | 'sick_leave' | 'unpaid' | 'parental'
+  | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
+  | 'remote_work' | 'other';
 
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> = {
   vacation: {
@@ -17,10 +37,50 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
     icon: <Umbrella className="h-5 w-5" />,
     color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30',
   },
+  personal: {
+    label: 'Urlop na żądanie',
+    icon: <Calendar className="h-5 w-5" />,
+    color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
+  },
   sick_leave: {
     label: 'L4 / Zwolnienie lekarskie',
     icon: <Heart className="h-5 w-5" />,
     color: 'text-red-600 bg-red-50 dark:bg-red-900/30',
+  },
+  unpaid: {
+    label: 'Urlop bezpłatny',
+    icon: <MoreHorizontal className="h-5 w-5" />,
+    color: 'text-gray-600 bg-gray-100 dark:bg-gray-700',
+  },
+  parental: {
+    label: 'Urlop rodzicielski',
+    icon: <Heart className="h-5 w-5" />,
+    color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/30',
+  },
+  maternity: {
+    label: 'Urlop macierzyński',
+    icon: <Heart className="h-5 w-5" />,
+    color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/30',
+  },
+  paternity: {
+    label: 'Urlop ojcowski',
+    icon: <Heart className="h-5 w-5" />,
+    color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30',
+  },
+  childcare_188: {
+    label: 'Opieka nad dzieckiem do 14 lat',
+    icon: <Heart className="h-5 w-5" />,
+    color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30',
+  },
+  care: {
+    label: 'Urlop opiekuńczy',
+    icon: <Heart className="h-5 w-5" />,
+    color: 'text-teal-600 bg-teal-50 dark:bg-teal-900/30',
+  },
+  occasional: {
+    label: 'Urlop okolicznościowy',
+    icon: <Calendar className="h-5 w-5" />,
+    color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/30',
   },
   remote_work: {
     label: 'Praca zdalna',
@@ -222,6 +282,53 @@ const AbsenceDetail = () => {
     ? leaveTypeConfig[request.leave_type as LeaveType] || leaveTypeConfig.other
     : leaveTypeConfig.other;
   const statusConfig = request ? getStatusConfig(request.status) : getStatusConfig('cancelled');
+  const isPending = request?.status === 'pending';
+  const isReviewed = request?.status === 'approved' || request?.status === 'rejected';
+  const canShowManagerActions = Boolean(request && canReview && (isPending || isReviewed));
+  const canShowUserCancel = Boolean(request && canCancel);
+  const canShowAnyActions = canShowManagerActions || canShowUserCancel || isAdmin;
+
+  const ActionButton = ({
+    icon,
+    title,
+    description,
+    onClick,
+    disabled,
+    variant = 'neutral',
+  }: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    onClick: () => void;
+    disabled?: boolean;
+    variant?: 'primary' | 'neutral' | 'warning' | 'danger';
+  }) => {
+    const variantClasses = {
+      primary: 'border-gray-900 bg-gray-900 text-white hover:bg-gray-800 dark:border-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600',
+      neutral: 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
+      warning: 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+      danger: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300',
+    };
+
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]}`}
+      >
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/70 text-current dark:bg-white/10">
+          {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : icon}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">{title}</span>
+          <span className={`mt-0.5 block text-xs ${variant === 'primary' ? 'text-white/75' : 'text-current opacity-70'}`}>
+            {description}
+          </span>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <MainLayout title="Szczegóły nieobecności">
@@ -410,85 +517,97 @@ const AbsenceDetail = () => {
                 </div>
               )}
 
-              {request.status === 'pending' && (canReview || canCancel) && (
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Akcje
+              {request.review_notes && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-900/40 dark:bg-amber-900/10">
+                  <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                    <ShieldAlert className="h-4 w-4" />
+                    Notatka do decyzji
                   </h3>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">{request.review_notes}</p>
+                </div>
+              )}
+
+              {canShowAnyActions && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Akcje wniosku
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        Dostępne operacje zależą od statusu i uprawnień.
+                      </p>
+                    </div>
+                    {isReviewing && <Loader2 className="h-4 w-4 animate-spin text-[#F7941D]" />}
+                  </div>
+
                   <div className="space-y-2">
-                    {canReview && (
+                    {canReview && isPending && (
                       <>
-                        <button
-                          type="button"
+                        <ActionButton
+                          icon={<CheckCircle2 className="h-4 w-4" />}
+                          title="Zatwierdź wniosek"
+                          description="Potwierdza nieobecność i aktualizuje status."
                           onClick={handleApprove}
                           disabled={isReviewing}
-                          className="w-full rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
-                        >
-                          Zatwierdź
-                        </button>
-                        <button
-                          type="button"
+                          variant="primary"
+                        />
+                        <ActionButton
+                          icon={<XCircle className="h-4 w-4" />}
+                          title="Odrzuć wniosek"
+                          description="Oznacza wniosek jako odrzucony."
                           onClick={handleReject}
                           disabled={isReviewing}
-                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                        >
-                          Odrzuć
-                        </button>
+                          variant="neutral"
+                        />
                       </>
                     )}
-                    {canCancel && (
-                      <button
-                        type="button"
+
+                    {canReview && isReviewed && (
+                      <>
+                        <ActionButton
+                          icon={<RotateCcw className="h-4 w-4" />}
+                          title="Cofnij do oczekujących"
+                          description="Przywraca wniosek do ponownego rozpatrzenia."
+                          onClick={handleRevert}
+                          disabled={isReviewing}
+                          variant="warning"
+                        />
+                        <ActionButton
+                          icon={<XCircle className="h-4 w-4" />}
+                          title="Anuluj wniosek"
+                          description="Zamyka wniosek bez usuwania historii."
+                          onClick={handleAdminCancel}
+                          disabled={isReviewing}
+                          variant="danger"
+                        />
+                      </>
+                    )}
+
+                    {canShowUserCancel && (
+                      <ActionButton
+                        icon={<XCircle className="h-4 w-4" />}
+                        title="Anuluj własny wniosek"
+                        description="Dostępne tylko przed rozpatrzeniem."
                         onClick={handleCancel}
                         disabled={isReviewing}
-                        className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-60 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300"
-                      >
-                        Anuluj wniosek
-                      </button>
+                        variant="danger"
+                      />
+                    )}
+
+                    {isAdmin && (
+                      <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                        <ActionButton
+                          icon={<Trash2 className="h-4 w-4" />}
+                          title="Usuń trwale"
+                          description="Operacja administracyjna, bez możliwości cofnięcia."
+                          onClick={() => setDeleteOpen(true)}
+                          disabled={isReviewing}
+                          variant="danger"
+                        />
+                      </div>
                     )}
                   </div>
-                </div>
-              )}
-
-              {(request.status === 'approved' || request.status === 'rejected') && canReview && (
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Akcje
-                  </h3>
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={handleRevert}
-                      disabled={isReviewing}
-                      className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-60 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
-                    >
-                      Cofnij do oczekujących
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAdminCancel}
-                      disabled={isReviewing}
-                      className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-60 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300"
-                    >
-                      Anuluj wniosek
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {isAdmin && (
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Administrator
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteOpen(true)}
-                    disabled={isReviewing}
-                    className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
-                  >
-                    Usuń wniosek trwale
-                  </button>
                 </div>
               )}
             </div>

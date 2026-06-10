@@ -8,6 +8,8 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Clock3,
+  Edit3,
   Loader2,
   MapPin,
   Plus,
@@ -90,6 +92,25 @@ function addDays(date: Date, n: number): Date {
   return d;
 }
 
+function parseLocalDate(date: string): Date {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function formatShortDate(date: string): string {
+  return parseLocalDate(date).toLocaleDateString('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
+function getRangeDays(startDate: string, endDate?: string | null): number {
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate || startDate);
+  const diff = end.getTime() - start.getTime();
+  return Math.max(1, Math.round(diff / 86400000) + 1);
+}
+
 const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik'];
 
 const EMPTY_FORM: CreateEntryPayload = {
@@ -112,6 +133,7 @@ export default function BossCalendar() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<BossCalendarEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<BossCalendarEntry | null>(null);
   const [form, setForm] = useState<CreateEntryPayload>(EMPTY_FORM);
   const [multiDay, setMultiDay] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -145,6 +167,7 @@ export default function BossCalendar() {
   };
 
   const openEdit = (entry: BossCalendarEntry) => {
+    setSelectedEntry(null);
     setEditingEntry(entry);
     setMultiDay(!!entry.end_date && entry.end_date !== entry.date);
     setForm({
@@ -158,6 +181,10 @@ export default function BossCalendar() {
       location: entry.location ?? '',
     });
     setModalOpen(true);
+  };
+
+  const openDetails = (entry: BossCalendarEntry) => {
+    setSelectedEntry(entry);
   };
 
   const closeModal = () => {
@@ -211,6 +238,7 @@ export default function BossCalendar() {
     try {
       await api.deleteEntry(id);
       setDeleteConfirm(null);
+      setSelectedEntry(null);
       toast.success('Wpis usunięty');
       load();
     } catch {
@@ -238,12 +266,22 @@ export default function BossCalendar() {
   const meetingsCount = entries.filter((entry) => entry.type === 'meeting').length;
   const availableCount = entries.filter((entry) => entry.type === 'available').length;
   const blockedCount = entries.filter((entry) => entry.type === 'blocked').length;
+  const multiDayCount = entries.filter((entry) => entry.end_date && entry.end_date !== entry.date).length;
+  const hiddenOutsideHoursCount = entries.filter((entry) => {
+    const start = toMinutes(entry.start_time);
+    const end = toMinutes(entry.end_time);
+    return end <= HOUR_START * 60 || start >= HOUR_END * 60;
+  }).length;
+  const formRangeEnd = multiDay ? (form.end_date || form.date) : form.date;
+  const formRangeDays = form.date ? getRangeDays(form.date, formRangeEnd) : 1;
+  const formTypeConfig = TYPE_CONFIG[form.type];
 
   const statCards = [
     { label: 'Wpisy w tygodniu', value: entries.length, dot: 'bg-[#F7941D]' },
     { label: 'Spotkania', value: meetingsCount, dot: 'bg-[#F7941D]' },
     { label: 'Dostępność', value: availableCount, dot: 'bg-emerald-400' },
     { label: 'Blokady', value: blockedCount, dot: 'bg-gray-400' },
+    { label: 'Wielodniowe', value: multiDayCount, dot: 'bg-blue-400' },
   ];
 
   return (
@@ -279,7 +317,7 @@ export default function BossCalendar() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {statCards.map((card) => (
             <div
               key={card.label}
@@ -347,10 +385,24 @@ export default function BossCalendar() {
               </div>
             ) : (
               <div className="min-w-[900px]">
+                {entries.length === 0 && (
+                  <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
+                    Brak wpisów w tym tygodniu. {canEdit ? 'Kliknij w wybrany dzień w siatce albo użyj przycisku „Dodaj wpis”.' : 'Po dodaniu wpisów pojawią się w siatce kalendarza.'}
+                  </div>
+                )}
+
+                {hiddenOutsideHoursCount > 0 && (
+                  <div className="border-b border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                    {hiddenOutsideHoursCount} wpis{hiddenOutsideHoursCount === 1 ? '' : 'y'} wypada poza widocznym zakresem {HOUR_START}:00-{HOUR_END}:00 i nie jest pokazany w siatce.
+                  </div>
+                )}
+
                 <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,1fr)] border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                   <div className="border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40" />
                   {weekDays.map((day, index) => {
-                    const isToday = formatDate(day) === todayStr;
+                    const dayStr = formatDate(day);
+                    const isToday = dayStr === todayStr;
+                    const dayEntriesCount = entriesByDay(dayStr).length;
                     return (
                       <div
                         key={index}
@@ -364,6 +416,11 @@ export default function BossCalendar() {
                         <div className={`mt-0.5 text-lg font-semibold ${isToday ? 'text-[#F7941D]' : 'text-gray-950 dark:text-white'}`}>
                           {day.getDate()}
                         </div>
+                        {dayEntriesCount > 0 && (
+                          <div className="mt-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500">
+                            {dayEntriesCount} wpis{dayEntriesCount === 1 ? '' : 'y'}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -425,6 +482,12 @@ export default function BossCalendar() {
                           const top = (clampedStart / 60) * SLOT_PX;
                           const height = ((clampedEnd - clampedStart) / 60) * SLOT_PX;
                           const cfg = TYPE_CONFIG[entry.type];
+                          const rangeEnd = entry.end_date || entry.date;
+                          const isMultiDay = rangeEnd !== entry.date;
+                          const isRangeStart = dayStr === entry.date;
+                          const isRangeEnd = dayStr === rangeEnd;
+                          const rangeLabel = isRangeStart ? 'Start' : isRangeEnd ? 'Koniec' : 'Kont.';
+                          const rangeDays = getRangeDays(entry.date, rangeEnd);
 
                           return (
                             <div
@@ -433,13 +496,25 @@ export default function BossCalendar() {
                               className={`absolute z-10 cursor-pointer select-none overflow-hidden rounded-lg border-l-4 px-2 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${cfg.bg} ${cfg.border}`}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                if (canEdit) openEdit(entry);
+                                openDetails(entry);
                               }}
                             >
-                              <div className={`truncate text-xs font-semibold ${cfg.text}`}>{entry.title}</div>
+                              <div className="flex items-start justify-between gap-1">
+                                <div className={`min-w-0 truncate text-xs font-semibold ${cfg.text}`}>{entry.title}</div>
+                                {isMultiDay && (
+                                  <span className={`shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-bold uppercase ${cfg.text} dark:bg-gray-900/30`}>
+                                    {rangeLabel}
+                                  </span>
+                                )}
+                              </div>
                               {height >= 36 && (
                                 <div className={`truncate text-xs ${cfg.text} opacity-75`}>
                                   {entry.start_time}-{entry.end_time}
+                                </div>
+                              )}
+                              {height >= 48 && isMultiDay && (
+                                <div className={`truncate text-[10px] ${cfg.text} opacity-70`}>
+                                  {formatShortDate(entry.date)}-{formatShortDate(rangeEnd)} · {rangeDays} dni
                                 </div>
                               )}
                               {height >= 52 && entry.location && (
@@ -460,7 +535,7 @@ export default function BossCalendar() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-gray-800">
+          <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl dark:bg-gray-800">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Wpis kalendarza</p>
@@ -477,7 +552,7 @@ export default function BossCalendar() {
               </button>
             </div>
 
-            <div className="space-y-4 px-6 py-5">
+            <div className="max-h-[72vh] space-y-5 overflow-y-auto px-6 py-5">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Typ</label>
                 <div className="flex gap-2">
@@ -498,7 +573,7 @@ export default function BossCalendar() {
                 </div>
               </div>
 
-              <div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Tytuł *</label>
                 <input
                   type="text"
@@ -509,73 +584,83 @@ export default function BossCalendar() {
                 />
               </div>
 
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={multiDay}
-                  onChange={(event) => {
-                    const on = event.target.checked;
-                    setMultiDay(on);
-                    setForm((current) => ({ ...current, end_date: on ? (current.end_date || current.date) : null }));
-                  }}
-                  className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]/30"
-                />
-                Wiele dni (przedział)
-              </label>
-
-              {multiDay && (
-                <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Od dnia *</label>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Zakres wpisu</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Wpis wielodniowy pojawi się w każdym dniu zakresu z tymi samymi godzinami.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const on = !multiDay;
+                      setMultiDay(on);
+                      setForm((current) => ({ ...current, end_date: on ? (current.end_date || current.date) : null }));
+                    }}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                      multiDay
+                        ? 'bg-[#F7941D] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {multiDay ? 'Wiele dni' : 'Jeden dzień'}
+                  </button>
+                </div>
+
+                <div className={`grid grid-cols-1 gap-3 ${multiDay ? 'sm:grid-cols-2' : ''}`}>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {multiDay ? 'Od dnia *' : 'Data *'}
+                    </label>
                     <input
                       type="date"
                       value={form.date}
-                      onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
+                      onChange={(event) => setForm((current) => ({
+                        ...current,
+                        date: event.target.value,
+                        end_date: multiDay && current.end_date && current.end_date < event.target.value ? event.target.value : current.end_date,
+                      }))}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  {multiDay && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Do dnia *</label>
+                      <input
+                        type="date"
+                        value={form.end_date ?? form.date}
+                        min={form.date}
+                        onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Godziny</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Od *</label>
+                    <input
+                      type="time"
+                      value={form.start_time}
+                      onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
                       className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Do dnia *</label>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Do *</label>
                     <input
-                      type="date"
-                      value={form.end_date ?? ''}
-                      min={form.date}
-                      onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))}
+                      type="time"
+                      value={form.end_time}
+                      onChange={(event) => setForm((current) => ({ ...current, end_time: event.target.value }))}
                       className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-3 gap-3">
-                {!multiDay && (
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Data *</label>
-                  <input
-                    type="date"
-                    value={form.date}
-                    onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-                )}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Od *</label>
-                  <input
-                    type="time"
-                    value={form.start_time}
-                    onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Do *</label>
-                  <input
-                    type="time"
-                    value={form.end_time}
-                    onChange={(event) => setForm((current) => ({ ...current, end_time: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  />
                 </div>
               </div>
 
@@ -603,6 +688,18 @@ export default function BossCalendar() {
                   placeholder="Dodatkowe informacje..."
                   className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
+              </div>
+
+              <div className={`rounded-xl border-l-4 px-4 py-3 ${formTypeConfig.bg} ${formTypeConfig.border}`}>
+                <p className={`text-sm font-semibold ${formTypeConfig.text}`}>
+                  {form.title.trim() || 'Nowy wpis'} · {formTypeConfig.label}
+                </p>
+                <p className={`mt-1 text-xs ${formTypeConfig.text} opacity-80`}>
+                  {formatShortDate(form.date)}
+                  {multiDay && formRangeEnd !== form.date ? `-${formatShortDate(formRangeEnd)} (${formRangeDays} dni)` : ''}
+                  {' · '}
+                  {form.start_time}-{form.end_time}
+                </p>
               </div>
             </div>
 
@@ -637,6 +734,122 @@ export default function BossCalendar() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {selectedEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          {(() => {
+            const cfg = TYPE_CONFIG[selectedEntry.type];
+            const rangeEnd = selectedEntry.end_date || selectedEntry.date;
+            const isMultiDayEntry = rangeEnd !== selectedEntry.date;
+            const rangeDays = getRangeDays(selectedEntry.date, rangeEnd);
+
+            return (
+              <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl dark:bg-gray-800">
+                <div className={`border-l-4 px-6 py-5 ${cfg.bg} ${cfg.border}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold uppercase tracking-wide ${cfg.text}`}>
+                        {cfg.label}
+                      </p>
+                      <h2 className="mt-1 text-xl font-semibold text-gray-950 dark:text-white">
+                        {selectedEntry.title}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEntry(null)}
+                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/70 hover:text-gray-600 dark:hover:bg-gray-700"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4 px-6 py-5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <CalendarDays className="h-4 w-4 text-[#F7941D]" />
+                        Termin
+                      </div>
+                      <p className="text-sm font-semibold text-gray-950 dark:text-white">
+                        {formatShortDate(selectedEntry.date)}
+                        {isMultiDayEntry ? ` - ${formatShortDate(rangeEnd)}` : ''}
+                      </p>
+                      {isMultiDayEntry && (
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{rangeDays} dni</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <Clock3 className="h-4 w-4 text-[#F7941D]" />
+                        Godziny
+                      </div>
+                      <p className="text-sm font-semibold text-gray-950 dark:text-white">
+                        {selectedEntry.start_time} - {selectedEntry.end_time}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedEntry.location && (
+                    <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <MapPin className="h-4 w-4 text-[#F7941D]" />
+                        Miejsce
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{selectedEntry.location}</p>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      <AlignLeft className="h-4 w-4 text-[#F7941D]" />
+                      Opis
+                    </div>
+                    <p className="whitespace-pre-line text-sm leading-6 text-gray-700 dark:text-gray-300">
+                      {selectedEntry.description || 'Brak dodatkowego opisu.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/60">
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirm(selectedEntry.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Usuń
+                    </button>
+                  )}
+
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEntry(null)}
+                      className="rounded-lg px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Zamknij
+                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => openEdit(selectedEntry)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        Edytuj
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

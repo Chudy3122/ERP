@@ -289,33 +289,103 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [autoScale, setAutoScale] = useState(true);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, positionX: 0, positionY: 0 });
+
+  const getCenteredPosition = (nextScale: number) => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return { x: 0, y: 0 };
+
+    const centeredY = Math.max(0, (container.clientHeight - content.scrollHeight * nextScale) / 2);
+    return { x: 0, y: centeredY };
+  };
+
+  const calculateAutoScale = () => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    setScale(1);
+    content.style.transform = 'scale(1)';
+    requestAnimationFrame(() => {
+      const padding = 48;
+      const scaleX = content.scrollWidth > container.clientWidth - padding ? (container.clientWidth - padding) / content.scrollWidth : 1;
+      const scaleY = content.scrollHeight > container.clientHeight - padding ? (container.clientHeight - padding) / content.scrollHeight : 1;
+      const nextScale = Math.max(0.25, Math.min(1, scaleX, scaleY));
+      setScale(nextScale);
+      setPosition(getCenteredPosition(nextScale));
+    });
+  };
 
   useEffect(() => {
     if (!autoScale || !containerRef.current || !contentRef.current) return;
 
-    const calculateScale = () => {
-      const container = containerRef.current;
-      const content = contentRef.current;
-      if (!container || !content) return;
-      setScale(1);
-      content.style.transform = 'scale(1)';
-      requestAnimationFrame(() => {
-        const padding = 48;
-        const scaleX = content.scrollWidth > container.clientWidth - padding ? (container.clientWidth - padding) / content.scrollWidth : 1;
-        const scaleY = content.scrollHeight > container.clientHeight - padding ? (container.clientHeight - padding) / content.scrollHeight : 1;
-        setScale(Math.max(0.25, Math.min(1, scaleX, scaleY)));
-      });
-    };
-
-    const id = setTimeout(calculateScale, 100);
-    const ro = new ResizeObserver(() => setTimeout(calculateScale, 50));
+    const id = setTimeout(calculateAutoScale, 100);
+    const ro = new ResizeObserver(() => setTimeout(calculateAutoScale, 50));
     ro.observe(containerRef.current);
     return () => { clearTimeout(id); ro.disconnect(); };
   }, [tree, autoScale]);
 
   const handleZoomIn = () => { setAutoScale(false); setScale((p) => Math.min(1.5, p + 0.1)); };
   const handleZoomOut = () => { setAutoScale(false); setScale((p) => Math.max(0.3, p - 0.1)); };
-  const handleReset = () => { setAutoScale(true); setScale(1); };
+  const handleReset = () => {
+    setAutoScale(true);
+    setTimeout(calculateAutoScale, 0);
+  };
+
+  const handleWheel = (event: WheelEvent) => {
+    if (!event.ctrlKey) return;
+
+    event.preventDefault();
+    setAutoScale(false);
+    const direction = event.deltaY > 0 ? -1 : 1;
+    setScale((previousScale) => {
+      const nextScale = Math.min(1.5, Math.max(0.3, previousScale + direction * 0.08));
+      return Number(nextScale.toFixed(2));
+    });
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('button')) return;
+
+    setIsPanning(true);
+    panStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      positionX: position.x,
+      positionY: position.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning) return;
+
+    const deltaX = event.clientX - panStartRef.current.x;
+    const deltaY = event.clientY - panStartRef.current.y;
+    setPosition({
+      x: panStartRef.current.positionX + deltaX,
+      y: panStartRef.current.positionY + deltaY,
+    });
+  };
+
+  const stopPanning = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsPanning(false);
+  };
 
   if (tree.length === 0) {
     return (
@@ -331,19 +401,37 @@ const OrgChart: React.FC<OrgChartProps> = ({ tree }) => {
   return (
     <div className="flex flex-col bg-white dark:bg-gray-800">
       {/* Zoom controls */}
-      <div className="flex items-center justify-end gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Ctrl + scroll przybliża, przeciągnięcie tła przesuwa schemat.
+        </p>
+        <div className="flex items-center gap-2">
         <span className="mr-2 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300">{Math.round(scale * 100)}%</span>
         <button onClick={handleZoomOut} className="rounded-lg border border-gray-200 p-1.5 text-gray-600 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-400 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300" title="Pomniejsz"><ZoomOut className="w-4 h-4" /></button>
         <button onClick={handleZoomIn} className="rounded-lg border border-gray-200 p-1.5 text-gray-600 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-400 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300" title="Powiększ"><ZoomIn className="w-4 h-4" /></button>
         <button onClick={handleReset} className="rounded-lg border border-gray-200 p-1.5 text-gray-600 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-400 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300" title="Dopasuj"><RotateCcw className="w-4 h-4" /></button>
+        </div>
       </div>
 
       {/* Chart */}
-      <div ref={containerRef} className="flex justify-center overflow-hidden bg-gray-50/60 p-4 dark:bg-gray-900/20" style={{ height: 'calc(100vh - 340px)' }}>
+      <div
+        ref={containerRef}
+        className={`relative touch-none select-none overflow-hidden bg-gray-50/60 p-4 dark:bg-gray-900/20 ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{ height: 'calc(100vh - 340px)' }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={stopPanning}
+        onPointerCancel={stopPanning}
+        onPointerLeave={() => setIsPanning(false)}
+      >
         <div
           ref={contentRef}
-          className="flex flex-col items-center gap-4"
-          style={{ transform: `scale(${scale})`, transformOrigin: 'top center', width: 'fit-content' }}
+          className="absolute left-1/2 top-4 flex flex-col items-center gap-4"
+          style={{
+            transform: `translate(calc(-50% + ${position.x}px), ${position.y}px) scale(${scale})`,
+            transformOrigin: 'top center',
+            width: 'fit-content',
+          }}
         >
           {tree.map((rootNode) => (
             <OrgNode key={rootNode.id} node={rootNode} isRoot />
