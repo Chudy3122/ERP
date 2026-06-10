@@ -102,6 +102,9 @@ export interface LeaveBalance {
   total: number;
   usedDays: number;
   remaining: number;
+  remoteAllowance: number;
+  remoteUsed: number;
+  remoteRemaining: number;
   year: number;
 }
 
@@ -118,6 +121,9 @@ export interface LeaveOverviewRow {
   carriedOver: number;
   usedDays: number;
   available: number;
+  remoteAllowance: number;
+  remoteUsed: number;
+  remoteAvailable: number;
 }
 
 export interface ClockInRequest {

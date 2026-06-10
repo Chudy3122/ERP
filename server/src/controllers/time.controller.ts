@@ -715,10 +715,11 @@ export class TimeController {
   async updateLeaveAllocation(req: Request, res: Response): Promise<void> {
     try {
       const { userId } = req.params;
-      const { annualLeaveDays, carriedOverDays } = req.body;
+      const { annualLeaveDays, carriedOverDays, remoteWorkDays } = req.body;
       const user = await timeService.updateLeaveAllocation(userId, {
         annualLeaveDays: annualLeaveDays !== undefined ? Number(annualLeaveDays) : undefined,
         carriedOverDays: carriedOverDays !== undefined ? Number(carriedOverDays) : undefined,
+        remoteWorkDays: remoteWorkDays !== undefined ? Number(remoteWorkDays) : undefined,
       });
       res.status(200).json({
         success: true,
@@ -726,6 +727,7 @@ export class TimeController {
           id: user.id,
           annualLeave: user.annual_leave_days,
           carriedOver: user.carried_over_days,
+          remoteWork: user.remote_work_days,
         },
       });
     } catch (error: any) {

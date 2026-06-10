@@ -726,6 +726,43 @@ export class TimeService {
   }
 
   /**
+   * Approved remote-work (praca zdalna) days for one user in a year.
+   */
+  private async getUsedRemoteDays(userId: string, year: number): Promise<number> {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+    const approved = await this.leaveRequestRepository.find({
+      where: {
+        user_id: userId,
+        status: LeaveStatus.APPROVED,
+        leave_type: LeaveType.REMOTE_WORK,
+        start_date: Between(startDate, endDate),
+      },
+    });
+    return approved.reduce((sum, req) => sum + req.total_days, 0);
+  }
+
+  /**
+   * Approved remote-work days per user across all users in a year.
+   */
+  private async getUsedRemoteByUser(year: number): Promise<Map<string, number>> {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+    const approved = await this.leaveRequestRepository.find({
+      where: {
+        status: LeaveStatus.APPROVED,
+        leave_type: LeaveType.REMOTE_WORK,
+        start_date: Between(startDate, endDate),
+      },
+    });
+    const map = new Map<string, number>();
+    for (const req of approved) {
+      map.set(req.user_id, (map.get(req.user_id) ?? 0) + req.total_days);
+    }
+    return map;
+  }
+
+  /**
    * Get leave balance for user. Pool = carried-over (zaległy) + this year's entitlement.
    */
   async getUserLeaveBalance(userId: string, year: number = new Date().getFullYear()) {
@@ -735,12 +772,18 @@ export class TimeService {
     const usedDays = await this.getUsedLeaveDays(userId, year);
     const total = annualLeave + carriedOver;
 
+    const remoteAllowance = user?.remote_work_days ?? 24;
+    const remoteUsed = await this.getUsedRemoteDays(userId, year);
+
     return {
       annualLeave,
       carriedOver,
       total,
       usedDays,
       remaining: Math.max(0, total - usedDays),
+      remoteAllowance,
+      remoteUsed,
+      remoteRemaining: Math.max(0, remoteAllowance - remoteUsed),
       year,
     };
   }
@@ -753,11 +796,14 @@ export class TimeService {
       order: { first_name: 'ASC', last_name: 'ASC' },
     });
     const usedByUser = await this.getUsedDaysByUser(year);
+    const remoteByUser = await this.getUsedRemoteByUser(year);
 
     return users.map((u) => {
       const annualLeave = u.annual_leave_days ?? 20;
       const carriedOver = u.carried_over_days ?? 0;
       const usedDays = usedByUser.get(u.id) ?? 0;
+      const remoteAllowance = u.remote_work_days ?? 24;
+      const remoteUsed = remoteByUser.get(u.id) ?? 0;
       return {
         id: u.id,
         firstName: u.first_name,
@@ -771,6 +817,9 @@ export class TimeService {
         carriedOver,
         usedDays,
         available: Math.max(0, annualLeave + carriedOver - usedDays),
+        remoteAllowance,
+        remoteUsed,
+        remoteAvailable: Math.max(0, remoteAllowance - remoteUsed),
       };
     });
   }
@@ -780,7 +829,7 @@ export class TimeService {
    */
   async updateLeaveAllocation(
     userId: string,
-    data: { annualLeaveDays?: number; carriedOverDays?: number },
+    data: { annualLeaveDays?: number; carriedOverDays?: number; remoteWorkDays?: number },
   ): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new Error('User not found');
@@ -798,6 +847,10 @@ export class TimeService {
     if (data.carriedOverDays !== undefined) {
       validate(data.carriedOverDays, 'Dni przeniesione');
       user.carried_over_days = Math.round(data.carriedOverDays);
+    }
+    if (data.remoteWorkDays !== undefined) {
+      validate(data.remoteWorkDays, 'Dni pracy zdalnej');
+      user.remote_work_days = Math.round(data.remoteWorkDays);
     }
 
     await this.userRepository.save(user);

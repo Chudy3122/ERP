@@ -123,6 +123,7 @@ const Absences = () => {
   const [savingLeaveDaysUserId, setSavingLeaveDaysUserId] = useState<string | null>(null);
   const [carriedDrafts, setCarriedDrafts] = useState<Record<string, string>>({});
   const [annualDrafts, setAnnualDrafts] = useState<Record<string, string>>({});
+  const [remoteDrafts, setRemoteDrafts] = useState<Record<string, string>>({});
   const [managementError, setManagementError] = useState('');
   const [managementSuccess, setManagementSuccess] = useState('');
 
@@ -163,6 +164,7 @@ const Absences = () => {
       setOverviewRows(rows);
       setCarriedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.carriedOver)])));
       setAnnualDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.annualLeave)])));
+      setRemoteDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteAllowance)])));
     } catch {
       setManagementError('Nie udało się pobrać planów urlopowych.');
       setOverviewRows([]);
@@ -173,10 +175,11 @@ const Absences = () => {
 
   const handleAllocationDraftChange = (
     employeeId: string,
-    field: 'carried' | 'annual',
+    field: 'carried' | 'annual' | 'remote',
     value: string
   ) => {
-    const setter = field === 'carried' ? setCarriedDrafts : setAnnualDrafts;
+    const setter =
+      field === 'carried' ? setCarriedDrafts : field === 'annual' ? setAnnualDrafts : setRemoteDrafts;
     setter(prev => ({ ...prev, [employeeId]: value }));
     setManagementError('');
     setManagementSuccess('');
@@ -185,9 +188,10 @@ const Absences = () => {
   const handleSaveAllocation = async (row: LeaveOverviewRow) => {
     const carriedOverDays = Number(carriedDrafts[row.id]);
     const annualLeaveDays = Number(annualDrafts[row.id]);
+    const remoteWorkDays = Number(remoteDrafts[row.id]);
 
     const invalid = (v: number) => !Number.isFinite(v) || v < 0 || v > 365;
-    if (invalid(carriedOverDays) || invalid(annualLeaveDays)) {
+    if (invalid(carriedOverDays) || invalid(annualLeaveDays) || invalid(remoteWorkDays)) {
       setManagementError('Podaj poprawne wartości z zakresu 0–365 dni.');
       setManagementSuccess('');
       return;
@@ -197,7 +201,7 @@ const Absences = () => {
       setSavingLeaveDaysUserId(row.id);
       setManagementError('');
       setManagementSuccess('');
-      await timeApi.updateLeaveAllocation(row.id, { annualLeaveDays, carriedOverDays });
+      await timeApi.updateLeaveAllocation(row.id, { annualLeaveDays, carriedOverDays, remoteWorkDays });
 
       setOverviewRows(prev =>
         prev.map(item =>
@@ -207,11 +211,13 @@ const Absences = () => {
                 carriedOver: carriedOverDays,
                 annualLeave: annualLeaveDays,
                 available: Math.max(0, carriedOverDays + annualLeaveDays - item.usedDays),
+                remoteAllowance: remoteWorkDays,
+                remoteAvailable: Math.max(0, remoteWorkDays - item.remoteUsed),
               }
             : item
         )
       );
-      setManagementSuccess(`Zapisano plan urlopowy dla ${row.firstName} ${row.lastName}.`);
+      setManagementSuccess(`Zapisano plan dla ${row.firstName} ${row.lastName}.`);
     } catch {
       setManagementError('Nie udało się zapisać planu urlopowego.');
     } finally {
@@ -394,6 +400,16 @@ const Absences = () => {
       iconBg: 'bg-emerald-50 dark:bg-emerald-900/30',
       valueColor: 'text-emerald-600',
     },
+    {
+      label: 'Praca zdalna — pozostało',
+      value: balance?.remoteRemaining,
+      hint: balance
+        ? `${balance.remoteUsed} / ${balance.remoteAllowance} dni wykorzystane`
+        : undefined,
+      icon: <Home className="h-5 w-5 text-purple-600" />,
+      iconBg: 'bg-purple-50 dark:bg-purple-900/30',
+      valueColor: 'text-purple-600',
+    },
   ];
 
   const currentRequests = activeTab === 'pending' ? pendingRequests : leaveRequests;
@@ -451,7 +467,7 @@ const Absences = () => {
 
         {/* Balance Cards */}
         {balance && (
-          <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {balanceCards.map(card => (
               <div
                 key={card.label}
@@ -763,8 +779,9 @@ const Absences = () => {
                     Zarządzanie urlopami
                   </h2>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Ustaw dni przeniesione z poprzedniego roku oraz limit na ten rok. Przeniesienie
-                    salda na nowy rok następuje automatycznie 1 stycznia.
+                    Ustaw dni przeniesione z poprzedniego roku, limit urlopu na ten rok oraz limit
+                    pracy zdalnej (urzędowo 24 dni). Przeniesienie salda urlopowego na nowy rok
+                    następuje automatycznie 1 stycznia; praca zdalna resetuje się rocznie.
                   </p>
                 </div>
                 <div className="relative w-full sm:w-80">
@@ -805,6 +822,9 @@ const Absences = () => {
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">W tym roku</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wykorzystane</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dostępne</th>
+                      <th className="border-l border-gray-200 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:border-gray-700 dark:text-purple-400">Zdalna w roku</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Zdalna wykorz.</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Zdalna dost.</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Akcja</th>
                     </tr>
                   </thead>
@@ -812,7 +832,7 @@ const Absences = () => {
                     {isManagementLoading ? (
                       [...Array(5)].map((_, index) => (
                         <tr key={index}>
-                          {[...Array(8)].map((__, i) => (
+                          {[...Array(11)].map((__, i) => (
                             <td key={i} className="px-4 py-4">
                               <div className="h-4 w-full max-w-[120px] animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                             </td>
@@ -821,7 +841,7 @@ const Absences = () => {
                       ))
                     ) : filteredManagementUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <td colSpan={11} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                           Brak pracowników pasujących do wyszukiwania.
                         </td>
                       </tr>
@@ -834,6 +854,10 @@ const Absences = () => {
                           Number.isFinite(carried) && Number.isFinite(annual)
                             ? Math.max(0, carried + annual - row.usedDays)
                             : row.available;
+                        const remote = Number(remoteDrafts[row.id]);
+                        const liveRemoteAvailable = Number.isFinite(remote)
+                          ? Math.max(0, remote - row.remoteUsed)
+                          : row.remoteAvailable;
                         const inputCls =
                           'h-10 w-20 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
@@ -872,6 +896,18 @@ const Absences = () => {
                             </td>
                             <td className="px-4 py-4 text-center text-sm font-semibold text-[#F7941D]">{row.usedDays}</td>
                             <td className="px-4 py-4 text-center text-sm font-bold text-emerald-600 dark:text-emerald-400">{liveAvailable}</td>
+                            <td className="border-l border-gray-100 px-4 py-4 text-center dark:border-gray-700">
+                              <input
+                                type="number"
+                                min={0}
+                                max={365}
+                                value={remoteDrafts[row.id] ?? ''}
+                                onChange={e => handleAllocationDraftChange(row.id, 'remote', e.target.value)}
+                                className={inputCls}
+                              />
+                            </td>
+                            <td className="px-4 py-4 text-center text-sm font-semibold text-purple-600 dark:text-purple-400">{row.remoteUsed}</td>
+                            <td className="px-4 py-4 text-center text-sm font-bold text-purple-600 dark:text-purple-400">{liveRemoteAvailable}</td>
                             <td className="px-4 py-4 text-right">
                               <button
                                 type="button"

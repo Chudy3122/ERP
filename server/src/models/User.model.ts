@@ -108,6 +108,10 @@ export class User {
   @Column({ type: 'integer', default: 0 })
   carried_over_days: number;
 
+  // Yearly remote-work (praca zdalna) entitlement — official default 24 days
+  @Column({ type: 'integer', default: 24 })
+  remote_work_days: number;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
