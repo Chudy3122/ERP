@@ -220,14 +220,24 @@ export class TimeService {
       clockIn: string; // HH:MM
       clockOut: string; // HH:MM
       notes?: string;
+      clock_in?: string; // ISO, built in the user's tz (preferred)
+      clock_out?: string; // ISO
     }
   ): Promise<TimeEntry> {
-    const [inH, inM] = data.clockIn.split(':').map(Number);
-    const [outH, outM] = data.clockOut.split(':').map(Number);
-    const [y, mo, d] = data.date.split('-').map(Number);
-
-    const clockInDate = new Date(y, mo - 1, d, inH, inM, 0, 0);
-    const clockOutDate = new Date(y, mo - 1, d, outH, outM, 0, 0);
+    // Prefer ISO timestamps from the client (correct timezone). Fall back to
+    // constructing from date + HH:MM (interprets in server tz — legacy).
+    let clockInDate: Date;
+    let clockOutDate: Date;
+    if (data.clock_in && data.clock_out) {
+      clockInDate = new Date(data.clock_in);
+      clockOutDate = new Date(data.clock_out);
+    } else {
+      const [inH, inM] = data.clockIn.split(':').map(Number);
+      const [outH, outM] = data.clockOut.split(':').map(Number);
+      const [y, mo, d] = data.date.split('-').map(Number);
+      clockInDate = new Date(y, mo - 1, d, inH, inM, 0, 0);
+      clockOutDate = new Date(y, mo - 1, d, outH, outM, 0, 0);
+    }
 
     if (clockOutDate <= clockInDate) {
       throw new Error('Czas zakończenia musi być po czasie rozpoczęcia');

@@ -102,14 +102,14 @@ export class TimeController {
   async addManualEntry(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { date, clockIn, clockOut, notes } = req.body;
+      const { date, clockIn, clockOut, notes, clock_in, clock_out } = req.body;
 
       if (!date || !clockIn || !clockOut) {
         res.status(400).json({ success: false, message: 'Wymagane pola: date, clockIn, clockOut' });
         return;
       }
 
-      const timeEntry = await timeService.addManualEntry(userId, { date, clockIn, clockOut, notes });
+      const timeEntry = await timeService.addManualEntry(userId, { date, clockIn, clockOut, notes, clock_in, clock_out });
       res.status(201).json({ success: true, data: timeEntry });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to add manual entry' });

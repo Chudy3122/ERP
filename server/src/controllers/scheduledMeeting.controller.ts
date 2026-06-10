@@ -3,6 +3,8 @@ import scheduledMeetingService from '../services/scheduledMeeting.service';
 import { MeetingPlatform } from '../models/ScheduledMeeting.model';
 import { getIO } from '../config/socket';
 import notificationService from '../services/notification.service';
+import { AppDataSource } from '../config/database';
+import { User } from '../models/User.model';
 
 export class ScheduledMeetingController {
   /**
@@ -39,8 +41,13 @@ export class ScheduledMeetingController {
         participant_ids: participant_ids || [],
       });
 
-      // Notify all participants (except organizer)
-      const organizerName = `${meeting.creator.first_name} ${meeting.creator.last_name}`;
+      // Notify all participants (except organizer). The created meeting object
+      // doesn't include the creator relation, so look the organizer up directly.
+      const organizer = await AppDataSource.getRepository(User).findOne({
+        where: { id: userId },
+        select: ['id', 'first_name', 'last_name', 'avatar_url'],
+      });
+      const organizerName = organizer ? `${organizer.first_name} ${organizer.last_name}` : 'Organizator';
       const io = getIO();
 
       for (const participantId of (meeting.participant_ids || [])) {
@@ -49,7 +56,7 @@ export class ScheduledMeetingController {
         // Real-time toast
         io.to(`user:${participantId}`).emit('notification:meeting_scheduled', {
           senderName: organizerName,
-          senderAvatar: (meeting.creator as any)?.avatar_url || null,
+          senderAvatar: organizer?.avatar_url || null,
           meetingId: meeting.id,
           meetingTitle: meeting.title,
           scheduledDate: meeting.scheduled_date,

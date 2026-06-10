@@ -59,7 +59,14 @@ export const endWork = async (notes?: string): Promise<TimeEntry> => {
  * Add a manual time entry
  */
 export const addManualEntry = async (data: ManualEntryRequest): Promise<TimeEntry> => {
-  const response = await apiClient.post('/time/manual-entry', data);
+  // Build ISO timestamps in the user's local timezone so the server stores the
+  // exact instant meant (avoids a UTC-vs-local +offset shift on display).
+  const [y, mo, d] = data.date.split('-').map(Number);
+  const [ih, im] = data.clockIn.split(':').map(Number);
+  const [oh, om] = data.clockOut.split(':').map(Number);
+  const clock_in = new Date(y, mo - 1, d, ih, im, 0, 0).toISOString();
+  const clock_out = new Date(y, mo - 1, d, oh, om, 0, 0).toISOString();
+  const response = await apiClient.post('/time/manual-entry', { ...data, clock_in, clock_out });
   return response.data.data;
 };
 
