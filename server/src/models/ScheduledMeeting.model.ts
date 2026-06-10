@@ -53,6 +53,10 @@ export class ScheduledMeeting extends BaseEntity {
   @Column({ type: 'simple-array', nullable: true })
   participant_ids: string[];
 
+  // Set once the "meeting is starting" ring/notification has been sent
+  @Column({ type: 'timestamp', nullable: true })
+  ring_sent_at: Date | null;
+
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'created_by' })
   creator: User;

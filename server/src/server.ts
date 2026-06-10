@@ -9,6 +9,7 @@ import { setupStatusHandlers } from './sockets/status.socket';
 import { setupNotificationHandlers } from './sockets/notification.socket';
 import { setupMeetingHandlers } from './sockets/meeting.socket';
 import { TimeService } from './services/time.service';
+import scheduledMeetingService from './services/scheduledMeeting.service';
 import { seedDepartments } from './database/seeds/seedDepartments';
 import userStatusService from './services/userStatus.service';
 
@@ -56,6 +57,13 @@ const startServer = async () => {
     // year-boundary. Runs on boot and once a day so it fires after New Year.
     await timeService.ensureLeaveRollover().catch(console.error);
     setInterval(() => timeService.ensureLeaveRollover().catch(console.error), 24 * 60 * 60 * 1000);
+
+    // Scheduled-meeting ringer (best-effort) — rings/notifies participants when a
+    // meeting starts. Only fires while the server is awake (free tier may sleep).
+    setInterval(
+      () => scheduledMeetingService.processDueScheduledMeetings().catch(console.error),
+      30 * 1000
+    );
 
     // Start HTTP server
     httpServer.listen(PORT, () => {

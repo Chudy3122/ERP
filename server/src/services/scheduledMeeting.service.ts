@@ -1,7 +1,10 @@
-import { Repository, MoreThanOrEqual, LessThan } from 'typeorm';
+import { Repository, MoreThanOrEqual, LessThan, IsNull } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { ScheduledMeeting, MeetingPlatform } from '../models/ScheduledMeeting.model';
 import { User } from '../models/User.model';
+import meetingService from './meeting.service';
+import { getIO } from '../config/socket';
+import { emitMeetingInvitation } from '../sockets/meeting.socket';
 
 interface CreateScheduledMeetingDto {
   title: string;
@@ -233,6 +236,95 @@ export class ScheduledMeetingService {
       id: user.id,
       name: `${user.first_name} ${user.last_name}`,
     }));
+  }
+
+  /**
+   * Convert a Europe/Warsaw wall-clock date + time to a UTC Date (DST-aware).
+   */
+  private warsawToUtc(dateStr: string, timeStr: string): Date {
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const [h, mi] = (timeStr || '00:00').split(':').map(Number);
+    const utcGuess = Date.UTC(y, mo - 1, d, h, mi, 0);
+    const asUtc = new Date(utcGuess);
+    const warsaw = new Date(asUtc.toLocaleString('en-US', { timeZone: 'Europe/Warsaw' }));
+    const utc = new Date(asUtc.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return new Date(utcGuess - (warsaw.getTime() - utc.getTime()));
+  }
+
+  /**
+   * Best-effort scheduler: when a scheduled meeting's start time arrives, ring
+   * everyone. Internal meetings open a live WebRTC room + ring (incl. organizer);
+   * external meetings get a "your meeting is starting" notification with a sound.
+   * Idempotent via ring_sent_at. Rings up to 15 min late (e.g. after a server wake).
+   */
+  async processDueScheduledMeetings(): Promise<void> {
+    const now = Date.now();
+    const GRACE_MS = 15 * 60 * 1000;
+
+    const pending = await this.scheduledMeetingRepository.find({ where: { ring_sent_at: IsNull() } });
+
+    for (const meeting of pending) {
+      const dateStr = meeting.scheduled_date instanceof Date
+        ? meeting.scheduled_date.toISOString().split('T')[0]
+        : String(meeting.scheduled_date);
+      const startMs = this.warsawToUtc(dateStr, meeting.scheduled_time).getTime();
+
+      if (now < startMs) continue; // not yet
+
+      // Mark handled now so it never double-rings; only actually ring if within grace.
+      meeting.ring_sent_at = new Date();
+      await this.scheduledMeetingRepository.save(meeting);
+      if (now > startMs + GRACE_MS) continue; // too late (server was asleep) — skip
+
+      try {
+        await this.ringDueMeeting(meeting);
+      } catch (err) {
+        console.error('Failed to ring scheduled meeting', meeting.id, err);
+      }
+    }
+  }
+
+  private async ringDueMeeting(meeting: ScheduledMeeting): Promise<void> {
+    const io = getIO();
+    const organizer = await this.userRepository.findOne({
+      where: { id: meeting.created_by },
+      select: ['id', 'first_name', 'last_name', 'avatar_url'],
+    });
+    const organizerName = organizer ? `${organizer.first_name} ${organizer.last_name}` : 'Organizator';
+    const recipientIds = Array.from(new Set([meeting.created_by, ...(meeting.participant_ids || [])]));
+
+    if (meeting.platform === MeetingPlatform.INTERNAL) {
+      // Open a live room and ring everyone (including the organizer)
+      const live = await meetingService.createMeeting(meeting.created_by, {
+        title: meeting.title,
+        description: meeting.description,
+        participant_ids: meeting.participant_ids || [],
+      });
+      for (const userId of recipientIds) {
+        emitMeetingInvitation(io, userId, {
+          meeting_id: live.id,
+          room_id: live.room_id,
+          meeting_title: meeting.title,
+          caller: {
+            id: organizer?.id || meeting.created_by,
+            first_name: organizer?.first_name || 'Spotkanie',
+            last_name: organizer?.last_name || '',
+            avatar_url: organizer?.avatar_url || undefined,
+          },
+          created_at: new Date().toISOString(),
+        });
+      }
+    } else {
+      // External — informational "starting now" notification (with link + sound)
+      for (const userId of recipientIds) {
+        io.to(`user:${userId}`).emit('meeting:external-starting', {
+          title: meeting.title,
+          platform: meeting.platform,
+          meeting_link: meeting.meeting_link || null,
+          organizerName,
+        });
+      }
+    }
   }
 }
 
