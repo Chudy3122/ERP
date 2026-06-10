@@ -28,10 +28,25 @@ type ModalType = 'overtime' | 'collection' | null;
 interface LogForm {
   work_date: string;
   hours: string;
+  minutes: string;
   description: string;
   project_id: string;
   task_id: string;
   user_id: string;
+}
+
+/** Format decimal hours (e.g. 6.03) as "6h 02min" / "45min" / "6h". */
+function formatHM(value: number | string): string {
+  const v = Number(value) || 0;
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  let h = Math.floor(abs);
+  let m = Math.round((abs - h) * 60);
+  if (m === 60) { h += 1; m = 0; }
+  if (h === 0 && m === 0) return '0h';
+  if (m === 0) return `${sign}${h}h`;
+  if (h === 0) return `${sign}${m}min`;
+  return `${sign}${h}h ${String(m).padStart(2, '0')}min`;
 }
 
 export default function Overtime() {
@@ -46,6 +61,7 @@ export default function Overtime() {
   const [form, setForm] = useState<LogForm>({
     work_date: new Date().toISOString().split('T')[0],
     hours: '',
+    minutes: '',
     description: '',
     project_id: '',
     task_id: '',
@@ -122,6 +138,7 @@ export default function Overtime() {
     setForm({
       work_date: new Date().toISOString().split('T')[0],
       hours: '',
+      minutes: '',
       description: '',
       project_id: '',
       task_id: '',
@@ -156,15 +173,22 @@ export default function Overtime() {
   }
 
   async function handleSubmit() {
-    if (!form.hours || parseFloat(form.hours) <= 0) {
-      toast.error('Podaj liczbę godzin');
+    const h = parseInt(form.hours || '0', 10) || 0;
+    const m = parseInt(form.minutes || '0', 10) || 0;
+    if (m < 0 || m > 59) {
+      toast.error('Minuty muszą być z zakresu 0–59');
+      return;
+    }
+    const totalHours = h + m / 60;
+    if (totalHours <= 0) {
+      toast.error('Podaj godziny lub minuty');
       return;
     }
     setSubmitting(true);
     try {
       await worklogApi.createWorkLog({
         work_date: form.work_date,
-        hours: parseFloat(form.hours),
+        hours: totalHours,
         description: form.description || undefined,
         project_id: form.project_id || undefined,
         task_id: form.task_id || undefined,
@@ -213,22 +237,22 @@ export default function Overtime() {
         </div>
       </td>
       <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
-        {entry.total_overtime.toFixed(1)}h
+        {formatHM(entry.total_overtime)}
       </td>
       <td className="px-4 py-3 text-right font-medium text-blue-600 dark:text-blue-400">
-        {entry.overtime_this_month.toFixed(1)}h
+        {formatHM(entry.overtime_this_month)}
       </td>
       <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-        {entry.total_collected.toFixed(1)}h
+        {formatHM(entry.total_collected)}
       </td>
       <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-        {entry.collected_this_month.toFixed(1)}h
+        {formatHM(entry.collected_this_month)}
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2">
           <div>
             <span className={`font-semibold ${balanceColor(entry.balance)}`}>
-              {entry.balance > 0 ? '+' : ''}{entry.balance.toFixed(1)}h
+              {entry.balance > 0 ? '+' : ''}{formatHM(entry.balance)}
             </span>
             {entry.balance < 0 && (
               <span className="block text-xs text-red-500">zaległe</span>
@@ -308,7 +332,7 @@ export default function Overtime() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {myEntry.total_overtime.toFixed(1)}h
+                      {formatHM(myEntry.total_overtime)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Nadgodziny łącznie</p>
                   </div>
@@ -322,7 +346,7 @@ export default function Overtime() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-blue-600">
-                      {myEntry.overtime_this_month.toFixed(1)}h
+                      {formatHM(myEntry.overtime_this_month)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">W tym miesiącu</p>
                   </div>
@@ -336,7 +360,7 @@ export default function Overtime() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {myEntry.total_collected.toFixed(1)}h
+                      {formatHM(myEntry.total_collected)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Odebrane łącznie</p>
                   </div>
@@ -350,7 +374,7 @@ export default function Overtime() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {myEntry.collected_this_month.toFixed(1)}h
+                      {formatHM(myEntry.collected_this_month)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Odebrane w tym mcu</p>
                   </div>
@@ -382,7 +406,7 @@ export default function Overtime() {
                           ? 'text-red-600'
                           : 'text-gray-900 dark:text-white'
                     }`}>
-                      {myEntry.balance > 0 ? '+' : ''}{myEntry.balance.toFixed(1)}h
+                      {myEntry.balance > 0 ? '+' : ''}{formatHM(myEntry.balance)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Saldo</p>
                   </div>
@@ -413,7 +437,7 @@ export default function Overtime() {
                       {isOvertime ? 'Nadgodziny' : 'Odbiór'}
                     </span>
                     <span className="w-24 shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
-                      {Number(log.hours).toFixed(1)}h
+                      {formatHM(log.hours)}
                     </span>
                     <span className="w-28 shrink-0 text-xs text-gray-500 dark:text-gray-400">
                       {new Date(log.work_date).toLocaleDateString('pl-PL')}
@@ -542,17 +566,33 @@ export default function Overtime() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Liczba godzin</label>
-                  <input
-                    type="number"
-                    min="0.5"
-                    max="24"
-                    step="0.5"
-                    value={form.hours}
-                    onChange={(e) => setForm({ ...form, hours: e.target.value })}
-                    placeholder="np. 2.5"
-                    className={inputClass}
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Czas</label>
+                  <div className="flex gap-2">
+                    <div className="flex flex-1 items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        value={form.hours}
+                        onChange={(e) => setForm({ ...form, hours: e.target.value })}
+                        placeholder="0"
+                        className={inputClass}
+                      />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">godz.</span>
+                    </div>
+                    <div className="flex flex-1 items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={form.minutes}
+                        onChange={(e) => setForm({ ...form, minutes: e.target.value })}
+                        placeholder="0"
+                        className={inputClass}
+                      />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">min.</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -669,7 +709,7 @@ export default function Overtime() {
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${log.work_type === WorkLogType.OVERTIME ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-300'}`}>
                         {log.work_type === WorkLogType.OVERTIME ? 'Nadgodziny' : 'Odbiór'}
                       </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{Number(log.hours).toFixed(1)}h</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{formatHM(log.hours)}</span>
                       <span className="text-xs text-gray-400">{new Date(log.work_date).toLocaleDateString('pl-PL')}</span>
                       <span className="flex-1 truncate text-xs text-gray-500 dark:text-gray-400" title={log.description || ''}>{log.description || ''}</span>
                       <button onClick={() => handleDeleteLog(log.id)} title="Usuń" className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
