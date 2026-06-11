@@ -93,11 +93,18 @@ export class LeaveRequest {
 
   // Helper methods
   calculateTotalDays(): number {
-    const start = new Date(this.start_date);
-    const end = new Date(this.end_date);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays + 1; // Include both start and end dates
+    // Count working days only (Mon–Fri); weekends don't deduct from leave.
+    const s = new Date(this.start_date);
+    const e = new Date(this.end_date);
+    const cur = new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate()));
+    const last = new Date(Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), e.getUTCDate()));
+    let count = 0;
+    while (cur.getTime() <= last.getTime()) {
+      const dow = cur.getUTCDay();
+      if (dow !== 0 && dow !== 6) count++; // skip Sunday (0) and Saturday (6)
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return count;
   }
 
   approve(reviewerId: string, notes?: string): void {
