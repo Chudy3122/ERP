@@ -129,6 +129,7 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
   const [clockOut, setClockOut] = useState('17:00');
   const [notes, setNotes] = useState('');
   const [targetUser, setTargetUser] = useState('');
+  const [mode, setMode] = useState<'full' | 'start'>('full');
   const [saving, setSaving] = useState(false);
   const [clockInHours, clockInMinutes] = clockIn.split(':').map(Number);
   const [clockOutHours, clockOutMinutes] = clockOut.split(':').map(Number);
@@ -145,19 +146,31 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isInvalidTimeRange) {
-      toast.error('Zakończenie musi być później niż rozpoczęcie');
-      return;
-    }
-
     if (!targetUser) {
       toast.error('Wybierz pracownika');
       return;
     }
+    if (mode === 'full' && isInvalidTimeRange) {
+      toast.error('Zakończenie musi być później niż rozpoczęcie');
+      return;
+    }
     setSaving(true);
     try {
-      await timeApi.addManualEntry({ date, clockIn, clockOut, notes: notes || undefined, userId: targetUser });
-      toast.success('Wpis został dodany');
+      if (mode === 'start') {
+        const [y, mo, d] = date.split('-').map(Number);
+        const [h, mi] = clockIn.split(':').map(Number);
+        const startDate = new Date(y, mo - 1, d, h, mi, 0, 0);
+        if (startDate.getTime() > Date.now()) {
+          toast.error('Godzina rozpoczęcia nie może być w przyszłości');
+          setSaving(false);
+          return;
+        }
+        await timeApi.clockIn({ clockInTime: startDate.toISOString(), userId: targetUser, notes: notes || 'Rozpoczęcie (ręczne)' });
+        toast.success('Timer uruchomiony dla pracownika');
+      } else {
+        await timeApi.addManualEntry({ date, clockIn, clockOut, notes: notes || undefined, userId: targetUser });
+        toast.success('Wpis został dodany');
+      }
       onClose();
       await onSaved();
     } catch (err: any) {
@@ -178,7 +191,9 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
             <div>
               <h2 className="font-semibold text-gray-900 dark:text-white">Wpis za pracownika</h2>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                Uzupełnij kompletną sesję (od–do) dla wybranej osoby.
+                {mode === 'full'
+                  ? 'Uzupełnij kompletną sesję (od–do) dla wybranej osoby.'
+                  : 'Wpisz godzinę rozpoczęcia — uruchomi timer u pracownika.'}
               </p>
             </div>
           </div>
@@ -206,6 +221,22 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
                 .map(u => <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>)}
             </select>
           </div>
+          <div className="flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-600">
+            <button
+              type="button"
+              onClick={() => setMode('full')}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${mode === 'full' ? 'bg-[#F7941D] text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+            >
+              Pełna sesja (od–do)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('start')}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${mode === 'start' ? 'bg-[#F7941D] text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+            >
+              Tylko start (timer)
+            </button>
+          </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Data</label>
             <input
@@ -217,7 +248,7 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${mode === 'full' ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rozpoczęcie</label>
               <input
@@ -228,20 +259,22 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Zakończenie</label>
-              <input
-                type="time"
-                value={clockOut}
-                onChange={(e) => setClockOut(e.target.value)}
-                required
-                className={`w-full rounded-lg border px-3 py-2 font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white ${
-                  isInvalidTimeRange
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-800'
-                    : 'border-gray-200 focus:border-[#F7941D] focus:ring-[#F7941D]/30 dark:border-gray-600'
-                }`}
-              />
-            </div>
+            {mode === 'full' && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Zakończenie</label>
+                <input
+                  type="time"
+                  value={clockOut}
+                  onChange={(e) => setClockOut(e.target.value)}
+                  required
+                  className={`w-full rounded-lg border px-3 py-2 font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white ${
+                    isInvalidTimeRange
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-800'
+                      : 'border-gray-200 focus:border-[#F7941D] focus:ring-[#F7941D]/30 dark:border-gray-600'
+                  }`}
+                />
+              </div>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Notatka</label>
@@ -254,22 +287,33 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
             />
           </div>
 
-          <div className={`rounded-xl border p-4 ${
-            isInvalidTimeRange
-              ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300'
-              : 'border-orange-200 bg-orange-50 text-gray-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-gray-200'
-          }`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Podsumowanie
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span>{formattedSelectedDate}</span>
-              <span className="font-mono font-semibold">{clockIn} - {clockOut}</span>
-              <span className="font-semibold">
-                {isInvalidTimeRange ? 'Nieprawidłowy zakres' : formatDurationValue(selectedDurationMinutes)}
-              </span>
+          {mode === 'full' ? (
+            <div className={`rounded-xl border p-4 ${
+              isInvalidTimeRange
+                ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300'
+                : 'border-orange-200 bg-orange-50 text-gray-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-gray-200'
+            }`}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Podsumowanie
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span>{formattedSelectedDate}</span>
+                <span className="font-mono font-semibold">{clockIn} - {clockOut}</span>
+                <span className="font-semibold">
+                  {isInvalidTimeRange ? 'Nieprawidłowy zakres' : formatDurationValue(selectedDurationMinutes)}
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 text-gray-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-gray-200">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Podsumowanie</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span>{formattedSelectedDate}</span>
+                <span className="font-mono font-semibold">start {clockIn}</span>
+                <span className="font-semibold">timer leci do zakończenia</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-1">
             <button
@@ -281,10 +325,10 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
             </button>
             <button
               type="submit"
-              disabled={saving || isInvalidTimeRange}
+              disabled={saving || (mode === 'full' && isInvalidTimeRange)}
               className="flex-1 rounded-lg bg-[#F7941D] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? 'Zapisywanie...' : 'Dodaj wpis'}
+              {saving ? 'Zapisywanie...' : mode === 'start' ? 'Uruchom timer' : 'Dodaj wpis'}
             </button>
           </div>
         </form>

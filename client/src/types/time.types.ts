@@ -143,6 +143,7 @@ export interface ClockInRequest {
   notes?: string;
   expectedClockIn?: string;
   clockInTime?: string; // backdated manual start (ISO) — timer runs live from this time
+  userId?: string; // admin/kadry: start the timer on behalf of another employee
 }
 
 export interface ClockOutRequest {

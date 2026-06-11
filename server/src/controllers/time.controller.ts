@@ -17,8 +17,10 @@ export class TimeController {
    */
   async clockIn(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
-      const { notes, expectedClockIn, clockInTime } = req.body;
+      const { notes, expectedClockIn, clockInTime, userId: targetUserId } = req.body;
+      // Admin / kadry may start a (backdated) timer on behalf of another employee
+      const canForOthers = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const userId = canForOthers && targetUserId ? targetUserId : req.user!.userId;
 
       const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, clockInTime);
 
