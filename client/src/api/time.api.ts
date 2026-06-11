@@ -201,6 +201,14 @@ export const getManageableLeaveRequests = async (): Promise<LeaveRequest[]> => {
   return response.data.data;
 };
 
+/**
+ * All leave requests for all users, all statuses (admin / kadry)
+ */
+export const getAllLeaveRequests = async (): Promise<LeaveRequest[]> => {
+  const response = await apiClient.get('/time/leave/all');
+  return response.data.data;
+};
+
 export interface LeaveComment {
   id: string;
   leave_request_id: string;

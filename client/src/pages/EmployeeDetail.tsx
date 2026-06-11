@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import * as adminApi from '../api/admin.api';
+import * as userApi from '../api/user.api';
 import * as departmentApi from '../api/department.api';
 import { AdminUser, UpdateUserData } from '../types/admin.types';
 import type { Department } from '../types/department.types';
@@ -61,7 +62,7 @@ const EmployeeDetail = () => {
       setIsLoading(true);
       setError(null);
       const [data, depts] = await Promise.all([
-        adminApi.getUserById(id!),
+        userApi.getProfileById(id!),
         departmentApi.getAllDepartments().catch(() => [] as Department[]),
       ]);
       setEmployee(data);

@@ -44,7 +44,7 @@ const Employees = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<10 | 30 | 50>(10);
+  const [pageSize, setPageSize] = useState<10 | 30 | 50>(50);
   const [userStatuses, setUserStatuses] = useState<Map<string, StatusType>>(new Map());
   const navigate = useNavigate();
   const { t } = useTranslation('employees');

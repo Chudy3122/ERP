@@ -105,7 +105,11 @@ const Absences = () => {
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar' | 'management'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar' | 'management' | 'all'>('my');
+  const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const [allSearch, setAllSearch] = useState('');
+  const [allSortAsc, setAllSortAsc] = useState(false);
   const [requestPage, setRequestPage] = useState(1);
   const [requestPageSize, setRequestPageSize] = useState<10 | 30 | 50>(10);
   const [requestSearch, setRequestSearch] = useState('');
@@ -118,6 +122,7 @@ const Absences = () => {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const canManageLeavePlans = ['admin', 'ksiegowosc'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
+  const canViewAllAbsences = ['admin', 'ksiegowosc'].includes(user?.role || '');
 
   const [overviewRows, setOverviewRows] = useState<LeaveOverviewRow[]>([]);
   const [managementSearch, setManagementSearch] = useState('');
@@ -154,6 +159,16 @@ const Absences = () => {
       loadLeaveOverview();
     }
   }, [activeTab, canManageLeavePlans]);
+
+  useEffect(() => {
+    if (activeTab === 'all' && canViewAllAbsences) {
+      setAllLoading(true);
+      timeApi.getAllLeaveRequests()
+        .then(setAllRequests)
+        .catch(() => setAllRequests([]))
+        .finally(() => setAllLoading(false));
+    }
+  }, [activeTab, canViewAllAbsences]);
 
   useEffect(() => {
     setRequestPage(1);
@@ -467,6 +482,20 @@ const Absences = () => {
       .includes(normalizedManagementSearch);
   });
 
+  const allSearchNorm = allSearch.trim().toLowerCase();
+  const filteredAllRequests = allRequests
+    .filter(r => {
+      if (!allSearchNorm) return true;
+      const u = (r as any).user;
+      const name = u ? `${u.first_name} ${u.last_name} ${u.email}` : '';
+      return name.toLowerCase().includes(allSearchNorm);
+    })
+    .sort((a, b) => {
+      const da = new Date(a.start_date).getTime();
+      const db = new Date(b.start_date).getTime();
+      return allSortAsc ? da - db : db - da;
+    });
+
   useEffect(() => {
     if (requestPage > requestTotalPages) {
       setRequestPage(requestTotalPages);
@@ -571,6 +600,19 @@ const Absences = () => {
                 <Users className="h-4 w-4" />
                 Kalendarz zespołu
               </button>
+              {canViewAllAbsences && (
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                    activeTab === 'all'
+                      ? 'bg-[#F7941D] text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Wszystkie nieobecności
+                </button>
+              )}
               {canManageLeavePlans && (
                 <button
                   onClick={() => setActiveTab('management')}
@@ -588,7 +630,7 @@ const Absences = () => {
         </div>
 
         {/* Leave Requests List */}
-        {activeTab !== 'calendar' && activeTab !== 'management' && (
+        {(activeTab === 'my' || activeTab === 'pending') && (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div className="border-b border-gray-100 p-4 dark:border-gray-700">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -838,6 +880,91 @@ const Absences = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* All absences tab (admin / kadry) */}
+        {activeTab === 'all' && canViewAllAbsences && (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wszystkie nieobecności</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Wnioski wszystkich pracowników. Filtruj po imieniu/nazwisku, sortuj po dacie.
+                </p>
+              </div>
+              <div className="relative w-full sm:w-80">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="search"
+                  value={allSearch}
+                  onChange={e => setAllSearch(e.target.value)}
+                  placeholder="Szukaj po imieniu i nazwisku..."
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Pracownik</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Typ</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">
+                      <button onClick={() => setAllSortAsc(s => !s)} className="inline-flex items-center gap-1 hover:text-[#F7941D]">
+                        Termin {allSortAsc ? '↑' : '↓'}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dni</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Uzasadnienie</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                  {allLoading ? (
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie…</td></tr>
+                  ) : filteredAllRequests.length === 0 ? (
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Brak nieobecności.</td></tr>
+                  ) : (
+                    filteredAllRequests.map(request => {
+                      const u = (request as any).user;
+                      const typeCfg = leaveTypeConfig[request.leave_type as LeaveType] || leaveTypeConfig.other;
+                      const statusCfg = getStatusConfig(request.status);
+                      const fmt = (d: string) => new Date(d).toLocaleDateString('pl-PL');
+                      return (
+                        <tr
+                          key={request.id}
+                          onClick={() => navigate(`/absences/${request.id}`)}
+                          className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-gray-900 dark:text-white">
+                              {u ? `${u.first_name} ${u.last_name}` : '—'}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{u?.email}</div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{typeCfg.label}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                            {fmt(request.start_date)}{request.end_date && request.end_date !== request.start_date ? ` – ${fmt(request.end_date)}` : ''}
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{request.total_days}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusCfg.classes}`}>{statusCfg.label}</span>
+                          </td>
+                          <td className="px-4 py-3 max-w-[260px] truncate text-sm text-gray-600 dark:text-gray-400" title={request.reason || ''}>
+                            {request.reason || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              Łącznie: {filteredAllRequests.length}
+            </div>
           </div>
         )}
 

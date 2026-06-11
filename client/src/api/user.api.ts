@@ -45,6 +45,14 @@ export const getDirectory = async (): Promise<AdminUser[]> => {
 };
 
 /**
+ * Single user's profile by id — for admin / kadry / managers (read-only view).
+ */
+export const getProfileById = async (id: string): Promise<AdminUser> => {
+  const response = await apiClient.get(`/users/${id}`);
+  return response.data.data as AdminUser;
+};
+
+/**
  * Update user profile
  */
 export const updateProfile = async (data: UpdateProfileData): Promise<UserProfile> => {

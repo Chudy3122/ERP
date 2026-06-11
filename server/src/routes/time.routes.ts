@@ -115,6 +115,13 @@ router.get(
   timeController.getManageableLeaveRequests.bind(timeController)
 );
 
+// All leave requests for all users — admin + kadry
+router.get(
+  '/leave/all',
+  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  timeController.getAllLeaveRequests.bind(timeController)
+);
+
 // Approve/reject leave requests (managers only)
 router.put(
   '/leave/:id/approve',

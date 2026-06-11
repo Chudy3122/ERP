@@ -3,6 +3,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { authenticate } from '../middleware/auth.middleware';
+import { requireRole } from '../middleware/role.middleware';
+import { UserRole } from '../models/User.model';
 import * as userController from '../controllers/user.controller';
 
 const router = Router();
@@ -62,5 +64,12 @@ router.post('/cover', avatarUpload.single('cover'), userController.uploadCover);
 
 // Password change
 router.put('/password', userController.changePassword);
+
+// Single user profile (admin / kadry / managers) — keep AFTER the specific paths above
+router.get(
+  '/:id',
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SZEF, UserRole.KIEROWNIK]),
+  userController.getUserProfileById
+);
 
 export default router;

@@ -68,6 +68,23 @@ export const getDirectory = async (_req: Request, res: Response) => {
 };
 
 /**
+ * Get a single user's profile by id (admin / kadry / managers — read only).
+ * GET /api/users/:id
+ */
+export const getUserProfileById = async (req: Request, res: Response) => {
+  try {
+    const user = await userRepository.findOne({ where: { id: req.params.id } });
+    if (!user) {
+      return res.status(404).json({ error: 'Not Found', message: 'User not found' });
+    }
+    return res.status(200).json({ data: user.toJSON() });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to get user profile' });
+  }
+};
+
+/**
  * Update user profile
  * PUT /api/users/profile
  */

@@ -608,6 +608,16 @@ export class TimeService {
   }
 
   /**
+   * Every leave request for every user, all statuses (admin / kadry view).
+   */
+  async getAllLeaveRequests(): Promise<LeaveRequest[]> {
+    return await this.leaveRequestRepository.find({
+      relations: ['user'],
+      order: { start_date: 'DESC' },
+    });
+  }
+
+  /**
    * Approve leave request
    */
   async approveLeaveRequest(

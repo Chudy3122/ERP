@@ -485,6 +485,20 @@ export class TimeController {
   }
 
   /**
+   * All leave requests for all users (admin / kadry)
+   * GET /api/time/leave/all
+   */
+  async getAllLeaveRequests(_req: Request, res: Response): Promise<void> {
+    try {
+      const requests = await timeService.getAllLeaveRequests();
+      res.status(200).json({ success: true, data: requests });
+    } catch (error: any) {
+      console.error('Get all leave requests error:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to get all leave requests' });
+    }
+  }
+
+  /**
    * Approve leave request (admin/team leader only)
    * PUT /api/time/leave/:id/approve
    */
