@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { workLogController } from '../controllers/worklog.controller';
+import { workLogController } from '../controllers/workLog.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();

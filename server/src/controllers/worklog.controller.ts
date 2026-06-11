@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import workLogService from '../services/worklog.service';
+import { AppDataSource } from '../config/database';
+import { User } from '../models/User.model';
 
 export class WorkLogController {
   /**
@@ -24,11 +26,30 @@ export class WorkLogController {
    */
   async getWorkLogs(req: Request, res: Response): Promise<void> {
     try {
-      const isAdmin = req.user!.role === 'admin';
-      const requestedUserId = req.query.user_id as string;
+      const role = req.user!.role;
+      const myId = req.user!.userId;
+      const requestedUserId = req.query.user_id as string | undefined;
+      // admin/księgowość/szef see everyone; kierownik sees their own department; others only themselves
+      const seesEveryone = ['admin', 'ksiegowosc', 'szef'].includes(role);
+
+      let effectiveUserId: string | undefined = requestedUserId;
+      if (!seesEveryone && requestedUserId && requestedUserId !== myId) {
+        if (role === 'kierownik') {
+          const userRepo = AppDataSource.getRepository(User);
+          const [me, target] = await Promise.all([
+            userRepo.findOne({ where: { id: myId }, select: ['id', 'department_id'] }),
+            userRepo.findOne({ where: { id: requestedUserId }, select: ['id', 'department_id'] }),
+          ]);
+          effectiveUserId = me?.department_id && target?.department_id === me.department_id ? requestedUserId : myId;
+        } else {
+          effectiveUserId = myId;
+        }
+      } else if (!seesEveryone && !requestedUserId) {
+        effectiveUserId = myId;
+      }
+
       const filters = {
-        // Non-admins can only ever see their own logs
-        user_id: isAdmin ? requestedUserId : req.user!.userId,
+        user_id: effectiveUserId,
         task_id: req.query.task_id as string,
         project_id: req.query.project_id as string,
         start_date: req.query.start_date as string,

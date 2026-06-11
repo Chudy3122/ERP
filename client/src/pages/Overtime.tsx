@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
 import {
@@ -75,6 +75,11 @@ export default function Overtime() {
   const [manageLogs, setManageLogs] = useState<WorkLog[]>([]);
   const [manageLoading, setManageLoading] = useState(false);
   const [myLogs, setMyLogs] = useState<WorkLog[]>([]);
+  // Expandable team rows: view a person's entries inline (for those who see more than themselves)
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [expandedLogs, setExpandedLogs] = useState<WorkLog[]>([]);
+  const [expandedLoading, setExpandedLoading] = useState(false);
+  const canExpand = ['admin', 'ksiegowosc', 'szef', 'kierownik'].includes(user?.role || '');
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
 
@@ -147,6 +152,29 @@ export default function Overtime() {
     setModal(type);
   }
 
+  async function toggleExpand(entry: OvertimeSummaryEntry) {
+    if (expandedUserId === entry.user_id) {
+      setExpandedUserId(null);
+      setExpandedLogs([]);
+      return;
+    }
+    setExpandedUserId(entry.user_id);
+    setExpandedLoading(true);
+    try {
+      const logs = await worklogApi.getWorkLogs({ user_id: entry.user_id });
+      setExpandedLogs(
+        logs
+          .filter((l) => l.work_type === WorkLogType.OVERTIME || l.work_type === WorkLogType.OVERTIME_COMP)
+          .sort((a, b) => new Date(b.work_date).getTime() - new Date(a.work_date).getTime())
+      );
+    } catch {
+      toast.error('Nie udało się pobrać wpisów');
+      setExpandedLogs([]);
+    } finally {
+      setExpandedLoading(false);
+    }
+  }
+
   async function openManage(entry: OvertimeSummaryEntry) {
     setManageUser(entry);
     setManageLoading(true);
@@ -215,14 +243,20 @@ export default function Overtime() {
   const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
   const renderOvertimeRow = (entry: OvertimeSummaryEntry) => (
+    <Fragment key={entry.user_id}>
     <tr
-      key={entry.user_id}
-      className={`transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+      className={`transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${canExpand ? 'cursor-pointer' : ''} ${
         entry.user_id === user?.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
       }`}
+      onClick={canExpand ? () => toggleExpand(entry) : undefined}
     >
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
+          {canExpand && (
+            <ChevronDown
+              className={`h-4 w-4 flex-shrink-0 text-gray-400 transition-transform ${expandedUserId === entry.user_id ? '' : '-rotate-90'}`}
+            />
+          )}
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-200">
             {entry.first_name[0]}{entry.last_name[0]}
           </div>
@@ -261,14 +295,14 @@ export default function Overtime() {
           {isAdmin && (
             <div className="flex flex-shrink-0 items-center gap-1">
               <button
-                onClick={() => openModal('overtime', entry.user_id)}
+                onClick={(e) => { e.stopPropagation(); openModal('overtime', entry.user_id); }}
                 title="Dodaj nadgodziny temu pracownikowi"
                 className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
               >
                 <Plus className="h-4 w-4" />
               </button>
               <button
-                onClick={() => openManage(entry)}
+                onClick={(e) => { e.stopPropagation(); openManage(entry); }}
                 title="Zarządzaj wpisami (usuń)"
                 className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
               >
@@ -279,6 +313,52 @@ export default function Overtime() {
         </div>
       </td>
     </tr>
+    {canExpand && expandedUserId === entry.user_id && (
+      <tr className="bg-gray-50/70 dark:bg-gray-900/30">
+        <td colSpan={6} className="px-4 py-3">
+          {expandedLoading ? (
+            <div className="flex items-center gap-2 px-2 py-3 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" /> Ładowanie wpisów…
+            </div>
+          ) : expandedLogs.length === 0 ? (
+            <div className="px-2 py-3 text-sm text-gray-500 dark:text-gray-400">Brak wpisów.</div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400">
+                Wpisy: {entry.first_name} {entry.last_name}
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {expandedLogs.map((log) => {
+                  const isOvertime = log.work_type === WorkLogType.OVERTIME;
+                  return (
+                    <div key={log.id} className="flex items-center gap-3 px-3 py-2">
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        isOvertime
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      }`}>
+                        {isOvertime ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                        {isOvertime ? 'Nadgodziny' : 'Odbiór'}
+                      </span>
+                      <span className="w-24 shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatHM(log.hours)}
+                      </span>
+                      <span className="w-28 shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(log.work_date).toLocaleDateString('pl-PL')}
+                      </span>
+                      <span className="flex-1 truncate text-sm text-gray-600 dark:text-gray-300" title={log.description || ''}>
+                        {log.description || <span className="text-gray-400">— bez opisu —</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </td>
+      </tr>
+    )}
+    </Fragment>
   );
 
   return (
