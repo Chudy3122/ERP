@@ -1569,6 +1569,22 @@ const ChatMeet: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Uczestnicy ({intParticipants.length} wybrano) *</label>
+                {intParticipants.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {intParticipants.map((id) => {
+                      const u = allUsers.find((x) => x.id === id);
+                      if (!u) return null;
+                      return (
+                        <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 text-[#F7941D] px-2.5 py-1 text-xs font-medium">
+                          {u.first_name} {u.last_name}
+                          <button type="button" onClick={() => setIntParticipants((p) => p.filter((x) => x !== id))} className="hover:text-red-600" title="Usuń">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="relative mb-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -1674,6 +1690,22 @@ const ChatMeet: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Uczestnicy ({extParticipants.length} wybrano)</label>
+                {extParticipants.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {extParticipants.map((id) => {
+                      const u = allUsers.find((x) => x.id === id);
+                      if (!u) return null;
+                      return (
+                        <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 text-[#F7941D] px-2.5 py-1 text-xs font-medium">
+                          {u.first_name} {u.last_name}
+                          <button type="button" onClick={() => setExtParticipants((p) => p.filter((x) => x !== id))} className="hover:text-red-600" title="Usuń">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="relative mb-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input value={extSearch} onChange={(e) => setExtSearch(e.target.value)} placeholder="Szukaj..." className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
