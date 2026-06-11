@@ -724,7 +724,7 @@ export default function WorkTime() {
           {clocking ? 'Zapisywanie...' : 'Rozpocznij pracę'}
         </button>
         <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
-          Pierwsze wejście dnia zaokrąglane do 15 min w dół
+          Pierwsze wejście dnia zaokrąglane do 5 min w dół
         </p>
       </div>
     );
@@ -841,7 +841,7 @@ export default function WorkTime() {
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">Czas pracy</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-            Rejestracja czasu pracy — pierwsze rozpoczęcie dnia pracy zaokrąglone do 15 minut
+            Rejestracja czasu pracy — pierwsze rozpoczęcie dnia pracy zaokrąglone do 5 minut
           </p>
           </div>
         </div>

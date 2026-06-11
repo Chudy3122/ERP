@@ -17,9 +17,9 @@ function parseEmploymentFraction(s: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function roundToNearest15Min(date: Date): Date {
-  const ms15 = 15 * 60 * 1000;
-  return new Date(Math.floor(date.getTime() / ms15) * ms15);
+function roundToNearest5Min(date: Date): Date {
+  const ms5 = 5 * 60 * 1000;
+  return new Date(Math.floor(date.getTime() / ms5) * ms5);
 }
 
 function getLocalDateKey(date: Date): string {
@@ -131,7 +131,7 @@ export class TimeService {
   }
 
   /**
-   * Clock in - Start work (first clock-in of the day gets 15-min rounding bonus)
+   * Clock in - Start work (first clock-in of the day gets 5-min rounding bonus)
    */
   async clockIn(userId: string, notes?: string, expectedClockIn?: string): Promise<TimeEntry> {
     const existingEntry = await this.timeEntryRepository.findOne({
@@ -147,8 +147,8 @@ export class TimeService {
       where: { user_id: userId, clock_in: Between(start, end) },
     });
 
-    // Only the first clock-in of the day gets the 15-minute floor rounding
-    const clockInTime = todayCount === 0 ? roundToNearest15Min(new Date()) : new Date();
+    // Only the first clock-in of the day gets the 5-minute floor rounding
+    const clockInTime = todayCount === 0 ? roundToNearest5Min(new Date()) : new Date();
 
     const timeEntry = this.timeEntryRepository.create({
       user_id: userId,
@@ -185,7 +185,7 @@ export class TimeService {
   }
 
   /**
-   * End work for the day — clock-out rounded to nearest 15 min (same as clock-in);
+   * End work for the day — clock-out rounded to nearest 5 min (same as clock-in);
    * if paused, just mark day as ended (no time to adjust)
    */
   async endWork(userId: string, notes?: string): Promise<TimeEntry> {
@@ -195,7 +195,7 @@ export class TimeService {
 
     if (activeEntry) {
       const now = new Date();
-      const rounded = roundToNearest15Min(now);
+      const rounded = roundToNearest5Min(now);
       // Safety: never let rounded clock_out be before clock_in (would give negative duration)
       const clockOutTime = rounded.getTime() > activeEntry.clock_in.getTime() ? rounded : now;
       activeEntry.clockOut(notes || 'Zakończenie pracy', clockOutTime);
