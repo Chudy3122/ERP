@@ -481,13 +481,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <button
-              onClick={toggleSidebarCollapsed}
-              title={sidebarCollapsed ? 'Pokaż menu' : 'Ukryj menu'}
-              className="hidden lg:inline-flex rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
+            {sidebarCollapsed && (
+              <button
+                onClick={toggleSidebarCollapsed}
+                title="Pokaż menu"
+                className="hidden lg:inline-flex rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+            )}
             {title && (
               <nav aria-label="Ścieżka" className="flex min-w-0 items-center gap-2 text-sm">
                 <span className="shrink-0 font-medium text-gray-400 dark:text-gray-500">
