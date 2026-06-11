@@ -84,6 +84,7 @@ import {
   Shield,
   Package,
   ListTodo,
+  PanelLeftClose,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -426,6 +427,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             className="lg:hidden absolute right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400"
           >
             <X className="w-6 h-6" />
+          </button>
+          <button
+            onClick={toggleSidebarCollapsed}
+            title="Ukryj menu"
+            className="hidden lg:flex absolute right-3 items-center justify-center rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
+          >
+            <PanelLeftClose className="w-5 h-5" />
           </button>
         </div>
 
