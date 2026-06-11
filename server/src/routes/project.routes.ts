@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import projectController from '../controllers/project.controller';
-import { workLogController } from '../controllers/workLog.controller';
+import { workLogController } from '../controllers/worklog.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import taskController from '../controllers/task.controller';
-import { workLogController } from '../controllers/workLog.controller';
+import { workLogController } from '../controllers/worklog.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
