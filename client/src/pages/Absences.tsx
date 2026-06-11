@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as timeApi from '../api/time.api';
 import * as calendarApi from '../api/calendar.api';
+import * as userApi from '../api/user.api';
 import type { LeaveRequest, LeaveBalance, LeaveOverviewRow } from '../types/time.types';
 import type { TeamAvailability } from '../api/calendar.api';
 
@@ -147,6 +148,8 @@ const Absences = () => {
     end_date: '',
     reason: '',
   });
+  const [formUserId, setFormUserId] = useState('');
+  const [directoryUsers, setDirectoryUsers] = useState<{ id: string; first_name: string; last_name: string; email: string }[]>([]);
 
   useEffect(() => {
     loadData();
@@ -171,6 +174,14 @@ const Absences = () => {
         .finally(() => setAllLoading(false));
     }
   }, [activeTab, canViewAllAbsences]);
+
+  useEffect(() => {
+    if (canViewAllAbsences && directoryUsers.length === 0) {
+      userApi.getDirectory()
+        .then(u => setDirectoryUsers(u as any))
+        .catch(() => {});
+    }
+  }, [canViewAllAbsences]);
 
   useEffect(() => {
     setRequestPage(1);
@@ -326,10 +337,12 @@ const Absences = () => {
         startDate: formData.start_date,
         endDate: oneDayLeave ? formData.start_date : formData.end_date,
         reason: formData.reason,
+        ...(canViewAllAbsences && formUserId ? { userId: formUserId } : {}),
       });
       setShowForm(false);
       setOneDayLeave(false);
       setFormData({ leave_type: 'vacation', start_date: '', end_date: '', reason: '' });
+      setFormUserId('');
       loadData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się utworzyć wniosku');
@@ -1367,6 +1380,25 @@ const Absences = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                {canViewAllAbsences && (
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Pracownik
+                    </label>
+                    <select
+                      value={formUserId}
+                      onChange={e => setFormUserId(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="">— ja ({user?.first_name} {user?.last_name}) —</option>
+                      {[...directoryUsers]
+                        .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                        .map(u => (
+                          <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>
+                        ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Typ nieobecności *

@@ -327,8 +327,10 @@ export class TimeController {
    */
   async createLeaveRequest(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
-      const { leaveType, startDate, endDate, reason } = req.body;
+      const { leaveType, startDate, endDate, reason, userId: targetUserId } = req.body;
+      // Admin / kadry may file an absence on behalf of another employee
+      const canCreateForOthers = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const userId = canCreateForOthers && targetUserId ? targetUserId : req.user!.userId;
 
       const leaveRequest = await timeService.createLeaveRequest(
         userId,

@@ -152,6 +152,7 @@ export interface CreateLeaveRequest {
   startDate: string;
   endDate: string;
   reason?: string;
+  userId?: string; // admin/kadry: file on behalf of another employee
 }
 
 export interface ReviewLeaveRequest {
