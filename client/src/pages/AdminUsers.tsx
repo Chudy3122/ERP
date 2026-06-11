@@ -238,7 +238,7 @@ const AdminUsers: React.FC = () => {
               >
                 <option value="">Wszystkie role</option>
                 <option value="admin">Admin</option>
-                <option value="kierownik">Team Leader</option>
+                <option value="kierownik">Kierownik</option>
                 <option value="employee">Employee</option>
               </select>
             </div>
@@ -422,7 +422,7 @@ const AdminUsers: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="employee">Employee</option>
-                  <option value="kierownik">Team Leader</option>
+                  <option value="kierownik">Kierownik</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>

@@ -107,7 +107,7 @@ const Dashboard = () => {
         <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatWidget
             label={t('common.profile')}
-            value={user?.role === 'admin' ? 'Administrator' : user?.role === 'kierownik' ? 'Team Leader' : t('common.employee')}
+            value={({ admin: 'Administrator', kierownik: 'Kierownik', ksiegowosc: 'Księgowość', szef: 'Szef', sekretariat: 'Sekretariat' } as Record<string, string>)[user?.role || ''] || t('common.employee')}
             icon={<User className="w-5 h-5" />}
             color="blue"
             onClick={() => navigate('/profile')}

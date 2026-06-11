@@ -107,7 +107,7 @@ const Profile: React.FC = () => {
   const getRoleName = () => {
     switch (user?.role) {
       case 'admin': return 'Administrator';
-      case 'kierownik': return 'Team Leader';
+      case 'kierownik': return 'Kierownik';
       default: return 'Pracownik';
     }
   };

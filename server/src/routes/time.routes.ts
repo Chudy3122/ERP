@@ -60,17 +60,9 @@ router.put(
   timeController.rejectTimeEntry
 );
 
-// Edit / delete a time entry (admin only)
-router.put(
-  '/entries/:id',
-  roleMiddleware([UserRole.ADMIN]),
-  timeController.updateTimeEntry.bind(timeController)
-);
-router.delete(
-  '/entries/:id',
-  roleMiddleware([UserRole.ADMIN]),
-  timeController.deleteTimeEntry.bind(timeController)
-);
+// Edit / delete a time entry — owner (their own) or admin (any); enforced in service
+router.put('/entries/:id', timeController.updateTimeEntry.bind(timeController));
+router.delete('/entries/:id', timeController.deleteTimeEntry.bind(timeController));
 
 // ===== LEAVE REQUESTS =====
 

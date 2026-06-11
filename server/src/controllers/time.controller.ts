@@ -274,7 +274,8 @@ export class TimeController {
     try {
       const { id } = req.params;
       const { clock_in, clock_out, notes } = req.body;
-      const timeEntry = await timeService.updateTimeEntry(id, { clock_in, clock_out, notes });
+      const requester = { id: req.user!.userId, isAdmin: req.user!.role === UserRole.ADMIN };
+      const timeEntry = await timeService.updateTimeEntry(id, { clock_in, clock_out, notes }, requester);
       res.status(200).json({ success: true, data: timeEntry });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to update time entry' });
@@ -288,7 +289,8 @@ export class TimeController {
   async deleteTimeEntry(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      await timeService.deleteTimeEntry(id);
+      const requester = { id: req.user!.userId, isAdmin: req.user!.role === UserRole.ADMIN };
+      await timeService.deleteTimeEntry(id, requester);
       res.status(200).json({ success: true });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to delete time entry' });
@@ -346,16 +348,20 @@ export class TimeController {
       const user = await adminService.getUserById(userId);
       const employeeName = user ? `${user.first_name} ${user.last_name}` : 'Unknown';
 
-      // Get all admins and team leaders to notify
+      // Notify: all admins + all księgowość; kierownik only for their own department
       const userRepository = AppDataSource.getRepository(User);
-      const managers = await userRepository.find({
-        where: [
-          { role: UserRole.ADMIN },
-          { role: UserRole.KIEROWNIK }
-        ]
-      });
+      const applicantDeptId = (user as any)?.department_id || null;
+      const where: any[] = [
+        { role: UserRole.ADMIN },
+        { role: UserRole.KSIEGOWOSC },
+      ];
+      if (applicantDeptId) {
+        where.push({ role: UserRole.KIEROWNIK, department_id: applicantDeptId });
+      }
+      const managers = await userRepository.find({ where });
 
       for (const manager of managers) {
+        if (manager.id === userId) continue; // don't notify the applicant about their own request
         await notificationService.notifyNewLeaveRequest(
           manager.id,
           employeeName,

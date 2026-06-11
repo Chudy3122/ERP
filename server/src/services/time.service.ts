@@ -371,9 +371,13 @@ export class TimeService {
   async updateTimeEntry(
     entryId: string,
     data: { clock_in?: string; clock_out?: string | null; notes?: string },
+    requester?: { id: string; isAdmin: boolean },
   ): Promise<TimeEntry> {
     const entry = await this.timeEntryRepository.findOne({ where: { id: entryId } });
     if (!entry) throw new Error('Wpis nie istnieje');
+    if (requester && !requester.isAdmin && entry.user_id !== requester.id) {
+      throw new Error('Brak uprawnień do edycji tego wpisu');
+    }
 
     if (data.clock_in !== undefined) entry.clock_in = new Date(data.clock_in);
     if (data.clock_out !== undefined) entry.clock_out = data.clock_out ? new Date(data.clock_out) : null;
@@ -395,9 +399,13 @@ export class TimeService {
   /**
    * Admin: permanently delete a time entry.
    */
-  async deleteTimeEntry(entryId: string): Promise<void> {
-    const result = await this.timeEntryRepository.delete({ id: entryId });
-    if (!result.affected) throw new Error('Wpis nie istnieje');
+  async deleteTimeEntry(entryId: string, requester?: { id: string; isAdmin: boolean }): Promise<void> {
+    const entry = await this.timeEntryRepository.findOne({ where: { id: entryId } });
+    if (!entry) throw new Error('Wpis nie istnieje');
+    if (requester && !requester.isAdmin && entry.user_id !== requester.id) {
+      throw new Error('Brak uprawnień do usunięcia tego wpisu');
+    }
+    await this.timeEntryRepository.delete({ id: entryId });
   }
 
   /**

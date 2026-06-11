@@ -383,8 +383,6 @@ export default function WorkTime() {
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
-  // Admin-only full edit / delete of a time entry
-  const isAdmin = user?.role === 'admin';
   // Admin/kadry may add a completed entry (od–do) for any employee
   const isManager = user?.role === 'admin' || user?.role === 'ksiegowosc';
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
@@ -1267,12 +1265,12 @@ export default function WorkTime() {
                                 </span>
                               </button>
                               <Pencil className="w-3 h-3 flex-shrink-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity dark:text-gray-600" />
-                              {isAdmin && (
+                              {entry.status !== 'in_progress' && (
                                 <>
                                   <button
                                     type="button"
                                     onClick={() => openEditEntry(entry)}
-                                    title="Edytuj wpis (admin)"
+                                    title="Edytuj wpis"
                                     className="flex-shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700"
                                   >
                                     <Pencil className="w-3.5 h-3.5" />
@@ -1280,7 +1278,7 @@ export default function WorkTime() {
                                   <button
                                     type="button"
                                     onClick={() => setDeleteEntryId(entry.id)}
-                                    title="Usuń wpis (admin)"
+                                    title="Usuń wpis"
                                     className="flex-shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />

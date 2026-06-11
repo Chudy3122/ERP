@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './User.model';
+import { isPolishHoliday } from '../utils/polishHolidays';
 
 export enum LeaveType {
   VACATION = 'vacation',          // Urlop wypoczynkowy — odlicza dni
@@ -101,7 +102,8 @@ export class LeaveRequest {
     let count = 0;
     while (cur.getTime() <= last.getTime()) {
       const dow = cur.getUTCDay();
-      if (dow !== 0 && dow !== 6) count++; // skip Sunday (0) and Saturday (6)
+      // skip weekends (Sun=0, Sat=6) and Polish public holidays
+      if (dow !== 0 && dow !== 6 && !isPolishHoliday(cur)) count++;
       cur.setUTCDate(cur.getUTCDate() + 1);
     }
     return count;
