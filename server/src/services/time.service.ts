@@ -133,7 +133,7 @@ export class TimeService {
   /**
    * Clock in - Start work (first clock-in of the day gets 5-min rounding bonus)
    */
-  async clockIn(userId: string, notes?: string, expectedClockIn?: string): Promise<TimeEntry> {
+  async clockIn(userId: string, notes?: string, expectedClockIn?: string, backdatedStart?: string): Promise<TimeEntry> {
     const existingEntry = await this.timeEntryRepository.findOne({
       where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
@@ -142,13 +142,23 @@ export class TimeService {
       throw new Error('Masz już aktywny wpis czasu pracy. Najpierw zakończ lub zapauzuj pracę.');
     }
 
-    const { start, end } = todayRange();
-    const todayCount = await this.timeEntryRepository.count({
-      where: { user_id: userId, clock_in: Between(start, end) },
-    });
-
-    // Only the first clock-in of the day gets the 5-minute floor rounding
-    const clockInTime = todayCount === 0 ? roundToNearest5Min(new Date()) : new Date();
+    let clockInTime: Date;
+    let isManual = false;
+    if (backdatedStart) {
+      // Manual start: timer runs live from the given (past) time
+      const t = new Date(backdatedStart);
+      if (isNaN(t.getTime())) throw new Error('Nieprawidłowa godzina rozpoczęcia');
+      if (t.getTime() > Date.now()) throw new Error('Godzina rozpoczęcia nie może być w przyszłości');
+      clockInTime = t;
+      isManual = true;
+    } else {
+      const { start, end } = todayRange();
+      const todayCount = await this.timeEntryRepository.count({
+        where: { user_id: userId, clock_in: Between(start, end) },
+      });
+      // Only the first clock-in of the day gets the 5-minute floor rounding
+      clockInTime = todayCount === 0 ? roundToNearest5Min(new Date()) : new Date();
+    }
 
     const timeEntry = this.timeEntryRepository.create({
       user_id: userId,
@@ -157,7 +167,7 @@ export class TimeService {
       expected_clock_in: expectedClockIn || '09:00:00',
       status: TimeEntryStatus.IN_PROGRESS,
       is_break: false,
-      is_manual: false,
+      is_manual: isManual,
     });
 
     const lateMinutes = timeEntry.calculateLateArrival();

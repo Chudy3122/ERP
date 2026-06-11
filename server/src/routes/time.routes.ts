@@ -19,7 +19,12 @@ router.post('/clock-out', timeController.clockOut.bind(timeController));
 router.get('/day-status', timeController.getDayStatus.bind(timeController));
 router.post('/pause', timeController.pauseWork.bind(timeController));
 router.post('/end-work', timeController.endWork.bind(timeController));
-router.post('/manual-entry', timeController.addManualEntry.bind(timeController));
+// Completed manual entry (od–do) — admin/kadry only, may target any employee
+router.post(
+  '/manual-entry',
+  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  timeController.addManualEntry.bind(timeController)
+);
 
 // Get current entry
 router.get('/current', timeController.getCurrentEntry.bind(timeController));

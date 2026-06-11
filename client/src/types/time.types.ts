@@ -66,6 +66,7 @@ export interface ManualEntryRequest {
   clockIn: string; // HH:MM
   clockOut: string;// HH:MM
   notes?: string;
+  userId?: string; // admin/kadry: log for another employee
 }
 
 export interface LeaveRequest {
@@ -141,6 +142,7 @@ export interface LeaveOverviewRow {
 export interface ClockInRequest {
   notes?: string;
   expectedClockIn?: string;
+  clockInTime?: string; // backdated manual start (ISO) — timer runs live from this time
 }
 
 export interface ClockOutRequest {

@@ -18,9 +18,9 @@ export class TimeController {
   async clockIn(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { notes, expectedClockIn } = req.body;
+      const { notes, expectedClockIn, clockInTime } = req.body;
 
-      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn);
+      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, clockInTime);
 
       res.status(201).json({
         success: true,
@@ -101,8 +101,9 @@ export class TimeController {
    */
   async addManualEntry(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
-      const { date, clockIn, clockOut, notes, clock_in, clock_out } = req.body;
+      const { date, clockIn, clockOut, notes, clock_in, clock_out, userId: targetUserId } = req.body;
+      // Restricted to admin/kadry (route guard); they may log for any employee
+      const userId = targetUserId || req.user!.userId;
 
       if (!date || !clockIn || !clockOut) {
         res.status(400).json({ success: false, message: 'Wymagane pola: date, clockIn, clockOut' });

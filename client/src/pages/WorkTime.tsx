@@ -5,6 +5,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
+import * as userApi from '../api/user.api';
 import type { TimeEntry, DayStatus, DayState } from '../types/time.types';
 import { getFileUrl } from '../api/axios-config';
 
@@ -122,11 +123,12 @@ function getFilteredHistoryEntries(
 }
 
 // ─── Manual Entry Modal ───────────────────────────────────────────────────────
-function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => Promise<void> }) {
+function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; onSaved: () => Promise<void>; users: { id: string; first_name: string; last_name: string }[] }) {
   const [date, setDate] = useState(todayStr());
   const [clockIn, setClockIn] = useState('09:00');
   const [clockOut, setClockOut] = useState('17:00');
   const [notes, setNotes] = useState('');
+  const [targetUser, setTargetUser] = useState('');
   const [saving, setSaving] = useState(false);
   const [clockInHours, clockInMinutes] = clockIn.split(':').map(Number);
   const [clockOutHours, clockOutMinutes] = clockOut.split(':').map(Number);
@@ -148,9 +150,13 @@ function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
       return;
     }
 
+    if (!targetUser) {
+      toast.error('Wybierz pracownika');
+      return;
+    }
     setSaving(true);
     try {
-      await timeApi.addManualEntry({ date, clockIn, clockOut, notes: notes || undefined });
+      await timeApi.addManualEntry({ date, clockIn, clockOut, notes: notes || undefined, userId: targetUser });
       toast.success('Wpis został dodany');
       onClose();
       await onSaved();
@@ -170,9 +176,9 @@ function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
               <Pencil className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-semibold text-gray-900 dark:text-white">Dodaj ręczny wpis</h2>
+              <h2 className="font-semibold text-gray-900 dark:text-white">Wpis za pracownika</h2>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                Uzupełnij brakującą sesję czasu pracy.
+                Uzupełnij kompletną sesję (od–do) dla wybranej osoby.
               </p>
             </div>
           </div>
@@ -186,6 +192,20 @@ function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik *</label>
+            <select
+              value={targetUser}
+              onChange={(e) => setTargetUser(e.target.value)}
+              required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">— wybierz —</option>
+              {[...users]
+                .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                .map(u => <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>)}
+            </select>
+          </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Data</label>
             <input
@@ -273,6 +293,75 @@ function ManualEntryModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
   );
 }
 
+// ─── Start-from-time Modal (backdated clock-in → live timer) ──────────────────
+function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onStarted: () => Promise<void> }) {
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const [date, setDate] = useState(todayStr());
+  const [start, setStart] = useState(hhmm);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const [y, mo, d] = date.split('-').map(Number);
+    const [h, mi] = start.split(':').map(Number);
+    const startDate = new Date(y, mo - 1, d, h, mi, 0, 0);
+    if (startDate.getTime() > Date.now()) {
+      toast.error('Godzina rozpoczęcia nie może być w przyszłości');
+      return;
+    }
+    setSaving(true);
+    try {
+      await timeApi.clockIn({ clockInTime: startDate.toISOString(), notes: 'Rozpoczęcie (ręczne)' });
+      toast.success('Praca rozpoczęta — timer leci od podanej godziny');
+      onClose();
+      await onStarted();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się rozpocząć');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3 border-b border-gray-100 px-6 py-5 dark:border-gray-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#F7941D] dark:bg-orange-900/20">
+            <Play className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-900 dark:text-white">Rozpocznij od godziny</h2>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Zapomniałeś kliknąć start? Wpisz godzinę rozpoczęcia — timer poleci od niej.
+            </p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Data</label>
+              <input type="date" value={date} max={todayStr()} onChange={e => setDate(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Godzina startu</label>
+              <input type="time" value={start} onChange={e => setStart(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
+            <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Rozpocznij
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function WorkTime() {
   const { user } = useAuth();
@@ -285,6 +374,8 @@ export default function WorkTime() {
   const [clocking, setClocking] = useState(false);
   const [loadingMy, setLoadingMy] = useState(true);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showStartManual, setShowStartManual] = useState(false);
+  const [managerUsers, setManagerUsers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState<10 | 30 | 50>(10);
   const [historyDateFilter, setHistoryDateFilter] = useState<HistoryDateFilter>('all');
@@ -294,6 +385,8 @@ export default function WorkTime() {
   const [savingNotes, setSavingNotes] = useState(false);
   // Admin-only full edit / delete of a time entry
   const isAdmin = user?.role === 'admin';
+  // Admin/kadry may add a completed entry (od–do) for any employee
+  const isManager = user?.role === 'admin' || user?.role === 'ksiegowosc';
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
   const [savingEntry, setSavingEntry] = useState(false);
@@ -306,6 +399,12 @@ export default function WorkTime() {
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => { loadMyData(); }, []);
+
+  useEffect(() => {
+    if (isManager && managerUsers.length === 0) {
+      userApi.getDirectory().then(u => setManagerUsers(u as any)).catch(() => {});
+    }
+  }, [isManager]);
 
   useEffect(() => {
     setHistoryPage(1);
@@ -741,7 +840,10 @@ export default function WorkTime() {
   return (
     <MainLayout title="Czas pracy">
       {showManualEntry && (
-        <ManualEntryModal onClose={() => setShowManualEntry(false)} onSaved={loadMyData} />
+        <ManualEntryModal onClose={() => setShowManualEntry(false)} onSaved={loadMyData} users={managerUsers} />
+      )}
+      {showStartManual && (
+        <StartFromTimeModal onClose={() => setShowStartManual(false)} onStarted={loadMyData} />
       )}
 
       {editNotesEntry && (
@@ -845,13 +947,24 @@ export default function WorkTime() {
           </p>
           </div>
         </div>
-        <button
-          onClick={() => setShowManualEntry(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-        >
-          <PlusCircle className="w-4 h-4 text-[#F7941D]" />
-          Dodaj ręcznie
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setShowStartManual(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <Play className="w-4 h-4 text-[#F7941D]" />
+            Rozpocznij od godziny
+          </button>
+          {isManager && (
+            <button
+              onClick={() => setShowManualEntry(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <PlusCircle className="w-4 h-4 text-[#F7941D]" />
+              Wpis za pracownika
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
