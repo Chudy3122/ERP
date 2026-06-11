@@ -127,6 +127,13 @@ router.get(
   timeController.getAllLeaveRequests.bind(timeController)
 );
 
+// Monthly evidence report for one employee — admin + kadry
+router.get(
+  '/report/monthly',
+  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  timeController.getMonthlyReport.bind(timeController)
+);
+
 // Approve/reject leave requests (managers only)
 router.put(
   '/leave/:id/approve',

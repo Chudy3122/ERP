@@ -209,6 +209,14 @@ export const getAllLeaveRequests = async (): Promise<LeaveRequest[]> => {
   return response.data.data;
 };
 
+/**
+ * Monthly evidence report for one employee (admin / kadry)
+ */
+export const getMonthlyReport = async (userId: string, year: number, month: number): Promise<any> => {
+  const response = await apiClient.get('/time/report/monthly', { params: { userId, year, month } });
+  return response.data.data;
+};
+
 export interface LeaveComment {
   id: string;
   leave_request_id: string;

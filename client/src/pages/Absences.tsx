@@ -106,7 +106,14 @@ const Absences = () => {
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar' | 'management' | 'all'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report'>('my');
+  const [reportUserId, setReportUserId] = useState('');
+  const [reportMonth, setReportMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [reportData, setReportData] = useState<any | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
@@ -182,6 +189,19 @@ const Absences = () => {
         .catch(() => {});
     }
   }, [canViewAllAbsences]);
+
+  useEffect(() => {
+    if (activeTab === 'report' && canViewAllAbsences && reportUserId) {
+      const [y, m] = reportMonth.split('-').map(Number);
+      setReportLoading(true);
+      timeApi.getMonthlyReport(reportUserId, y, m)
+        .then(setReportData)
+        .catch(() => setReportData(null))
+        .finally(() => setReportLoading(false));
+    } else if (activeTab === 'report') {
+      setReportData(null);
+    }
+  }, [activeTab, canViewAllAbsences, reportUserId, reportMonth]);
 
   useEffect(() => {
     setRequestPage(1);
@@ -635,6 +655,19 @@ const Absences = () => {
                   Wszystkie nieobecności
                 </button>
               )}
+              {canViewAllAbsences && (
+                <button
+                  onClick={() => setActiveTab('report')}
+                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                    activeTab === 'report'
+                      ? 'bg-[#F7941D] text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Raport miesięczny
+                </button>
+              )}
               {canManageLeavePlans && (
                 <button
                   onClick={() => setActiveTab('management')}
@@ -902,6 +935,105 @@ const Absences = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Monthly report tab (admin / kadry) */}
+        {activeTab === 'report' && canViewAllAbsences && (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700 print:hidden">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
+                  <select
+                    value={reportUserId}
+                    onChange={e => setReportUserId(e.target.value)}
+                    className="h-10 w-64 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">— wybierz pracownika —</option>
+                    {[...directoryUsers]
+                      .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                      .map(u => <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Miesiąc</label>
+                  <input
+                    type="month"
+                    value={reportMonth}
+                    onChange={e => setReportMonth(e.target.value)}
+                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+              {reportData && reportUserId && (
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                  Drukuj
+                </button>
+              )}
+            </div>
+
+            {!reportUserId ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Wybierz pracownika, aby zobaczyć raport.</div>
+            ) : reportLoading ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie…</div>
+            ) : !reportData ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Brak danych.</div>
+            ) : (() => {
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const empName = directoryUsers.find(u => u.id === reportUserId);
+              const monthLabel = new Date(reportData.year, reportData.month - 1, 1).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+              const rows = Array.from({ length: reportData.daysInMonth }, (_, i) => {
+                const day = i + 1;
+                const dayStr = `${reportData.year}-${pad(reportData.month)}-${pad(day)}`;
+                const dow = new Date(reportData.year, reportData.month - 1, day).getDay();
+                const leave = (reportData.leaves || []).find((l: any) =>
+                  dayStr >= String(l.start_date).slice(0, 10) && dayStr <= String(l.end_date || l.start_date).slice(0, 10));
+                const ot = (reportData.workLogs || []).filter((w: any) => String(w.work_date).slice(0, 10) === dayStr && w.work_type === 'overtime')
+                  .reduce((s: number, w: any) => s + Number(w.hours), 0);
+                const comp = (reportData.workLogs || []).filter((w: any) => String(w.work_date).slice(0, 10) === dayStr && w.work_type === 'overtime_comp')
+                  .reduce((s: number, w: any) => s + Number(w.hours), 0);
+                return { day, dayStr, dow, leave, ot, comp };
+              });
+              const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'];
+              return (
+                <div className="overflow-x-auto">
+                  <div className="px-4 pt-4 text-sm font-semibold text-gray-900 dark:text-white">
+                    {empName ? `${empName.last_name} ${empName.first_name}` : ''} — {monthLabel}
+                  </div>
+                  <table className="mt-2 min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dzień</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Nieobecność</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Nadgodziny</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Odbiór</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {rows.map(r => {
+                        const weekend = r.dow === 0 || r.dow === 6;
+                        return (
+                          <tr key={r.day} className={weekend ? 'bg-gray-50/60 dark:bg-gray-900/30' : ''}>
+                            <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                              {pad(r.day)} <span className="text-gray-400">{DOW[r.dow]}</span>
+                            </td>
+                            <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">
+                              {r.leave ? (leaveTypeConfig[r.leave.leave_type as LeaveType]?.label || r.leave.leave_type) : ''}
+                            </td>
+                            <td className="px-4 py-1.5 text-center text-sm text-blue-600 dark:text-blue-400">{r.ot > 0 ? `${r.ot}h` : ''}</td>
+                            <td className="px-4 py-1.5 text-center text-sm text-emerald-600 dark:text-emerald-400">{r.comp > 0 ? `${r.comp}h` : ''}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 

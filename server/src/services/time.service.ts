@@ -2,6 +2,7 @@ import { Between, Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../models/LeaveRequest.model';
+import { WorkLog, WorkLogType } from '../models/WorkLog.model';
 import { LeaveRequestComment } from '../models/LeaveRequestComment.model';
 import { User } from '../models/User.model';
 
@@ -625,6 +626,36 @@ export class TimeService {
       relations: ['user'],
       order: { start_date: 'DESC' },
     });
+  }
+
+  /**
+   * Monthly evidence report for one employee: approved absences overlapping the
+   * month + overtime/time-off work logs in the month.
+   */
+  async getMonthlyReport(userId: string, year: number, month: number) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const startStr = `${year}-${pad(month)}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endStr = `${year}-${pad(month)}-${pad(lastDay)}`;
+
+    const leaves = await this.leaveRequestRepository
+      .createQueryBuilder('lr')
+      .where('lr.user_id = :userId', { userId })
+      .andWhere('lr.status = :st', { st: LeaveStatus.APPROVED })
+      .andWhere('lr.start_date <= :end', { end: endStr })
+      .andWhere('lr.end_date >= :start', { start: startStr })
+      .orderBy('lr.start_date', 'ASC')
+      .getMany();
+
+    const workLogs = await AppDataSource.getRepository(WorkLog)
+      .createQueryBuilder('wl')
+      .where('wl.user_id = :userId', { userId })
+      .andWhere('wl.work_date BETWEEN :s AND :e', { s: startStr, e: endStr })
+      .andWhere('wl.work_type IN (:...types)', { types: [WorkLogType.OVERTIME, WorkLogType.OVERTIME_COMP] })
+      .orderBy('wl.work_date', 'ASC')
+      .getMany();
+
+    return { year, month, daysInMonth: lastDay, leaves, workLogs };
   }
 
   /**

@@ -502,6 +502,24 @@ export class TimeController {
   }
 
   /**
+   * Monthly evidence report for one employee (admin / kadry)
+   * GET /api/time/report/monthly?userId=&year=&month=
+   */
+  async getMonthlyReport(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.query.userId as string;
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const month = parseInt(req.query.month as string) || (new Date().getMonth() + 1);
+      if (!userId) { res.status(400).json({ success: false, message: 'userId jest wymagany' }); return; }
+      const data = await timeService.getMonthlyReport(userId, year, month);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      console.error('Get monthly report error:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to get report' });
+    }
+  }
+
+  /**
    * Approve leave request (admin/team leader only)
    * PUT /api/time/leave/:id/approve
    */
