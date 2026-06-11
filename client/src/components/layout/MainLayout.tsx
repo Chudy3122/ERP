@@ -130,6 +130,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('sidebar-collapsed') === '1'; } catch { return false; }
+  });
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('sidebar-collapsed', next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -400,7 +410,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       <aside
         className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-200 ease-in-out z-50 flex flex-col`}
+        } ${
+          sidebarCollapsed
+            ? 'lg:w-0 lg:min-w-0 lg:overflow-hidden lg:border-r-0 lg:-translate-x-full'
+            : 'lg:w-64 lg:translate-x-0'
+        } transition-all duration-200 ease-in-out z-50 flex flex-col`}
       >
         {/* Logo */}
         <div className="h-16 relative flex items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
@@ -456,6 +470,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <button
+              onClick={toggleSidebarCollapsed}
+              title={sidebarCollapsed ? 'Pokaż menu' : 'Ukryj menu'}
+              className="hidden lg:inline-flex rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               <Menu className="w-6 h-6" />
             </button>

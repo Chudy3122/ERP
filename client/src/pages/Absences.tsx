@@ -110,6 +110,8 @@ const Absences = () => {
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
   const [allSortAsc, setAllSortAsc] = useState(false);
+  const [allDateFrom, setAllDateFrom] = useState('');
+  const [allDateTo, setAllDateTo] = useState('');
   const [requestPage, setRequestPage] = useState(1);
   const [requestPageSize, setRequestPageSize] = useState<10 | 30 | 50>(10);
   const [requestSearch, setRequestSearch] = useState('');
@@ -485,10 +487,17 @@ const Absences = () => {
   const allSearchNorm = allSearch.trim().toLowerCase();
   const filteredAllRequests = allRequests
     .filter(r => {
-      if (!allSearchNorm) return true;
-      const u = (r as any).user;
-      const name = u ? `${u.first_name} ${u.last_name} ${u.email}` : '';
-      return name.toLowerCase().includes(allSearchNorm);
+      // Name filter — strictly by last name
+      if (allSearchNorm) {
+        const u = (r as any).user;
+        if (!(u?.last_name || '').toLowerCase().includes(allSearchNorm)) return false;
+      }
+      // Date-range overlap: absence [start..end] intersects [from..to]
+      const start = r.start_date?.slice(0, 10);
+      const end = (r.end_date || r.start_date)?.slice(0, 10);
+      if (allDateFrom && end < allDateFrom) return false;
+      if (allDateTo && start > allDateTo) return false;
+      return true;
     })
     .sort((a, b) => {
       const da = new Date(a.start_date).getTime();
@@ -890,18 +899,46 @@ const Absences = () => {
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wszystkie nieobecności</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Wnioski wszystkich pracowników. Filtruj po imieniu/nazwisku, sortuj po dacie.
+                  Wnioski wszystkich pracowników. Filtruj po nazwisku i zakresie dat, sortuj po dacie.
                 </p>
               </div>
-              <div className="relative w-full sm:w-80">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="search"
-                  value={allSearch}
-                  onChange={e => setAllSearch(e.target.value)}
-                  placeholder="Szukaj po imieniu i nazwisku..."
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-full sm:w-64">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="search"
+                    value={allSearch}
+                    onChange={e => setAllSearch(e.target.value)}
+                    placeholder="Szukaj po nazwisku..."
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                  <input
+                    type="date"
+                    value={allDateFrom}
+                    onChange={e => setAllDateFrom(e.target.value)}
+                    title="Od dnia"
+                    className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                  <span>–</span>
+                  <input
+                    type="date"
+                    value={allDateTo}
+                    onChange={e => setAllDateTo(e.target.value)}
+                    title="Do dnia"
+                    className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                  {(allDateFrom || allDateTo) && (
+                    <button
+                      onClick={() => { setAllDateFrom(''); setAllDateTo(''); }}
+                      className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:text-[#F7941D]"
+                      title="Wyczyść daty"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

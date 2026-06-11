@@ -125,21 +125,16 @@ const Employees = () => {
   const filteredEmployees = employees
     .filter(employee => {
       const query = searchQuery.trim().toLowerCase();
-      const matchesSearch =
-        !query ||
-        employee.first_name.toLowerCase().includes(query) ||
-        employee.last_name.toLowerCase().includes(query) ||
-        employee.email.toLowerCase().includes(query) ||
-        employee.position?.toLowerCase().includes(query) ||
-        employee.employee_id?.toLowerCase().includes(query);
+      // Search strictly by last name (as requested)
+      const matchesSearch = !query || employee.last_name.toLowerCase().includes(query);
 
       const matchesDepartment = !departmentFilter || employee.department === departmentFilter;
 
       return matchesSearch && matchesDepartment;
     })
     .sort((firstEmployee, secondEmployee) =>
-      `${firstEmployee.first_name} ${firstEmployee.last_name}`.localeCompare(
-        `${secondEmployee.first_name} ${secondEmployee.last_name}`,
+      `${firstEmployee.last_name} ${firstEmployee.first_name}`.localeCompare(
+        `${secondEmployee.last_name} ${secondEmployee.first_name}`,
         'pl',
         { sensitivity: 'base' }
       )
@@ -283,7 +278,7 @@ const Employees = () => {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder={t('search')}
+                  placeholder="Szukaj po nazwisku..."
                   value={searchQuery}
                   onChange={event => setSearchQuery(event.target.value)}
                   className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
