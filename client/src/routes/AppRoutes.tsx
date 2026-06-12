@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 
 // Pages
 import Login from '../pages/Login';
-import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import VideoMeeting from '../pages/VideoMeeting';
 import ChatMeet from '../pages/ChatMeet';
@@ -61,7 +60,7 @@ const AppRoutes = () => {
       />
       <Route
         path="/register"
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />}
+        element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />}
       />
 
       {/* Protected routes */}

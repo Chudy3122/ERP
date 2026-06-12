@@ -184,16 +184,9 @@ const Login = () => {
               {isSubmitting ? t('loggingIn') : t('login')}
             </button>
 
-            {/* Register link */}
             <div className="text-center pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500">
-                {t('noAccount')}{' '}
-                <Link
-                  to="/register"
-                  className="font-medium text-[#F7941D] hover:text-[#e08317] transition-colors duration-200"
-                >
-                  {t('register')}
-                </Link>
+                Dostęp do systemu nadaje administrator organizacji.
               </p>
             </div>
           </form>

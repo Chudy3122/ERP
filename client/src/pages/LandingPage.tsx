@@ -363,10 +363,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 
         <div className="mt-6 pt-6 border-t border-gray-100 text-center">
           <p className="text-sm text-gray-500">
-            Nie masz konta?{' '}
-            <Link to="/register" className="font-semibold text-[#F7941D] hover:text-[#e08317] transition-colors">
-              Zarejestruj się
-            </Link>
+            Dostęp do systemu nadaje administrator organizacji.
           </p>
         </div>
       </div>
@@ -521,12 +518,6 @@ export default function LandingPage() {
           >
             Zaloguj się
           </button>
-            <Link
-              to="/register"
-              className="text-[15px] font-semibold tracking-wide bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2.5 rounded-full shadow-sm transition-all duration-200"
-            >
-              Zarejestruj się
-            </Link>
           </div>
         </div>
       </nav>
@@ -1089,12 +1080,9 @@ export default function LandingPage() {
                 >
                   Zaloguj się
                 </button>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold uppercase tracking-wide text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  Zarejestruj się
-                </Link>
+                <p className="text-center text-xs leading-relaxed text-gray-400">
+                  Konta użytkowników tworzy administrator organizacji.
+                </p>
               </div>
             </div>
           </div>

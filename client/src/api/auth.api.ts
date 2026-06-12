@@ -20,8 +20,8 @@ export const loginApi = async (credentials: LoginRequest): Promise<AuthResponse>
  * Register new user
  */
 export const registerApi = async (data: RegisterRequest): Promise<AuthResponse> => {
-  const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/register', data);
-  return response.data.data!;
+  void data;
+  throw new Error('Samodzielna rejestracja użytkowników została wyłączona.');
 };
 
 /**
