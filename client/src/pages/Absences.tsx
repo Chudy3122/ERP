@@ -15,6 +15,7 @@ import {
   Save,
   Search,
   Users,
+  ArrowUpDown,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +30,15 @@ type LeaveType =
   | 'vacation' | 'personal' | 'sick_leave' | 'unpaid' | 'parental'
   | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
   | 'remote_work' | 'other';
+
+type RequestDateField = 'submitted' | 'absence';
+type AbsenceTab = 'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report';
+
+const ABSENCES_ACTIVE_TAB_KEY = 'erp:absences:active-tab';
+const absenceTabs: AbsenceTab[] = ['my', 'pending', 'calendar', 'management', 'all', 'report'];
+
+const isAbsenceTab = (value: string | null): value is AbsenceTab =>
+  Boolean(value && absenceTabs.includes(value as AbsenceTab));
 
 // Tylko te typy odliczają dni z puli urlopowej
 const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal'];
@@ -100,13 +110,27 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
 const Absences = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const canManageLeavePlans = ['admin', 'ksiegowosc'].includes(user?.role || '');
+  const canReviewLeave = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
+  const canViewAllAbsences = ['admin', 'ksiegowosc'].includes(user?.role || '');
+  const activeTabStorageKey = `${ABSENCES_ACTIVE_TAB_KEY}:${user?.id || 'current-user'}`;
+
+  const canOpenAbsenceTab = (tab: AbsenceTab) => {
+    if (tab === 'pending') return canReviewLeave;
+    if (tab === 'management') return canManageLeavePlans;
+    if (tab === 'all' || tab === 'report') return canViewAllAbsences;
+    return true;
+  };
 
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [pendingRequests, setPendingRequests] = useState<LeaveRequest[]>([]);
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report'>('my');
+  const [activeTab, setActiveTab] = useState<AbsenceTab>(() => {
+    const storedTab = sessionStorage.getItem(activeTabStorageKey);
+    return isAbsenceTab(storedTab) && canOpenAbsenceTab(storedTab) ? storedTab : 'my';
+  });
   const [reportUserId, setReportUserId] = useState('');
   const [reportMonth, setReportMonth] = useState(() => {
     const d = new Date();
@@ -124,16 +148,16 @@ const Absences = () => {
   const [requestPageSize, setRequestPageSize] = useState<10 | 30 | 50>(10);
   const [requestSearch, setRequestSearch] = useState('');
   const [requestStatusFilter, setRequestStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'>('all');
+  const [requestDateField, setRequestDateField] = useState<RequestDateField>('absence');
+  const [requestSortAsc, setRequestSortAsc] = useState(false);
+  const [requestDateFrom, setRequestDateFrom] = useState('');
+  const [requestDateTo, setRequestDateTo] = useState('');
 
   // Calendar tab state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState(7);
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
-  const canManageLeavePlans = ['admin', 'ksiegowosc'].includes(user?.role || '');
-  const canReviewLeave = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
-  const canViewAllAbsences = ['admin', 'ksiegowosc'].includes(user?.role || '');
-
   const [overviewRows, setOverviewRows] = useState<LeaveOverviewRow[]>([]);
   const [managementSearch, setManagementSearch] = useState('');
   const [isManagementLoading, setIsManagementLoading] = useState(false);
@@ -157,6 +181,15 @@ const Absences = () => {
   });
   const [formUserId, setFormUserId] = useState('');
   const [directoryUsers, setDirectoryUsers] = useState<{ id: string; first_name: string; last_name: string; email: string }[]>([]);
+
+  useEffect(() => {
+    if (!canOpenAbsenceTab(activeTab)) {
+      setActiveTab('my');
+      return;
+    }
+
+    sessionStorage.setItem(activeTabStorageKey, activeTab);
+  }, [activeTab, activeTabStorageKey, canManageLeavePlans, canReviewLeave, canViewAllAbsences]);
 
   useEffect(() => {
     loadData();
@@ -205,7 +238,16 @@ const Absences = () => {
 
   useEffect(() => {
     setRequestPage(1);
-  }, [activeTab, requestPageSize, requestSearch, requestStatusFilter]);
+  }, [
+    activeTab,
+    requestPageSize,
+    requestSearch,
+    requestStatusFilter,
+    requestDateField,
+    requestSortAsc,
+    requestDateFrom,
+    requestDateTo,
+  ]);
 
   const loadLeaveOverview = async () => {
     try {
@@ -479,18 +521,43 @@ const Absences = () => {
 
   const baseRequests = activeTab === 'pending' ? pendingRequests : leaveRequests;
   const normalizedRequestSearch = requestSearch.trim().toLowerCase();
-  const currentRequests = baseRequests.filter(request => {
-    const typeLabel = leaveTypeConfig[request.leave_type as LeaveType]?.label || '';
-    const userName = request.user ? `${request.user.first_name} ${request.user.last_name}` : '';
-    const searchable = [typeLabel, request.reason, userName, request.user?.email, request.status]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    const matchesSearch = !normalizedRequestSearch || searchable.includes(normalizedRequestSearch);
-    const matchesStatus = requestStatusFilter === 'all' || request.status === requestStatusFilter;
+  const currentRequests = baseRequests
+    .filter(request => {
+      const typeLabel = leaveTypeConfig[request.leave_type as LeaveType]?.label || '';
+      const userName = request.user ? `${request.user.first_name} ${request.user.last_name}` : '';
+      const searchable = [typeLabel, request.reason, userName, request.user?.email, request.status]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const matchesSearch = !normalizedRequestSearch || searchable.includes(normalizedRequestSearch);
+      const matchesStatus = requestStatusFilter === 'all' || request.status === requestStatusFilter;
 
-    return matchesSearch && matchesStatus;
-  });
+      if (activeTab !== 'my') return matchesSearch && matchesStatus;
+
+      const submittedDate = request.created_at.slice(0, 10);
+      const absenceStart = request.start_date.slice(0, 10);
+      const absenceEnd = (request.end_date || request.start_date).slice(0, 10);
+      const matchesDateRange =
+        requestDateField === 'submitted'
+          ? (!requestDateFrom || submittedDate >= requestDateFrom) &&
+            (!requestDateTo || submittedDate <= requestDateTo)
+          : (!requestDateFrom || absenceEnd >= requestDateFrom) &&
+            (!requestDateTo || absenceStart <= requestDateTo);
+
+      return matchesSearch && matchesStatus && matchesDateRange;
+    })
+    .sort((firstRequest, secondRequest) => {
+      if (activeTab !== 'my') return 0;
+
+      const firstDate = new Date(
+        requestDateField === 'submitted' ? firstRequest.created_at : firstRequest.start_date
+      ).getTime();
+      const secondDate = new Date(
+        requestDateField === 'submitted' ? secondRequest.created_at : secondRequest.start_date
+      ).getTime();
+
+      return requestSortAsc ? firstDate - secondDate : secondDate - firstDate;
+    });
   const requestStatusCounts = baseRequests.reduce(
     (acc, request) => {
       acc[request.status as keyof typeof acc] += 1;
@@ -721,8 +788,73 @@ const Absences = () => {
                     <option value="rejected">Odrzucone</option>
                     <option value="cancelled">Anulowane</option>
                   </select>
+                  {activeTab === 'my' && (
+                    <>
+                      <select
+                        value={requestDateField}
+                        onChange={event => setRequestDateField(event.target.value as RequestDateField)}
+                        aria-label="Wybierz datę filtrowania i sortowania"
+                        className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                      >
+                        <option value="submitted">Data złożenia</option>
+                        <option value="absence">Termin nieobecności</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setRequestSortAsc(current => !current)}
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/40 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                        title="Zmień kierunek sortowania"
+                      >
+                        <ArrowUpDown className="h-4 w-4" />
+                        {requestSortAsc ? 'Rosnąco' : 'Malejąco'}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
+
+              {activeTab === 'my' && (
+                <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4 dark:border-gray-700">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Data od
+                    </label>
+                    <input
+                      type="date"
+                      value={requestDateFrom}
+                      onChange={event => setRequestDateFrom(event.target.value)}
+                      className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Data do
+                    </label>
+                    <input
+                      type="date"
+                      value={requestDateTo}
+                      onChange={event => setRequestDateTo(event.target.value)}
+                      className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  {(requestDateFrom || requestDateTo) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRequestDateFrom('');
+                        setRequestDateTo('');
+                      }}
+                      className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/40 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                    >
+                      <X className="h-4 w-4" />
+                      Wyczyść daty
+                    </button>
+                  )}
+                  <p className="pb-2 text-xs text-gray-500 dark:text-gray-400">
+                    Zakres dotyczy: {requestDateField === 'submitted' ? 'daty złożenia wniosku' : 'terminu nieobecności'}.
+                  </p>
+                </div>
+              )}
 
               {activeTab === 'pending' && baseRequests.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">

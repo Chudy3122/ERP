@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   TrendingUp,
   X,
+  LayoutTemplate,
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import {
@@ -24,12 +25,15 @@ import {
 } from '../types/project.types';
 import { getFileUrl } from '../api/axios-config';
 import type { User } from '../types/user.types';
+import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../types/auth.types';
 
 type ViewFilter = 'all' | 'active' | 'completed' | 'planning';
 type ProjectTypeFilter = 'all' | 'ongoing' | 'deadline';
 
 const Projects = () => {
   const { t } = useTranslation('projects');
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStatistics>>({});
   const [projectMembersById, setProjectMembersById] = useState<Record<string, ProjectMember[]>>({});
@@ -320,13 +324,25 @@ const Projects = () => {
             </p>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/projects/new')}
-            className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
-          >
-            <Plus className="w-5 h-5" />
-            {t('newProject')}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {user?.role === UserRole.ADMIN && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin/project-templates')}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/5 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:border-[#F7941D]/40"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                Szablony projektów
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/projects/new')}
+              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+            >
+              <Plus className="w-5 h-5" />
+              {t('newProject')}
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}

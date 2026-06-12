@@ -57,11 +57,83 @@ import { useTranslation } from 'react-i18next';
 
 type TabType = 'dashboard' | 'tasks' | 'members' | 'files' | 'activity' | 'settings';
 type MemberSortMode = 'name' | 'role';
+type ColumnSortMode = 'manual' | 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc';
+
+const projectTabs: TabType[] = ['dashboard', 'tasks', 'members', 'files', 'activity', 'settings'];
+
+const getStoredProjectTab = (storageKey: string): TabType => {
+  const storedTab = localStorage.getItem(storageKey) as TabType | null;
+  return storedTab && projectTabs.includes(storedTab) ? storedTab : 'tasks';
+};
+
+const columnSortModes: ColumnSortMode[] = [
+  'manual',
+  'date_asc',
+  'date_desc',
+  'name_asc',
+  'name_desc',
+];
+
+const getStoredColumnSort = (storageKey: string): Record<string, ColumnSortMode> => {
+  try {
+    const storedValue = localStorage.getItem(storageKey);
+    if (!storedValue) return {};
+
+    const parsedValue = JSON.parse(storedValue) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsedValue).filter((entry): entry is [string, ColumnSortMode] =>
+        columnSortModes.includes(entry[1] as ColumnSortMode)
+      )
+    );
+  } catch {
+    return {};
+  }
+};
+
+const KanbanTaskTitle = ({ title }: { title: string }) => {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+  const handleMouseEnter = () => {
+    const element = titleRef.current;
+    if (!element) return;
+
+    setIsTooltipVisible(
+      element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth
+    );
+  };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setIsTooltipVisible(false)}
+    >
+      <h4
+        ref={titleRef}
+        className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-white"
+      >
+        {title}
+      </h4>
+      {isTooltipVisible && (
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute left-0 top-full z-40 mt-1 max-w-[260px] rounded-lg bg-gray-950 px-3 py-2 text-xs font-medium leading-relaxed text-white shadow-xl dark:bg-gray-700"
+        >
+          {title}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const columnSortStorageKey = `erp:project-kanban-sort:${user?.id || 'current-user'}:${id || 'unknown-project'}`;
+  const activeTabStorageKey = `erp:project-active-tab:${user?.id || 'current-user'}:${id || 'unknown-project'}`;
+  const searchQueryStorageKey = `erp:project-kanban-search:${user?.id || 'current-user'}:${id || 'unknown-project'}`;
 
   const [project, setProject] = useState<Project | null>(null);
   const [stages, setStages] = useState<ProjectStage[]>([]);
@@ -79,9 +151,13 @@ const ProjectDetail = () => {
   const [attachments, setAttachments] = useState<ProjectAttachment[]>([]);
   const [activities, setActivities] = useState<ProjectActivity[]>([]);
   const [timeStats, setTimeStats] = useState<ProjectTimeStats | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('tasks');
+  const [activeTab, setActiveTab] = useState<TabType>(() =>
+    getStoredProjectTab(activeTabStorageKey)
+  );
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() =>
+    localStorage.getItem(searchQueryStorageKey) || ''
+  );
 
   // Drag and drop state
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
@@ -93,7 +169,9 @@ const ProjectDetail = () => {
   const [bulkUnassignId, setBulkUnassignId] = useState('');
   const [isBulkAssigning, setIsBulkAssigning] = useState(false);
   const [isBulkUnassigning, setIsBulkUnassigning] = useState(false);
-  const [columnSort, setColumnSort] = useState<Record<string, 'manual' | 'date_asc' | 'date_desc'>>({});
+  const [columnSort, setColumnSort] = useState<Record<string, ColumnSortMode>>(() =>
+    getStoredColumnSort(columnSortStorageKey)
+  );
   const isDraggingRef = useRef(false);
   const mouseStartPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -144,6 +222,18 @@ const ProjectDetail = () => {
       loadProject();
     }
   }, [id]);
+
+  useEffect(() => {
+    setColumnSort(getStoredColumnSort(columnSortStorageKey));
+  }, [columnSortStorageKey]);
+
+  useEffect(() => {
+    setActiveTab(getStoredProjectTab(activeTabStorageKey));
+  }, [activeTabStorageKey]);
+
+  useEffect(() => {
+    setSearchQuery(localStorage.getItem(searchQueryStorageKey) || '');
+  }, [searchQueryStorageKey]);
 
   useEffect(() => {
     if (id && activeTab === 'tasks') {
@@ -807,12 +897,14 @@ const ProjectDetail = () => {
     const key = stageId ?? 'null';
     setColumnSort(prev => {
       const cur = prev[key] || 'manual';
-      const next = cur === 'manual' ? 'date_asc' : cur === 'date_asc' ? 'date_desc' : 'manual';
-      return { ...prev, [key]: next };
+      const next = columnSortModes[(columnSortModes.indexOf(cur) + 1) % columnSortModes.length];
+      const nextColumnSort = { ...prev, [key]: next };
+      localStorage.setItem(columnSortStorageKey, JSON.stringify(nextColumnSort));
+      return nextColumnSort;
     });
   };
 
-  const getColumnSortMeta = (sort: 'manual' | 'date_asc' | 'date_desc') => {
+  const getColumnSortMeta = (sort: ColumnSortMode) => {
     if (sort === 'date_asc') {
       return {
         label: 'Data ↑',
@@ -823,7 +915,21 @@ const ProjectDetail = () => {
     if (sort === 'date_desc') {
       return {
         label: 'Data ↓',
-        title: 'Sortowanie po dacie malejąco. Kliknij, aby wrócić do kolejności ręcznej.',
+        title: 'Sortowanie po dacie malejąco. Kliknij, aby sortować alfabetycznie A–Z.',
+      };
+    }
+
+    if (sort === 'name_asc') {
+      return {
+        label: 'A–Z',
+        title: 'Sortowanie alfabetyczne A–Z. Kliknij, aby sortować Z–A.',
+      };
+    }
+
+    if (sort === 'name_desc') {
+      return {
+        label: 'Z–A',
+        title: 'Sortowanie alfabetyczne Z–A. Kliknij, aby wrócić do kolejności ręcznej.',
       };
     }
 
@@ -837,7 +943,13 @@ const ProjectDetail = () => {
     const key = stageId ?? 'null';
     const sort = columnSort[key] || 'manual';
     if (sort === 'manual') return tasks;
+
     return [...tasks].sort((a, b) => {
+      if (sort === 'name_asc' || sort === 'name_desc') {
+        const titleComparison = a.title.localeCompare(b.title, 'pl', { sensitivity: 'base' });
+        return sort === 'name_asc' ? titleComparison : -titleComparison;
+      }
+
       const da = new Date(a.created_at).getTime();
       const db = new Date(b.created_at).getTime();
       return sort === 'date_asc' ? da - db : db - da;
@@ -1182,6 +1294,21 @@ const ProjectDetail = () => {
     });
   };
 
+  const selectProjectTab = (tab: TabType) => {
+    setActiveTab(tab);
+    localStorage.setItem(activeTabStorageKey, tab);
+  };
+
+  const updateKanbanSearchQuery = (value: string) => {
+    setSearchQuery(value);
+
+    if (value) {
+      localStorage.setItem(searchQueryStorageKey, value);
+    } else {
+      localStorage.removeItem(searchQueryStorageKey);
+    }
+  };
+
   const tabs = [
     { key: 'dashboard', label: t('dashboard.title'), icon: LayoutDashboard },
     { key: 'tasks', label: t('tasks.title'), icon: CheckSquare },
@@ -1376,7 +1503,7 @@ const ProjectDetail = () => {
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as TabType)}
+                onClick={() => selectProjectTab(tab.key as TabType)}
                 className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                   isActive
                     ? 'bg-[#F7941D] text-white shadow-sm'
@@ -1535,7 +1662,7 @@ const ProjectDetail = () => {
                 {t('dashboard.recentActivity')}
               </h3>
               <button
-                onClick={() => setActiveTab('activity')}
+                onClick={() => selectProjectTab('activity')}
                 className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
               >
                 {t('common.all') || 'Zobacz wszystko'} →
@@ -1684,13 +1811,13 @@ const ProjectDetail = () => {
                       type="text"
                       placeholder="Szukaj zadań w kanbanie..."
                       value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
+                      onChange={e => updateKanbanSearchQuery(e.target.value)}
                       className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 transition-all placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
                     />
                     {searchQuery && (
                       <button
                         type="button"
-                        onClick={() => setSearchQuery('')}
+                        onClick={() => updateKanbanSearchQuery('')}
                         className="absolute right-2 top-1/2 rounded-md p-1 text-gray-400 transition-colors -translate-y-1/2 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                         aria-label="Wyczyść wyszukiwanie"
                       >
@@ -1913,9 +2040,7 @@ const ProjectDetail = () => {
                             </div>
                           </div>
 
-                          <h4 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-white">
-                            {task.title}
-                          </h4>
+                          <KanbanTaskTitle title={task.title} />
 
                           {task.description && (
                             <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
@@ -2044,7 +2169,7 @@ const ProjectDetail = () => {
                         {searchQuery ? (
                           <button
                             type="button"
-                            onClick={() => setSearchQuery('')}
+                            onClick={() => updateKanbanSearchQuery('')}
                             className="mt-2 rounded-md px-2 py-1 text-[11px] font-semibold text-[#F7941D] transition-colors hover:bg-[#F7941D]/10"
                           >
                             Wyczyść wyszukiwanie
