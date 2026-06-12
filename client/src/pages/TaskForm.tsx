@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
   ArrowLeft,
@@ -35,8 +35,15 @@ import { getFileUrl } from '../api/axios-config';
 const TaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const isEdit = !!id;
+  const rawReturnTo = searchParams.get('returnTo');
+  const returnTo =
+    rawReturnTo && rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//')
+      ? rawReturnTo
+      : '/tasks';
+  const navigateBack = () => navigate(returnTo);
 
   const [task, setTask] = useState<Task | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -233,7 +240,7 @@ const TaskForm = () => {
       } else {
         await taskApi.createTask(payload as CreateTaskRequest);
       }
-      navigate('/tasks');
+      navigateBack();
     } catch (error: any) {
       console.error('Failed to save task:', error);
       setError(error.response?.data?.message || 'Nie udało się zapisać zadania');
@@ -248,7 +255,7 @@ const TaskForm = () => {
     try {
       setIsDeleting(true);
       await taskApi.deleteTask(id);
-      navigate('/tasks');
+      navigateBack();
     } catch (error: any) {
       console.error('Failed to delete task:', error);
       setError(error.response?.data?.message || 'Nie udało się usunąć zadania');
@@ -478,7 +485,7 @@ const TaskForm = () => {
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-wrap items-start gap-4">
             <button
-              onClick={() => navigate('/tasks')}
+              onClick={navigateBack}
               className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-300 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10"
               aria-label="Wróć do listy zadań"
             >
@@ -851,7 +858,7 @@ const TaskForm = () => {
             <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
               <button
                 type="button"
-                onClick={() => navigate('/tasks')}
+                onClick={navigateBack}
                 className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Anuluj

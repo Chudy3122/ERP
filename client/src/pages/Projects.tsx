@@ -14,8 +14,16 @@ import {
   X,
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
-import { Project, ProjectStatus, ProjectPriority, ProjectStatistics } from '../types/project.types';
+import {
+  Project,
+  ProjectStatus,
+  ProjectPriority,
+  ProjectStatistics,
+  ProjectMember,
+  ProjectMemberRole,
+} from '../types/project.types';
 import { getFileUrl } from '../api/axios-config';
+import type { User } from '../types/user.types';
 
 type ViewFilter = 'all' | 'active' | 'completed' | 'planning';
 type ProjectTypeFilter = 'all' | 'ongoing' | 'deadline';
@@ -24,6 +32,7 @@ const Projects = () => {
   const { t } = useTranslation('projects');
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStatistics>>({});
+  const [projectMembersById, setProjectMembersById] = useState<Record<string, ProjectMember[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
@@ -74,7 +83,19 @@ const Projects = () => {
         }
       });
 
-      const statsResults = await Promise.all(statsPromises);
+      const membersPromises = result.projects.map(async project => {
+        try {
+          const members = await projectApi.getProjectMembers(project.id);
+          return { id: project.id, members };
+        } catch {
+          return { id: project.id, members: [] };
+        }
+      });
+
+      const [statsResults, membersResults] = await Promise.all([
+        Promise.all(statsPromises),
+        Promise.all(membersPromises),
+      ]);
       const statsMap: Record<string, ProjectStatistics> = {};
       statsResults.forEach(result => {
         if (result.stats) {
@@ -82,6 +103,12 @@ const Projects = () => {
         }
       });
       setProjectStats(statsMap);
+
+      const membersMap: Record<string, ProjectMember[]> = {};
+      membersResults.forEach(result => {
+        membersMap[result.id] = result.members;
+      });
+      setProjectMembersById(membersMap);
     } catch (error) {
       console.error('Failed to load projects:', error);
     } finally {
@@ -180,6 +207,42 @@ const Projects = () => {
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  };
+
+  const getUserDisplayName = (userItem?: User) => {
+    if (!userItem) return '';
+    return `${userItem.first_name || ''} ${userItem.last_name || ''}`.trim() || userItem.email || '';
+  };
+
+  const getProjectMemberRoleRank = (role: ProjectMemberRole) => {
+    const ranks = {
+      [ProjectMemberRole.LEAD]: 0,
+      [ProjectMemberRole.OBSERVER]: 1,
+      [ProjectMemberRole.MEMBER]: 2,
+    };
+
+    return ranks[role] ?? 99;
+  };
+
+  const getProjectDisplayOwner = (project: Project) => {
+    const activeMembers = projectMembersById[project.id] ?? [];
+    const preferredMember = [...activeMembers]
+      .filter(member => member.user)
+      .sort((firstMember, secondMember) => {
+        const roleDiff =
+          getProjectMemberRoleRank(firstMember.role) - getProjectMemberRoleRank(secondMember.role);
+        if (roleDiff !== 0) return roleDiff;
+
+        return getUserDisplayName(firstMember.user).localeCompare(
+          getUserDisplayName(secondMember.user),
+          'pl',
+          { sensitivity: 'base' }
+        );
+      })[0];
+
+    if (preferredMember?.user) return preferredMember.user;
+
+    return project.manager || project.creator;
   };
 
   const isOverdue = (dateString: string) => {
@@ -492,6 +555,7 @@ const Projects = () => {
                       bar: 'bg-slate-700',
                     };
                 const stats = projectStats[project.id];
+                const displayOwner = getProjectDisplayOwner(project);
 
                 return (
                   <button
@@ -517,24 +581,24 @@ const Projects = () => {
                           </span>
                         </div>
                         <div className="mt-1 flex items-center gap-3">
-                          {project.manager && (
+                          {displayOwner && (
                             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              {project.manager.avatar_url ? (
+                              {displayOwner.avatar_url ? (
                                 <img
-                                  src={getFileUrl(project.manager.avatar_url) || ''}
+                                  src={getFileUrl(displayOwner.avatar_url) || ''}
                                   alt=""
                                   className="h-4 w-4 rounded-full object-cover"
                                 />
                               ) : (
                                 <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-600">
                                   {getInitials(
-                                    project.manager.first_name,
-                                    project.manager.last_name
+                                    displayOwner.first_name,
+                                    displayOwner.last_name
                                   )}
                                 </div>
                               )}
                               <span>
-                                {project.manager.first_name} {project.manager.last_name}
+                                {displayOwner.first_name} {displayOwner.last_name}
                               </span>
                             </div>
                           )}

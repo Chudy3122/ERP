@@ -24,7 +24,7 @@ import { Task, TaskStatus, TaskPriority } from '../types/task.types';
 import { Project } from '../types/project.types';
 import { useAuth } from '../contexts/AuthContext';
 
-type FilterTab = 'my' | 'all' | 'today' | 'tomorrow' | 'week' | 'twoweeks' | 'overdue';
+type FilterTab = 'my' | 'created' | 'all' | 'today' | 'tomorrow' | 'week' | 'twoweeks' | 'overdue';
 type AssigneeFilter = 'all' | 'mine' | 'unassigned';
 
 const getFilterTabFromDueParam = (due: string | null): FilterTab => {
@@ -165,6 +165,9 @@ const Tasks = () => {
           case 'all':
             data = await taskApi.getTasks();
             break;
+          case 'created':
+            data = await taskApi.getTasks();
+            break;
           default:
             data = await taskApi.getMyTasks();
         }
@@ -204,6 +207,18 @@ const Tasks = () => {
     return task.assignee ? [task.assignee] : [];
   };
 
+  const isTaskAssignedToCurrentUser = (task: Task) => {
+    if (!user?.id) return false;
+
+    return (
+      task.assigned_to === user.id ||
+      task.assignee?.id === user.id ||
+      getTaskAssignees(task).some(person => person.id === user.id)
+    );
+  };
+
+  const isTaskCreatedByCurrentUser = (task: Task) => Boolean(user?.id && task.created_by === user.id);
+
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
     const lastInitial = lastName?.[0] || '';
@@ -211,8 +226,22 @@ const Tasks = () => {
     return `${firstInitial}${lastInitial}`.toUpperCase() || '?';
   };
 
+  const tabScopedTasks = tasks.filter(task => {
+    if (!selectedProjectId) {
+      if (activeTab === 'my' && !isTaskAssignedToCurrentUser(task)) {
+        return false;
+      }
+
+      if (activeTab === 'created' && !isTaskCreatedByCurrentUser(task)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   // Filter tasks
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = tabScopedTasks.filter(task => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
@@ -263,11 +292,11 @@ const Tasks = () => {
 
   // Stats
   const stats = {
-    total: tasks.length,
-    todo: tasks.filter(t => t.status === TaskStatus.TODO).length,
-    inProgress: tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
-    done: tasks.filter(t => t.status === TaskStatus.DONE).length,
-    overdue: tasks.filter(t =>
+    total: tabScopedTasks.length,
+    todo: tabScopedTasks.filter(t => t.status === TaskStatus.TODO).length,
+    inProgress: tabScopedTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
+    done: tabScopedTasks.filter(t => t.status === TaskStatus.DONE).length,
+    overdue: tabScopedTasks.filter(t =>
       t.due_date &&
       new Date(t.due_date) < new Date() &&
       t.status !== TaskStatus.DONE
@@ -423,6 +452,7 @@ const Tasks = () => {
             <nav className="flex flex-wrap gap-2">
               {[
                 { key: 'my', label: t('my') },
+                { key: 'created', label: 'Utworzone przeze mnie' },
                 { key: 'all', label: t('all') },
                 { key: 'today', label: t('today') },
                 { key: 'tomorrow', label: t('tomorrow') },

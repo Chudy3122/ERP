@@ -71,11 +71,14 @@ export interface UpdateProjectRequest {
   description?: string;
   status?: ProjectStatus;
   priority?: ProjectPriority;
+  created_by?: string;
+  creator?: Partial<User> | null;
   start_date?: string;
   target_end_date?: string | null;
   actual_end_date?: string;
   budget?: number;
-  manager_id?: string;
+  manager_id?: string | null;
+  manager?: Partial<User> | null;
   is_archived?: boolean;
 }
 

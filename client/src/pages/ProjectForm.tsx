@@ -10,6 +10,8 @@ import {
   Users,
   ChevronDown,
   Check,
+  Layers,
+  CheckSquare,
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import * as templateApi from '../api/projectTemplate.api';
@@ -229,6 +231,7 @@ const ProjectForm = () => {
       .toLowerCase()
       .includes(query);
   });
+  const selectedTemplate = templates.find(template => template.id === formData.template_id);
   const selectedMembers = availableMembers.filter(member => selectedMemberIds.includes(member.id));
   const areAllMembersSelected =
     availableMembers.length > 0 &&
@@ -291,33 +294,136 @@ const ProjectForm = () => {
         )}
 
         {/* Template selector (only for new projects) */}
-        {!isEdit && templates.length > 0 && (
-          <div className="mb-6 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <LayoutTemplate className="w-5 h-5 text-gray-500" />
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Szablon projektu (opcjonalnie)
-              </h3>
+        {!isEdit && (
+          <div className="mb-6 rounded-xl border border-[#F7941D]/20 bg-white p-5 shadow-sm dark:border-[#F7941D]/30 dark:bg-gray-800">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
+                  <LayoutTemplate className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                    Szybsze tworzenie
+                  </p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Utwórz na podstawie szablonu
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                    Wybierz gotowy układ etapów i zadań. W tym formularzu uzupełnisz tylko dane konkretnego projektu.
+                  </p>
+                </div>
+              </div>
+              {formData.template_id && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, template_id: undefined }))}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Wyczyść szablon
+                </button>
+              )}
             </div>
-            <select
-              value={formData.template_id || ''}
-              onChange={e =>
-                setFormData(prev => ({ ...prev, template_id: e.target.value || undefined }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-            >
-              <option value="">Bez szablonu (domyślne etapy)</option>
-              {templates.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.stages?.length || 0} etapów, {t.tasks?.length || 0} zadań)
-                </option>
-              ))}
-            </select>
-            {formData.template_id && (
-              <p className="mt-2 text-xs text-gray-500">
-                Po utworzeniu projektu zostaną automatycznie utworzone etapy i zadania z wybranego
-                szablonu.
-              </p>
+
+            {templates.length > 0 ? (
+              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Szablon projektu
+                  </label>
+                  <select
+                    value={formData.template_id || ''}
+                    onChange={e =>
+                      setFormData(prev => ({ ...prev, template_id: e.target.value || undefined }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 outline-none transition-colors focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">Bez szablonu - utwórz pusty projekt z domyślnymi etapami</option>
+                    {templates.map(template => (
+                      <option key={template.id} value={template.id}>
+                        {template.name} ({template.stages?.length || 0} etapów, {template.tasks?.length || 0} zadań)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Po zapisaniu projektu system automatycznie utworzy etapy i zadania z wybranego szablonu.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                  {selectedTemplate ? (
+                    <div>
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {selectedTemplate.name}
+                          </h3>
+                          {selectedTemplate.description && (
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              {selectedTemplate.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="rounded-full bg-[#F7941D]/10 px-2 py-1 text-xs font-semibold text-[#F7941D]">
+                          Wybrany
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-white p-3 dark:bg-gray-800">
+                          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <Layers className="h-3.5 w-3.5" />
+                            Etapy
+                          </div>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {selectedTemplate.stages?.length || 0}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-white p-3 dark:bg-gray-800">
+                          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <CheckSquare className="h-3.5 w-3.5" />
+                            Zadania
+                          </div>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {selectedTemplate.tasks?.length || 0}
+                          </p>
+                        </div>
+                      </div>
+
+                      {(selectedTemplate.tasks || []).length > 0 && (
+                        <div className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1">
+                          {(selectedTemplate.tasks || []).slice(0, 5).map(task => (
+                            <div
+                              key={task.id || `${task.title}-${task.order_index}`}
+                              className="truncate rounded-md bg-white px-2 py-1.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                              {task.title}
+                            </div>
+                          ))}
+                          {(selectedTemplate.tasks || []).length > 5 && (
+                            <p className="px-2 pt-1 text-xs text-gray-400">
+                              +{(selectedTemplate.tasks || []).length - 5} kolejnych zadań
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex h-full min-h-[128px] flex-col items-center justify-center text-center">
+                      <LayoutTemplate className="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        Nie wybrano szablonu
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Projekt zostanie utworzony z domyślnymi etapami.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-400">
+                Nie ma jeszcze zapisanych szablonów projektów. Możesz utworzyć projekt ręcznie albo zapisać istniejący projekt jako szablon z jego widoku szczegółów.
+              </div>
             )}
           </div>
         )}

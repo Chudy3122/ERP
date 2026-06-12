@@ -29,11 +29,13 @@ import {
   FolderOpen,
   MessageSquare,
   ArrowUpDown,
+  LayoutTemplate,
 } from 'lucide-react';
 import * as projectApi from '../api/project.api';
 import * as workLogApi from '../api/worklog.api';
 import * as userApi from '../api/user.api';
 import * as taskApi from '../api/task.api';
+import * as templateApi from '../api/projectTemplate.api';
 import {
   Project,
   ProjectStage,
@@ -47,6 +49,7 @@ import {
 import type { ProjectTimeStats } from '../types/worklog.types';
 import type { AdminUser } from '../types/admin.types';
 import { Task, TaskPriority, TaskStatus } from '../types/task.types';
+import { TemplateTaskPriority } from '../types/projectTemplate.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -118,6 +121,11 @@ const ProjectDetail = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeletingFile, setIsDeletingFile] = useState<string | null>(null);
+  const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [templateError, setTemplateError] = useState('');
+  const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
 
   // Confirm dialogs
   const [showDeleteStageConfirm, setShowDeleteStageConfirm] = useState(false);
@@ -125,6 +133,7 @@ const ProjectDetail = () => {
 
   const { t } = useTranslation();
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  const canCreateProjectTemplate = user?.role === 'admin';
   // Member management is also allowed for the project's creator / manager
   const canManageMembers =
     isAdmin ||
@@ -284,8 +293,8 @@ const ProjectDetail = () => {
   const getProjectMemberRoleSortRank = (role: ProjectMemberRole) => {
     const ranks = {
       [ProjectMemberRole.LEAD]: 0,
-      [ProjectMemberRole.MEMBER]: 1,
-      [ProjectMemberRole.OBSERVER]: 2,
+      [ProjectMemberRole.OBSERVER]: 1,
+      [ProjectMemberRole.MEMBER]: 2,
     };
     return ranks[role] ?? 99;
   };
@@ -371,6 +380,35 @@ const ProjectDetail = () => {
       .includes(query);
   });
 
+  const getProjectOwnershipSuccessor = (removedUserId: string) => {
+    const rolePriority = {
+      [ProjectMemberRole.LEAD]: 0,
+      [ProjectMemberRole.OBSERVER]: 1,
+      [ProjectMemberRole.MEMBER]: 2,
+    };
+
+    return [...visibleMembers]
+      .filter(member => member.user_id !== removedUserId)
+      .sort((firstMember, secondMember) => {
+        const roleDiff = rolePriority[firstMember.role] - rolePriority[secondMember.role];
+        if (roleDiff !== 0) return roleDiff;
+
+        return getUserDisplayName(firstMember.user).localeCompare(
+          getUserDisplayName(secondMember.user),
+          'pl',
+          { sensitivity: 'base' }
+        );
+      })[0];
+  };
+
+  const projectDisplayOwner = project
+    ? getProjectOwnershipSuccessor('')?.user ||
+      (project.manager_id && visibleMembers.some(member => member.user_id === project.manager_id)
+        ? project.manager
+        : undefined) ||
+      (visibleMembers.some(member => member.user_id === project.created_by) ? project.creator : undefined)
+    : undefined;
+
   const handleAddProjectMember = async (userId: string) => {
     if (!id) return;
 
@@ -387,16 +425,122 @@ const ProjectDetail = () => {
   };
 
   const handleRemoveProjectMember = async (userId: string) => {
-    if (!id) return;
+    if (!id || !project) return;
 
     try {
       setMemberActionUserId(userId);
+      const shouldTransferCreator = project.created_by === userId;
+      const shouldTransferManager = project.manager_id === userId;
+      const successor = shouldTransferCreator || shouldTransferManager
+        ? getProjectOwnershipSuccessor(userId)
+        : undefined;
+
+      if ((shouldTransferCreator || shouldTransferManager) && successor) {
+        const updatePayload = {
+          ...(shouldTransferCreator
+            ? { created_by: successor.user_id, creator: { id: successor.user_id } }
+            : {}),
+          ...(shouldTransferManager
+            ? { manager_id: successor.user_id, manager: { id: successor.user_id } }
+            : {}),
+        };
+        const updatedProject = await projectApi.updateProject(id, updatePayload);
+        setProject(updatedProject);
+      } else if (shouldTransferManager && !successor) {
+        const updatedProject = await projectApi.updateProject(id, {
+          manager_id: null,
+          manager: null,
+        });
+        setProject(updatedProject);
+      }
+
       await projectApi.removeProjectMember(id, userId);
+      if (shouldTransferCreator || shouldTransferManager) {
+        const refreshedProject = await projectApi.getProjectById(id);
+        setProject(refreshedProject);
+      }
       await loadMembers();
     } catch (error) {
       console.error('Failed to remove project member:', error);
     } finally {
       setMemberActionUserId(null);
+    }
+  };
+
+  const openCreateTemplateModal = () => {
+    if (!project) return;
+    setTemplateName(`Szablon: ${project.name}`);
+    setTemplateDescription(project.description || '');
+    setTemplateError('');
+    setShowCreateTemplateModal(true);
+  };
+
+  const handleCreateTemplateFromProject = async () => {
+    if (!id || !project) return;
+
+    if (!templateName.trim()) {
+      setTemplateError('Nazwa szablonu jest wymagana');
+      return;
+    }
+
+    try {
+      setIsCreatingTemplate(true);
+      setTemplateError('');
+
+      const [projectStages, projectTasks] = await Promise.all([
+        projectApi.getProjectStages(id),
+        taskApi.getProjectTasks(id),
+      ]);
+
+      const sortedStages = [...projectStages].sort((firstStage, secondStage) => {
+        const positionDiff = firstStage.position - secondStage.position;
+        if (positionDiff !== 0) return positionDiff;
+        return firstStage.name.localeCompare(secondStage.name, 'pl', { sensitivity: 'base' });
+      });
+      const stagePositionById = new Map(
+        sortedStages.map((stage, index) => [stage.id, index])
+      );
+
+      const payload = {
+        name: templateName.trim(),
+        description: templateDescription.trim() || undefined,
+        stages: sortedStages.map((stage, index) => ({
+          name: stage.name,
+          description: stage.description,
+          color: stage.color,
+          position: index,
+          is_completed_stage: stage.is_completed_stage,
+        })),
+        tasks: [...projectTasks]
+          .sort((firstTask, secondTask) => {
+            const stageDiff =
+              (stagePositionById.get(firstTask.stage_id || '') ?? 0) -
+              (stagePositionById.get(secondTask.stage_id || '') ?? 0);
+            if (stageDiff !== 0) return stageDiff;
+            return (firstTask.order_index ?? 0) - (secondTask.order_index ?? 0);
+          })
+          .map((task, index) => ({
+            stage_position: stagePositionById.get(task.stage_id || '') ?? 0,
+            title: task.title,
+            description: task.description,
+            priority: task.priority as unknown as TemplateTaskPriority,
+            estimated_hours: task.estimated_hours,
+            order_index: index,
+          })),
+      };
+
+      await templateApi.createTemplate(payload);
+      setShowCreateTemplateModal(false);
+      setTemplateName('');
+      setTemplateDescription('');
+    } catch (error: any) {
+      console.error('Failed to create project template:', error);
+      setTemplateError(
+        error.response?.data?.message ||
+          'Nie udało się utworzyć szablonu. Sprawdź, czy masz uprawnienia administratora.'
+      );
+    } finally {
+      setIsCreatingTemplate(false);
     }
   };
 
@@ -433,7 +577,7 @@ const ProjectDetail = () => {
       }
     }
     mouseStartPos.current = null;
-    navigate(`/tasks/${taskId}/edit`);
+    navigate(`/tasks/${taskId}/edit?returnTo=${encodeURIComponent(`/projects/${id}`)}`);
   };
 
   const getTaskAssigneeIds = (task: Task) =>
@@ -1024,10 +1168,18 @@ const ProjectDetail = () => {
   const filterTasks = (tasks: Task[]) => {
     if (!searchQuery) return tasks;
     const query = searchQuery.toLowerCase();
-    return tasks.filter(
-      task =>
-        task.title.toLowerCase().includes(query) || task.description?.toLowerCase().includes(query)
-    );
+    return tasks.filter(task => {
+      const assignedPeopleText = getTaskAssignedPeople(task)
+        .map(person => `${person.first_name} ${person.last_name} ${person.email || ''}`)
+        .join(' ')
+        .toLowerCase();
+
+      return (
+        task.title.toLowerCase().includes(query) ||
+        Boolean(task.description?.toLowerCase().includes(query)) ||
+        assignedPeopleText.includes(query)
+      );
+    });
   };
 
   const tabs = [
@@ -1181,23 +1333,37 @@ const ProjectDetail = () => {
                   )}
                 </span>
               )}
-              {project.manager && (
+              {projectDisplayOwner && (
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-lg">
                   <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <span className="font-medium text-gray-700 dark:text-gray-300">
-                    {project.manager.first_name} {project.manager.last_name}
+                    {projectDisplayOwner.first_name} {projectDisplayOwner.last_name}
                   </span>
                 </span>
               )}
             </div>
           </div>
-          <button
-            onClick={() => navigate(`/tasks/new?project=${id}`)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all font-semibold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5"
-          >
-            <Plus className="w-4 h-4" />
-            {t('tasks.newTask')}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canCreateProjectTemplate && (
+              <button
+                type="button"
+                onClick={openCreateTemplateModal}
+                className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-[#F7941D]/40 hover:bg-[#F7941D]/5 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-[#F7941D]/10"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                Zapisz jako szablon
+              </button>
+            )}
+            <button
+              onClick={() =>
+                navigate(`/tasks/new?project=${id}&returnTo=${encodeURIComponent(`/projects/${id}`)}`)
+              }
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all font-semibold text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5"
+            >
+              <Plus className="w-4 h-4" />
+              {t('tasks.newTask')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1511,25 +1677,27 @@ const ProjectDetail = () => {
                     Usuń
                   </button>
                 </div>
-                <div className="relative w-72 max-w-full">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder={t('tasks.searchTasks')}
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 transition-all placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2 top-1/2 rounded-md p-1 text-gray-400 transition-colors -translate-y-1/2 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                      aria-label="Wyczyść wyszukiwanie"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                <div className="w-80 max-w-full">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                    <input
+                      type="text"
+                      placeholder="Szukaj zadań w kanbanie..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 transition-all placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 rounded-md p-1 text-gray-400 transition-colors -translate-y-1/2 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                        aria-label="Wyczyść wyszukiwanie"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1578,7 +1746,6 @@ const ProjectDetail = () => {
               const sortMeta = getColumnSortMeta(curSort);
               const isOver = dragOverStage === stageId;
               const stageColor = stage?.color || '#6B7280';
-              const isUnassignedStage = !stage;
 
               return (
                 <div
@@ -1593,7 +1760,7 @@ const ProjectDetail = () => {
                 >
                   {/* Column header */}
                   <div
-                    className="flex items-start justify-between gap-3 px-3 py-3"
+                    className="flex flex-col gap-2 px-3 py-3"
                     style={{
                       background: `linear-gradient(135deg, ${stageColor}25 0%, ${stageColor}15 100%)`,
                       borderBottom: `2px solid ${stageColor}40`,
@@ -1604,29 +1771,36 @@ const ProjectDetail = () => {
                         className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-800"
                         style={{ backgroundColor: stageColor }}
                       />
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-start justify-between gap-2">
+                          <span className="min-w-0 whitespace-normal break-words text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
                             {stage?.name || t('projects.noStage') || 'Bez etapu'}
                           </span>
-                          <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">
+                          <span className="mt-0.5 shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">
                             {searchQuery ? `${filteredTasks.length}/${tasks.length}` : tasks.length}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                          {isUnassignedStage ? 'Zadania bez przypisanego etapu' : 'Etap projektu'}
-                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex justify-end">
+                      <div className="inline-flex items-center gap-1 rounded-lg bg-white/60 p-1 shadow-sm ring-1 ring-white/70 dark:bg-gray-800/60 dark:ring-gray-700/70">
+                      <button
+                        type="button"
+                        onClick={() => handleStartQuickTask(stageId)}
+                        title="Dodaj zadanie w tej kolumnie"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#F7941D] text-white transition-colors hover:bg-[#e08317]"
+                        aria-label="Dodaj zadanie w tej kolumnie"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => cycleColumnSort(stageId)}
                         title={sortMeta.title}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all hover:bg-white/80 dark:hover:bg-gray-700/80 ${
+                        className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-semibold transition-colors ${
                           curSort !== 'manual'
-                            ? 'border-[#F7941D]/40 bg-white/80 text-[#F7941D] shadow-sm dark:bg-gray-800/80'
-                            : 'border-white/70 bg-white/60 text-gray-500 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300'
+                            ? 'bg-[#F7941D]/10 text-[#F7941D]'
+                            : 'text-gray-500 hover:bg-white/80 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/80 dark:hover:text-gray-100'
                         }`}
                       >
                         <ArrowUpDown className="h-3.5 w-3.5" />
@@ -1636,12 +1810,13 @@ const ProjectDetail = () => {
                         <button
                           type="button"
                           onClick={() => handleOpenEditStage(stage)}
-                          className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/80 hover:text-gray-700 dark:hover:bg-gray-700/80 dark:hover:text-gray-200"
                           aria-label="Opcje etapu"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
                       )}
+                      </div>
                     </div>
                   </div>
 
@@ -1654,6 +1829,35 @@ const ProjectDetail = () => {
                         : undefined,
                     }}
                   >
+                    {/* Quick task input */}
+                    {quickTaskStageId === stageId && (
+                      <div className="rounded-lg border-2 border-[#F7941D] bg-white p-2 shadow-md dark:bg-gray-800">
+                        <input
+                          ref={quickTaskInputRef}
+                          type="text"
+                          value={quickTaskTitle}
+                          onChange={e => setQuickTaskTitle(e.target.value)}
+                          onKeyDown={handleQuickTaskKeyDown}
+                          onBlur={() => {
+                            if (!quickTaskTitle.trim()) {
+                              setQuickTaskStageId(null);
+                            }
+                          }}
+                          placeholder={t('tasks.enterTitle') || 'Wpisz tytuł zadania...'}
+                          className="w-full text-xs border-0 focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 font-medium"
+                          disabled={isCreatingQuickTask}
+                        />
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
+                            Enter - {t('common.save')}, Esc - {t('common.cancel')}
+                          </span>
+                          {isCreatingQuickTask && (
+                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {filteredTasks.map((task) => {
                       const priorityConfig = getPriorityConfig(task.priority);
                       const isDragging = draggedTask?.id === task.id;
@@ -1853,34 +2057,8 @@ const ProjectDetail = () => {
                       </div>
                     )}
 
-                    {/* Quick task input */}
-                    {quickTaskStageId === stageId ? (
-                      <div className="rounded-lg border-2 border-[#F7941D] bg-white p-2 shadow-md dark:bg-gray-800">
-                        <input
-                          ref={quickTaskInputRef}
-                          type="text"
-                          value={quickTaskTitle}
-                          onChange={e => setQuickTaskTitle(e.target.value)}
-                          onKeyDown={handleQuickTaskKeyDown}
-                          onBlur={() => {
-                            if (!quickTaskTitle.trim()) {
-                              setQuickTaskStageId(null);
-                            }
-                          }}
-                          placeholder={t('tasks.enterTitle') || 'Wpisz tytuł zadania...'}
-                          className="w-full text-xs border-0 focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 font-medium"
-                          disabled={isCreatingQuickTask}
-                        />
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
-                            Enter - {t('common.save')}, Esc - {t('common.cancel')}
-                          </span>
-                          {isCreatingQuickTask && (
-                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
-                          )}
-                        </div>
-                      </div>
-                    ) : (
+                    {/* Bottom quick add button */}
+                    {quickTaskStageId !== stageId && (
                       <button
                         type="button"
                         onClick={() => handleStartQuickTask(stageId)}
@@ -2426,6 +2604,87 @@ const ProjectDetail = () => {
                   Zapisz
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Template Modal */}
+      {showCreateTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
+                  <LayoutTemplate className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Zapisz projekt jako szablon
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Szablon zapisze aktualne etapy i zadania. Nazwę, opis, terminy i zespół ustawisz już przy tworzeniu nowego projektu.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateTemplateModal(false)}
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                aria-label="Zamknij"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {templateError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                {templateError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Nazwa szablonu
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={event => setTemplateName(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  placeholder="np. Wdrożenie standardowe"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Opis
+                </label>
+                <textarea
+                  value={templateDescription}
+                  onChange={event => setTemplateDescription(event.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  placeholder="Krótki opis, kiedy używać tego szablonu"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setShowCreateTemplateModal(false)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateTemplateFromProject}
+                disabled={isCreatingTemplate || !templateName.trim()}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isCreatingTemplate && <Loader2 className="h-4 w-4 animate-spin" />}
+                Utwórz szablon
+              </button>
             </div>
           </div>
         </div>
