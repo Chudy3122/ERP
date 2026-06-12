@@ -37,7 +37,7 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: TaskPriority;
-  assigned_to?: string;
+  assigned_to?: string | null;
   created_by: string;
   estimated_hours?: number;
   actual_hours?: number;
@@ -64,7 +64,7 @@ export interface CreateTaskRequest {
   description?: string;
   status?: TaskStatus;
   priority: TaskPriority;
-  assigned_to?: string;
+  assigned_to?: string | null;
   assignee_ids?: string[];
   estimated_hours?: number;
   due_date?: string | null;
@@ -76,7 +76,7 @@ export interface UpdateTaskRequest {
   description?: string;
   status?: TaskStatus;
   priority?: TaskPriority;
-  assigned_to?: string;
+  assigned_to?: string | null;
   assignee_ids?: string[];
   estimated_hours?: number;
   actual_hours?: number;

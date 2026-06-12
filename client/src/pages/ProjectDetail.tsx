@@ -86,6 +86,10 @@ const ProjectDetail = () => {
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
+  const [bulkAssigneeId, setBulkAssigneeId] = useState('');
+  const [bulkUnassignId, setBulkUnassignId] = useState('');
+  const [isBulkAssigning, setIsBulkAssigning] = useState(false);
+  const [isBulkUnassigning, setIsBulkUnassigning] = useState(false);
   const [columnSort, setColumnSort] = useState<Record<string, 'manual' | 'date_asc' | 'date_desc'>>({});
   const isDraggingRef = useRef(false);
   const mouseStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -179,8 +183,19 @@ const ProjectDetail = () => {
 
   const loadTasksByStages = async () => {
     try {
-      const data = await projectApi.getTasksByStages(id!);
-      setTasksByStages(data);
+      const [data, projectTasks] = await Promise.all([
+        projectApi.getTasksByStages(id!),
+        taskApi.getProjectTasks(id!),
+      ]);
+      const tasksById = new Map(projectTasks.map(task => [task.id, task]));
+      const enrichedData = data.map(group => ({
+        ...group,
+        tasks: group.tasks.map(task => ({
+          ...task,
+          ...tasksById.get(task.id),
+        })),
+      }));
+      setTasksByStages(enrichedData);
     } catch (error) {
       console.error('Failed to load tasks by stages:', error);
     }
@@ -421,30 +436,97 @@ const ProjectDetail = () => {
     navigate(`/tasks/${taskId}/edit`);
   };
 
+  const getTaskAssigneeIds = (task: Task) =>
+    Array.from(new Set([
+      ...(task.assignees?.map(person => person.id) ?? []),
+      ...(task.assigned_to ? [task.assigned_to] : []),
+    ]));
+
+  const getTaskMutationAssigneeIds = (task: Task) =>
+    Array.from(new Set([
+      ...getTaskAssigneeIds(task),
+      ...(task.assignee?.id ? [task.assignee.id] : []),
+    ]));
+
+  const getFullTaskForAssignment = async (task: Task) => {
+    try {
+      const fullTask = await taskApi.getTaskById(task.id);
+      return { ...task, ...fullTask };
+    } catch (error) {
+      console.error('Failed to load full task assignment data:', error);
+      return task;
+    }
+  };
+
+  const getAssignmentPayload = (assigneeIds: string[]) => ({
+    assignee_ids: assigneeIds,
+    assigned_to: assigneeIds[0] ?? null,
+    assignee: assigneeIds[0] ? { id: assigneeIds[0] } : null,
+  });
+
+  const replaceTaskInStages = (taskId: string, updater: (task: Task) => Task) => {
+    setTasksByStages(prev =>
+      prev.map(group => ({
+        ...group,
+        tasks: group.tasks.map(task => (task.id === taskId ? updater(task) : task)),
+      }))
+    );
+  };
+
+  const removeAssigneeFromTaskState = (taskId: string, userId: string, nextAssigneeIds: string[]) => {
+    replaceTaskInStages(taskId, task => ({
+      ...task,
+      assignees: task.assignees?.filter(person => person.id !== userId) ?? [],
+      assignee: task.assignee?.id === userId ? undefined : task.assignee,
+      assigned_to: nextAssigneeIds[0] ?? null,
+    }));
+  };
+
+  const getTaskAssignedPeople = (task: Task) => {
+    const assigneeIds = getTaskAssigneeIds(task);
+    const peopleById = new Map<string, NonNullable<Task['assignees']>[number]>();
+
+    task.assignees?.forEach(person => {
+      if (assigneeIds.includes(person.id)) {
+        peopleById.set(person.id, person);
+      }
+    });
+
+    if (task.assignee && assigneeIds.includes(task.assignee.id)) {
+      peopleById.set(task.assignee.id, task.assignee);
+    }
+
+    assigneeIds.forEach(assigneeId => {
+      if (peopleById.has(assigneeId)) return;
+
+      const projectMember = assignableProjectMembers.find(member => member.user_id === assigneeId);
+      if (projectMember?.user) {
+        peopleById.set(assigneeId, projectMember.user);
+      }
+    });
+
+    return Array.from(peopleById.values());
+  };
+
   const handleAssignTask = async (event: React.ChangeEvent<HTMLSelectElement>, task: Task) => {
     event.stopPropagation();
     const assigneeId = event.target.value;
-    const currentAssigneeIds =
-      task.assignees && task.assignees.length > 0
-        ? task.assignees.map(person => person.id)
-        : task.assigned_to
-          ? [task.assigned_to]
-          : [];
 
-    if (
-      !assigneeId ||
-      currentAssigneeIds.includes(assigneeId)
-    ) {
+    if (!assigneeId) {
       return;
     }
 
     try {
       setAssigningTaskId(task.id);
+      const fullTask = await getFullTaskForAssignment(task);
+      const currentAssigneeIds = getTaskMutationAssigneeIds(fullTask);
+
+      if (currentAssigneeIds.includes(assigneeId)) {
+        return;
+      }
+
       const nextAssigneeIds = [...currentAssigneeIds, assigneeId];
-      await taskApi.updateTask(task.id, {
-        assignee_ids: nextAssigneeIds,
-        assigned_to: nextAssigneeIds[0],
-      });
+      await taskApi.updateTask(task.id, getAssignmentPayload(nextAssigneeIds));
       await loadTasksByStages();
     } catch (error) {
       console.error('Failed to assign task:', error);
@@ -460,25 +542,72 @@ const ProjectDetail = () => {
   ) => {
     event.stopPropagation();
 
-    const currentAssigneeIds =
-      task.assignees && task.assignees.length > 0
-        ? task.assignees.map(person => person.id)
-        : task.assigned_to
-          ? [task.assigned_to]
-          : [];
-    const nextAssigneeIds = currentAssigneeIds.filter(assigneeId => assigneeId !== userId);
-
     try {
       setAssigningTaskId(task.id);
-      await taskApi.updateTask(task.id, {
-        assignee_ids: nextAssigneeIds,
-        assigned_to: nextAssigneeIds[0],
-      });
+      const fullTask = await getFullTaskForAssignment(task);
+      const currentAssigneeIds = getTaskMutationAssigneeIds(fullTask);
+      const nextAssigneeIds = currentAssigneeIds.filter(assigneeId => assigneeId !== userId);
+      await taskApi.updateTask(task.id, getAssignmentPayload(nextAssigneeIds));
+      removeAssigneeFromTaskState(task.id, userId, nextAssigneeIds);
       await loadTasksByStages();
     } catch (error) {
       console.error('Failed to remove task assignee:', error);
     } finally {
       setAssigningTaskId(null);
+    }
+  };
+
+  const handleBulkAssignTasks = async () => {
+    if (!bulkAssigneeId) return;
+
+    try {
+      setIsBulkAssigning(true);
+      const allTasks = await taskApi.getProjectTasks(id!);
+      const tasksToUpdate = allTasks.filter(task => !getTaskMutationAssigneeIds(task).includes(bulkAssigneeId));
+
+      if (tasksToUpdate.length === 0) return;
+
+      await Promise.all(
+        tasksToUpdate.map(task => {
+          const nextAssigneeIds = [...getTaskMutationAssigneeIds(task), bulkAssigneeId];
+          return taskApi.updateTask(task.id, getAssignmentPayload(nextAssigneeIds));
+        })
+      );
+      setBulkAssigneeId('');
+      await loadTasksByStages();
+    } catch (error) {
+      console.error('Failed to bulk assign tasks:', error);
+    } finally {
+      setIsBulkAssigning(false);
+    }
+  };
+
+  const handleBulkUnassignTasks = async () => {
+    if (!bulkUnassignId) return;
+
+    try {
+      setIsBulkUnassigning(true);
+      const allTasks = await taskApi.getProjectTasks(id!);
+      const tasksToUpdate = allTasks.filter(task => getTaskMutationAssigneeIds(task).includes(bulkUnassignId));
+
+      if (tasksToUpdate.length === 0) return;
+
+      await Promise.all(
+        tasksToUpdate.map(task => {
+          const nextAssigneeIds = getTaskMutationAssigneeIds(task).filter(assigneeId => assigneeId !== bulkUnassignId);
+          return taskApi.updateTask(task.id, getAssignmentPayload(nextAssigneeIds));
+        })
+      );
+      tasksToUpdate.forEach(task => {
+        const nextAssigneeIds = getTaskMutationAssigneeIds(task).filter(assigneeId => assigneeId !== bulkUnassignId);
+        removeAssigneeFromTaskState(task.id, bulkUnassignId, nextAssigneeIds);
+      });
+      setBulkUnassignId('');
+      await loadTasksByStages();
+    } catch (error) {
+      console.error('Failed to bulk unassign tasks:', error);
+    } finally {
+      setIsBulkUnassigning(false);
     }
   };
 
@@ -965,6 +1094,24 @@ const ProjectDetail = () => {
     (sum, group) => sum + filterTasks(group.tasks).length,
     0
   );
+  const bulkAssigneeName =
+    assignableProjectMembers.find(member => member.user_id === bulkAssigneeId)?.user
+      ? getUserDisplayName(assignableProjectMembers.find(member => member.user_id === bulkAssigneeId)?.user)
+      : '';
+  const bulkAssignableTaskCount = bulkAssigneeId
+    ? tasksByStages
+        .flatMap(group => group.tasks)
+        .filter(task => !getTaskMutationAssigneeIds(task).includes(bulkAssigneeId)).length
+    : 0;
+  const bulkUnassignName =
+    assignableProjectMembers.find(member => member.user_id === bulkUnassignId)?.user
+      ? getUserDisplayName(assignableProjectMembers.find(member => member.user_id === bulkUnassignId)?.user)
+      : '';
+  const bulkUnassignableTaskCount = bulkUnassignId
+    ? tasksByStages
+        .flatMap(group => group.tasks)
+        .filter(task => getTaskMutationAssigneeIds(task).includes(bulkUnassignId)).length
+    : 0;
 
   return (
     <MainLayout title={project.name}>
@@ -1278,6 +1425,92 @@ const ProjectDetail = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-gray-900">
+                  <select
+                    value={bulkAssigneeId}
+                    onChange={event => setBulkAssigneeId(event.target.value)}
+                    disabled={isBulkAssigning || assignableProjectMembers.length === 0 || totalTaskCount === 0}
+                    className="h-9 min-w-[210px] rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition-colors focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    title="Wybierz osobę z zespołu projektu"
+                  >
+                    <option value="">
+                      {assignableProjectMembers.length > 0 ? 'Przypisz do wszystkich zadań' : 'Brak osób w zespole'}
+                    </option>
+                    {assignableProjectMembers.map(member => (
+                      <option key={member.user_id} value={member.user_id}>
+                        {getUserDisplayName(member.user)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleBulkAssignTasks}
+                    disabled={
+                      isBulkAssigning ||
+                      !bulkAssigneeId ||
+                      bulkAssignableTaskCount === 0 ||
+                      totalTaskCount === 0
+                    }
+                    className="inline-flex h-9 items-center gap-2 rounded-md bg-[#F7941D] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                    title={
+                      bulkAssigneeId
+                        ? bulkAssignableTaskCount > 0
+                          ? `Przypisz ${bulkAssigneeName} do ${bulkAssignableTaskCount} zadań`
+                          : 'Ta osoba jest już przypisana do wszystkich zadań'
+                        : 'Najpierw wybierz osobę'
+                    }
+                  >
+                    {isBulkAssigning ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Users className="h-3.5 w-3.5" />
+                    )}
+                    Przypisz
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-gray-900">
+                  <select
+                    value={bulkUnassignId}
+                    onChange={event => setBulkUnassignId(event.target.value)}
+                    disabled={isBulkUnassigning || assignableProjectMembers.length === 0 || totalTaskCount === 0}
+                    className="h-9 min-w-[210px] rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition-colors focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    title="Wybierz osobę z zespołu projektu"
+                  >
+                    <option value="">
+                      {assignableProjectMembers.length > 0 ? 'Usuń ze wszystkich' : 'Brak osób w zespole'}
+                    </option>
+                    {assignableProjectMembers.map(member => (
+                      <option key={member.user_id} value={member.user_id}>
+                        {getUserDisplayName(member.user)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleBulkUnassignTasks}
+                    disabled={
+                      isBulkUnassigning ||
+                      !bulkUnassignId ||
+                      bulkUnassignableTaskCount === 0 ||
+                      totalTaskCount === 0
+                    }
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/50 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-900/20"
+                    title={
+                      bulkUnassignId
+                        ? bulkUnassignableTaskCount > 0
+                          ? `Usuń ${bulkUnassignName} z ${bulkUnassignableTaskCount} zadań`
+                          : 'Ta osoba nie jest przypisana do żadnego zadania'
+                        : 'Najpierw wybierz osobę'
+                    }
+                  >
+                    {isBulkUnassigning ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <X className="h-3.5 w-3.5" />
+                    )}
+                    Usuń
+                  </button>
+                </div>
                 <div className="relative w-72 max-w-full">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                   <input
@@ -1427,13 +1660,8 @@ const ProjectDetail = () => {
                       const isDragTarget = dragOverTaskId === task.id && draggedTask?.stage_id === task.stage_id;
                       const priorityAccent = getTaskPriorityAccent(task.priority);
                       const overdue = isTaskOverdue(task);
-                      const assignedPeople =
-                        task.assignees && task.assignees.length > 0
-                          ? task.assignees
-                          : task.assignee
-                            ? [task.assignee]
-                            : [];
-                      const assignedPersonIds = assignedPeople.map(person => person.id);
+                      const assignedPeople = getTaskAssignedPeople(task);
+                      const assignedPersonIds = getTaskAssigneeIds(task);
                       const availableAssignees = assignableProjectMembers.filter(
                         member => !assignedPersonIds.includes(member.user_id)
                       );
