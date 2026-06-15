@@ -7,7 +7,7 @@ import StatusSelector from '../status/StatusSelector';
 import { useAutoAway } from '../../hooks/useAutoAway';
 import { StatusType, STATUS_COLORS } from '../../types/status.types';
 import * as statusApi from '../../api/status.api';
-import AIAssistant from '../helpdesk/AIAssistant';
+// import AIAssistant from '../helpdesk/AIAssistant'; // temporarily disabled (no OpenAI billing)
 import FloatingChatPanel from '../chat/FloatingChatPanel';
 import ChatMeetToast from '../notifications/ChatMeetToast';
 import IncomingCallOverlay from '../meeting/IncomingCallOverlay';
@@ -727,8 +727,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       {/* Floating Chat Panel */}
       <FloatingChatPanel />
 
-      {/* AI Helpdesk Assistant */}
-      <AIAssistant />
+      {/* AI Helpdesk Assistant — temporarily hidden (no OpenAI billing/credits).
+          Re-enable by uncommenting once the OpenAI account is funded. */}
+      {/* <AIAssistant /> */}
 
       {/* Chat & Meet toast notifications */}
       <ChatMeetToast />
