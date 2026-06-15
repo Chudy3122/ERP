@@ -5,6 +5,10 @@ import dotenv from 'dotenv';
 import path from 'path';
 import apiRoutes from './routes';
 
+// Load .env.local first (e.g. a Neon dev branch for localhost) — it takes
+// precedence; dotenv never overrides keys already set. On Render there is no
+// .env.local, so the platform's env vars are used.
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const app: Application = express();

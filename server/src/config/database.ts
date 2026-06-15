@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm';
 import dotenv from 'dotenv';
 import path from 'path';
 
+// .env.local (e.g. a Neon dev branch) overrides .env for local development.
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 // Support DATABASE_URL (Neon, Railway, Heroku style) or individual vars
