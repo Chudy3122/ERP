@@ -15,7 +15,7 @@ const FloatingChatButton: React.FC<FloatingChatButtonProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`fixed bottom-6 right-24 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 z-50 ${
+      className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 z-50 ${
         isOpen
           ? 'bg-gray-600 hover:bg-gray-700'
           : unreadCount > 0
