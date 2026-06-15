@@ -409,7 +409,7 @@ function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onSta
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function WorkTime() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'my' | 'attendance'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'attendance' | 'all'>('my');
 
   // Day state machine
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
@@ -439,6 +439,38 @@ export default function WorkTime() {
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>('week');
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+
+  // All-entries tab (admin/kadry): edit everyone's work time
+  const monthStartStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; })();
+  const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const [allFrom, setAllFrom] = useState(monthStartStr);
+  const [allTo, setAllTo] = useState(todayStr());
+  const [allSearch, setAllSearch] = useState('');
+  const [allTypeFilter, setAllTypeFilter] = useState<'all' | 'auto' | 'manual'>('all');
+  const [allStatusFilter, setAllStatusFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
+  const [allSort, setAllSort] = useState<'date_desc' | 'date_asc' | 'name' | 'duration_desc'>('date_desc');
+  const [allPage, setAllPage] = useState(1);
+  const [allPageSize, setAllPageSize] = useState<10 | 30 | 50>(30);
+
+  async function loadAllEntries() {
+    setAllLoading(true);
+    try {
+      const data = await timeApi.getAllTimeEntries(allFrom || undefined, allTo ? `${allTo}T23:59:59` : undefined);
+      setAllEntries(data);
+    } catch {
+      setAllEntries([]);
+    } finally {
+      setAllLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'all' && isManager) loadAllEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, allFrom, allTo]);
+
+  useEffect(() => { setAllPage(1); }, [allSearch, allTypeFilter, allStatusFilter, allSort, allPageSize, allFrom, allTo]);
 
   useEffect(() => { loadMyData(); }, []);
 
@@ -557,6 +589,7 @@ export default function WorkTime() {
       toast.success('Wpis zaktualizowany');
       setEditEntry(null);
       await loadMyData();
+      if (activeTab === 'all') await loadAllEntries();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Nie udało się zapisać wpisu');
     } finally {
@@ -570,6 +603,7 @@ export default function WorkTime() {
       await timeApi.deleteTimeEntry(deleteEntryId);
       toast.success('Wpis usunięty');
       await loadMyData();
+      if (activeTab === 'all') await loadAllEntries();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Nie udało się usunąć wpisu');
     } finally {
@@ -875,6 +909,30 @@ export default function WorkTime() {
     ? 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10'
     : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800';
 
+  // ── All-entries tab: filter + sort + paginate ──
+  const allSearchNorm = allSearch.trim().toLocaleLowerCase('pl');
+  const allFilteredEntries = allEntries
+    .filter((e) => {
+      const u = (e as any).user;
+      if (allSearchNorm && !(u ? `${u.last_name} ${u.first_name}`.toLocaleLowerCase('pl').includes(allSearchNorm) : false)) return false;
+      if (allTypeFilter === 'manual' && !e.is_manual) return false;
+      if (allTypeFilter === 'auto' && e.is_manual) return false;
+      if (allStatusFilter !== 'all' && e.status !== allStatusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (allSort === 'date_asc') return new Date(a.clock_in).getTime() - new Date(b.clock_in).getTime();
+      if (allSort === 'duration_desc') return (b.duration_minutes || 0) - (a.duration_minutes || 0);
+      if (allSort === 'name') {
+        const ua = (a as any).user, ub = (b as any).user;
+        return `${ua?.last_name ?? ''} ${ua?.first_name ?? ''}`.localeCompare(`${ub?.last_name ?? ''} ${ub?.first_name ?? ''}`, 'pl');
+      }
+      return new Date(b.clock_in).getTime() - new Date(a.clock_in).getTime();
+    });
+  const allTotalPages = Math.max(1, Math.ceil(allFilteredEntries.length / allPageSize));
+  const allPageStart = (allPage - 1) * allPageSize;
+  const allPageEntries = allFilteredEntries.slice(allPageStart, allPageStart + allPageSize);
+
   return (
     <MainLayout title="Czas pracy">
       {isManager && showManualEntry && (
@@ -1013,10 +1071,11 @@ export default function WorkTime() {
           {[
             { id: 'my', label: 'Mój czas pracy', icon: Clock },
             { id: 'attendance', label: 'Frekwencja pracowników', icon: Users },
+            ...(isManager ? [{ id: 'all', label: 'Wszystkie czasy pracy', icon: Calendar }] : []),
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id as 'my' | 'attendance')}
+              onClick={() => setActiveTab(id as 'my' | 'attendance' | 'all')}
               className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === id
                   ? 'border-[#F7941D] text-[#F7941D]'
@@ -1534,6 +1593,138 @@ export default function WorkTime() {
               </div>
             </div>
           ) : null}
+        </div>
+      )}
+
+      {/* ── ALL TIME ENTRIES TAB (admin / kadry) ── */}
+      {activeTab === 'all' && isManager && (
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[200px] flex-1">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
+                <input
+                  type="search"
+                  value={allSearch}
+                  onChange={(e) => setAllSearch(e.target.value)}
+                  placeholder="Szukaj po nazwisku..."
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Od</label>
+                <input type="date" value={allFrom} max={allTo || undefined} onChange={(e) => setAllFrom(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Do</label>
+                <input type="date" value={allTo} min={allFrom || undefined} onChange={(e) => setAllTo(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Typ</label>
+                <select value={allTypeFilter} onChange={(e) => setAllTypeFilter(e.target.value as any)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="all">Wszystkie</option>
+                  <option value="auto">Automatyczny</option>
+                  <option value="manual">Ręczny</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</label>
+                <select value={allStatusFilter} onChange={(e) => setAllStatusFilter(e.target.value as any)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="all">Wszystkie</option>
+                  <option value="in_progress">W pracy</option>
+                  <option value="completed">Zakończone</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sortuj</label>
+                <select value={allSort} onChange={(e) => setAllSort(e.target.value as any)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value="date_desc">Data: najnowsze</option>
+                  <option value="date_asc">Data: najstarsze</option>
+                  <option value="name">Nazwisko (A–Z)</option>
+                  <option value="duration_desc">Czas pracy: malejąco</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Wszystkie czasy pracy</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Edytuj lub usuń wpis, jeśli ktoś się źle odkliknął lub zapomniał.</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>{allFilteredEntries.length} wpisów · Na stronie</span>
+                <select value={allPageSize} onChange={(e) => setAllPageSize(Number(e.target.value) as 10 | 30 | 50)} className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                  <option value={10}>10</option>
+                  <option value={30}>30</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Pracownik</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Data</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Rozpoczęcie</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Zakończenie</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Czas pracy</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Typ</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Opis</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Akcje</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {allLoading ? (
+                    <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie…</td></tr>
+                  ) : allPageEntries.length === 0 ? (
+                    <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Brak wpisów w wybranym zakresie.</td></tr>
+                  ) : (
+                    allPageEntries.map((entry) => {
+                      const u = (entry as any).user;
+                      const fmtT = (d: string) => new Date(d).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                      const inProgress = entry.status === 'in_progress';
+                      return (
+                        <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                          <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{u ? `${u.last_name} ${u.first_name}` : '—'}</td>
+                          <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{new Date(entry.clock_in).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                          <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">{fmtT(entry.clock_in)}</td>
+                          <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">{entry.clock_out ? fmtT(entry.clock_out) : <span className="font-sans text-[#F7941D]">W pracy</span>}</td>
+                          <td className="px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-white">{inProgress ? <span className="text-[#F7941D]">—</span> : formatDurationValue(entry.duration_minutes || 0)}</td>
+                          <td className="px-4 py-2.5 text-sm">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${entry.is_manual ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{entry.is_manual ? 'Ręczny' : 'Automatyczny'}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-sm">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${inProgress ? 'bg-orange-50 text-[#F7941D] dark:bg-orange-900/20' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}>{inProgress ? 'W pracy' : 'Zakończone'}</span>
+                          </td>
+                          <td className="px-4 py-2.5 max-w-[220px] truncate text-sm text-gray-600 dark:text-gray-400" title={entry.notes || ''}>{entry.notes || <span className="text-gray-400">—</span>}</td>
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            <button type="button" onClick={() => openEditEntry(entry)} title="Edytuj wpis" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700"><Pencil className="h-4 w-4" /></button>
+                            <button type="button" onClick={() => setDeleteEntryId(entry.id)} title="Usuń wpis" className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination */}
+            {allFilteredEntries.length > 0 && (
+              <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <span>Strona {allPage} / {allTotalPages}</span>
+                <div className="flex gap-2">
+                  <button disabled={allPage <= 1} onClick={() => setAllPage((p) => Math.max(1, p - 1))} className="rounded-lg border border-gray-200 px-3 py-1 disabled:opacity-50 dark:border-gray-600">Poprzednia</button>
+                  <button disabled={allPage >= allTotalPages} onClick={() => setAllPage((p) => Math.min(allTotalPages, p + 1))} className="rounded-lg border border-gray-200 px-3 py-1 disabled:opacity-50 dark:border-gray-600">Następna</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
       </div>

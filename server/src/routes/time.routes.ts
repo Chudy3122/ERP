@@ -38,10 +38,10 @@ router.get('/stats', timeController.getUserTimeStats);
 // Get attendance overview (all users, last N days)
 router.get('/attendance', timeController.getAttendance.bind(timeController));
 
-// Get all entries (admin/kierownik only)
+// Get all entries (admin/kadry = everyone, kierownik = own department)
 router.get(
   '/entries/all',
-  roleMiddleware([UserRole.ADMIN, UserRole.KIEROWNIK]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KIEROWNIK]),
   timeController.getAllTimeEntries
 );
 
