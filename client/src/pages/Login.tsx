@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Clock, Users, BarChart3, Shield } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Clock, Users, BarChart3, Shield, AlertCircle } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -14,16 +14,23 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    setLoginError('');
     setIsSubmitting(true);
     try {
       await login({ email, password });
       navigate('/dashboard');
-    } catch (error) {
-      // Error is handled in AuthContext with toast
+    } catch (error: any) {
+      const status = error?.response?.status;
+      setLoginError(
+        status === 401
+          ? 'Nieprawidłowy adres e-mail lub hasło.'
+          : 'Nie udało się zalogować. Spróbuj ponownie za chwilę.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -140,7 +147,10 @@ const Login = () => {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => {
+                    setEmail(e.target.value);
+                    if (loginError) setLoginError('');
+                  }}
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all duration-200"
                   placeholder={t('emailPlaceholder')}
                 />
@@ -161,7 +171,10 @@ const Login = () => {
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => {
+                    setPassword(e.target.value);
+                    if (loginError) setLoginError('');
+                  }}
                   className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all duration-200"
                   placeholder={t('passwordPlaceholder')}
                 />
@@ -174,6 +187,17 @@ const Login = () => {
                 </button>
               </div>
             </div>
+
+            {loginError && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
 
             {/* Submit */}
             <button

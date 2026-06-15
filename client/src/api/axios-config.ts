@@ -60,6 +60,16 @@ apiClient.interceptors.response.use(
   response => response,
   async (error: AxiosError) => {
     const originalRequest: any = error.config;
+    const requestUrl = originalRequest?.url || '';
+    const isPublicAuthRequest = ['/auth/login', '/auth/register', '/auth/refresh'].some(
+      endpoint => requestUrl.includes(endpoint),
+    );
+
+    // Błędne dane logowania mają wrócić do formularza, a nie uruchamiać
+    // mechanizm odświeżania sesji i przekierowanie na stronę logowania.
+    if (isPublicAuthRequest) {
+      return Promise.reject(error);
+    }
 
     // If error is 401 and we haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {

@@ -23,6 +23,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -275,15 +276,22 @@ function LoginModal({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError('');
     setIsSubmitting(true);
     try {
       await login({ email, password });
       navigate('/dashboard');
-    } catch {
-      // toast handled in AuthContext
+    } catch (error: any) {
+      const status = error?.response?.status;
+      setLoginError(
+        status === 401
+          ? 'Nieprawidłowy adres e-mail lub hasło.'
+          : 'Nie udało się zalogować. Spróbuj ponownie za chwilę.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -322,7 +330,10 @@ function LoginModal({ onClose }: { onClose: () => void }) {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (loginError) setLoginError('');
+                }}
                 placeholder="twoj@email.pl"
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all"
               />
@@ -338,7 +349,10 @@ function LoginModal({ onClose }: { onClose: () => void }) {
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (loginError) setLoginError('');
+                }}
                 placeholder="••••••••"
                 className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 focus:border-[#F7941D] transition-all"
               />
@@ -351,6 +365,17 @@ function LoginModal({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           </div>
+
+          {loginError && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{loginError}</span>
+            </div>
+          )}
 
           <button
             type="submit"

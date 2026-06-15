@@ -4,7 +4,7 @@ import MainLayout from '../components/layout/MainLayout';
 import { useTheme } from '../contexts/ThemeContext';
 import * as notificationPreferenceApi from '../api/notificationPreference.api';
 import { changePasswordApi } from '../api/auth.api';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { confirmDialog } from '../utils/confirm';
 import type { NotificationPreference, UpdateNotificationPreferencesData } from '../api/notificationPreference.api';
 import {

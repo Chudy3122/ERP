@@ -11,6 +11,11 @@ import {
   X,
   AlertCircle,
   ChevronDown,
+  Pencil,
+  Save,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -24,6 +29,10 @@ import { Task } from '../types/task.types';
 import type { AdminUser } from '../types/admin.types';
 
 type ModalType = 'overtime' | 'collection' | null;
+type ManageTypeFilter = 'all' | WorkLogType.OVERTIME | WorkLogType.OVERTIME_COMP;
+type ManageSort = 'newest' | 'oldest';
+type TeamBalanceFilter = 'all' | 'positive' | 'zero' | 'negative';
+type TeamSort = 'name' | 'balance_desc' | 'balance_asc' | 'overtime_desc';
 
 interface LogForm {
   work_date: string;
@@ -33,6 +42,14 @@ interface LogForm {
   project_id: string;
   task_id: string;
   user_id: string;
+}
+
+interface EditLogForm {
+  work_date: string;
+  hours: string;
+  minutes: string;
+  description: string;
+  work_type: WorkLogType.OVERTIME | WorkLogType.OVERTIME_COMP;
 }
 
 /** Format decimal hours (e.g. 6.03) as "6h 02min" / "45min" / "6h". */
@@ -69,34 +86,116 @@ export default function Overtime() {
   });
 
   const isAdmin = user?.role === 'admin';
+  const canManageEntries = user?.role === 'admin' || user?.role === 'ksiegowosc';
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   // Manage-entries modal (admin: view/delete a user's overtime entries)
   const [manageUser, setManageUser] = useState<OvertimeSummaryEntry | null>(null);
   const [manageLogs, setManageLogs] = useState<WorkLog[]>([]);
   const [manageLoading, setManageLoading] = useState(false);
+  const [manageSearch, setManageSearch] = useState('');
+  const [manageTypeFilter, setManageTypeFilter] = useState<ManageTypeFilter>('all');
+  const [manageSort, setManageSort] = useState<ManageSort>('newest');
+  const [managePage, setManagePage] = useState(1);
+  const [managePageSize, setManagePageSize] = useState<10 | 30 | 50>(10);
+  const [editingLog, setEditingLog] = useState<WorkLog | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState<EditLogForm>({
+    work_date: '',
+    hours: '',
+    minutes: '',
+    description: '',
+    work_type: WorkLogType.OVERTIME,
+  });
   const [myLogs, setMyLogs] = useState<WorkLog[]>([]);
   // Expandable team rows: view a person's entries inline (for those who see more than themselves)
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [expandedLogs, setExpandedLogs] = useState<WorkLog[]>([]);
   const [expandedLoading, setExpandedLoading] = useState(false);
+  const [teamSearch, setTeamSearch] = useState('');
+  const [teamDepartment, setTeamDepartment] = useState('all');
+  const [teamBalanceFilter, setTeamBalanceFilter] = useState<TeamBalanceFilter>('all');
+  const [teamSort, setTeamSort] = useState<TeamSort>('name');
   const canExpand = ['admin', 'ksiegowosc', 'szef', 'kierownik'].includes(user?.role || '');
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
 
   // Admin / księgowość / szef see everyone grouped by department
   const groupByDept = ['admin', 'ksiegowosc', 'szef'].includes(user?.role || '');
+  const teamDepartments = Array.from(
+    new Set(summary.map((entry) => entry.department || 'Bez działu')),
+  ).sort((a, b) => a.localeCompare(b, 'pl'));
+  const normalizedTeamSearch = teamSearch.trim().toLocaleLowerCase('pl');
+  const filteredTeamSummary = [...summary]
+    .filter((entry) => {
+      if (!normalizedTeamSearch) return true;
+      return `${entry.first_name} ${entry.last_name} ${entry.department || 'Bez działu'}`
+        .toLocaleLowerCase('pl')
+        .includes(normalizedTeamSearch);
+    })
+    .filter((entry) => teamDepartment === 'all' || (entry.department || 'Bez działu') === teamDepartment)
+    .filter((entry) => {
+      if (teamBalanceFilter === 'positive') return entry.balance > 0;
+      if (teamBalanceFilter === 'negative') return entry.balance < 0;
+      if (teamBalanceFilter === 'zero') return entry.balance === 0;
+      return true;
+    })
+    .sort((a, b) => {
+      if (teamSort === 'balance_desc') return b.balance - a.balance;
+      if (teamSort === 'balance_asc') return a.balance - b.balance;
+      if (teamSort === 'overtime_desc') return b.total_overtime - a.total_overtime;
+      return a.first_name.localeCompare(b.first_name, 'pl') || a.last_name.localeCompare(b.last_name, 'pl');
+    });
   const groupedSummary: Record<string, OvertimeSummaryEntry[]> = {};
   if (groupByDept) {
-    for (const entry of summary) {
+    for (const entry of filteredTeamSummary) {
       const key = entry.department || 'Bez działu';
       (groupedSummary[key] ||= []).push(entry);
     }
   }
   const deptKeys = Object.keys(groupedSummary).sort((a, b) => a.localeCompare(b, 'pl'));
+  const normalizedManageSearch = manageSearch.trim().toLocaleLowerCase('pl');
+  const filteredManageLogs = manageLogs
+    .filter((log) => manageTypeFilter === 'all' || log.work_type === manageTypeFilter)
+    .filter((log) => {
+      if (!normalizedManageSearch) return true;
+      const searchableText = [
+        log.description,
+        log.project?.name,
+        log.task?.title,
+        formatHM(log.hours),
+        new Date(log.work_date).toLocaleDateString('pl-PL'),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('pl');
+      return searchableText.includes(normalizedManageSearch);
+    })
+    .sort((a, b) => {
+      const difference = new Date(b.work_date).getTime() - new Date(a.work_date).getTime();
+      return manageSort === 'newest' ? difference : -difference;
+    });
+  const manageTotalPages = Math.max(1, Math.ceil(filteredManageLogs.length / managePageSize));
+  const managePageStart = (managePage - 1) * managePageSize;
+  const paginatedManageLogs = filteredManageLogs.slice(managePageStart, managePageStart + managePageSize);
+  const manageRangeStart = filteredManageLogs.length === 0 ? 0 : managePageStart + 1;
+  const manageRangeEnd = Math.min(managePageStart + managePageSize, filteredManageLogs.length);
+  const visiblePageStart = Math.max(1, Math.min(managePage - 2, manageTotalPages - 4));
+  const visibleManagePages = Array.from(
+    { length: Math.min(5, manageTotalPages) },
+    (_, index) => visiblePageStart + index,
+  );
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setManagePage(1);
+  }, [manageSearch, manageTypeFilter, manageSort, managePageSize]);
+
+  useEffect(() => {
+    setManagePage((page) => Math.min(page, manageTotalPages));
+  }, [manageTotalPages]);
 
   // Load tasks when project changes
   useEffect(() => {
@@ -176,6 +275,11 @@ export default function Overtime() {
   }
 
   async function openManage(entry: OvertimeSummaryEntry) {
+    if (!canManageEntries) return;
+    setManageSearch('');
+    setManageTypeFilter('all');
+    setManageSort('newest');
+    setManagePage(1);
     setManageUser(entry);
     setManageLoading(true);
     try {
@@ -186,6 +290,52 @@ export default function Overtime() {
       setManageLogs([]);
     } finally {
       setManageLoading(false);
+    }
+  }
+
+  function openEditLog(log: WorkLog) {
+    if (!canManageEntries) return;
+    const totalMinutes = Math.round(Number(log.hours) * 60);
+    setEditForm({
+      work_date: log.work_date.slice(0, 10),
+      hours: String(Math.floor(totalMinutes / 60)),
+      minutes: String(totalMinutes % 60),
+      description: log.description || '',
+      work_type: log.work_type as WorkLogType.OVERTIME | WorkLogType.OVERTIME_COMP,
+    });
+    setEditingLog(log);
+  }
+
+  async function handleUpdateLog() {
+    if (!editingLog || !canManageEntries) return;
+    const hours = parseInt(editForm.hours || '0', 10) || 0;
+    const minutes = parseInt(editForm.minutes || '0', 10) || 0;
+    if (minutes < 0 || minutes > 59) {
+      toast.error('Minuty muszą być z zakresu 0–59');
+      return;
+    }
+    const totalHours = hours + minutes / 60;
+    if (totalHours <= 0) {
+      toast.error('Podaj godziny lub minuty');
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const updated = await worklogApi.updateWorkLog(editingLog.id, {
+        work_date: editForm.work_date,
+        hours: totalHours,
+        description: editForm.description.trim(),
+        work_type: editForm.work_type,
+      });
+      setManageLogs((logs) => logs.map((log) => (log.id === updated.id ? updated : log)));
+      setEditingLog(null);
+      toast.success('Wpis nadgodzin został zaktualizowany');
+      await fetchData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się zaktualizować wpisu');
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -292,21 +442,24 @@ export default function Overtime() {
               <span className="block text-xs text-red-500">zaległe</span>
             )}
           </div>
-          {isAdmin && (
+          {canManageEntries && (
             <div className="flex flex-shrink-0 items-center gap-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); openModal('overtime', entry.user_id); }}
-                title="Dodaj nadgodziny temu pracownikowi"
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); openModal('overtime', entry.user_id); }}
+                  title="Dodaj nadgodziny temu pracownikowi"
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); openManage(entry); }}
-                title="Zarządzaj wpisami (usuń)"
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                title="Przejrzyj i edytuj wpisy"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/40 hover:bg-orange-50 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-orange-900/20"
               >
-                <Trash2 className="h-4 w-4" />
+                <Pencil className="h-3.5 w-3.5" />
+                Wpisy
               </button>
             </div>
           )}
@@ -534,10 +687,66 @@ export default function Overtime() {
 
         {/* Team Summary */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
-            <Users className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Zestawienie zespołu</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Zestawienie zespołu</h2>
+            </div>
+            {!loading && summary.length > 0 && (
+              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600">
+                {filteredTeamSummary.length} z {summary.length} osób
+              </span>
+            )}
           </div>
+
+          {!loading && summary.length > 0 && (
+            <div className="grid gap-3 border-b border-gray-100 p-4 dark:border-gray-700 md:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_190px_180px_210px]">
+              <label className="relative min-w-0">
+                <span className="sr-only">Szukaj pracownika</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="search"
+                  value={teamSearch}
+                  onChange={(e) => setTeamSearch(e.target.value)}
+                  placeholder="Szukaj pracownika lub działu..."
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </label>
+              <select
+                value={teamDepartment}
+                onChange={(e) => setTeamDepartment(e.target.value)}
+                aria-label="Filtruj pracowników po dziale"
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+              >
+                <option value="all">Wszystkie działy</option>
+                {teamDepartments.map((department) => (
+                  <option key={department} value={department}>{department}</option>
+                ))}
+              </select>
+              <select
+                value={teamBalanceFilter}
+                onChange={(e) => setTeamBalanceFilter(e.target.value as TeamBalanceFilter)}
+                aria-label="Filtruj pracowników po saldzie"
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+              >
+                <option value="all">Każde saldo</option>
+                <option value="positive">Dodatnie saldo</option>
+                <option value="zero">Saldo zerowe</option>
+                <option value="negative">Ujemne saldo</option>
+              </select>
+              <select
+                value={teamSort}
+                onChange={(e) => setTeamSort(e.target.value as TeamSort)}
+                aria-label="Sortuj zestawienie pracowników"
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+              >
+                <option value="name">Alfabetycznie po imieniu</option>
+                <option value="balance_desc">Najwyższe saldo</option>
+                <option value="balance_asc">Najniższe saldo</option>
+                <option value="overtime_desc">Najwięcej nadgodzin</option>
+              </select>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -555,6 +764,19 @@ export default function Overtime() {
               <p className="max-w-md text-sm text-gray-500 dark:text-gray-400">
                 Zacznij od dodania nadgodzin lub odboru
               </p>
+            </div>
+          ) : filteredTeamSummary.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+              <Search className="mb-3 h-8 w-8 text-gray-300 dark:text-gray-600" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Brak pasujących pracowników</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Zmień wyszukiwaną frazę lub wybrane filtry.</p>
+              <button
+                type="button"
+                onClick={() => { setTeamSearch(''); setTeamDepartment('all'); setTeamBalanceFilter('all'); }}
+                className="mt-4 text-sm font-semibold text-[#F7941D] hover:text-[#e08317]"
+              >
+                Wyczyść filtry
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -579,7 +801,7 @@ export default function Overtime() {
                         </tr>,
                         ...groupedSummary[dept].map((entry) => renderOvertimeRow(entry)),
                       ])
-                    : summary.map((entry) => renderOvertimeRow(entry))}
+                    : filteredTeamSummary.map((entry) => renderOvertimeRow(entry))}
                 </tbody>
               </table>
             </div>
@@ -589,8 +811,8 @@ export default function Overtime() {
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
             <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-gray-700">
               <div className="flex items-center gap-2">
                 {modal === 'overtime' ? (
@@ -635,9 +857,9 @@ export default function Overtime() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(260px,1.35fr)]">
+                <div className="min-w-0">
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Data</label>
                   <input
                     type="date"
                     value={form.work_date}
@@ -645,10 +867,10 @@ export default function Overtime() {
                     className={inputClass}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Czas</label>
-                  <div className="flex gap-2">
-                    <div className="flex flex-1 items-center gap-1.5">
+                <div className="min-w-0">
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Czas</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="min-w-0">
                       <input
                         type="number"
                         min="0"
@@ -656,11 +878,12 @@ export default function Overtime() {
                         value={form.hours}
                         onChange={(e) => setForm({ ...form, hours: e.target.value })}
                         placeholder="0"
+                        aria-label="Liczba godzin"
                         className={inputClass}
                       />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">godz.</span>
+                      <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">godziny</span>
                     </div>
-                    <div className="flex flex-1 items-center gap-1.5">
+                    <div className="min-w-0">
                       <input
                         type="number"
                         min="0"
@@ -668,9 +891,10 @@ export default function Overtime() {
                         value={form.minutes}
                         onChange={(e) => setForm({ ...form, minutes: e.target.value })}
                         placeholder="0"
+                        aria-label="Liczba minut"
                         className={inputClass}
                       />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">min.</span>
+                      <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">minuty</span>
                     </div>
                   </div>
                 </div>
@@ -766,37 +990,273 @@ export default function Overtime() {
         </div>
       )}
 
-      {/* Admin: manage a user's overtime entries */}
-      {manageUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setManageUser(null)}>
-          <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-200 p-5 dark:border-gray-700">
-              <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">Wpisy nadgodzin</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{manageUser.first_name} {manageUser.last_name}</p>
+      {/* Admin / księgowość: przeglądanie i edycja wpisów pracownika */}
+      {canManageEntries && manageUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setManageUser(null); setEditingLog(null); }}
+        >
+          <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
+                  <Pencil className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-gray-900 dark:text-white">Zarządzanie wpisami</h2>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {manageUser.first_name} {manageUser.last_name} · {manageLogs.length} wpisów
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setManageUser(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-4 w-4" /></button>
+              <button
+                onClick={() => { setManageUser(null); setEditingLog(null); }}
+                aria-label="Zamknij zarządzanie wpisami"
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
+
             <div className="flex-1 overflow-y-auto p-5">
               {manageLoading ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-[#F7941D]" /></div>
+                <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-[#F7941D]" /></div>
               ) : manageLogs.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">Brak wpisów nadgodzin / odbiorów.</p>
+                <div className="py-12 text-center">
+                  <Clock className="mx-auto mb-3 h-8 w-8 text-gray-300 dark:text-gray-600" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Brak wpisów nadgodzin lub odbiorów.</p>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {manageLogs.map((log) => (
-                    <div key={log.id} className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${log.work_type === WorkLogType.OVERTIME ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-300'}`}>
-                        {log.work_type === WorkLogType.OVERTIME ? 'Nadgodziny' : 'Odbiór'}
+                <div className="space-y-4">
+                  <div className="grid gap-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-700 dark:bg-gray-700/30 md:grid-cols-[minmax(220px,1fr)_180px_170px]">
+                    <label className="relative min-w-0">
+                      <span className="sr-only">Szukaj wpisów</span>
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="search"
+                        value={manageSearch}
+                        onChange={(e) => setManageSearch(e.target.value)}
+                        placeholder="Szukaj w opisie, projekcie lub dacie..."
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      />
+                    </label>
+                    <select
+                      value={manageTypeFilter}
+                      onChange={(e) => setManageTypeFilter(e.target.value as ManageTypeFilter)}
+                      aria-label="Filtruj rodzaj wpisu"
+                      className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      <option value="all">Wszystkie rodzaje</option>
+                      <option value={WorkLogType.OVERTIME}>Nadgodziny</option>
+                      <option value={WorkLogType.OVERTIME_COMP}>Odbiory</option>
+                    </select>
+                    <select
+                      value={manageSort}
+                      onChange={(e) => setManageSort(e.target.value as ManageSort)}
+                      aria-label="Sortuj wpisy po dacie"
+                      className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      <option value="newest">Najnowsze najpierw</option>
+                      <option value="oldest">Najstarsze najpierw</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span>
+                        Wyświetlane <strong className="font-semibold text-gray-700 dark:text-gray-200">{manageRangeStart}-{manageRangeEnd}</strong> z {filteredManageLogs.length} pasujących wpisów
                       </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{formatHM(log.hours)}</span>
-                      <span className="text-xs text-gray-400">{new Date(log.work_date).toLocaleDateString('pl-PL')}</span>
-                      <span className="flex-1 truncate text-xs text-gray-500 dark:text-gray-400" title={log.description || ''}>{log.description || ''}</span>
-                      <button onClick={() => handleDeleteLog(log.id)} title="Usuń" className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                      <label className="flex items-center gap-2">
+                        <span>Na stronie</span>
+                        <select
+                          value={managePageSize}
+                          onChange={(e) => setManagePageSize(Number(e.target.value) as 10 | 30 | 50)}
+                          className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                        >
+                          <option value={10}>10</option>
+                          <option value={30}>30</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </label>
                     </div>
-                  ))}
+                    {(manageSearch || manageTypeFilter !== 'all') && (
+                      <button
+                        type="button"
+                        onClick={() => { setManageSearch(''); setManageTypeFilter('all'); }}
+                        className="font-semibold text-[#F7941D] hover:text-[#e08317]"
+                      >
+                        Wyczyść filtry
+                      </button>
+                    )}
+                  </div>
+
+                  {filteredManageLogs.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center dark:border-gray-600">
+                      <Search className="mx-auto mb-2 h-6 w-6 text-gray-300 dark:text-gray-600" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Brak wpisów pasujących do filtrów.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="hidden grid-cols-[130px_100px_110px_minmax(0,1fr)_150px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400 md:grid">
+                        <span>Rodzaj</span>
+                        <span>Czas</span>
+                        <span>Data</span>
+                        <span>Opis</span>
+                        <span className="text-right">Akcje</span>
+                      </div>
+                      <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {paginatedManageLogs.map((log) => (
+                          <div key={log.id} className="grid gap-3 px-4 py-3 md:grid-cols-[130px_100px_110px_minmax(0,1fr)_150px] md:items-center">
+                            <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${log.work_type === WorkLogType.OVERTIME ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' : 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300'}`}>
+                              {log.work_type === WorkLogType.OVERTIME ? 'Nadgodziny' : 'Odbiór'}
+                            </span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatHM(log.hours)}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{new Date(log.work_date).toLocaleDateString('pl-PL')}</span>
+                            <span className="min-w-0 truncate text-sm text-gray-600 dark:text-gray-300" title={log.description || ''}>
+                              {log.description || <span className="text-gray-400">Bez opisu</span>}
+                            </span>
+                            <div className="flex items-center gap-2 md:justify-end">
+                              <button
+                                type="button"
+                                onClick={() => openEditLog(log)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/40 hover:bg-orange-50 hover:text-[#F7941D] dark:border-gray-600 dark:text-gray-300 dark:hover:bg-orange-900/20"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edytuj
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLog(log.id)}
+                                  title="Usuń wpis"
+                                  aria-label="Usuń wpis"
+                                  className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {filteredManageLogs.length > managePageSize && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setManagePage((page) => Math.max(1, page - 1))}
+                        disabled={managePage === 1}
+                        aria-label="Poprzednia strona"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+
+                      {visibleManagePages.map((page) => (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => setManagePage(page)}
+                          aria-label={`Strona ${page}`}
+                          aria-current={managePage === page ? 'page' : undefined}
+                          className={`h-9 min-w-9 rounded-lg px-2 text-xs font-semibold transition-colors ${
+                            managePage === page
+                              ? 'bg-[#F7941D] text-white'
+                              : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => setManagePage((page) => Math.min(manageTotalPages, page + 1))}
+                        disabled={managePage === manageTotalPages}
+                        aria-label="Następna strona"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {canManageEntries && editingLog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" onClick={() => setEditingLog(null)}>
+          <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Edytuj wpis</h2>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {manageUser?.first_name} {manageUser?.last_name}
+                </p>
+              </div>
+              <button onClick={() => setEditingLog(null)} aria-label="Zamknij edycję" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Rodzaj wpisu</label>
+                <select
+                  value={editForm.work_type}
+                  onChange={(e) => setEditForm({ ...editForm, work_type: e.target.value as EditLogForm['work_type'] })}
+                  className={selectClass}
+                >
+                  <option value={WorkLogType.OVERTIME}>Nadgodziny</option>
+                  <option value={WorkLogType.OVERTIME_COMP}>Odbiór nadgodzin</option>
+                </select>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Data</label>
+                  <input type="date" value={editForm.work_date} onChange={(e) => setEditForm({ ...editForm, work_date: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Czas</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <input type="number" min="0" max="24" value={editForm.hours} onChange={(e) => setEditForm({ ...editForm, hours: e.target.value })} className={`${inputClass} pr-11`} />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">godz.</span>
+                    </div>
+                    <div className="relative">
+                      <input type="number" min="0" max="59" value={editForm.minutes} onChange={(e) => setEditForm({ ...editForm, minutes: e.target.value })} className={`${inputClass} pr-10`} />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">min.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Opis</label>
+                <textarea
+                  rows={4}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Opis wpisu nadgodzin..."
+                  className={`${inputClass} resize-none`}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-gray-200 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800">
+              <button type="button" onClick={() => setEditingLog(null)} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                Anuluj
+              </button>
+              <button type="button" onClick={handleUpdateLog} disabled={editSaving} className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e08317] disabled:opacity-60">
+                {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Zapisz zmiany
+              </button>
             </div>
           </div>
         </div>

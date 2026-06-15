@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -13,11 +13,14 @@ import {
   Inbox,
   Loader2,
   RefreshCw,
+  TrendingUp,
   User,
 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import { getRecentActivities } from '../api/activity.api';
+import { getWorkLogById } from '../api/worklog.api';
 import { ActivityLog } from '../types/activity.types';
+import { WorkLogType } from '../types/worklog.types';
 
 const ENTITY_FILTERS = [
   { label: 'Wszystkie', value: 'all' },
@@ -25,9 +28,36 @@ const ENTITY_FILTERS = [
   { label: 'Zadania', value: 'task' },
   { label: 'Zgłoszenia', value: 'ticket' },
   { label: 'Czas pracy', value: 'work_log' },
+  { label: 'Nadgodziny', value: 'overtime' },
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 30, 50];
+
+const isOvertimeActivity = (activity: ActivityLog) =>
+  activity.entity_type === 'work_log' &&
+  [WorkLogType.OVERTIME, WorkLogType.OVERTIME_COMP].includes(activity.metadata?.work_type);
+
+const formatHours = (hours: number) => {
+  const totalMinutes = Math.round(Number(hours) * 60);
+  const fullHours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return [fullHours > 0 ? `${fullHours} godz.` : '', minutes > 0 ? `${minutes} min` : '']
+    .filter(Boolean)
+    .join(' ');
+};
+
+const getActivityDescription = (activity: ActivityLog) => {
+  if (!isOvertimeActivity(activity) || activity.metadata?.hours === undefined) {
+    return activity.description;
+  }
+
+  const duration = formatHours(activity.metadata.hours);
+
+  return activity.metadata.work_type === WorkLogType.OVERTIME_COMP
+    ? `Zarejestrowano odbiór ${duration} nadgodzin`
+    : `Zalogowano ${duration} nadgodzin`;
+};
 
 const Activities = () => {
   const navigate = useNavigate();
@@ -37,6 +67,7 @@ const Activities = () => {
   const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const workLogDetailsCache = useRef(new Map<string, { workType: WorkLogType; hours: number }>());
 
   useEffect(() => {
     loadActivities();
@@ -45,9 +76,13 @@ const Activities = () => {
   const filteredActivities = useMemo(() => {
     if (activeFilter === 'all') return activities;
 
+    if (activeFilter === 'overtime') {
+      return activities.filter((activity) => isOvertimeActivity(activity));
+    }
+
     if (activeFilter === 'work_log') {
       return activities.filter((activity) =>
-        ['work_log', 'time_entry'].includes(activity.entity_type),
+        ['work_log', 'time_entry'].includes(activity.entity_type) && !isOvertimeActivity(activity),
       );
     }
 
@@ -71,7 +106,43 @@ const Activities = () => {
       setIsLoading(true);
       setError('');
       const data = await getRecentActivities(100);
-      setActivities(data);
+      const enrichedActivities = await Promise.all(
+        data.map(async (activity) => {
+          if (activity.entity_type !== 'work_log' || !activity.entity_id) return activity;
+
+          const cachedDetails = workLogDetailsCache.current.get(activity.entity_id);
+
+          if (cachedDetails) {
+            return {
+              ...activity,
+              metadata: {
+                ...activity.metadata,
+                work_type: cachedDetails.workType,
+                hours: cachedDetails.hours,
+              },
+            };
+          }
+
+          try {
+            const workLog = await getWorkLogById(activity.entity_id);
+            const details = { workType: workLog.work_type, hours: workLog.hours };
+            workLogDetailsCache.current.set(activity.entity_id, details);
+
+            return {
+              ...activity,
+              metadata: {
+                ...activity.metadata,
+                work_type: details.workType,
+                hours: details.hours,
+              },
+            };
+          } catch {
+            return activity;
+          }
+        }),
+      );
+
+      setActivities(enrichedActivities);
     } catch {
       setError('Nie udało się pobrać aktywności.');
     } finally {
@@ -97,10 +168,14 @@ const Activities = () => {
     return `${firstName || ''} ${lastName || ''}`.trim();
   };
 
-  const getActivityIcon = (entityType: string) => {
+  const getActivityIcon = (activity: ActivityLog) => {
     const iconClass = 'h-5 w-5';
 
-    switch (entityType) {
+    if (isOvertimeActivity(activity)) {
+      return <TrendingUp className={iconClass} />;
+    }
+
+    switch (activity.entity_type) {
       case 'project':
         return <Folder className={iconClass} />;
       case 'task':
@@ -124,8 +199,12 @@ const Activities = () => {
     }
   };
 
-  const getActivityAccent = (entityType: string) => {
-    switch (entityType) {
+  const getActivityAccent = (activity: ActivityLog) => {
+    if (isOvertimeActivity(activity)) {
+      return 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300';
+    }
+
+    switch (activity.entity_type) {
       case 'project':
         return 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300';
       case 'task':
@@ -143,8 +222,10 @@ const Activities = () => {
     }
   };
 
-  const getEntityLabel = (entityType: string) => {
-    switch (entityType) {
+  const getEntityLabel = (activity: ActivityLog) => {
+    if (isOvertimeActivity(activity)) return 'Nadgodziny';
+
+    switch (activity.entity_type) {
       case 'project':
         return 'Projekt';
       case 'task':
@@ -196,6 +277,12 @@ const Activities = () => {
         break;
       case 'ticket':
         navigate(`/tickets/${activity.entity_id}/edit`);
+        break;
+      case 'time_entry':
+        navigate('/work-time');
+        break;
+      case 'work_log':
+        navigate(isOvertimeActivity(activity) ? '/overtime' : '/work-time');
         break;
       case 'user':
       case 'employee':
@@ -312,17 +399,17 @@ const Activities = () => {
                       activity.entity_id ? 'cursor-pointer' : 'cursor-default'
                     }`}
                   >
-                    <span className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${getActivityAccent(activity.entity_type)}`}>
-                      {getActivityIcon(activity.entity_type)}
+                    <span className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${getActivityAccent(activity)}`}>
+                      {getActivityIcon(activity)}
                     </span>
 
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {activity.description}
+                          {getActivityDescription(activity)}
                         </span>
                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-300">
-                          {getEntityLabel(activity.entity_type)}
+                          {getEntityLabel(activity)}
                         </span>
                       </span>
                       <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">

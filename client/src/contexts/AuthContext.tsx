@@ -71,9 +71,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       toast.success('Zalogowano pomyślnie!');
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message || 'Nie udało się zalogować. Sprawdź swoje dane.';
-      toast.error(message);
       throw error;
     }
   };
