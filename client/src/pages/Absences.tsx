@@ -33,6 +33,7 @@ type LeaveType =
 
 type RequestDateField = 'submitted' | 'absence';
 type AbsenceTab = 'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report';
+type LeaveDateMode = 'range' | 'multiple';
 
 const ABSENCES_ACTIVE_TAB_KEY = 'erp:absences:active-tab';
 const absenceTabs: AbsenceTab[] = ['my', 'pending', 'calendar', 'management', 'all', 'report'];
@@ -172,6 +173,10 @@ const Absences = () => {
   const [managementSuccess, setManagementSuccess] = useState('');
 
   const [oneDayLeave, setOneDayLeave] = useState(false);
+  const [leaveDateMode, setLeaveDateMode] = useState<LeaveDateMode>('range');
+  const [multipleDateDraft, setMultipleDateDraft] = useState('');
+  const [selectedLeaveDates, setSelectedLeaveDates] = useState<string[]>([]);
+  const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     leave_type: 'vacation' as LeaveType,
@@ -393,22 +398,105 @@ const Absences = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (leaveDateMode === 'multiple' && selectedLeaveDates.length === 0) {
+      toast.error('Dodaj przynajmniej jeden dzień nieobecności');
+      return;
+    }
+
+    setIsSubmittingLeave(true);
+
     try {
-      await timeApi.createLeaveRequest({
-        leaveType: formData.leave_type as any,
-        startDate: formData.start_date,
-        endDate: oneDayLeave ? formData.start_date : formData.end_date,
-        reason: formData.reason,
-        ...(canViewAllAbsences && formUserId ? { userId: formUserId } : {}),
-      });
+      if (leaveDateMode === 'multiple') {
+        const results = await Promise.allSettled(
+          selectedLeaveDates.map(date =>
+            timeApi.createLeaveRequest({
+              leaveType: formData.leave_type as any,
+              startDate: date,
+              endDate: date,
+              reason: formData.reason,
+              ...(canViewAllAbsences && formUserId ? { userId: formUserId } : {}),
+            }),
+          ),
+        );
+        const failedDates = selectedLeaveDates.filter((_, index) => results[index].status === 'rejected');
+        const createdCount = results.length - failedDates.length;
+
+        if (failedDates.length > 0) {
+          setSelectedLeaveDates(failedDates);
+          if (createdCount > 0) {
+            toast.error(`Utworzono ${createdCount} wniosków. Nie udało się zapisać ${failedDates.length}.`);
+            await loadData();
+          } else {
+            const firstError = results.find(result => result.status === 'rejected');
+            const message = firstError?.status === 'rejected'
+              ? firstError.reason?.response?.data?.message
+              : null;
+            toast.error(message || 'Nie udało się utworzyć wniosków');
+          }
+          return;
+        }
+
+        toast.success(`Utworzono ${createdCount} ${createdCount === 1 ? 'wniosek' : 'wnioski'}`);
+      } else {
+        await timeApi.createLeaveRequest({
+          leaveType: formData.leave_type as any,
+          startDate: formData.start_date,
+          endDate: oneDayLeave ? formData.start_date : formData.end_date,
+          reason: formData.reason,
+          ...(canViewAllAbsences && formUserId ? { userId: formUserId } : {}),
+        });
+        toast.success('Wniosek został złożony');
+      }
+
       setShowForm(false);
       setOneDayLeave(false);
+      setLeaveDateMode('range');
+      setMultipleDateDraft('');
+      setSelectedLeaveDates([]);
       setFormData({ leave_type: 'vacation', start_date: '', end_date: '', reason: '' });
       setFormUserId('');
-      loadData();
+      await loadData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się utworzyć wniosku');
+    } finally {
+      setIsSubmittingLeave(false);
     }
+  };
+
+  const addSelectedLeaveDate = () => {
+    if (!multipleDateDraft) {
+      toast.error('Wybierz datę');
+      return;
+    }
+
+    if (selectedLeaveDates.includes(multipleDateDraft)) {
+      toast.error('Ten dzień jest już dodany');
+      return;
+    }
+
+    setSelectedLeaveDates(currentDates =>
+      [...currentDates, multipleDateDraft].sort((firstDate, secondDate) =>
+        firstDate.localeCompare(secondDate),
+      ),
+    );
+    setMultipleDateDraft('');
+  };
+
+  const formatSelectedLeaveDate = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString('pl-PL', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+  const getLeaveRequestCountLabel = (count: number) => {
+    if (count === 1) return '1 wniosek';
+    if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)) {
+      return `${count} wnioski`;
+    }
+    return `${count} wniosków`;
   };
 
   const handleApprove = async (requestId: string) => {
@@ -1683,47 +1771,159 @@ const Absences = () => {
                   </select>
                 </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={oneDayLeave}
-                    onChange={e => {
-                      setOneDayLeave(e.target.checked);
-                      if (e.target.checked) setFormData(prev => ({ ...prev, end_date: '' }));
-                    }}
-                    className="w-4 h-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Urlop 1-dniowy</span>
-                </label>
-
-                <div className={`grid grid-cols-1 gap-4 ${oneDayLeave ? '' : 'sm:grid-cols-2'}`}>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      {oneDayLeave ? 'Data urlopu *' : 'Data początkowa *'}
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                      required
-                    />
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Sposób wyboru terminu
+                  </label>
+                  <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-700/50">
+                    <button
+                      type="button"
+                      onClick={() => setLeaveDateMode('range')}
+                      className={`h-9 rounded-md px-3 text-sm font-semibold transition-colors ${
+                        leaveDateMode === 'range'
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                          : 'text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white'
+                      }`}
+                    >
+                      Jeden zakres
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeaveDateMode('multiple');
+                        setOneDayLeave(false);
+                      }}
+                      className={`h-9 rounded-md px-3 text-sm font-semibold transition-colors ${
+                        leaveDateMode === 'multiple'
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                          : 'text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white'
+                      }`}
+                    >
+                      Pojedyncze dni
+                    </button>
                   </div>
-                  {!oneDayLeave && (
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Data końcowa *
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.end_date}
-                        onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        required
-                      />
-                    </div>
-                  )}
                 </div>
+
+                {leaveDateMode === 'range' ? (
+                  <>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={oneDayLeave}
+                        onChange={e => {
+                          setOneDayLeave(e.target.checked);
+                          if (e.target.checked) setFormData(prev => ({ ...prev, end_date: '' }));
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Nieobecność 1-dniowa</span>
+                    </label>
+
+                    <div className={`grid grid-cols-1 gap-4 ${oneDayLeave ? '' : 'sm:grid-cols-2'}`}>
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          {oneDayLeave ? 'Data nieobecności *' : 'Data początkowa *'}
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.start_date}
+                          onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          required
+                        />
+                      </div>
+                      {!oneDayLeave && (
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Data końcowa *
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.end_date}
+                            min={formData.start_date || undefined}
+                            onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <div className="min-w-0 flex-1">
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Dodaj dzień nieobecności
+                        </label>
+                        <input
+                          type="date"
+                          value={multipleDateDraft}
+                          onChange={e => setMultipleDateDraft(e.target.value)}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              addSelectedLeaveDate();
+                            }
+                          }}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addSelectedLeaveDate}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:border-[#F7941D]/40 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Dodaj dzień
+                      </button>
+                    </div>
+
+                    {selectedLeaveDates.length > 0 ? (
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Wybrane dni ({selectedLeaveDates.length})
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLeaveDates([])}
+                            className="text-xs font-semibold text-gray-500 hover:text-red-600 dark:text-gray-400"
+                          >
+                            Wyczyść
+                          </button>
+                        </div>
+                        {selectedLeaveDates.map(date => (
+                          <div
+                            key={date}
+                            className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+                          >
+                            <span className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                              <CalendarDays className="h-4 w-4 text-[#F7941D]" />
+                              {formatSelectedLeaveDate(date)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLeaveDates(currentDates => currentDates.filter(item => item !== date))}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                              aria-label={`Usuń datę ${formatSelectedLeaveDate(date)}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <p className="pt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                          Dla każdego dnia zostanie utworzony osobny wniosek z tym samym typem i powodem.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-lg border border-dashed border-gray-300 px-4 py-5 text-center dark:border-gray-600">
+                        <CalendarDays className="mx-auto h-6 w-6 text-gray-300 dark:text-gray-600" />
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Nie dodano jeszcze żadnego dnia.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -1742,15 +1942,23 @@ const Absences = () => {
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
+                    disabled={isSubmittingLeave}
                     className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                   >
                     Anuluj
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex h-10 items-center justify-center rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                    disabled={
+                      isSubmittingLeave ||
+                      (leaveDateMode === 'multiple' && selectedLeaveDates.length === 0)
+                    }
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
                   >
-                    Złóż wniosek
+                    {isSubmittingLeave && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {leaveDateMode === 'multiple'
+                      ? `Złóż ${getLeaveRequestCountLabel(selectedLeaveDates.length)}`
+                      : 'Złóż wniosek'}
                   </button>
                 </div>
               </form>
