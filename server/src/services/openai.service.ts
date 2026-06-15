@@ -50,15 +50,22 @@ export class OpenAIService {
       return completion.choices[0]?.message?.content || 'Przepraszam, nie udało mi się wygenerować odpowiedzi.';
     } catch (error: any) {
       console.error('OpenAI API error:', error);
+      const code = error?.code || error?.error?.code;
 
       if (error?.status === 401) {
-        throw new Error('Nieprawidłowy klucz API OpenAI');
+        throw new Error('Nieprawidłowy lub odwołany klucz API OpenAI (401).');
       }
       if (error?.status === 429) {
-        throw new Error('Przekroczono limit zapytań do API. Spróbuj ponownie za chwilę.');
+        if (code === 'insufficient_quota') {
+          throw new Error('Brak środków/billing na koncie OpenAI (insufficient_quota) — doładuj konto na platform.openai.com → Billing.');
+        }
+        throw new Error('Przekroczono limit zapytań do API OpenAI (429). Spróbuj ponownie za chwilę.');
+      }
+      if (error?.status === 404) {
+        throw new Error(`Model "gpt-3.5-turbo" niedostępny dla tego klucza (404).`);
       }
 
-      throw new Error('Wystąpił błąd podczas komunikacji z AI. Spróbuj ponownie.');
+      throw new Error(`Błąd OpenAI${code ? ` (${code})` : ''}: ${error?.message || 'nieznany błąd'}`);
     }
   }
 }
