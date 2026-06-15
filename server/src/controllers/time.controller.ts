@@ -18,11 +18,13 @@ export class TimeController {
   async clockIn(req: Request, res: Response): Promise<void> {
     try {
       const { notes, expectedClockIn, clockInTime, userId: targetUserId } = req.body;
-      // Admin / kadry may start a (backdated) timer on behalf of another employee
-      const canForOthers = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
-      const userId = canForOthers && targetUserId ? targetUserId : req.user!.userId;
+      // Only admin / kadry may set a manual (backdated) start time or clock in for
+      // someone else. Regular employees always clock in at "now".
+      const canManageTime = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const userId = canManageTime && targetUserId ? targetUserId : req.user!.userId;
+      const effClockInTime = canManageTime ? clockInTime : undefined;
 
-      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, clockInTime);
+      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, effClockInTime);
 
       res.status(201).json({
         success: true,
@@ -276,8 +278,13 @@ export class TimeController {
     try {
       const { id } = req.params;
       const { clock_in, clock_out, notes } = req.body;
-      const requester = { id: req.user!.userId, isAdmin: req.user!.role === UserRole.ADMIN };
-      const timeEntry = await timeService.updateTimeEntry(id, { clock_in, clock_out, notes }, requester);
+      // Editing hours is restricted to admin / kadry (regular users must not change times)
+      const canManageTime = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      if (!canManageTime) {
+        res.status(403).json({ success: false, message: 'Tylko administrator lub kadry mogą edytować godziny pracy' });
+        return;
+      }
+      const timeEntry = await timeService.updateTimeEntry(id, { clock_in, clock_out, notes });
       res.status(200).json({ success: true, data: timeEntry });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to update time entry' });
@@ -291,8 +298,13 @@ export class TimeController {
   async deleteTimeEntry(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const requester = { id: req.user!.userId, isAdmin: req.user!.role === UserRole.ADMIN };
-      await timeService.deleteTimeEntry(id, requester);
+      // Deleting time entries is restricted to admin / kadry
+      const canManageTime = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      if (!canManageTime) {
+        res.status(403).json({ success: false, message: 'Tylko administrator lub kadry mogą usuwać wpisy czasu pracy' });
+        return;
+      }
+      await timeService.deleteTimeEntry(id);
       res.status(200).json({ success: true });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to delete time entry' });

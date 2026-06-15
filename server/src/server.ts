@@ -49,9 +49,9 @@ const startServer = async () => {
     // Setup meeting handlers
     setupMeetingHandlers(io);
 
-    // Auto clock-out scheduler — every 5 minutes close entries running 8+ hours
+    // Auto clock-out after the user's etat hours is DISABLED — sessions run until
+    // ended manually by the user (or admin/kadry). Scheduler intentionally removed.
     const timeService = new TimeService();
-    setInterval(() => timeService.autoClockOutStale().catch(console.error), 5 * 60 * 1000);
 
     // Leave rollover (Automat 1 stycznia) — idempotent: rolls over any missed
     // year-boundary. Runs on boot and once a day so it fires after New Year.
