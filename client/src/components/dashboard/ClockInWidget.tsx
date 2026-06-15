@@ -147,7 +147,6 @@ const ClockInWidget = () => {
   const isClockedIn = currentEntry && currentEntry.status === TimeEntryStatus.IN_PROGRESS;
   const clockInTime = currentEntry ? new Date(currentEntry.clock_in).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
   const workingHoursPerDay = Number(user?.working_hours_per_day) || 8;
-  const autoEndTime = currentEntry ? new Date(new Date(currentEntry.clock_in).getTime() + workingHoursPerDay * 60 * 60 * 1000).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
   const expectedClockInTime = currentEntry?.expected_clock_in
     ? currentEntry.expected_clock_in.slice(0, 5)
     : null;
@@ -272,7 +271,7 @@ const ClockInWidget = () => {
                 </div>
               )}
               <div className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
-                Auto-zakończenie o {autoEndTime}
+                Pracę zakończysz ręcznie
               </div>
             </div>
 

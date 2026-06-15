@@ -427,7 +427,7 @@ export default function WorkTime() {
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
-  // Admin/kadry may add a completed entry (od–do) for any employee
+  // Ręczne wpisy czasu są dostępne wyłącznie dla administratorów i księgowości.
   const isManager = user?.role === 'admin' || user?.role === 'ksiegowosc';
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
@@ -524,6 +524,8 @@ export default function WorkTime() {
   }
 
   function openEditEntry(entry: TimeEntry) {
+    if (!isManager) return;
+
     const toLocalInput = (iso: string | null) => {
       if (!iso) return '';
       const d = new Date(iso);
@@ -539,7 +541,7 @@ export default function WorkTime() {
   }
 
   async function handleSaveEntry() {
-    if (!editEntry) return;
+    if (!isManager || !editEntry) return;
     if (!editForm.clock_in) { toast.error('Podaj godzinę rozpoczęcia'); return; }
     if (editForm.clock_out && new Date(editForm.clock_out) < new Date(editForm.clock_in)) {
       toast.error('Zakończenie musi być później niż rozpoczęcie');
@@ -563,7 +565,7 @@ export default function WorkTime() {
   }
 
   async function handleDeleteEntry() {
-    if (!deleteEntryId) return;
+    if (!isManager || !deleteEntryId) return;
     try {
       await timeApi.deleteTimeEntry(deleteEntryId);
       toast.success('Wpis usunięty');
@@ -709,12 +711,6 @@ export default function WorkTime() {
   // ── Render helpers ────────────────────────────────────────────────────────
   function renderClockPanel() {
     if (state === 'working' && currentEntry) {
-      const planHours = Number(user?.working_hours_per_day) || 8;
-      const autoEndTime = new Date(new Date(currentEntry.clock_in).getTime() + planHours * 60 * 60 * 1000).toLocaleTimeString('pl-PL', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
       return (
         <div className="mx-auto flex max-w-3xl flex-col items-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-3 py-1 text-sm font-semibold text-[#F7941D] shadow-sm dark:border-orange-900/40 dark:bg-gray-800">
@@ -742,10 +738,10 @@ export default function WorkTime() {
             </div>
             <div className="rounded-xl border border-orange-200/70 bg-white/70 p-3 dark:border-orange-900/40 dark:bg-gray-800/70">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                Auto-zakończenie
+                Zakończenie pracy
               </p>
-              <p className="mt-1 font-mono text-sm font-semibold text-gray-900 dark:text-white">
-                {autoEndTime}
+              <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                Ręczne
               </p>
             </div>
           </div>
@@ -881,10 +877,10 @@ export default function WorkTime() {
 
   return (
     <MainLayout title="Czas pracy">
-      {showManualEntry && (
+      {isManager && showManualEntry && (
         <ManualEntryModal onClose={() => setShowManualEntry(false)} onSaved={loadMyData} users={managerUsers} />
       )}
-      {showStartManual && (
+      {isManager && showStartManual && (
         <StartFromTimeModal onClose={() => setShowStartManual(false)} onStarted={loadMyData} />
       )}
 
@@ -916,7 +912,7 @@ export default function WorkTime() {
       )}
 
       {/* Admin: edit time entry */}
-      {editEntry && (
+      {isManager && editEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditEntry(null)}>
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
             <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
@@ -962,7 +958,7 @@ export default function WorkTime() {
       )}
 
       <ConfirmDialog
-        isOpen={deleteEntryId !== null}
+        isOpen={isManager && deleteEntryId !== null}
         onClose={() => setDeleteEntryId(null)}
         onConfirm={handleDeleteEntry}
         title="Usuń wpis czasu pracy"
@@ -990,13 +986,15 @@ export default function WorkTime() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowStartManual(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-          >
-            <Play className="w-4 h-4 text-[#F7941D]" />
-            Rozpocznij od godziny
-          </button>
+          {isManager && (
+            <button
+              onClick={() => setShowStartManual(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <Play className="w-4 h-4 text-[#F7941D]" />
+              Rozpocznij od godziny
+            </button>
+          )}
           {isManager && (
             <button
               onClick={() => setShowManualEntry(true)}
@@ -1309,7 +1307,7 @@ export default function WorkTime() {
                                 </span>
                               </button>
                               <Pencil className="w-3 h-3 flex-shrink-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity dark:text-gray-600" />
-                              {entry.status !== 'in_progress' && (
+                              {isManager && entry.status !== 'in_progress' && (
                                 <>
                                   <button
                                     type="button"
