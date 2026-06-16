@@ -58,37 +58,37 @@ router.get('/:id/attachments', contractController.getAttachments.bind(contractCo
 // Write routes (ADMIN, KSIEGOWOSC only)
 router.post(
   '/',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY]),
   contractController.createContract.bind(contractController)
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY]),
   contractController.updateContract.bind(contractController)
 );
 router.delete(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY]),
   contractController.deleteContract.bind(contractController)
 );
 
 // Status management (ADMIN, KSIEGOWOSC only)
 router.patch(
   '/:id/status',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY]),
   contractController.updateStatus.bind(contractController)
 );
 
 // Attachment management (ADMIN, KSIEGOWOSC only)
 router.post(
   '/:id/attachments',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY]),
   upload.single('file'),
   contractController.uploadAttachment.bind(contractController)
 );
 router.delete(
   '/:id/attachments/:attachmentId',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY]),
   contractController.deleteAttachment.bind(contractController)
 );
 

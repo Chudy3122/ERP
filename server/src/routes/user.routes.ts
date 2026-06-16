@@ -68,7 +68,7 @@ router.put('/password', userController.changePassword);
 // Single user profile (admin / kadry / managers) — keep AFTER the specific paths above
 router.get(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SZEF, UserRole.KIEROWNIK]),
+  requireRole([UserRole.ADMIN, UserRole.KADRY, UserRole.SZEF, UserRole.KIEROWNIK]),
   userController.getUserProfileById
 );
 

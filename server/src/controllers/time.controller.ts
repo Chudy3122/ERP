@@ -20,7 +20,7 @@ export class TimeController {
       const { notes, expectedClockIn, clockInTime, userId: targetUserId } = req.body;
       // Only admin / kadry may set a manual (backdated) start time or clock in for
       // someone else. Regular employees always clock in at "now".
-      const canManageTime = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const canManageTime = [UserRole.ADMIN, UserRole.KADRY].includes(req.user!.role as UserRole);
       const userId = canManageTime && targetUserId ? targetUserId : req.user!.userId;
       const effClockInTime = canManageTime ? clockInTime : undefined;
 
@@ -279,7 +279,7 @@ export class TimeController {
       const { id } = req.params;
       const { clock_in, clock_out, notes } = req.body;
       // Editing hours is restricted to admin / kadry (regular users must not change times)
-      const canManageTime = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const canManageTime = [UserRole.ADMIN, UserRole.KADRY].includes(req.user!.role as UserRole);
       if (!canManageTime) {
         res.status(403).json({ success: false, message: 'Tylko administrator lub kadry mogą edytować godziny pracy' });
         return;
@@ -299,7 +299,7 @@ export class TimeController {
     try {
       const { id } = req.params;
       // Deleting time entries is restricted to admin / kadry
-      const canManageTime = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const canManageTime = [UserRole.ADMIN, UserRole.KADRY].includes(req.user!.role as UserRole);
       if (!canManageTime) {
         res.status(403).json({ success: false, message: 'Tylko administrator lub kadry mogą usuwać wpisy czasu pracy' });
         return;
@@ -346,7 +346,7 @@ export class TimeController {
     try {
       const { leaveType, startDate, endDate, reason, userId: targetUserId } = req.body;
       // Admin / kadry may file an absence on behalf of another employee
-      const canCreateForOthers = [UserRole.ADMIN, UserRole.KSIEGOWOSC].includes(req.user!.role as UserRole);
+      const canCreateForOthers = [UserRole.ADMIN, UserRole.KADRY].includes(req.user!.role as UserRole);
       const userId = canCreateForOthers && targetUserId ? targetUserId : req.user!.userId;
 
       const leaveRequest = await timeService.createLeaveRequest(
@@ -367,7 +367,7 @@ export class TimeController {
       const applicantDeptId = (user as any)?.department_id || null;
       const where: any[] = [
         { role: UserRole.ADMIN },
-        { role: UserRole.KSIEGOWOSC },
+        { role: UserRole.KADRY },
       ];
       if (applicantDeptId) {
         where.push({ role: UserRole.KIEROWNIK, department_id: applicantDeptId });

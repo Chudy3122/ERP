@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 // Payments are invoice data — hidden from regular employees entirely
-router.use(requireRole([UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]));
+router.use(requireRole([UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]));
 
 // Read routes (available to all roles above)
 router.get('/overdue', paymentController.getOverdueInvoices.bind(paymentController));
@@ -21,24 +21,24 @@ router.get('/:id', paymentController.getPaymentById.bind(paymentController));
 // Write routes (ADMIN, KSIEGOWOSC only)
 router.post(
   '/',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   paymentController.createPayment.bind(paymentController)
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   paymentController.updatePayment.bind(paymentController)
 );
 router.delete(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   paymentController.deletePayment.bind(paymentController)
 );
 
 // Send reminders (ADMIN, KSIEGOWOSC only)
 router.post(
   '/send-reminders',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   paymentController.sendOverdueReminders.bind(paymentController)
 );
 

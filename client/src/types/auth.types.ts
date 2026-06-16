@@ -3,6 +3,7 @@ export enum UserRole {
   KIEROWNIK = 'kierownik',
   EMPLOYEE = 'employee',
   KSIEGOWOSC = 'ksiegowosc',
+  KADRY = 'kadry',
   SZEF = 'szef',
   SEKRETARIAT = 'sekretariat',
 }

@@ -391,7 +391,7 @@ export class WorkLogService {
     let allowedUserIds: string[] | null = null; // null = all users
     if (viewerId && viewerRole) {
       const userRepo = AppDataSource.getRepository(User);
-      const seesEveryone = ['admin', 'ksiegowosc', 'szef'].includes(viewerRole);
+      const seesEveryone = ['admin', 'kadry', 'szef'].includes(viewerRole);
       if (seesEveryone) {
         allowedUserIds = null;
       } else if (viewerRole === 'kierownik') {

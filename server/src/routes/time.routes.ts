@@ -22,7 +22,7 @@ router.post('/end-work', timeController.endWork.bind(timeController));
 // Completed manual entry (od–do) — admin/kadry only, may target any employee
 router.post(
   '/manual-entry',
-  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KADRY]),
   timeController.addManualEntry.bind(timeController)
 );
 
@@ -41,7 +41,7 @@ router.get('/attendance', timeController.getAttendance.bind(timeController));
 // Get all entries (admin/kadry = everyone, kierownik = own department)
 router.get(
   '/entries/all',
-  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KIEROWNIK]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KADRY, UserRole.KIEROWNIK]),
   timeController.getAllTimeEntries
 );
 
@@ -83,10 +83,10 @@ router.get('/leave/:id/comments', timeController.getLeaveComments.bind(timeContr
 router.post('/leave/:id/comments', timeController.addLeaveComment.bind(timeController));
 
 // Roles allowed to manage (approve/reject/revert) leave requests
-const LEAVE_MANAGER_ROLES = [UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SZEF];
+const LEAVE_MANAGER_ROLES = [UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KADRY, UserRole.SZEF];
 
 // Leave plan management (yearly limits + carry-over) — admin + kadry (ksiegowosc)
-const LEAVE_PLAN_ROLES = [UserRole.ADMIN, UserRole.KSIEGOWOSC];
+const LEAVE_PLAN_ROLES = [UserRole.ADMIN, UserRole.KADRY];
 router.get(
   '/leave/overview',
   roleMiddleware(LEAVE_PLAN_ROLES),
@@ -115,14 +115,14 @@ router.get(
 // All leave requests for all users — admin + kadry
 router.get(
   '/leave/all',
-  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KADRY]),
   timeController.getAllLeaveRequests.bind(timeController)
 );
 
 // Monthly evidence report for one employee — admin + kadry
 router.get(
   '/report/monthly',
-  roleMiddleware([UserRole.ADMIN, UserRole.KSIEGOWOSC]),
+  roleMiddleware([UserRole.ADMIN, UserRole.KADRY]),
   timeController.getMonthlyReport.bind(timeController)
 );
 

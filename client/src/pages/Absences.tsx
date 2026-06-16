@@ -116,9 +116,9 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
 const Absences = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const canManageLeavePlans = ['admin', 'ksiegowosc'].includes(user?.role || '');
-  const canReviewLeave = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
-  const canViewAllAbsences = ['admin', 'ksiegowosc'].includes(user?.role || '');
+  const canManageLeavePlans = ['admin', 'kadry'].includes(user?.role || '');
+  const canReviewLeave = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
+  const canViewAllAbsences = ['admin', 'kadry'].includes(user?.role || '');
   const activeTabStorageKey = `${ABSENCES_ACTIVE_TAB_KEY}:${user?.id || 'current-user'}`;
 
   const canOpenAbsenceTab = (tab: AbsenceTab) => {
@@ -392,7 +392,7 @@ const Absences = () => {
       setLeaveRequests(requests);
       setBalance(leaveBalance);
 
-      if (['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '')) {
+      if (['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '')) {
         const manageable = await timeApi.getManageableLeaveRequests();
         setPendingRequests(manageable);
       }

@@ -17,7 +17,8 @@ export enum UserRole {
   ADMIN = 'admin',
   KIEROWNIK = 'kierownik',
   EMPLOYEE = 'employee',
-  KSIEGOWOSC = 'ksiegowosc',
+  KSIEGOWOSC = 'ksiegowosc', // Księgowość — finanse + ograniczony zakres
+  KADRY = 'kadry',           // Kadry — pełny dostęp HR (dawna „księgowość")
   SZEF = 'szef',
   SEKRETARIAT = 'sekretariat',
 }

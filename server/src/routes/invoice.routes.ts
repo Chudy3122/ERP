@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 // Invoices are hidden from regular employees entirely (read + write)
-router.use(requireRole([UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]));
+router.use(requireRole([UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]));
 
 // Read routes (available to all roles above)
 router.get('/', invoiceController.getAllInvoices.bind(invoiceController));
@@ -25,12 +25,12 @@ router.get('/reports/payment-overview', invoiceController.getPaymentOverview.bin
 // Export routes (ADMIN, KSIEGOWOSC only)
 router.get(
   '/reports/export/excel',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.exportExcel.bind(invoiceController)
 );
 router.get(
   '/reports/export/pdf',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.exportPdf.bind(invoiceController)
 );
 
@@ -41,46 +41,46 @@ router.get('/:id/items', invoiceController.getInvoiceItems.bind(invoiceControlle
 // Write routes (ADMIN, KSIEGOWOSC only)
 router.post(
   '/',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.createInvoice.bind(invoiceController)
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.updateInvoice.bind(invoiceController)
 );
 router.delete(
   '/:id',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.deleteInvoice.bind(invoiceController)
 );
 
 // Status management (ADMIN, KSIEGOWOSC only)
 router.patch(
   '/:id/status',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.updateStatus.bind(invoiceController)
 );
 router.post(
   '/:id/mark-paid',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.markAsPaid.bind(invoiceController)
 );
 
 // Invoice items (ADMIN, KSIEGOWOSC only)
 router.post(
   '/:id/items',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.addItem.bind(invoiceController)
 );
 router.put(
   '/:id/items/:itemId',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.updateItem.bind(invoiceController)
 );
 router.delete(
   '/:id/items/:itemId',
-  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT]),
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.removeItem.bind(invoiceController)
 );
 

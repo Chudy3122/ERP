@@ -10,9 +10,9 @@ export class WorkLogController {
    */
   async createWorkLog(req: Request, res: Response): Promise<void> {
     try {
-      // Admins may log time on behalf of another user via body.user_id
-      const isAdmin = req.user!.role === 'admin';
-      const targetUserId = isAdmin && req.body.user_id ? req.body.user_id : req.user!.userId;
+      // Admin / kadry may log overtime on behalf of another user via body.user_id
+      const canForOthers = ['admin', 'kadry'].includes(req.user!.role);
+      const targetUserId = canForOthers && req.body.user_id ? req.body.user_id : req.user!.userId;
       const workLog = await workLogService.createWorkLog(targetUserId, req.body);
       res.status(201).json(workLog);
     } catch (error: any) {
@@ -30,7 +30,7 @@ export class WorkLogController {
       const myId = req.user!.userId;
       const requestedUserId = req.query.user_id as string | undefined;
       // admin/księgowość/szef see everyone; kierownik sees their own department; others only themselves
-      const seesEveryone = ['admin', 'ksiegowosc', 'szef'].includes(role);
+      const seesEveryone = ['admin', 'kadry', 'szef'].includes(role);
 
       let effectiveUserId: string | undefined = requestedUserId;
       if (!seesEveryone && requestedUserId && requestedUserId !== myId) {

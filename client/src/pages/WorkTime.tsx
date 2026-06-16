@@ -428,7 +428,7 @@ export default function WorkTime() {
   const [editNotesValue, setEditNotesValue] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   // Ręczne wpisy czasu są dostępne wyłącznie dla administratorów i księgowości.
-  const isManager = user?.role === 'admin' || user?.role === 'ksiegowosc';
+  const isManager = user?.role === 'admin' || user?.role === 'kadry';
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
   const [savingEntry, setSavingEntry] = useState(false);

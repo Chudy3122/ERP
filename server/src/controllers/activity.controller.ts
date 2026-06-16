@@ -10,7 +10,7 @@ export class ActivityController {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       // Privileged roles see the global feed; everyone else sees only their own activity
-      const canSeeAll = ['admin', 'ksiegowosc', 'szef', 'kierownik'].includes(req.user!.role);
+      const canSeeAll = ['admin', 'ksiegowosc', 'kadry', 'szef', 'kierownik'].includes(req.user!.role);
       const activities = canSeeAll
         ? await activityService.getRecentActivities(limit)
         : await activityService.getUserActivities(req.user!.userId, limit);

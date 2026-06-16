@@ -76,7 +76,7 @@ export class TimeService {
     if (!request) throw new Error('Wniosek nie znaleziony');
 
     const author = await this.userRepository.findOne({ where: { id: userId }, select: ['id', 'role'] });
-    const managerRoles = ['admin', 'kierownik', 'ksiegowosc', 'szef'];
+    const managerRoles = ['admin', 'kierownik', 'kadry', 'szef'];
     const isOwner = request.user_id === userId;
     const isManager = author ? managerRoles.includes(author.role) : false;
     if (!isOwner && !isManager) {

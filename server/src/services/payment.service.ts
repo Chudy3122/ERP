@@ -287,7 +287,7 @@ export class PaymentService {
 
     // Get admin and accounting users
     const admins = await this.userRepository.find({
-      where: { role: In(['admin', 'ksiegowosc']) },
+      where: { role: In(['admin', 'ksiegowosc', 'kadry']) },
     });
 
     let remindersSent = 0;

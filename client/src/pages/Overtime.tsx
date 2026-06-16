@@ -86,7 +86,7 @@ export default function Overtime() {
   });
 
   const isAdmin = user?.role === 'admin';
-  const canManageEntries = user?.role === 'admin' || user?.role === 'ksiegowosc';
+  const canManageEntries = user?.role === 'admin' || user?.role === 'kadry';
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   // Manage-entries modal (admin: view/delete a user's overtime entries)
   const [manageUser, setManageUser] = useState<OvertimeSummaryEntry | null>(null);
@@ -115,12 +115,12 @@ export default function Overtime() {
   const [teamDepartment, setTeamDepartment] = useState('all');
   const [teamBalanceFilter, setTeamBalanceFilter] = useState<TeamBalanceFilter>('all');
   const [teamSort, setTeamSort] = useState<TeamSort>('name');
-  const canExpand = ['admin', 'ksiegowosc', 'szef', 'kierownik'].includes(user?.role || '');
+  const canExpand = ['admin', 'kadry', 'szef', 'kierownik'].includes(user?.role || '');
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
 
   // Admin / księgowość / szef see everyone grouped by department
-  const groupByDept = ['admin', 'ksiegowosc', 'szef'].includes(user?.role || '');
+  const groupByDept = ['admin', 'kadry', 'szef'].includes(user?.role || '');
   const teamDepartments = Array.from(
     new Set(summary.map((entry) => entry.department || 'Bez działu')),
   ).sort((a, b) => a.localeCompare(b, 'pl'));
