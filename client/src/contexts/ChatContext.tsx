@@ -95,6 +95,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const isPanelOpenRef = useRef(false);
   const userRef = useRef(user);
   const socketRef = useRef<Socket | null>(null);
+  const channelsRef = useRef<Channel[]>([]);
+  const loadChannelsRef = useRef<() => void>(() => {});
   // Sequence counter — prevents stale loadChannels responses from overwriting fresh ones
   const loadChannelsSeqRef = useRef(0);
 
@@ -115,6 +117,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   useEffect(() => { isPanelOpenRef.current = isPanelOpen; }, [isPanelOpen]);
   useEffect(() => { userRef.current = user; }, [user]);
   useEffect(() => { socketRef.current = socket; }, [socket]);
+  useEffect(() => { channelsRef.current = channels; }, [channels]);
 
   // Computed total unread count
   const totalUnreadCount = useMemo(() => {
@@ -177,10 +180,18 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socket.on('chat:new_message', (data: { message: Message; channelId: string }) => {
       console.log('📨 New message:', data);
 
+      // New conversation we don't know yet (first message in a fresh DM/channel)
+      // → pull the channel list so it shows up without a refresh.
+      if (data.channelId && !channelsRef.current.some((c) => c.id === data.channelId)) {
+        loadChannelsRef.current();
+      }
+
       // Add message to state if it's for the active channel (use ref to avoid stale closure)
-      // Replace any matching optimistic (temp-*) message to avoid duplicates
+      // De-dupe by id (covers the sender's own echo + file-upload reload) and
+      // replace any matching optimistic (temp-*) message.
       if (data.channelId === activeChannelRef.current?.id) {
         setMessages((prev) => {
+          if (prev.some((m) => m.id === data.message.id)) return prev;
           const withoutTemp = prev.filter(
             (m) =>
               !(
@@ -275,6 +286,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         playNotificationSound();
         const ts = new Date().toISOString();
         setStoredActivity(channelId, ts, data.preview, data.senderId);
+        // Unknown channel (new conversation) → fetch it so it appears in the list
+        if (!channelsRef.current.some((c) => c.id === channelId)) {
+          loadChannelsRef.current();
+        }
         setChannels((prev) => {
           const idx = prev.findIndex((ch) => ch.id === channelId);
           if (idx < 0) return prev;
@@ -398,6 +413,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       if (seq === loadChannelsSeqRef.current) setLoading(false);
     }
   }, []);
+
+  // Keep a ref to loadChannels so socket handlers can fetch a freshly-created
+  // channel (new conversation) without re-subscribing the socket listeners.
+  useEffect(() => { loadChannelsRef.current = loadChannels; }, [loadChannels]);
 
   // Load channels (and seed the unread badge) as soon as the user is authenticated,
   // independent of the chat panel being opened — otherwise the "Chat & Meet" badge

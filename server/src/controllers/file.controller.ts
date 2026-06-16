@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { FileService } from '../services/file.service';
 import { ChatService } from '../services/chat.service';
 import { MessageType } from '../models/Message.model';
+import { getIO } from '../config/socket';
+import { broadcastNewMessage } from '../sockets/chatBroadcast';
 import path from 'path';
 import fs from 'fs';
 
@@ -48,6 +50,13 @@ export class FileController {
 
       // Reload message with attachments
       const messageWithAttachments = await chatService.getMessageById(message.id);
+
+      // Deliver to all channel members in real time (same path as socket text messages)
+      try {
+        await broadcastNewMessage(getIO(), message.id);
+      } catch (e) {
+        console.error('Chat broadcast (file upload) error:', e);
+      }
 
       res.status(201).json({
         success: true,
