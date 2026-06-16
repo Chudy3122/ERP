@@ -138,27 +138,37 @@ export class CalendarService {
       leavesByUser.get(leave.user_id)!.push(leave);
     }
 
+    // Day keys are computed in Polish local time (server runs in UTC). Without this,
+    // days are shifted and entries land on the wrong day → past days look empty.
+    const dayKey = (d: Date | string) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' });
+    // Leave start/end are date-only columns (midnight) — compare on plain YYYY-MM-DD.
+    const leaveDayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
+
     const entriesByUserAndDate = new Map<string, typeof timeEntries[0]>();
     for (const entry of timeEntries) {
-      const d = new Date(entry.clock_in);
-      const dateKey = `${entry.user_id}_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      entriesByUserAndDate.set(dateKey, entry);
+      entriesByUserAndDate.set(`${entry.user_id}_${dayKey(entry.clock_in)}`, entry);
+    }
+
+    // Build the list of Polish calendar dates covered by the requested range
+    const dates: string[] = [];
+    {
+      const cursor = new Date(`${dayKey(startDate)}T00:00:00Z`);
+      const last = new Date(`${dayKey(endDate)}T00:00:00Z`);
+      while (cursor <= last) {
+        dates.push(cursor.toISOString().slice(0, 10));
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
     }
 
     const availability: TeamAvailability[] = [];
-    const currentDate = new Date(startDate);
 
-    while (currentDate <= endDate) {
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-      const dayStart = new Date(currentDate);
-      dayStart.setHours(0, 0, 0, 0);
-
+    for (const dateStr of dates) {
       const dayAvailability: TeamAvailability = { date: dateStr, users: [] };
 
       for (const user of users) {
         const userLeaves = leavesByUser.get(user.id) || [];
         const onLeave = userLeaves.find(
-          l => dayStart >= new Date(l.start_date) && dayStart <= new Date(l.end_date)
+          l => dateStr >= leaveDayKey(l.start_date) && dateStr <= leaveDayKey(l.end_date)
         );
 
         const name = `${user.first_name} ${user.last_name}`;
@@ -199,7 +209,6 @@ export class CalendarService {
       }
 
       availability.push(dayAvailability);
-      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return availability;
