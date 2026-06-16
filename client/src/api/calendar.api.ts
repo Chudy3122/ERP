@@ -17,7 +17,7 @@ export interface TeamAvailability {
   users: {
     id: string;
     name: string;
-    status: 'working' | 'on_leave' | 'absent';
+    status: 'working' | 'on_leave' | 'absent' | 'remote';
     details?: string;
   }[];
 }

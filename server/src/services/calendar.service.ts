@@ -1,6 +1,6 @@
 import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
-import { LeaveRequest, LeaveStatus } from '../models/LeaveRequest.model';
+import { LeaveRequest, LeaveStatus, LeaveType } from '../models/LeaveRequest.model';
 import { User } from '../models/User.model';
 import { Between, In } from 'typeorm';
 
@@ -21,7 +21,7 @@ export interface TeamAvailability {
   users: {
     id: string;
     name: string;
-    status: 'working' | 'on_leave' | 'absent';
+    status: 'working' | 'on_leave' | 'absent' | 'remote';
     details?: string;
   }[];
 }
@@ -156,35 +156,40 @@ export class CalendarService {
           l => dayStart >= new Date(l.start_date) && dayStart <= new Date(l.end_date)
         );
 
+        const name = `${user.first_name} ${user.last_name}`;
+        const workEntry = entriesByUserAndDate.get(`${user.id}_${dateStr}`);
+        const workDetail = workEntry
+          ? (workEntry.clock_out
+              ? `${this.formatTime(workEntry.clock_in)} - ${this.formatTime(workEntry.clock_out)}`
+              : workEntry.status === TimeEntryStatus.IN_PROGRESS
+                ? `W pracy od ${this.formatTime(workEntry.clock_in)}`
+                : `Od ${this.formatTime(workEntry.clock_in)}`)
+          : null;
+
         if (onLeave) {
-          dayAvailability.users.push({
-            id: user.id,
-            name: `${user.first_name} ${user.last_name}`,
-            status: 'on_leave',
-            details: this.translateLeaveType(onLeave.leave_type),
-          });
+          // Remote work shows as its own status (purple) and surfaces logged hours
+          if (onLeave.leave_type === LeaveType.REMOTE_WORK) {
+            dayAvailability.users.push({
+              id: user.id,
+              name,
+              status: 'remote',
+              details: workDetail || 'Praca zdalna',
+            });
+          } else {
+            dayAvailability.users.push({
+              id: user.id,
+              name,
+              status: 'on_leave',
+              details: this.translateLeaveType(onLeave.leave_type),
+            });
+          }
           continue;
         }
 
-        const workEntry = entriesByUserAndDate.get(`${user.id}_${dateStr}`);
         if (workEntry) {
-          const isActive = workEntry.status === TimeEntryStatus.IN_PROGRESS;
-          dayAvailability.users.push({
-            id: user.id,
-            name: `${user.first_name} ${user.last_name}`,
-            status: 'working',
-            details: workEntry.clock_out
-              ? `${this.formatTime(workEntry.clock_in)} - ${this.formatTime(workEntry.clock_out)}`
-              : isActive
-                ? `W pracy od ${this.formatTime(workEntry.clock_in)}`
-                : `Od ${this.formatTime(workEntry.clock_in)}`,
-          });
+          dayAvailability.users.push({ id: user.id, name, status: 'working', details: workDetail || undefined });
         } else {
-          dayAvailability.users.push({
-            id: user.id,
-            name: `${user.first_name} ${user.last_name}`,
-            status: 'absent',
-          });
+          dayAvailability.users.push({ id: user.id, name, status: 'absent' });
         }
       }
 

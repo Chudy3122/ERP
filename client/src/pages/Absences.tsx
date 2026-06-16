@@ -369,13 +369,15 @@ const Absences = () => {
   const calStatusColor = (s: string) =>
     s === 'working'
       ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-      : s === 'on_leave'
-        ? 'bg-amber-100 text-amber-800 border-amber-200'
-        : 'bg-gray-100 text-gray-500 border-gray-200';
+      : s === 'remote'
+        ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
+        : s === 'on_leave'
+          ? 'bg-amber-100 text-amber-800 border-amber-200'
+          : 'bg-gray-100 text-gray-500 border-gray-200';
 
-  const calStatusIcon = (s: string) => (s === 'working' ? '✓' : s === 'on_leave' ? '✈' : '–');
+  const calStatusIcon = (s: string) => (s === 'working' ? '✓' : s === 'remote' ? '🏠' : s === 'on_leave' ? '✈' : '–');
   const calStatusText = (s: string) =>
-    s === 'working' ? 'Pracuje' : s === 'on_leave' ? 'Urlop' : 'Nieobecny';
+    s === 'working' ? 'Pracuje' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Nieobecny';
 
   const formatCalDate = (d: string) =>
     new Date(d).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -1623,6 +1625,7 @@ const Absences = () => {
               <span className="font-medium">Legenda:</span>
               {[
                 ['working', 'Pracuje', '✓'],
+                ['remote', 'Praca zdalna', '🏠'],
                 ['on_leave', 'Urlop', '✈'],
                 ['absent', 'Nieobecny', '–'],
               ].map(([s, label, icon]) => (
@@ -1694,6 +1697,9 @@ const Absences = () => {
                                   >
                                     <span>{calStatusIcon(du.status)}</span>
                                     <span>{calStatusText(du.status)}</span>
+                                    {(du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (
+                                      <span className="font-normal opacity-90">{du.details}</span>
+                                    )}
                                   </div>
                                 </td>
                               );
