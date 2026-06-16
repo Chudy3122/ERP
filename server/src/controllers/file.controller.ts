@@ -41,7 +41,7 @@ export class FileController {
       const message = await chatService.createMessage(
         channelId,
         userId,
-        content || `Sent ${files.length} file(s)`,
+        content || '',
         MessageType.FILE
       );
 
