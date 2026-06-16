@@ -1697,7 +1697,7 @@ const Absences = () => {
                                   >
                                     <span>{calStatusIcon(du.status)}</span>
                                     <span>{calStatusText(du.status)}</span>
-                                    {(du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (
+                                    {du.status === 'remote' && du.details && du.details !== 'Praca zdalna' && (
                                       <span className="font-normal opacity-90">{du.details}</span>
                                     )}
                                   </div>

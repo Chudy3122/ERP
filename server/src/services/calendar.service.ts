@@ -118,8 +118,13 @@ export class CalendarService {
       order: { first_name: 'ASC', last_name: 'ASC' },
     });
 
+    // Approved leaves of any type, plus remote work even while pending
+    // (remote work is for visibility/coordination, shown as soon as it's filed)
     const leaves = await this.leaveRepository.find({
-      where: { status: LeaveStatus.APPROVED },
+      where: [
+        { status: LeaveStatus.APPROVED },
+        { status: LeaveStatus.PENDING, leave_type: LeaveType.REMOTE_WORK },
+      ],
     });
 
     const timeEntries = await this.timeEntryRepository.find({
