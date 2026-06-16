@@ -1,10 +1,48 @@
 import { Request, Response } from 'express';
 import { ChatService } from '../services/chat.service';
 import { ChannelType } from '../models/Channel.model';
+import { MessageType } from '../models/Message.model';
+import { ChannelMember } from '../models/ChannelMember.model';
 import { AppDataSource } from '../config/database';
 import { User } from '../models/User.model';
+import { getIO } from '../config/socket';
+import { broadcastNewMessage } from '../sockets/chatBroadcast';
 
 const chatService = new ChatService();
+
+/**
+ * Send a text message via REST (reliable persistence) — the server then
+ * broadcasts it over sockets to all members. Avoids messages being lost when
+ * the socket emit is dropped (e.g., during a reconnect / server wake-up).
+ * POST /api/chat/channels/:id/messages
+ */
+export const sendMessage = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const { id } = req.params;
+    const content = (req.body?.content || '').trim();
+    if (!content) return res.status(400).json({ message: 'Wiadomość nie może być pusta' });
+
+    const member = await AppDataSource.getRepository(ChannelMember).findOne({
+      where: { channel_id: id, user_id: req.user.userId },
+    });
+    if (!member) return res.status(403).json({ message: 'Nie jesteś członkiem tego kanału' });
+
+    const message = await chatService.createMessage(id, req.user.userId, content, MessageType.TEXT);
+    const saved = await chatService.getMessageById(message.id);
+
+    try {
+      await broadcastNewMessage(getIO(), message.id);
+    } catch (e) {
+      console.error('Chat broadcast (REST send) error:', e);
+    }
+
+    return res.status(201).json({ data: saved });
+  } catch (error) {
+    console.error('Send message error:', error);
+    return res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to send message' });
+  }
+};
 
 /**
  * Get user's channels

@@ -45,6 +45,12 @@ export const getChannelMessages = async (
   return response.data.data;
 };
 
+/** Send a text message via REST (reliable persistence; server then broadcasts). */
+export const sendMessage = async (channelId: string, content: string): Promise<Message> => {
+  const response = await apiClient.post(`/chat/channels/${channelId}/messages`, { content });
+  return response.data.data;
+};
+
 /**
  * Mark a channel as read (updates last_read_at → clears unread badge)
  */

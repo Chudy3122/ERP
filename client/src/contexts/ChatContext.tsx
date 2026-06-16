@@ -3,7 +3,7 @@ import { Socket } from 'socket.io-client';
 import socketService from '../services/socket.service';
 import * as chatApi from '../api/chat.api';
 import { useAuth } from './AuthContext';
-import type { Channel, Message, SendMessageData, EditMessageData, DeleteMessageData } from '../types/chat.types';
+import type { Channel, Message, EditMessageData, DeleteMessageData } from '../types/chat.types';
 import { MessageType } from '../types/chat.types';
 import { playNotificationSound } from '../utils/audio';
 
@@ -491,15 +491,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   // Send a message
   const sendMessage = useCallback(
-    (content: string, channelId?: string) => {
-      const targetChannelId = channelId || activeChannel?.id;
-      if (!targetChannelId || !socket) return;
+    async (content: string, channelId?: string) => {
+      const targetChannelId = channelId || activeChannelRef.current?.id;
+      if (!targetChannelId || !content.trim()) return;
 
       // Optimistic update — show message immediately before server confirms
       const currentUser = userRef.current;
+      const tempId = `temp-${Date.now()}`;
       if (targetChannelId === activeChannelRef.current?.id && currentUser) {
         const tempMessage: Message = {
-          id: `temp-${Date.now()}`,
+          id: tempId,
           channel_id: targetChannelId,
           sender_id: currentUser.id,
           content,
@@ -515,12 +516,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         setMessages((prev) => [...prev, tempMessage]);
       }
 
-      const messageData: SendMessageData = {
-        channelId: targetChannelId,
-        content,
-        messageType: MessageType.TEXT,
-      };
-
       // Optimistically bump channel to top + update preview + persist to localStorage
       const now = new Date().toISOString();
       const sentPreview = content.length > 60 ? content.slice(0, 60) + '…' : content;
@@ -534,9 +529,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         return [{ ...ch, last_message_at: now, last_message_preview: sentPreview, last_message_sender_id: currentUserId }, ...updated];
       });
 
-      socket.emit('chat:send_message', messageData);
+      // Send via REST so persistence is reliable (the server broadcasts over sockets).
+      // Avoids the message being lost when a socket emit is dropped on reconnect.
+      try {
+        await chatApi.sendMessage(targetChannelId, content);
+        // success: the broadcast (chat:new_message) replaces the optimistic temp by id
+      } catch (err: any) {
+        // remove the optimistic message and surface the failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setError(err?.response?.data?.message || 'Nie udało się wysłać wiadomości');
+        setTimeout(() => setError(null), 5000);
+      }
     },
-    [socket, activeChannel]
+    []
   );
 
   // Edit a message
