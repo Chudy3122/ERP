@@ -67,6 +67,35 @@ export class SupplyService {
     return (await this.repo.findOne({ where: { id }, relations: ['user', 'reviewer'] }))!;
   }
 
+  /**
+   * Edit a request.
+   * - Admin: any request, any status (also retroactively / "wstecz").
+   * - Owner: only their OWN request while still PENDING ("na bieżąco").
+   */
+  async update(id: string, data: CreateSupplyDto, userId: string, isAdmin: boolean): Promise<SupplyRequest> {
+    const request = await this.repo.findOne({ where: { id } });
+    if (!request) throw new Error('Zgłoszenie nie znalezione');
+
+    if (!isAdmin) {
+      if (request.user_id !== userId) throw new Error('Brak uprawnień do edycji tego zgłoszenia');
+      if (request.status !== SupplyRequestStatus.PENDING) {
+        throw new Error('Brak uprawnień: obsłużone zgłoszenie może edytować tylko administrator');
+      }
+    }
+
+    if (data.item_name !== undefined) {
+      if (!data.item_name.trim()) throw new Error('Nazwa artykułu jest wymagana');
+      request.item_name = data.item_name.trim();
+    }
+    if (data.quantity !== undefined) request.quantity = data.quantity && data.quantity > 0 ? data.quantity : 1;
+    if (data.category !== undefined) request.category = data.category;
+    if (data.priority !== undefined) request.priority = data.priority;
+    if (data.description !== undefined) request.description = data.description?.trim() || null;
+
+    await this.repo.save(request);
+    return (await this.repo.findOne({ where: { id }, relations: ['user', 'reviewer'] }))!;
+  }
+
   /** Owner can delete own pending request */
   async delete(id: string, userId: string, isManager: boolean): Promise<void> {
     const request = await this.repo.findOne({ where: { id } });

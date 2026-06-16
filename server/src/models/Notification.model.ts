@@ -34,6 +34,8 @@ export enum NotificationType {
   // Meeting notifications
   MEETING_INVITATION = 'meeting_invitation',
   MEETING_SCHEDULED = 'meeting_scheduled',
+  // Supply / procurement
+  SUPPLY_REQUEST_NEW = 'supply_request_new',
 }
 
 export enum NotificationPriority {

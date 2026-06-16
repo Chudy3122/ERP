@@ -331,6 +331,30 @@ class NotificationService {
   }
 
   /**
+   * Notify sekretariat/admin about a new supply (zaopatrzenie) request
+   */
+  async notifyNewSupplyRequest(
+    recipientId: string,
+    requesterName: string,
+    itemName: string,
+    quantity: number,
+    requestId: string,
+    requesterId: string
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: recipientId,
+      type: NotificationType.SUPPLY_REQUEST_NEW,
+      title: 'Nowe zgłoszenie zaopatrzenia',
+      message: `${requesterName} zgłosił zapotrzebowanie: ${itemName} (x${quantity})`,
+      actionUrl: '/supply',
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: requesterId,
+      relatedEntityType: 'supply_request',
+      relatedEntityId: requestId,
+    });
+  }
+
+  /**
    * Notify about time entry status
    */
   async notifyTimeEntryStatus(

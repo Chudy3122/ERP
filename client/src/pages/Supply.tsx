@@ -11,6 +11,7 @@ import {
   Clock,
   Loader2,
   Package,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -55,12 +56,14 @@ const EMPTY: CreateSupplyRequest = {
 export default function Supply() {
   const { user } = useAuth();
   const isManager = user?.role === 'sekretariat' || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   const [requests, setRequests] = useState<SupplyRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'all' | 'pending' | 'mine'>(isManager ? 'pending' : 'mine');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateSupplyRequest>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -98,17 +101,45 @@ export default function Supply() {
 
     try {
       setSaving(true);
-      await supplyApi.createSupplyRequest(form);
-      toast.success('Zgłoszenie wysłane');
+      if (editId) {
+        await supplyApi.updateSupplyRequest(editId, form);
+        toast.success('Zgłoszenie zaktualizowane');
+      } else {
+        await supplyApi.createSupplyRequest(form);
+        toast.success('Zgłoszenie wysłane');
+      }
       setShowForm(false);
       setForm(EMPTY);
+      setEditId(null);
       load();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Błąd wysyłania zgłoszenia');
+      toast.error(err.response?.data?.message || 'Błąd zapisu zgłoszenia');
     } finally {
       setSaving(false);
     }
   };
+
+  const openCreate = () => {
+    setEditId(null);
+    setForm(EMPTY);
+    setShowForm(true);
+  };
+
+  const openEdit = (request: SupplyRequest) => {
+    setEditId(request.id);
+    setForm({
+      item_name: request.item_name,
+      quantity: request.quantity,
+      category: request.category,
+      priority: request.priority,
+      description: request.description || '',
+    });
+    setShowForm(true);
+  };
+
+  // Owner can edit their own PENDING request; admin can edit any
+  const canEdit = (request: SupplyRequest) =>
+    isAdmin || (request.user_id === user?.id && request.status === 'pending');
 
   const handleApprove = async (id: string) => {
     try {
@@ -198,10 +229,7 @@ export default function Supply() {
 
             <button
               type="button"
-              onClick={() => {
-                setForm(EMPTY);
-                setShowForm(true);
-              }}
+              onClick={openCreate}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <Plus className="h-4 w-4" />
@@ -271,10 +299,7 @@ export default function Supply() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    setForm(EMPTY);
-                    setShowForm(true);
-                  }}
+                  onClick={openCreate}
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
                 >
                   <Plus className="h-4 w-4" />
@@ -367,6 +392,16 @@ export default function Supply() {
                                   </button>
                                 </>
                               )}
+                              {canEdit(request) && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(request)}
+                                  title={request.status === 'pending' ? 'Edytuj' : 'Edytuj (admin)'}
+                                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                              )}
                               {(isManager || (isOwner && request.status === 'pending')) && (
                                 <button
                                   type="button"
@@ -439,18 +474,18 @@ export default function Supply() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm" onClick={() => { setShowForm(false); setEditId(null); }}>
           <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
                   <Package className="h-5 w-5" />
                 </div>
-                <h2 className="font-semibold text-gray-950 dark:text-white">Nowe zapotrzebowanie</h2>
+                <h2 className="font-semibold text-gray-950 dark:text-white">{editId ? 'Edytuj zapotrzebowanie' : 'Nowe zapotrzebowanie'}</h2>
               </div>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowForm(false); setEditId(null); }}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
               >
                 <X className="h-4 w-4" />
@@ -527,7 +562,7 @@ export default function Supply() {
               <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => { setShowForm(false); setEditId(null); }}
                   className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
                   Anuluj
@@ -538,7 +573,7 @@ export default function Supply() {
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Wyślij zgłoszenie
+                  {editId ? 'Zapisz zmiany' : 'Wyślij zgłoszenie'}
                 </button>
               </div>
             </form>

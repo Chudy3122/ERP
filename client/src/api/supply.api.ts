@@ -16,6 +16,11 @@ export const createSupplyRequest = async (data: CreateSupplyRequest): Promise<Su
   return response.data;
 };
 
+export const updateSupplyRequest = async (id: string, data: CreateSupplyRequest): Promise<SupplyRequest> => {
+  const response = await client.put(`/supply/${id}`, data);
+  return response.data;
+};
+
 export const approveSupplyRequest = async (id: string, notes?: string): Promise<SupplyRequest> => {
   const response = await client.put(`/supply/${id}/approve`, { notes });
   return response.data;

@@ -17,6 +17,9 @@ router.get('/mine', supplyController.getMine);
 // Any logged-in user can submit a request
 router.post('/', supplyController.create);
 
+// Edit — owner (own pending) or admin (any); enforced in service
+router.put('/:id', supplyController.update);
+
 // Approve / reject — sekretariat + admin only
 router.put('/:id/approve', requireRole(MANAGER_ROLES), supplyController.approve);
 router.put('/:id/reject', requireRole(MANAGER_ROLES), supplyController.reject);

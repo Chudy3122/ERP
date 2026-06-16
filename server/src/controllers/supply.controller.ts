@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import supplyService from '../services/supply.service';
 import { SupplyRequestStatus } from '../models/SupplyRequest.model';
-import { UserRole } from '../models/User.model';
+import { User, UserRole } from '../models/User.model';
+import { AppDataSource } from '../config/database';
+import notificationService from '../services/notification.service';
 
 const MANAGER_ROLES = [UserRole.SEKRETARIAT, UserRole.ADMIN];
 
@@ -37,9 +39,43 @@ export class SupplyController {
   create = async (req: Request, res: Response): Promise<void> => {
     try {
       const request = await supplyService.create(req.body, req.user!.userId);
+
+      // Notify sekretariat + admins (except the creator)
+      try {
+        const userRepo = AppDataSource.getRepository(User);
+        const recipients = await userRepo.find({
+          where: [
+            { role: UserRole.SEKRETARIAT, is_active: true },
+            { role: UserRole.ADMIN, is_active: true },
+          ],
+        });
+        const requester = await userRepo.findOne({ where: { id: req.user!.userId }, select: ['id', 'first_name', 'last_name'] });
+        const requesterName = requester ? `${requester.first_name} ${requester.last_name}` : 'Pracownik';
+        for (const r of recipients) {
+          if (r.id === req.user!.userId) continue;
+          await notificationService.notifyNewSupplyRequest(
+            r.id, requesterName, request.item_name, request.quantity, request.id, req.user!.userId,
+          );
+        }
+      } catch (e) {
+        console.error('Supply notify error:', e);
+      }
+
       res.status(201).json(request);
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Błąd tworzenia zgłoszenia' });
+    }
+  };
+
+  /** PUT /api/supply/:id — owner can edit own PENDING; admin can edit any */
+  update = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const isAdmin = req.user!.role === UserRole.ADMIN;
+      const request = await supplyService.update(req.params.id, req.body, req.user!.userId, isAdmin);
+      res.json(request);
+    } catch (error: any) {
+      const code = /uprawnie/i.test(error.message || '') ? 403 : 400;
+      res.status(code).json({ message: error.message || 'Błąd edycji zgłoszenia' });
     }
   };
 
