@@ -29,7 +29,7 @@ import type { TeamAvailability } from '../api/calendar.api';
 type LeaveType =
   | 'vacation' | 'personal' | 'sick_leave' | 'unpaid' | 'parental'
   | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
-  | 'remote_work' | 'other';
+  | 'remote_work' | 'holiday_saturday' | 'other';
 
 type RequestDateField = 'submitted' | 'absence';
 type AbsenceTab = 'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report';
@@ -100,6 +100,11 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
       label: 'Praca zdalna',
       icon: <Home className="w-4 h-4" />,
       color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30',
+    },
+    holiday_saturday: {
+      label: 'Dzień wolny za święto w sobotę',
+      icon: <CalendarDays className="w-4 h-4" />,
+      color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
     },
     other: {
       label: 'Inne',

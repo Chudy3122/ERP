@@ -22,6 +22,7 @@ export enum LeaveType {
   CARE = 'care',                  // Urlop opiekuńczy (art. 173¹)
   OCCASIONAL = 'occasional',      // Urlop okolicznościowy
   REMOTE_WORK = 'remote_work',    // Praca zdalna (art. 67³³)
+  HOLIDAY_SATURDAY = 'holiday_saturday', // Dzień wolny za święto w sobotę — nie odlicza urlopu
   OTHER = 'other',                // Inne
 }
 

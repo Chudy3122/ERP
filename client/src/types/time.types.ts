@@ -19,6 +19,7 @@ export enum LeaveType {
   CARE = 'care',
   OCCASIONAL = 'occasional',
   REMOTE_WORK = 'remote_work',
+  HOLIDAY_SATURDAY = 'holiday_saturday',
   OTHER = 'other',
 }
 
