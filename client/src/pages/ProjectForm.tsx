@@ -469,6 +469,7 @@ const ProjectForm = () => {
                 value={formData.code}
                 onChange={handleChange}
                 required
+                maxLength={30}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-400 focus:border-gray-400 dark:bg-gray-700 dark:text-white"
                 placeholder="np. ERP-001"
               />

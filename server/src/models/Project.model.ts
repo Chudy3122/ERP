@@ -37,7 +37,7 @@ export class Project extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ length: 20, unique: true })
+  @Column({ length: 30, unique: true })
   code: string;
 
   @Column({

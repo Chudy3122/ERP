@@ -83,3 +83,7 @@ dist/
 client/dist/
 server/dist/
 local_dump.sql
+
+# Local DB migration tooling/dumps (never commit)
+.pgtools/
+*.dump
