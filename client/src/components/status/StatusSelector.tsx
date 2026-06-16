@@ -71,8 +71,10 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
     if ([StatusType.AWAY, StatusType.BUSY, StatusType.IN_MEETING].includes(newStatus)) {
       setPrevStatus(currentStatus);
       setStatus(newStatus);
-      // Optimistic update so navbar refreshes immediately
+      // Optimistic update so navbar refreshes immediately. "manual" tells the
+      // auto-away hook this is a deliberate choice it must not override.
       window.dispatchEvent(new CustomEvent('status-changed', { detail: newStatus }));
+      window.dispatchEvent(new CustomEvent('status-changed-manual', { detail: newStatus }));
       setShowMessageInput(true);
       return;
     }
@@ -81,6 +83,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
     setStatus(newStatus);
     setIsOpen(false);
     window.dispatchEvent(new CustomEvent('status-changed', { detail: newStatus }));
+    window.dispatchEvent(new CustomEvent('status-changed-manual', { detail: newStatus }));
 
     try {
       let updatedStatus;
@@ -122,6 +125,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
         onStatusChange(updatedStatus.status, updatedStatus.custom_message || undefined);
       }
       window.dispatchEvent(new CustomEvent('status-changed', { detail: updatedStatus.status }));
+      window.dispatchEvent(new CustomEvent('status-changed-manual', { detail: updatedStatus.status }));
 
       setIsOpen(false);
       setShowMessageInput(false);
@@ -228,6 +232,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatus
                     // Rollback optimistic update on cancel
                     setStatus(prevStatus);
                     window.dispatchEvent(new CustomEvent('status-changed', { detail: prevStatus }));
+                    window.dispatchEvent(new CustomEvent('status-changed-manual', { detail: prevStatus }));
                     setShowMessageInput(false);
                     setCustomMessage('');
                   }}

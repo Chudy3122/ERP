@@ -274,7 +274,7 @@ export default function SupplyDetail() {
 
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Opis / uzasadnienie</h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+          <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-6 text-gray-600 dark:text-gray-300">
             {request.description || 'Brak dodatkowego opisu.'}
           </p>
         </section>
