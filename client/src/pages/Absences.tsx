@@ -1692,11 +1692,14 @@ const Absences = () => {
                               return (
                                 <td key={day.date} className="px-3 py-3 text-center">
                                   <div
-                                    className={`inline-flex min-w-[90px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-xs font-semibold ${calStatusColor(du.status)}`}
+                                    className={`inline-flex h-14 min-w-[90px] flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-xs font-semibold ${calStatusColor(du.status)}`}
                                     title={du.details}
                                   >
                                     <span>{calStatusIcon(du.status)}</span>
                                     <span>{calStatusText(du.status)}</span>
+                                    {(du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (
+                                      <span className="text-[10px] font-normal leading-none opacity-90">{du.details}</span>
+                                    )}
                                   </div>
                                 </td>
                               );
