@@ -621,7 +621,7 @@ export class TimeService {
         { status: LeaveStatus.APPROVED },
         { status: LeaveStatus.REJECTED },
       ],
-      relations: ['user'],
+      relations: ['user', 'reviewer'],
       order: { created_at: 'DESC' },
     });
   }
@@ -631,7 +631,7 @@ export class TimeService {
    */
   async getAllLeaveRequests(): Promise<LeaveRequest[]> {
     return await this.leaveRequestRepository.find({
-      relations: ['user'],
+      relations: ['user', 'reviewer'],
       order: { start_date: 'DESC' },
     });
   }
@@ -687,7 +687,8 @@ export class TimeService {
     }
 
     request.approve(reviewerId, notes);
-    return await this.leaveRequestRepository.save(request);
+    await this.leaveRequestRepository.save(request);
+    return (await this.leaveRequestRepository.findOne({ where: { id: requestId }, relations: ['user', 'reviewer'] }))!;
   }
 
   /**
@@ -711,7 +712,8 @@ export class TimeService {
     }
 
     request.reject(reviewerId, notes);
-    return await this.leaveRequestRepository.save(request);
+    await this.leaveRequestRepository.save(request);
+    return (await this.leaveRequestRepository.findOne({ where: { id: requestId }, relations: ['user', 'reviewer'] }))!;
   }
 
   /**
