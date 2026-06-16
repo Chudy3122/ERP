@@ -1,0 +1,42 @@
+name: Keep Render awake (work hours)
+
+# Render's free tier sleeps after ~15 min idle (cold start 30-60s). This pings
+# the backend health endpoint on a schedule so it stays warm during office hours,
+# which also keeps the chat socket from dropping due to sleep.
+#
+# Schedule is in UTC. Poland is UTC+2 in summer (CEST) / UTC+1 in winter (CET),
+# so UTC hours 5-15 cover local 07:00-16:00 all year (with a little harmless
+# spillover at the edges). Mon-Fri only. Every 10 min keeps a safe buffer under
+# the 15-min sleep window even if GitHub's scheduler runs a few minutes late.
+
+on:
+  schedule:
+    - cron: '*/10 5-15 * * 1-5'
+  workflow_dispatch: {} # allow manual run from the Actions tab
+
+# If a previous ping is somehow still running, don't pile up.
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          URL="https://erp-nkn6.onrender.com/health"
+          echo "Pinging $URL"
+          # --retry handles a cold start: if the service was asleep the first
+          # request may time out / 502 while it boots, so retry a few times.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time 90 \
+            --retry 5 \
+            --retry-delay 15 \
+            --retry-all-errors \
+            "$URL")
+          echo "HTTP status: $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Health check returned $code (service may have been waking up)"
+          fi
