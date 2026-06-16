@@ -1,6 +1,14 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// Socket MUST hit the same backend as the REST API. We derive it from
+// VITE_API_BASE_URL (which is known-good — the API works) by stripping the
+// trailing /api. This is the source of truth, so a wrong/stale VITE_SOCKET_URL
+// can't break real-time chat. VITE_SOCKET_URL is only a last-resort fallback.
+const apiBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const SOCKET_URL =
+  (apiBase && apiBase.replace(/\/api\/?$/, '')) ||
+  import.meta.env.VITE_SOCKET_URL ||
+  'http://localhost:5000';
 
 /**
  * Socket.io client service for managing WebSocket connections
@@ -9,7 +17,6 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 class SocketService {
   private socket: Socket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
 
   /**
    * Connect to Socket.io server with JWT authentication
@@ -27,8 +34,12 @@ class SocketService {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionDelayMax: 10000,
+      // Never give up reconnecting. The backend (Render free tier) can take
+      // 30–60s to wake from sleep; a low cap made the socket give up before the
+      // server was back, leaving the user with no real-time chat until a manual
+      // page refresh. Infinity keeps retrying so it recovers automatically.
+      reconnectionAttempts: Infinity,
     });
 
     this.setupEventListeners();
@@ -53,11 +64,7 @@ class SocketService {
 
     this.socket.on('connect_error', (error) => {
       console.error('🔴 Socket connection error:', error.message);
-      this.reconnectAttempts++;
-
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('Max reconnection attempts reached. Please refresh the page.');
-      }
+      this.reconnectAttempts++; // socket.io keeps retrying (reconnectionAttempts: Infinity)
     });
 
     this.socket.on('error', (error) => {

@@ -96,7 +96,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const userRef = useRef(user);
   const socketRef = useRef<Socket | null>(null);
   const channelsRef = useRef<Channel[]>([]);
-  const loadChannelsRef = useRef<() => void>(() => {});
+  const loadChannelsRef = useRef<(silent?: boolean) => void>(() => {});
+  const loadMessagesRef = useRef<(id: string, silent?: boolean) => void>(() => {});
   // Sequence counter — prevents stale loadChannels responses from overwriting fresh ones
   const loadChannelsSeqRef = useRef(0);
 
@@ -165,6 +166,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     // Re-join all channels on reconnect (socket loses room membership after disconnect)
     socket.on('connect', () => {
       socket.emit('chat:join_channels');
+      // Recover anything missed while the socket was down (reconnect after a
+      // server wake-up / network blip): refresh the channel list (unread badges)
+      // and the currently-open conversation's messages.
+      loadChannelsRef.current(true);
+      const active = activeChannelRef.current;
+      if (active) loadMessagesRef.current(active.id, true);
     });
 
     // Channel events
@@ -368,10 +375,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   }, [socket]); // Using refs instead of state, so only socket matters
 
   // Load channels from REST API
-  const loadChannels = useCallback(async () => {
+  const loadChannels = useCallback(async (silent = false) => {
     const seq = ++loadChannelsSeqRef.current;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const fetchedChannels = await chatApi.getChannels();
       // Ignore response if a newer loadChannels call was made in the meantime
       if (seq !== loadChannelsSeqRef.current) return;
@@ -410,7 +417,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       console.error('Failed to load channels:', err);
       setError(err.response?.data?.message || 'Failed to load channels');
     } finally {
-      if (seq === loadChannelsSeqRef.current) setLoading(false);
+      if (seq === loadChannelsSeqRef.current && !silent) setLoading(false);
     }
   }, []);
 
@@ -425,20 +432,48 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     if (user) loadChannels();
   }, [user, loadChannels]);
 
-  // Load messages for a channel
-  const loadMessages = useCallback(async (channelId: string) => {
+  // Safety-net poll: refresh the channel list (unread badges + previews) every
+  // 30s while logged in. If a live socket event is ever missed (flaky network,
+  // backgrounded tab, server blip), the UI still self-heals within ~30s instead
+  // of staying stale until a manual refresh. Also refresh the open conversation.
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      loadChannelsRef.current(true);
+      const active = activeChannelRef.current;
+      if (active && isPanelOpenRef.current) loadMessagesRef.current(active.id, true);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Load messages for a channel. `silent` = background refresh (poll/reconnect):
+  // no loading spinner, and only update state if the messages actually changed
+  // (avoids flicker / scroll jump when nothing new arrived).
+  const loadMessages = useCallback(async (channelId: string, silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await chatApi.getChannelMessages(channelId, 50, 0);
-      setMessages(data.messages); // Already in chronological order from API
+      if (silent) {
+        setMessages((prev) => {
+          const a = prev[prev.length - 1];
+          const b = data.messages[data.messages.length - 1];
+          if (prev.length === data.messages.length && a?.id === b?.id) return prev;
+          return data.messages;
+        });
+      } else {
+        setMessages(data.messages); // Already in chronological order from API
+      }
       setError(null);
     } catch (err: any) {
       console.error('Failed to load messages:', err);
-      setError(err.response?.data?.message || 'Failed to load messages');
+      if (!silent) setError(err.response?.data?.message || 'Failed to load messages');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
+
+  useEffect(() => { loadMessagesRef.current = loadMessages; }, [loadMessages]);
 
   // Set active channel and load its messages
   const setActiveChannel = useCallback(
