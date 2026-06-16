@@ -145,7 +145,7 @@ const AbsenceDetail = () => {
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
 
-  const canReview = ['admin', 'kierownik', 'ksiegowosc', 'szef'].includes(user?.role || '');
+  const canReview = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
   const canCancel = request?.status === 'pending' && request.user_id === user?.id;
   const canComment = canReview || request?.user_id === user?.id;
   const isAdmin = user?.role === 'admin';

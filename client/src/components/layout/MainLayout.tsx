@@ -325,7 +325,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },
     { name: 'Kontrahenci', href: '/clients', icon: Building2 },
-    { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.SEKRETARIAT] },
+    { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT] },
 
     { type: 'divider' },
     { type: 'header', name: 'Procedury' },

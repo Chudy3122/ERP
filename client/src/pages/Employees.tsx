@@ -155,6 +155,7 @@ const Employees = () => {
       kierownik: 'Kierownik',
       employee: 'Pracownik',
       ksiegowosc: 'Księgowość',
+      kadry: 'Kadry',
       szef: 'Szef',
       sekretariat: 'Sekretariat',
     };
@@ -170,6 +171,8 @@ const Employees = () => {
       szef: 'bg-[#F7941D]/10 text-[#d87f16] border-[#F7941D]/20 dark:text-[#F7941D]',
       ksiegowosc:
         'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-900/40',
+      kadry:
+        'bg-teal-50 text-teal-700 border-teal-100 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-900/40',
       sekretariat:
         'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-900/40',
       employee:

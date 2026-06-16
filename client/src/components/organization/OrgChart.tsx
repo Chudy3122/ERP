@@ -55,6 +55,15 @@ const ROLE_STYLES: Record<string, {
     label: 'Księgowość',
     dot: 'bg-blue-400',
   },
+  kadry: {
+    bg: 'bg-teal-50 dark:bg-teal-900/20',
+    border: 'border-teal-200 dark:border-teal-800/40',
+    text: 'text-teal-800 dark:text-teal-300',
+    subtext: 'text-teal-600 dark:text-teal-500',
+    avatarBg: 'bg-teal-200 dark:bg-teal-800 text-teal-900 dark:text-teal-100',
+    label: 'Kadry',
+    dot: 'bg-teal-400',
+  },
   sekretariat: {
     bg: 'bg-green-50 dark:bg-green-900/20',
     border: 'border-green-200 dark:border-green-800/40',
@@ -75,7 +84,7 @@ const ROLE_STYLES: Record<string, {
   },
 };
 
-const SPECIAL_ROLES = ['szef', 'admin', 'kierownik', 'ksiegowosc', 'sekretariat'];
+const SPECIAL_ROLES = ['szef', 'admin', 'kierownik', 'ksiegowosc', 'kadry', 'sekretariat'];
 
 function getStyle(role: string) {
   return ROLE_STYLES[role] ?? ROLE_STYLES.employee;
@@ -130,6 +139,7 @@ const LEGEND_ENTRIES = [
   { role: 'admin', label: 'Administrator' },
   { role: 'kierownik', label: 'Kierownik' },
   { role: 'ksiegowosc', label: 'Księgowość' },
+  { role: 'kadry', label: 'Kadry' },
   { role: 'sekretariat', label: 'Sekretariat' },
   { role: 'employee', label: 'Pracownik' },
 ];

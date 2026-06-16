@@ -176,6 +176,7 @@ const EmployeeDetail = () => {
       employee: 'Pracownik',
       szef: 'Szef',
       ksiegowosc: 'Księgowość',
+      kadry: 'Kadry',
       sekretariat: 'Sekretariat',
     };
     return labels[role] || role;
@@ -187,6 +188,7 @@ const EmployeeDetail = () => {
       kierownik: 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/40',
       szef: 'bg-[#F7941D]/10 text-[#d87f16] border-[#F7941D]/20 dark:text-orange-300 dark:bg-[#F7941D]/15',
       ksiegowosc: 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-900/40',
+      kadry: 'bg-teal-50 text-teal-700 border-teal-100 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-900/40',
       sekretariat: 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-900/40',
       employee: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
     };
@@ -209,7 +211,8 @@ const EmployeeDetail = () => {
       admin: 'Pełny dostęp do wszystkich funkcji systemu',
       kierownik: 'Zarządzanie działem, urlopy i nieobecności swoich pracowników',
       szef: 'Szef firmy - podgląd całości, edycja kalendarza',
-      ksiegowosc: 'Dostęp do finansów, kadr i płac',
+      ksiegowosc: 'Księgowość — finanse (faktury, płatności, umowy) + aktywność',
+      kadry: 'Kadry — pełny dostęp HR: czas pracy, urlopy, nadgodziny, profile',
       sekretariat: 'Podstawowy dostęp oraz edycja kalendarza szefa',
       employee: 'Podstawowy dostęp do funkcji pracowniczych',
     })[role] ?? 'Podstawowy dostęp do funkcji pracowniczych';
@@ -484,6 +487,7 @@ const EmployeeDetail = () => {
                   <option value="employee">Pracownik</option>
                   <option value="kierownik">Kierownik</option>
                   <option value="szef">Szef</option>
+                  <option value="kadry">Kadry</option>
                   <option value="ksiegowosc">Księgowość</option>
                   <option value="sekretariat">Sekretariat</option>
                   <option value="admin">Administrator</option>
