@@ -336,7 +336,11 @@ export class TimeService {
       throw new Error('Brak aktywnej sesji pracy');
     }
 
-    timeEntry.clockOut(notes, new Date());
+    // Round clock-out down to the nearest 5 min (same as endWork); never before clock-in
+    const now = new Date();
+    const rounded = roundToNearest5Min(now);
+    const clockOutTime = rounded.getTime() > timeEntry.clock_in.getTime() ? rounded : now;
+    timeEntry.clockOut(notes, clockOutTime);
     timeEntry.is_break = false;
     return await this.timeEntryRepository.save(timeEntry);
   }
