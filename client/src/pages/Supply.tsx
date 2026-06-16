@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -9,6 +10,8 @@ import {
   ChevronRight,
   ClipboardList,
   Clock,
+  CalendarDays,
+  Eye,
   Loader2,
   Package,
   Pencil,
@@ -55,6 +58,8 @@ const EMPTY: CreateSupplyRequest = {
 
 export default function Supply() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isManager = user?.role === 'sekretariat' || user?.role === 'admin';
   const isAdmin = user?.role === 'admin';
 
@@ -67,6 +72,7 @@ export default function Supply() {
   const [form, setForm] = useState<CreateSupplyRequest>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<SupplyRequest | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -77,6 +83,17 @@ export default function Supply() {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, tab]);
+
+  useEffect(() => {
+    const editSupplyId = (location.state as { editSupplyId?: string } | null)?.editSupplyId;
+    if (!editSupplyId || requests.length === 0) return;
+
+    const request = requests.find(item => item.id === editSupplyId);
+    if (request && canEdit(request)) {
+      openEdit(request);
+      navigate('/supply', { replace: true, state: null });
+    }
+  }, [location.state, requests]);
 
   const load = async () => {
     try {
@@ -143,8 +160,11 @@ export default function Supply() {
 
   const handleApprove = async (id: string) => {
     try {
-      await supplyApi.approveSupplyRequest(id);
+      const updatedRequest = await supplyApi.approveSupplyRequest(id);
       toast.success('Zatwierdzono');
+      setSelectedRequest(currentRequest =>
+        currentRequest?.id === id ? updatedRequest : currentRequest
+      );
       load();
     } catch {
       toast.error('Nie udało się zatwierdzić');
@@ -153,8 +173,11 @@ export default function Supply() {
 
   const handleReject = async (id: string) => {
     try {
-      await supplyApi.rejectSupplyRequest(id);
+      const updatedRequest = await supplyApi.rejectSupplyRequest(id);
       toast.success('Odrzucono');
+      setSelectedRequest(currentRequest =>
+        currentRequest?.id === id ? updatedRequest : currentRequest
+      );
       load();
     } catch {
       toast.error('Nie udało się odrzucić');
@@ -167,6 +190,7 @@ export default function Supply() {
     try {
       await supplyApi.deleteSupplyRequest(deleteId);
       toast.success('Usunięto');
+      if (selectedRequest?.id === deleteId) setSelectedRequest(null);
       load();
     } catch {
       toast.error('Nie udało się usunąć');
@@ -202,6 +226,20 @@ export default function Supply() {
   const pageStart = filtered.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
   const pageEnd = Math.min(safeCurrentPage * pageSize, filtered.length);
   const paginatedRequests = filtered.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+  const formatDateTime = (date: string | null) =>
+    date
+      ? new Date(date).toLocaleString('pl-PL', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '—';
+  const getUserName = (request: SupplyRequest) =>
+    request.user ? `${request.user.first_name} ${request.user.last_name}` : '—';
+  const getReviewerName = (request: SupplyRequest) =>
+    request.reviewer ? `${request.reviewer.first_name} ${request.reviewer.last_name}` : '—';
 
   const fieldClass =
     'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
@@ -372,6 +410,14 @@ export default function Supply() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/supply/${request.id}`)}
+                                title="Pokaż szczegóły"
+                                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
                               {isManager && request.status === 'pending' && (
                                 <>
                                   <button
@@ -472,6 +518,177 @@ export default function Supply() {
           )}
         </section>
       </div>
+
+      {selectedRequest && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedRequest(null)}
+        >
+          <div
+            className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5 dark:border-gray-700">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                    Szczegóły zgłoszenia
+                  </p>
+                  <h2 className="text-xl font-semibold text-gray-950 dark:text-white">
+                    {selectedRequest.item_name}
+                  </h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {(() => {
+                      const statusConfig = STATUS_CFG[selectedRequest.status];
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusConfig.cls}`}>
+                          <StatusIcon className="h-3.5 w-3.5" />
+                          {statusConfig.label}
+                        </span>
+                      );
+                    })()}
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${PRIORITY_CLS[selectedRequest.priority]}`}>
+                      {SUPPLY_PRIORITY_LABELS[selectedRequest.priority]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRequest(null)}
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+                aria-label="Zamknij szczegóły"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="grid gap-4 md:grid-cols-3">
+                <DetailTile label="Ilość" value={String(selectedRequest.quantity)} />
+                <DetailTile label="Kategoria" value={SUPPLY_CATEGORY_LABELS[selectedRequest.category]} />
+                <DetailTile label="Priorytet" value={SUPPLY_PRIORITY_LABELS[selectedRequest.priority]} />
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <section className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                    <UserRound className="h-4 w-4 text-[#F7941D]" />
+                    Zgłaszający
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{getUserName(selectedRequest)}</p>
+                  {selectedRequest.user?.email && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{selectedRequest.user.email}</p>
+                  )}
+                  {selectedRequest.user?.department && (
+                    <p className="mt-2 inline-flex rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-500 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
+                      {selectedRequest.user.department}
+                    </p>
+                  )}
+                </section>
+
+                <section className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                    <CalendarDays className="h-4 w-4 text-[#F7941D]" />
+                    Daty
+                  </div>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-gray-500 dark:text-gray-400">Utworzono</dt>
+                      <dd className="text-right font-medium text-gray-800 dark:text-gray-100">{formatDateTime(selectedRequest.created_at)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-gray-500 dark:text-gray-400">Aktualizacja</dt>
+                      <dd className="text-right font-medium text-gray-800 dark:text-gray-100">{formatDateTime(selectedRequest.updated_at)}</dd>
+                    </div>
+                    {selectedRequest.reviewed_at && (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-gray-500 dark:text-gray-400">Rozpatrzono</dt>
+                        <dd className="text-right font-medium text-gray-800 dark:text-gray-100">{formatDateTime(selectedRequest.reviewed_at)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </section>
+              </div>
+
+              <section className="mt-5 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Opis / uzasadnienie</h3>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+                  {selectedRequest.description || 'Brak dodatkowego opisu.'}
+                </p>
+              </section>
+
+              {(selectedRequest.reviewer || selectedRequest.review_notes) && (
+                <section className="mt-5 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Decyzja</h3>
+                  <dl className="mt-2 space-y-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-gray-500 dark:text-gray-400">Rozpatrujący</dt>
+                      <dd className="text-right font-medium text-gray-800 dark:text-gray-100">{getReviewerName(selectedRequest)}</dd>
+                    </div>
+                    {selectedRequest.review_notes && (
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Notatka</dt>
+                        <dd className="mt-1 whitespace-pre-line text-gray-700 dark:text-gray-300">{selectedRequest.review_notes}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </section>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/80 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
+              <button
+                type="button"
+                onClick={() => setSelectedRequest(null)}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              >
+                Zamknij
+              </button>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {isManager && selectedRequest.status === 'pending' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleReject(selectedRequest.id)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:bg-gray-700 dark:hover:bg-red-900/20"
+                    >
+                      <X className="h-4 w-4" />
+                      Odrzuć
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(selectedRequest.id)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                    >
+                      <Check className="h-4 w-4" />
+                      Zatwierdź
+                    </button>
+                  </>
+                )}
+                {canEdit(selectedRequest) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      openEdit(selectedRequest);
+                      setSelectedRequest(null);
+                    }}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edytuj
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm" onClick={() => { setShowForm(false); setEditId(null); }}>
@@ -593,6 +810,15 @@ export default function Supply() {
         icon="delete"
       />
     </MainLayout>
+  );
+}
+
+function DetailTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-gray-950 dark:text-white">{value}</p>
+    </div>
   );
 }
 

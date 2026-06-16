@@ -17,6 +17,10 @@ const getNotificationTargetUrl = (notification: Notification) => {
     notification.data?.id ||
     null;
 
+  if (notification.related_entity_type === 'supply_request' && requestId) {
+    return `/supply/${requestId}`;
+  }
+
   if (notification.action_url) {
     const path = notification.action_url.split('?')[0];
     const leaveDetailMatch = path.match(

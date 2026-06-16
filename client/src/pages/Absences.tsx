@@ -574,6 +574,21 @@ const Absences = () => {
   const hpd = balance?.hoursPerDay ?? 8;
   const fmtD = (v?: number) => (v == null ? '—' : Number.isInteger(v) ? `${v}` : v.toFixed(1));
   const fmtHrs = (v?: number) => (v == null ? '' : `${Math.round(v * hpd)} h`);
+  const pendingDeductingLeaveDays = leaveRequests
+    .filter(request =>
+      request.status === 'pending' &&
+      DEDUCTING_TYPES.includes(request.leave_type as LeaveType)
+    )
+    .reduce((sum, request) => sum + Number(request.total_days || 0), 0);
+  const pendingRemoteWorkDays = leaveRequests
+    .filter(request => request.status === 'pending' && request.leave_type === 'remote_work')
+    .reduce((sum, request) => sum + Number(request.total_days || 0), 0);
+  const remainingAfterPending = balance
+    ? Math.max(0, balance.remaining - pendingDeductingLeaveDays)
+    : undefined;
+  const remoteRemainingAfterPending = balance
+    ? Math.max(0, balance.remoteRemaining - pendingRemoteWorkDays)
+    : undefined;
 
   const balanceCards = [
     {
@@ -598,6 +613,9 @@ const Absences = () => {
       label: 'Pozostało dni',
       value: fmtD(balance?.remaining),
       hint: balance ? fmtHrs(balance.remaining) : undefined,
+      subHint: balance
+        ? `Po uwzględnieniu oczekujących: ${fmtD(remainingAfterPending)} dni (${fmtHrs(remainingAfterPending)})`
+        : undefined,
       icon: <Calendar className="h-5 w-5 text-emerald-600" />,
       iconBg: 'bg-emerald-50 dark:bg-emerald-900/30',
       valueColor: 'text-emerald-600',
@@ -607,6 +625,9 @@ const Absences = () => {
       value: fmtD(balance?.remoteRemaining),
       hint: balance
         ? `${fmtHrs(balance.remoteRemaining)} · ${fmtD(balance.remoteUsed)}/${fmtD(balance.remoteAllowance)} wyk.`
+        : undefined,
+      subHint: balance
+        ? `Po uwzględnieniu oczekujących: ${fmtD(remoteRemainingAfterPending)} dni (${fmtHrs(remoteRemainingAfterPending)})`
         : undefined,
       icon: <Home className="h-5 w-5 text-purple-600" />,
       iconBg: 'bg-purple-50 dark:bg-purple-900/30',
@@ -752,6 +773,11 @@ const Absences = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">{card.label}</p>
                     {card.hint && (
                       <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">{card.hint}</p>
+                    )}
+                    {'subHint' in card && card.subHint && (
+                      <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                        {card.subHint}
+                      </p>
                     )}
                   </div>
                 </div>

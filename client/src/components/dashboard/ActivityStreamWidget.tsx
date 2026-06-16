@@ -4,14 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import WidgetCard from '../widgets/WidgetCard';
 import { getRecentActivities } from '../../api/activity.api';
 import { getWorkLogById } from '../../api/worklog.api';
+import { getTicketById } from '../../api/ticket.api';
 import { ActivityLog } from '../../types/activity.types';
+import { TicketStatus } from '../../types/ticket.types';
 import { WorkLogType } from '../../types/worklog.types';
 import { DashboardWidgetEmpty, DashboardWidgetLoading } from './DashboardWidgetState';
+
+const TICKET_STATUS_LABELS: Record<string, string> = {
+  [TicketStatus.OPEN]: 'Otwarte',
+  [TicketStatus.IN_PROGRESS]: 'W trakcie',
+  [TicketStatus.WAITING_RESPONSE]: 'Oczekuje na odpowiedź',
+  [TicketStatus.RESOLVED]: 'Rozwiązane',
+  [TicketStatus.REJECTED]: 'Odrzucone',
+  [TicketStatus.CLOSED]: 'Zamknięte',
+};
 
 const ActivityStreamWidget = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const workLogDetailsCache = useRef(new Map<string, { workType: WorkLogType; hours: number }>());
+  const ticketDetailsCache = useRef(new Map<string, { title: string; number: string; status: TicketStatus }>());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,6 +40,44 @@ const ActivityStreamWidget = () => {
       const data = await getRecentActivities(15);
       const enrichedActivities = await Promise.all(
         data.map(async (activity) => {
+          if (activity.entity_type === 'ticket' && activity.entity_id) {
+            const cachedTicketDetails = ticketDetailsCache.current.get(activity.entity_id);
+
+            if (cachedTicketDetails) {
+              return {
+                ...activity,
+                metadata: {
+                  ...activity.metadata,
+                  ticket_title: cachedTicketDetails.title,
+                  ticket_number: cachedTicketDetails.number,
+                  ticket_status: cachedTicketDetails.status,
+                },
+              };
+            }
+
+            try {
+              const ticket = await getTicketById(activity.entity_id);
+              const details = {
+                title: ticket.title,
+                number: ticket.ticket_number,
+                status: ticket.status,
+              };
+              ticketDetailsCache.current.set(activity.entity_id, details);
+
+              return {
+                ...activity,
+                metadata: {
+                  ...activity.metadata,
+                  ticket_title: details.title,
+                  ticket_number: details.number,
+                  ticket_status: details.status,
+                },
+              };
+            } catch {
+              return activity;
+            }
+          }
+
           if (activity.entity_type !== 'work_log' || !activity.entity_id) return activity;
 
           const cachedDetails = workLogDetailsCache.current.get(activity.entity_id);
@@ -103,6 +153,10 @@ const ActivityStreamWidget = () => {
   };
 
   const getActivityDescription = (activity: ActivityLog) => {
+    if (activity.entity_type === 'ticket') {
+      return getTicketActivityDescription(activity);
+    }
+
     if (!isOvertimeActivity(activity) || activity.metadata?.hours === undefined) {
       return activity.description;
     }
@@ -112,6 +166,62 @@ const ActivityStreamWidget = () => {
     return activity.metadata.work_type === WorkLogType.OVERTIME_COMP
       ? `Zarejestrowano odbiór ${duration} nadgodzin`
       : `Zalogowano ${duration} nadgodzin`;
+  };
+
+  const getActivityActor = (activity: ActivityLog) => {
+    const firstName = activity.user?.first_name || '';
+    const lastName = activity.user?.last_name || '';
+    return `${firstName} ${lastName}`.trim() || 'System';
+  };
+
+  const getTicketName = (activity: ActivityLog) => {
+    const title = activity.metadata?.ticket_title;
+
+    if (title) return title;
+
+    const quotedValue = activity.description.match(/"([^"]+)"/)?.[1];
+    return quotedValue?.replace(/^TKT-\d{8}-\d+:\s*/, '') || 'zgłoszenie';
+  };
+
+  const translateTicketStatuses = (description: string) =>
+    description.replace(/"([^"]+)"/g, (match, value) => {
+      const label = TICKET_STATUS_LABELS[value];
+      return label ? `"${label}"` : match;
+    });
+
+  const getTicketActivityDescription = (activity: ActivityLog) => {
+    const actor = getActivityActor(activity);
+    const ticketName = getTicketName(activity);
+    const quotedTicketName = `„${ticketName}”`;
+
+    switch (activity.action) {
+      case 'created_ticket':
+        return `${actor} utworzył zgłoszenie ${quotedTicketName}`;
+      case 'updated_ticket':
+        return `${actor} zaktualizował zgłoszenie ${quotedTicketName}`;
+      case 'changed_ticket_status': {
+        const oldStatus = TICKET_STATUS_LABELS[activity.metadata?.old_status] || activity.metadata?.old_status;
+        const newStatus = TICKET_STATUS_LABELS[activity.metadata?.new_status] || activity.metadata?.new_status;
+
+        if (oldStatus && newStatus) {
+          return `${actor} zmienił status zgłoszenia ${quotedTicketName} z „${oldStatus}” na „${newStatus}”`;
+        }
+
+        return translateTicketStatuses(activity.description);
+      }
+      case 'assigned_ticket':
+        return `${actor} przypisał zgłoszenie ${quotedTicketName}`;
+      case 'added_ticket_comment':
+        return `${actor} dodał komentarz do zgłoszenia ${quotedTicketName}`;
+      case 'uploaded_ticket_attachment':
+        return `${actor} dodał załącznik do zgłoszenia ${quotedTicketName}`;
+      case 'deleted_ticket_attachment':
+        return `${actor} usunął załącznik ze zgłoszenia ${quotedTicketName}`;
+      case 'deleted_ticket':
+        return `${actor} usunął zgłoszenie ${quotedTicketName}`;
+      default:
+        return translateTicketStatuses(activity.description);
+    }
   };
 
   const getActivityIcon = (activity: ActivityLog) => {

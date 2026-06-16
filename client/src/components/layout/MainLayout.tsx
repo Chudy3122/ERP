@@ -29,6 +29,17 @@ const getNotificationLeaveRequestId = (notification: NotificationItem) =>
 
 const getNotificationTargetUrl = (notification: NotificationItem) => {
   const actionUrl = notification.action_url;
+  const relatedEntityId =
+    notification.related_entity_id ||
+    notification.data?.requestId ||
+    notification.data?.supplyRequestId ||
+    notification.data?.supply_request_id ||
+    notification.data?.id ||
+    null;
+
+  if (notification.related_entity_type === 'supply_request' && relatedEntityId) {
+    return `/supply/${relatedEntityId}`;
+  }
 
   if (actionUrl) {
     const path = actionUrl.split('?')[0];
@@ -121,6 +132,7 @@ interface NotificationItem {
   created_at: string;
   action_url: string | null;
   type?: string;
+  related_entity_type?: string | null;
   related_entity_id?: string | null;
   data?: Record<string, any> | null;
 }

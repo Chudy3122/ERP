@@ -44,6 +44,7 @@ import LandingPage from '../pages/LandingPage';
 import Procedures from '../pages/Procedures';
 import BossCalendar from '../pages/BossCalendar';
 import Supply from '../pages/Supply';
+import SupplyDetail from '../pages/SupplyDetail';
 import PrivateZone from '../pages/PrivateZone';
 import PrivateRoute from './PrivateRoute';
 import { UserRole } from '../types/auth.types';
@@ -383,6 +384,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Supply />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/supply/:id"
+        element={
+          <PrivateRoute>
+            <SupplyDetail />
           </PrivateRoute>
         }
       />
