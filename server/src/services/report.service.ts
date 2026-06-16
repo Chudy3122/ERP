@@ -109,10 +109,10 @@ export class ReportService {
 
     // Time entries sheet
     const entriesData = reportData.entries.map((entry) => ({
-      'Data': new Date(entry.clock_in).toLocaleDateString('pl-PL'),
+      'Data': new Date(entry.clock_in).toLocaleDateString('pl-PL', { timeZone: 'Europe/Warsaw' }),
       'Pracownik': entry.user ? `${entry.user.first_name} ${entry.user.last_name}` : 'N/A',
-      'Wejście': new Date(entry.clock_in).toLocaleTimeString('pl-PL'),
-      'Wyjście': entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('pl-PL') : '-',
+      'Wejście': new Date(entry.clock_in).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }),
+      'Wyjście': entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }) : '-',
       'Czas pracy (min)': entry.duration_minutes || 0,
       'Nadgodziny (min)': entry.overtime_minutes || 0,
       'Spóźnienie (min)': entry.late_minutes || 0,
@@ -161,7 +161,7 @@ export class ReportService {
 
       // Report period
       doc.fontSize(12).text(
-        `Okres: ${filters.startDate.toLocaleDateString('pl-PL')} - ${filters.endDate.toLocaleDateString('pl-PL')}`,
+        `Okres: ${filters.startDate.toLocaleDateString('pl-PL', { timeZone: 'Europe/Warsaw' })} - ${filters.endDate.toLocaleDateString('pl-PL', { timeZone: 'Europe/Warsaw' })}`,
         { align: 'center' }
       );
       doc.moveDown(2);
@@ -219,7 +219,7 @@ export class ReportService {
         xPos = 50;
         const yPos = doc.y;
 
-        doc.text(new Date(entry.clock_in).toLocaleDateString('pl-PL'), xPos, yPos, { width: colWidths.date });
+        doc.text(new Date(entry.clock_in).toLocaleDateString('pl-PL', { timeZone: 'Europe/Warsaw' }), xPos, yPos, { width: colWidths.date });
         xPos += colWidths.date;
         doc.text(
           entry.user ? `${entry.user.first_name} ${entry.user.last_name}` : 'N/A',
@@ -228,10 +228,10 @@ export class ReportService {
           { width: colWidths.employee }
         );
         xPos += colWidths.employee;
-        doc.text(new Date(entry.clock_in).toLocaleTimeString('pl-PL'), xPos, yPos, { width: colWidths.in });
+        doc.text(new Date(entry.clock_in).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }), xPos, yPos, { width: colWidths.in });
         xPos += colWidths.in;
         doc.text(
-          entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('pl-PL') : '-',
+          entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }) : '-',
           xPos,
           yPos,
           { width: colWidths.out }
@@ -255,7 +255,7 @@ export class ReportService {
 
       // Footer
       doc.fontSize(8).text(
-        `Wygenerowano: ${new Date().toLocaleString('pl-PL')}`,
+        `Wygenerowano: ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`,
         50,
         doc.page.height - 50,
         { align: 'center' }

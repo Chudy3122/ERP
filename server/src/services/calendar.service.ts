@@ -298,7 +298,10 @@ export class CalendarService {
    * Format time
    */
   private formatTime(date: Date): string {
+    // Always render in Polish local time — the server runs in UTC, so without an
+    // explicit timeZone the times would be shown 2h early (the +2h shift bug).
     return new Date(date).toLocaleTimeString('pl-PL', {
+      timeZone: 'Europe/Warsaw',
       hour: '2-digit',
       minute: '2-digit',
     });
