@@ -92,7 +92,8 @@ export const sendMail = async (accountId: string, payload: SendMailPayload): Pro
   if (payload.inReplyTo) form.append('inReplyTo', payload.inReplyTo);
   if (payload.references) form.append('references', payload.references);
   (payload.attachments || []).forEach((f) => form.append('attachments', f));
-  await apiClient.post(`/email/accounts/${accountId}/send`, form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  // Do NOT set Content-Type manually — axios derives it from FormData together
+  // with the required multipart boundary. Forcing it drops the boundary and the
+  // server can't parse the body (→ 400).
+  await apiClient.post(`/email/accounts/${accountId}/send`, form);
 };
