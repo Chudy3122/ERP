@@ -1321,10 +1321,7 @@ export default function WorkTime() {
                             })}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-700 dark:text-gray-300 font-mono">
-                            <span className="inline-flex items-center justify-center gap-1.5">
-                              {formatTime(entry.clock_in)}
-                              <DeviceBadge device={entry.clock_in_device} ip={entry.clock_in_ip} />
-                            </span>
+                            {formatTime(entry.clock_in)}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-700 dark:text-gray-300 font-mono">
                             {entry.clock_out ? formatTime(entry.clock_out) : (
