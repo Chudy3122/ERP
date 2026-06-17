@@ -1,7 +1,13 @@
 import { Request, Response } from 'express';
 import projectTemplateService from '../services/projectTemplate.service';
+import { UserRole } from '../models/User.model';
 
 class ProjectTemplateController {
+  /** Admin manages any template; kierownik only the ones they created. */
+  private canManage(req: Request, createdBy: string): boolean {
+    return req.user!.role === UserRole.ADMIN || createdBy === req.user!.userId;
+  }
+
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
@@ -36,12 +42,16 @@ class ProjectTemplateController {
 
   async updateTemplate(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
-      const template = await projectTemplateService.updateTemplate(req.params.id, req.body, userId);
-      if (!template) {
+      const existing = await projectTemplateService.getTemplateById(req.params.id);
+      if (!existing) {
         res.status(404).json({ message: 'Template not found' });
         return;
       }
+      if (!this.canManage(req, existing.created_by)) {
+        res.status(403).json({ message: 'Możesz edytować tylko własne szablony' });
+        return;
+      }
+      const template = await projectTemplateService.updateTemplate(req.params.id, req.body, req.user!.userId);
       res.json(template);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -50,11 +60,16 @@ class ProjectTemplateController {
 
   async deleteTemplate(req: Request, res: Response): Promise<void> {
     try {
-      const success = await projectTemplateService.deleteTemplate(req.params.id);
-      if (!success) {
+      const existing = await projectTemplateService.getTemplateById(req.params.id);
+      if (!existing) {
         res.status(404).json({ message: 'Template not found' });
         return;
       }
+      if (!this.canManage(req, existing.created_by)) {
+        res.status(403).json({ message: 'Możesz usuwać tylko własne szablony' });
+        return;
+      }
+      await projectTemplateService.deleteTemplate(req.params.id);
       res.json({ message: 'Template deleted successfully' });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

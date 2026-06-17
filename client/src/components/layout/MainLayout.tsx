@@ -311,7 +311,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.projects') },
     { name: t('nav.projectList'), href: '/projects', icon: Folder },
-    { name: 'Szablony projektów', href: '/admin/project-templates', icon: LayoutTemplate, roles: [UserRole.ADMIN] },
+    { name: 'Szablony projektów', href: '/admin/project-templates', icon: LayoutTemplate, roles: [UserRole.ADMIN, UserRole.KIEROWNIK] },
     { name: t('nav.myTasks'), href: '/tasks', icon: CheckSquare },
     { name: 'Strefa prywatna', href: '/private-zone', icon: ListTodo },
 

@@ -13,20 +13,21 @@ router.use(authenticate);
 router.get('/', projectTemplateController.getAllTemplates.bind(projectTemplateController));
 router.get('/:id', projectTemplateController.getTemplateById.bind(projectTemplateController));
 
-// Write routes (ADMIN only)
+// Write routes: ADMIN + KIEROWNIK may create. Edit/delete is further checked in
+// the controller — admin manages any template, kierownik only their own.
 router.post(
   '/',
-  requireRole([UserRole.ADMIN]),
+  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   projectTemplateController.createTemplate.bind(projectTemplateController)
 );
 router.put(
   '/:id',
-  requireRole([UserRole.ADMIN]),
+  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   projectTemplateController.updateTemplate.bind(projectTemplateController)
 );
 router.delete(
   '/:id',
-  requireRole([UserRole.ADMIN]),
+  requireRole([UserRole.ADMIN, UserRole.KIEROWNIK]),
   projectTemplateController.deleteTemplate.bind(projectTemplateController)
 );
 

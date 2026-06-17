@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import { useAuth } from '../contexts/AuthContext';
 import { confirmDelete } from '../utils/confirm';
 import {
   Plus,
@@ -39,6 +40,10 @@ const DEFAULT_COLORS = ['#6B7280', '#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '
 
 const ProjectTemplates = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  // Admin manages every template; others (kierownik) only the ones they created.
+  const canManage = (template: ProjectTemplate) =>
+    user?.role === 'admin' || template.created_by === user?.id;
   const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -813,15 +818,17 @@ const ProjectTemplates = () => {
                   </button>
 
                   <div className="flex shrink-0 items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openEditForm(template)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-white"
-                      title="Edytuj szablon"
-                      aria-label={`Edytuj szablon ${template.name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+                    {canManage(template) && (
+                      <button
+                        type="button"
+                        onClick={() => openEditForm(template)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-white"
+                        title="Edytuj szablon"
+                        aria-label={`Edytuj szablon ${template.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleDuplicate(template)}
@@ -836,15 +843,17 @@ const ProjectTemplates = () => {
                         <Copy className="h-4 w-4" />
                       )}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(template.id)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                      title="Usuń szablon"
-                      aria-label={`Usuń szablon ${template.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {canManage(template) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(template.id)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                        title="Usuń szablon"
+                        aria-label={`Usuń szablon ${template.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : template.id)}

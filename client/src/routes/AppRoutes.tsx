@@ -423,7 +423,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/project-templates"
         element={
-          <PrivateRoute roles={[UserRole.ADMIN]}>
+          <PrivateRoute roles={[UserRole.ADMIN, UserRole.KIEROWNIK]}>
             <ProjectTemplates />
           </PrivateRoute>
         }
