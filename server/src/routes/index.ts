@@ -30,6 +30,7 @@ import bossCalendarRoutes from './boss-calendar.routes';
 import searchRoutes from './search.routes';
 import supplyRoutes from './supply.routes';
 import personalTaskRoutes from './personalTask.routes';
+import emailRoutes from './email.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -126,6 +127,8 @@ router.use('/supply', supplyRoutes);
 
 // Personal tasks / private zone (Strefa prywatna)
 router.use('/personal-tasks', personalTaskRoutes);
+
+router.use('/email', emailRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

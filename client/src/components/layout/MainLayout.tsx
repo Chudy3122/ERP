@@ -72,6 +72,7 @@ const getNotificationTargetUrl = (notification: NotificationItem) => {
 import {
   Home,
   MessageSquare,
+  Mail,
   Clock,
   CalendarDays,
   TrendingUp,
@@ -299,6 +300,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.communication') },
     { name: 'Chat & Meet', href: '/meeting', icon: MessageSquare },
+    { name: 'Poczta', href: '/mail', icon: Mail },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.workTime') },
