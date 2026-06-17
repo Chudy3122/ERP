@@ -92,9 +92,13 @@ export const sendMail = async (accountId: string, payload: SendMailPayload): Pro
   if (payload.inReplyTo) form.append('inReplyTo', payload.inReplyTo);
   if (payload.references) form.append('references', payload.references);
   (payload.attachments || []).forEach((f) => form.append('attachments', f));
-  // Do NOT set Content-Type manually — axios derives it from FormData together
-  // with the required multipart boundary. Forcing it drops the boundary and the
-  // server can't parse the body (→ 400). Give it a generous timeout because LH's
-  // SMTP can be slow to ACK from the server's IP.
-  await apiClient.post(`/email/accounts/${accountId}/send`, form, { timeout: 130000 });
+  // IMPORTANT: this axios instance defaults to Content-Type: application/json.
+  // With that default, axios v1 converts FormData to JSON (transformRequest),
+  // so the server can't parse it (→ 400, body empty). Setting multipart/form-data
+  // here makes axios keep the FormData; the browser then adds the boundary itself.
+  // Generous timeout because LH's SMTP can be slow to ACK from the server's IP.
+  await apiClient.post(`/email/accounts/${accountId}/send`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 130000,
+  });
 };
