@@ -300,7 +300,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.communication') },
     { name: 'Chat & Meet', href: '/meeting', icon: MessageSquare },
-    { name: 'Poczta', href: '/mail', icon: Mail },
+    { name: 'Poczta', href: '/mail', icon: Mail, roles: [UserRole.ADMIN] },
 
     { type: 'divider' },
     { type: 'header', name: t('nav.workTime') },

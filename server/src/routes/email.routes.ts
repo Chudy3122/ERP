@@ -2,6 +2,8 @@ import { Router } from 'express';
 import multer from 'multer';
 import emailController from '../controllers/email.controller';
 import { authenticate } from '../middleware/auth.middleware';
+import { requireRole } from '../middleware/role.middleware';
+import { UserRole } from '../models/User.model';
 
 const router = Router();
 
@@ -12,6 +14,8 @@ const upload = multer({
 });
 
 router.use(authenticate);
+// Mail module is admin-only for now.
+router.use(requireRole([UserRole.ADMIN]));
 
 // Accounts
 router.get('/accounts', emailController.listAccounts);

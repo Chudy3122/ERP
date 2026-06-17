@@ -12,6 +12,9 @@ export interface EmailAccount {
   is_active: boolean;
   last_checked_at: string | null;
   created_at: string;
+  // Present only in the add-account response: SMTP test result.
+  smtpOk?: boolean;
+  smtpWarning?: string | null;
 }
 
 export interface AddAccountDto {

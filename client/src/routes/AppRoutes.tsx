@@ -199,7 +199,7 @@ const AppRoutes = () => {
       <Route
         path="/mail"
         element={
-          <PrivateRoute>
+          <PrivateRoute roles={[UserRole.ADMIN]}>
             <Mail />
           </PrivateRoute>
         }

@@ -29,6 +29,14 @@ export interface SendMailDto {
   references?: string;
 }
 
+/** Reject a promise if it doesn't settle within `ms` — so nothing hangs forever. */
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 // Public (safe) shape of an account — never includes the password.
 function sanitize(a: EmailAccount) {
   return {
@@ -66,12 +74,16 @@ export class EmailService {
     return account;
   }
 
-  /** Verify IMAP login + SMTP auth before saving, so we never store bad creds. */
+  /**
+   * Verify IMAP (required — needed to read mail) and SMTP (best-effort — some
+   * hosts like Render block outbound SMTP, so a failed SMTP test must NOT prevent
+   * connecting the mailbox; we just warn). Hard timeouts so it never hangs.
+   */
   private async verifyConnection(params: {
     imap_host: string; imap_port: number; imap_secure: boolean;
     smtp_host: string; smtp_port: number; smtp_secure: boolean;
     username: string; password: string;
-  }): Promise<void> {
+  }): Promise<{ smtpOk: boolean; smtpError?: string }> {
     const client = new ImapFlow({
       host: params.imap_host,
       port: params.imap_port,
@@ -80,7 +92,7 @@ export class EmailService {
       logger: false,
     });
     try {
-      await client.connect();
+      await withTimeout(client.connect(), 20000, 'Przekroczono czas połączenia z serwerem IMAP');
     } catch (e: any) {
       throw new Error(`Nie udało się połączyć z IMAP: ${e.message || e}`);
     } finally {
@@ -92,11 +104,15 @@ export class EmailService {
       port: params.smtp_port,
       secure: params.smtp_secure,
       auth: { user: params.username, pass: params.password },
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
     try {
-      await transporter.verify();
+      await withTimeout(transporter.verify(), 18000, 'Przekroczono czas połączenia z serwerem SMTP');
+      return { smtpOk: true };
     } catch (e: any) {
-      throw new Error(`Nie udało się połączyć z SMTP: ${e.message || e}`);
+      return { smtpOk: false, smtpError: e.message || String(e) };
     }
   }
 
@@ -117,7 +133,7 @@ export class EmailService {
       password: dto.password,
     };
 
-    await this.verifyConnection(params);
+    const { smtpOk, smtpError } = await this.verifyConnection(params);
 
     const account = this.repo.create({
       user_id: userId,
@@ -135,7 +151,13 @@ export class EmailService {
       last_checked_at: new Date(),
     });
     await this.repo.save(account);
-    return sanitize(account);
+    return {
+      ...sanitize(account),
+      smtpOk,
+      smtpWarning: smtpOk
+        ? null
+        : `Połączono ze skrzynką (odbieranie działa), ale test wysyłki (SMTP) się nie powiódł: ${smtpError}. Wysyłanie maili może nie działać z tego serwera.`,
+    };
   }
 
   async deleteAccount(id: string, userId: string): Promise<void> {
@@ -152,7 +174,7 @@ export class EmailService {
       auth: { user: account.username, pass: decryptSecret(account.password_encrypted) },
       logger: false,
     });
-    await client.connect();
+    await withTimeout(client.connect(), 25000, 'Przekroczono czas połączenia z serwerem IMAP');
     try {
       return await fn(client);
     } finally {
@@ -323,6 +345,9 @@ export class EmailService {
       port: account.smtp_port,
       secure: account.smtp_secure,
       auth: { user: account.username, pass: decryptSecret(account.password_encrypted) },
+      connectionTimeout: 20000,
+      greetingTimeout: 12000,
+      socketTimeout: 20000,
     });
 
     const attachments = (files || []).map((f) => ({
@@ -332,18 +357,26 @@ export class EmailService {
     }));
 
     const fromName = account.display_name || account.email;
-    await transporter.sendMail({
-      from: { name: fromName, address: account.email },
-      to: dto.to,
-      cc: dto.cc || undefined,
-      bcc: dto.bcc || undefined,
-      subject: dto.subject || '(bez tematu)',
-      text: dto.text || undefined,
-      html: dto.html || undefined,
-      inReplyTo: dto.inReplyTo || undefined,
-      references: dto.references || undefined,
-      attachments,
-    });
+    try {
+      await withTimeout(
+        transporter.sendMail({
+          from: { name: fromName, address: account.email },
+          to: dto.to,
+          cc: dto.cc || undefined,
+          bcc: dto.bcc || undefined,
+          subject: dto.subject || '(bez tematu)',
+          text: dto.text || undefined,
+          html: dto.html || undefined,
+          inReplyTo: dto.inReplyTo || undefined,
+          references: dto.references || undefined,
+          attachments,
+        }),
+        30000,
+        'Przekroczono czas wysyłki (serwer SMTP nie odpowiada — możliwa blokada portu)',
+      );
+    } catch (e: any) {
+      throw new Error(`Nie udało się wysłać: ${e.message || e}`);
+    }
 
     return { ok: true };
   }

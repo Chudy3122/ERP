@@ -428,7 +428,8 @@ function AddAccountModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
         smtp_port: Number(form.smtp_port) || 465,
         smtp_secure: true,
       });
-      toast.success('Skrzynka dodana');
+      if (acc.smtpWarning) toast(acc.smtpWarning, { icon: '⚠️', duration: 8000 });
+      else toast.success('Skrzynka dodana');
       onAdded(acc);
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Nie udało się dodać skrzynki');
