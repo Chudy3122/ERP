@@ -12,6 +12,45 @@ interface MessageProps {
   compact?: boolean;
 }
 
+// ── Emoji-aware rendering ─────────────────────────────────────────────────────
+// Emojis are stored inline as plain text. We render them a touch larger than the
+// surrounding text, and blow up emoji-only messages (like Messenger/WhatsApp).
+const EMOJI_RE = /\p{Extended_Pictographic}/u;
+
+const toGraphemes = (text: string): string[] => {
+  // Intl.Segmenter isn't in this project's TS lib types, so access it untyped.
+  const SegCtor = (Intl as { Segmenter?: new (locale?: string, opts?: { granularity: string }) => { segment: (s: string) => Iterable<{ segment: string }> } }).Segmenter;
+  if (SegCtor) {
+    const seg = new SegCtor(undefined, { granularity: 'grapheme' });
+    return Array.from(seg.segment(text), (s) => s.segment);
+  }
+  return Array.from(text); // fallback (may split some emoji, acceptable)
+};
+
+const analyzeEmoji = (content: string) => {
+  const visible = toGraphemes(content).filter((g) => g.trim() !== '');
+  const emojiCount = visible.filter((g) => EMOJI_RE.test(g)).length;
+  const emojiOnly = visible.length > 0 && emojiCount === visible.length;
+  return { emojiOnly, emojiCount };
+};
+
+// Wrap each emoji grapheme in a span so it renders larger than the text around it.
+const withInlineEmoji = (text: string): React.ReactNode[] => {
+  const nodes: React.ReactNode[] = [];
+  let buffer = '';
+  const flush = () => { if (buffer) { nodes.push(buffer); buffer = ''; } };
+  toGraphemes(text).forEach((g, i) => {
+    if (EMOJI_RE.test(g)) {
+      flush();
+      nodes.push(<span key={`e${i}`} className="text-[1.3em] leading-none align-middle">{g}</span>);
+    } else {
+      buffer += g;
+    }
+  });
+  flush();
+  return nodes;
+};
+
 const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = false }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -138,13 +177,20 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                 </a>
               );
             }
-            return <p key={idx} className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{line}</p>;
+            return <p key={idx} className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{withInlineEmoji(line)}</p>;
           })}
         </div>
       );
     }
 
-    return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{content}</p>;
+    // Emoji-only messages get blown up; mixed text keeps emojis slightly larger.
+    const { emojiOnly, emojiCount } = analyzeEmoji(content);
+    if (emojiOnly) {
+      const sizeClass = emojiCount <= 2 ? 'text-4xl' : emojiCount <= 4 ? 'text-3xl' : 'text-2xl';
+      return <p className={`${sizeClass} leading-tight whitespace-pre-wrap break-words`}>{content}</p>;
+    }
+
+    return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{withInlineEmoji(content)}</p>;
   };
 
   if (message.message_type === 'system') {
