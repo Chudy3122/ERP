@@ -2,8 +2,9 @@ import { AppDataSource } from '../config/database';
 import { Ticket, TicketStatus, TicketType, TicketPriority } from '../models/Ticket.model';
 import { TicketComment } from '../models/TicketComment.model';
 import { TicketAttachment } from '../models/TicketAttachment.model';
-import { User } from '../models/User.model';
+import { User, UserRole } from '../models/User.model';
 import activityService from './activity.service';
+import notificationService from './notification.service';
 import { deleteFile } from '../config/multer';
 
 interface CreateTicketDto {
@@ -81,6 +82,23 @@ export class TicketService {
         `${user.first_name} ${user.last_name} utworzył zgłoszenie "${savedTicket.ticket_number}: ${savedTicket.title}"`,
         { ticket_type: savedTicket.type }
       );
+    }
+
+    // Notify all admins about the new ticket (except the creator)
+    try {
+      const admins = await this.userRepository.find({
+        where: { role: UserRole.ADMIN, is_active: true },
+        select: ['id'],
+      });
+      const creatorName = user ? `${user.first_name} ${user.last_name}` : 'Pracownik';
+      for (const admin of admins) {
+        if (admin.id === userId) continue;
+        await notificationService.notifyNewTicket(
+          admin.id, savedTicket.ticket_number, savedTicket.title, savedTicket.id, creatorName, userId,
+        );
+      }
+    } catch (e) {
+      console.error('Ticket notify error:', e);
     }
 
     return savedTicket;

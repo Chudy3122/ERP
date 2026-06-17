@@ -5,6 +5,7 @@ import { ProjectAttachment } from '../models/ProjectAttachment.model';
 import { Task } from '../models/Task.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
+import notificationService from './notification.service';
 import { IsNull, In } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -72,6 +73,18 @@ export class ProjectService {
         `${user.first_name} ${user.last_name} utworzył projekt "${savedProject.name}"`,
         { project_code: savedProject.code }
       );
+    }
+
+    // Notify the assigned manager (unless they created the project themselves)
+    if (savedProject.manager_id && savedProject.manager_id !== userId) {
+      try {
+        const assignerName = user ? `${user.first_name} ${user.last_name}` : 'Administrator';
+        await notificationService.notifyProjectAssignment(
+          savedProject.manager_id, savedProject.name, savedProject.id, assignerName, userId, true,
+        );
+      } catch (e) {
+        console.error('Project manager notify error:', e);
+      }
     }
 
     return savedProject;
@@ -268,6 +281,7 @@ export class ProjectService {
    */
   async updateProject(id: string, data: UpdateProjectDto, userId: string): Promise<Project> {
     const project = await this.getProjectById(id);
+    const previousManagerId = project.manager_id;
 
     Object.assign(project, data);
     const updatedProject = await this.projectRepository.save(project);
@@ -283,6 +297,22 @@ export class ProjectService {
         `${user.first_name} ${user.last_name} zaktualizował projekt "${project.name}"`,
         { changes: data }
       );
+    }
+
+    // Notify a newly assigned manager (changed and not the actor themselves)
+    if (
+      updatedProject.manager_id &&
+      updatedProject.manager_id !== previousManagerId &&
+      updatedProject.manager_id !== userId
+    ) {
+      try {
+        const assignerName = user ? `${user.first_name} ${user.last_name}` : 'Administrator';
+        await notificationService.notifyProjectAssignment(
+          updatedProject.manager_id, updatedProject.name, updatedProject.id, assignerName, userId, true,
+        );
+      } catch (e) {
+        console.error('Project manager notify error:', e);
+      }
     }
 
     return updatedProject;
@@ -368,6 +398,21 @@ export class ProjectService {
         `${adder.first_name} ${adder.last_name} dodał ${user.first_name} ${user.last_name} do projektu "${project.name}"`,
         { role, member_id: userId }
       );
+
+      // Notify the assigned user (unless they added themselves)
+      if (userId !== addedBy) {
+        try {
+          await notificationService.notifyProjectAssignment(
+            userId,
+            project.name,
+            projectId,
+            `${adder.first_name} ${adder.last_name}`,
+            addedBy,
+          );
+        } catch (e) {
+          console.error('Project assignment notify error:', e);
+        }
+      }
     }
 
     return savedMember;

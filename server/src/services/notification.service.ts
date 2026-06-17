@@ -355,6 +355,56 @@ class NotificationService {
   }
 
   /**
+   * Notify a user that they were assigned to a project (as a member or manager)
+   */
+  async notifyProjectAssignment(
+    userId: string,
+    projectName: string,
+    projectId: string,
+    assignerName: string,
+    assignerId: string,
+    asManager: boolean = false,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      type: NotificationType.PROJECT_ASSIGNED,
+      title: asManager ? 'Przypisano Cię jako kierownika projektu' : 'Dodano Cię do projektu',
+      message: asManager
+        ? `${assignerName} ustawił Cię jako kierownika projektu "${projectName}"`
+        : `${assignerName} dodał Cię do projektu "${projectName}"`,
+      actionUrl: `/projects/${projectId}`,
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: assignerId,
+      relatedEntityType: 'project',
+      relatedEntityId: projectId,
+    });
+  }
+
+  /**
+   * Notify an admin about a newly created ticket (zgłoszenie)
+   */
+  async notifyNewTicket(
+    adminId: string,
+    ticketNumber: string,
+    ticketTitle: string,
+    ticketId: string,
+    creatorName: string,
+    creatorId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: adminId,
+      type: NotificationType.TICKET_NEW,
+      title: 'Nowe zgłoszenie',
+      message: `${creatorName} utworzył zgłoszenie "${ticketNumber}: ${ticketTitle}"`,
+      actionUrl: `/tickets/${ticketId}/edit`,
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: creatorId,
+      relatedEntityType: 'ticket',
+      relatedEntityId: ticketId,
+    });
+  }
+
+  /**
    * Notify about time entry status
    */
   async notifyTimeEntryStatus(
