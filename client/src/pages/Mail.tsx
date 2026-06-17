@@ -373,7 +373,7 @@ export default function Mail() {
           account={account}
           reply={openMsg}
           onClose={() => setShowCompose(false)}
-          onSent={() => { setShowCompose(false); toast.success('Wiadomość wysłana'); }}
+          onSent={() => setShowCompose(false)}
         />
       )}
 
@@ -519,13 +519,18 @@ function ComposeModal({
     if (!to.trim()) { toast.error('Podaj odbiorcę'); return; }
     setSending(true);
     try {
-      await emailApi.sendMail(account.id, {
+      const res = await emailApi.sendMail(account.id, {
         to, cc: cc || undefined, subject,
         text,
         inReplyTo: reply?.messageId || undefined,
         references: reply?.messageId || undefined,
         attachments: files,
       });
+      if (res?.status === 'pending') {
+        toast('Wiadomość jest wysyłana — serwer pocztowy LH odpowiada wolno, dotrze za chwilę.', { icon: '⏳', duration: 7000 });
+      } else {
+        toast.success('Wiadomość wysłana');
+      }
       onSent();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Nie udało się wysłać');

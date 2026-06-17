@@ -81,7 +81,9 @@ export interface SendMailPayload {
   attachments?: File[];
 }
 
-export const sendMail = async (accountId: string, payload: SendMailPayload): Promise<void> => {
+export const sendMail = async (
+  accountId: string, payload: SendMailPayload,
+): Promise<{ ok: boolean; status: 'sent' | 'pending' }> => {
   const form = new FormData();
   form.append('to', payload.to);
   if (payload.cc) form.append('cc', payload.cc);
@@ -97,8 +99,9 @@ export const sendMail = async (accountId: string, payload: SendMailPayload): Pro
   // so the server can't parse it (→ 400, body empty). Setting multipart/form-data
   // here makes axios keep the FormData; the browser then adds the boundary itself.
   // Generous timeout because LH's SMTP can be slow to ACK from the server's IP.
-  await apiClient.post(`/email/accounts/${accountId}/send`, form, {
+  const res = await apiClient.post(`/email/accounts/${accountId}/send`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 130000,
+    timeout: 60000,
   });
+  return res.data;
 };

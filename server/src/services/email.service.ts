@@ -55,6 +55,20 @@ function evictImap(accountId: string) {
   p.client.logout().catch(() => {});
 }
 
+// Pooled SMTP transporters (keep the connection warm — the slow part on LH is
+// the initial handshake/greeting from a cloud IP, so reusing it speeds up sends).
+interface PooledSmtp { transporter: nodemailer.Transporter; idleTimer: NodeJS.Timeout; }
+const smtpPool = new Map<string, PooledSmtp>();
+const SMTP_IDLE_MS = 300_000;
+
+function evictSmtp(accountId: string) {
+  const p = smtpPool.get(accountId);
+  if (!p) return;
+  clearTimeout(p.idleTimer);
+  smtpPool.delete(accountId);
+  try { p.transporter.close(); } catch { /* ignore */ }
+}
+
 // Public (safe) shape of an account — never includes the password.
 function sanitize(a: EmailAccount) {
   return {
@@ -181,6 +195,7 @@ export class EmailService {
   async deleteAccount(id: string, userId: string): Promise<void> {
     const account = await this.getOwned(id, userId);
     evictImap(id);
+    evictSmtp(id);
     await this.repo.remove(account);
   }
 
@@ -381,57 +396,100 @@ export class EmailService {
   }
 
   // ── SMTP send ───────────────────────────────────────────────────────────────
-  async sendMail(
-    accountId: string,
-    userId: string,
-    dto: SendMailDto,
-    files?: Express.Multer.File[],
-  ) {
-    const account = await this.getOwned(accountId, userId);
-    if (!dto.to?.trim()) throw new Error('Pole „Do" jest wymagane');
+  private scheduleSmtpIdle(accountId: string) {
+    const p = smtpPool.get(accountId);
+    if (!p) return;
+    clearTimeout(p.idleTimer);
+    p.idleTimer = setTimeout(() => evictSmtp(accountId), SMTP_IDLE_MS);
+  }
+
+  private getTransporter(account: EmailAccount): nodemailer.Transporter {
+    const existing = smtpPool.get(account.id);
+    if (existing) { this.scheduleSmtpIdle(account.id); return existing.transporter; }
 
     const transporter = nodemailer.createTransport({
       host: account.smtp_host,
       port: account.smtp_port,
       secure: account.smtp_secure,
       auth: { user: account.username, pass: decryptSecret(account.password_encrypted) },
-      // LH's SMTP can be slow to ACK from Render's IP. Fail fast only on real
-      // connection problems; allow the actual send/ACK plenty of time so a slow
-      // but successful delivery completes instead of erroring mid-flight.
-      connectionTimeout: 20000,
-      greetingTimeout: 15000,
-      socketTimeout: 120000,
+      pool: true,
+      maxConnections: 1,
+      connectionTimeout: 30000,
+      greetingTimeout: 20000,
+      socketTimeout: 90000,
     });
+    const pooled: PooledSmtp = { transporter, idleTimer: setTimeout(() => evictSmtp(account.id), SMTP_IDLE_MS) };
+    smtpPool.set(account.id, pooled);
+    transporter.on('error', () => evictSmtp(account.id));
+    return transporter;
+  }
 
+  /**
+   * Send mail. Because LH's SMTP can be very slow to ACK from a cloud IP (and
+   * Render's proxy kills requests that run too long → 502), we wait up to 25s for
+   * the send to finish synchronously; if it's still going, we return 'pending'
+   * and let the send complete in the background (it does eventually deliver).
+   */
+  async sendMail(
+    accountId: string,
+    userId: string,
+    dto: SendMailDto,
+    files?: Express.Multer.File[],
+  ): Promise<{ ok: true; status: 'sent' | 'pending' }> {
+    const account = await this.getOwned(accountId, userId);
+    if (!dto.to?.trim()) throw new Error('Pole „Do" jest wymagane');
+
+    const transporter = this.getTransporter(account);
     const attachments = (files || []).map((f) => ({
       filename: f.originalname,
       content: f.buffer,
       contentType: f.mimetype,
     }));
-
     const fromName = account.display_name || account.email;
+
+    const sendPromise = transporter.sendMail({
+      from: { name: fromName, address: account.email },
+      to: dto.to,
+      cc: dto.cc || undefined,
+      bcc: dto.bcc || undefined,
+      subject: dto.subject || '(bez tematu)',
+      text: dto.text || undefined,
+      html: dto.html || undefined,
+      inReplyTo: dto.inReplyTo || undefined,
+      references: dto.references || undefined,
+      attachments,
+    });
+
+    const SYNC_WAIT = 25000;
+    let pendingTimer: NodeJS.Timeout;
+    const pendingMarker = new Promise<'pending'>((resolve) => {
+      pendingTimer = setTimeout(() => resolve('pending'), SYNC_WAIT);
+    });
+
     try {
-      await withTimeout(
-        transporter.sendMail({
-          from: { name: fromName, address: account.email },
-          to: dto.to,
-          cc: dto.cc || undefined,
-          bcc: dto.bcc || undefined,
-          subject: dto.subject || '(bez tematu)',
-          text: dto.text || undefined,
-          html: dto.html || undefined,
-          inReplyTo: dto.inReplyTo || undefined,
-          references: dto.references || undefined,
-          attachments,
-        }),
-        120000,
-        'Przekroczono czas wysyłki (serwer SMTP nie odpowiada)',
-      );
+      const result = await Promise.race([
+        sendPromise.then(() => { clearTimeout(pendingTimer); return 'sent' as const; }),
+        pendingMarker,
+      ]);
+
+      if (result === 'pending') {
+        // Still sending — finish in the background so we respond before Render's
+        // proxy timeout. Log the outcome; drop the transporter on failure.
+        sendPromise.then(
+          () => console.log(`✉️  Mail wysłany w tle: ${account.email} → ${dto.to}`),
+          (e: any) => { console.error(`✉️  Błąd wysyłki w tle (${account.email} → ${dto.to}): ${e?.message || e}`); evictSmtp(account.id); },
+        );
+        this.scheduleSmtpIdle(account.id);
+        return { ok: true, status: 'pending' };
+      }
+
+      this.scheduleSmtpIdle(account.id);
+      return { ok: true, status: 'sent' };
     } catch (e: any) {
+      clearTimeout(pendingTimer!);
+      evictSmtp(account.id);
       throw new Error(`Nie udało się wysłać: ${e.message || e}`);
     }
-
-    return { ok: true };
   }
 }
 
