@@ -4,14 +4,16 @@ import { Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import WidgetCard from '../widgets/WidgetCard';
-import { getUserTimeEntries } from '../../api/time.api';
+import { getCurrentEntry, getUserTimeEntries } from '../../api/time.api';
 import { getMyWorkLogs } from '../../api/worklog.api';
+import { TimeEntry, TimeEntryStatus } from '../../types/time.types';
 import { WorkLogType } from '../../types/worklog.types';
 import { DashboardWidgetEmpty, DashboardWidgetLoading } from './DashboardWidgetState';
 
 interface TimeData {
   date: string;
   regularHours: number;
+  excessHours: number;
   overtimeHours: number;
   totalMinutes: number;
   displayDate: string;
@@ -46,11 +48,14 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as TimeData;
     const regularMinutes = Math.round(data.regularHours * 60);
+    const excessMinutes = Math.round(data.excessHours * 60);
     const overtimeMinutes = Math.round(data.overtimeHours * 60);
     const hours = Math.floor(data.totalMinutes / 60);
     const mins = data.totalMinutes % 60;
     const regularHours = Math.floor(regularMinutes / 60);
     const regularMins = regularMinutes % 60;
+    const excessHours = Math.floor(excessMinutes / 60);
+    const excessMins = excessMinutes % 60;
     const overtimeHours = Math.floor(overtimeMinutes / 60);
     const overtimeMins = overtimeMinutes % 60;
 
@@ -63,6 +68,12 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           W planie: <span className="font-medium">{regularHours}h {regularMins}m</span>
         </p>
+        {excessMinutes > 0 && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Powyżej etatu, niezgłoszone jako nadgodziny:{' '}
+            <span className="font-medium">{excessHours}h {excessMins}m</span>
+          </p>
+        )}
         {overtimeMinutes > 0 && (
           <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
             Nadgodziny: <span className="font-medium">{overtimeHours}h {overtimeMins}m</span>
@@ -77,6 +88,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
 const TimeChartWidget = () => {
   const { user } = useAuth();
   const [timeData, setTimeData] = useState<TimeData[]>([]);
+  const [currentEntry, setCurrentEntry] = useState<TimeEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -84,16 +96,30 @@ const TimeChartWidget = () => {
     fetchTimeData();
   }, [user?.working_hours_per_day]);
 
-  const fetchTimeData = async () => {
+  useEffect(() => {
+    if (currentEntry?.status !== TimeEntryStatus.IN_PROGRESS) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      fetchTimeData(false);
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, [currentEntry?.id, currentEntry?.status, user?.working_hours_per_day]);
+
+  const fetchTimeData = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) {
+        setIsLoading(true);
+      }
 
       const { start, end } = getCurrentWeekRange();
 
-      const [entries, workLogs] = await Promise.all([
+      const [entries, workLogs, activeEntry] = await Promise.all([
         getUserTimeEntries(start.toISOString(), end.toISOString()),
         getMyWorkLogs(getLocalDateKey(start), getLocalDateKey(end)),
+        getCurrentEntry(),
       ]);
+      setCurrentEntry(activeEntry);
 
       const chartData: TimeData[] = [];
       const dates: Date[] = [];
@@ -104,10 +130,23 @@ const TimeChartWidget = () => {
 
       const entriesByDate: Record<string, number> = {};
       entries.forEach(entry => {
+        if (activeEntry?.status === TimeEntryStatus.IN_PROGRESS && entry.id === activeEntry.id) {
+          return;
+        }
+
         const entryDate = getLocalDateKey(new Date(entry.clock_in));
         const minutes = entry.duration_minutes || 0;
         entriesByDate[entryDate] = (entriesByDate[entryDate] || 0) + minutes;
       });
+
+      if (activeEntry?.status === TimeEntryStatus.IN_PROGRESS) {
+        const activeEntryDate = getLocalDateKey(new Date(activeEntry.clock_in));
+        const activeMinutes = Math.max(
+          0,
+          Math.floor((Date.now() - new Date(activeEntry.clock_in).getTime()) / 60000)
+        );
+        entriesByDate[activeEntryDate] = (entriesByDate[activeEntryDate] || 0) + activeMinutes;
+      }
 
       const overtimeByDate: Record<string, number> = {};
       workLogs
@@ -122,18 +161,19 @@ const TimeChartWidget = () => {
         const dateStr = getLocalDateKey(date);
         const timeEntryMinutes = entriesByDate[dateStr] || 0;
         const reportedOvertimeMinutes = overtimeByDate[dateStr] || 0;
-        const totalMinutes = timeEntryMinutes + reportedOvertimeMinutes;
         const plannedMinutes = (Number(user?.working_hours_per_day) || 8) * 60;
         const regularMinutes = Math.min(timeEntryMinutes, plannedMinutes);
-        const overtimeMinutes = Math.max(0, timeEntryMinutes - plannedMinutes) + reportedOvertimeMinutes;
+        const unreportedExcessMinutes = Math.max(0, timeEntryMinutes - plannedMinutes - reportedOvertimeMinutes);
+        const totalMinutes = regularMinutes + unreportedExcessMinutes + reportedOvertimeMinutes;
 
         chartData.push({
           date: dateStr,
           regularHours: parseFloat((regularMinutes / 60).toFixed(2)),
-          overtimeHours: parseFloat((overtimeMinutes / 60).toFixed(2)),
+          excessHours: parseFloat((unreportedExcessMinutes / 60).toFixed(2)),
+          overtimeHours: parseFloat((reportedOvertimeMinutes / 60).toFixed(2)),
           totalMinutes,
           displayDate: date.toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' }),
-          isOvertime: overtimeMinutes > 0,
+          isOvertime: reportedOvertimeMinutes > 0,
         });
       });
 
@@ -141,7 +181,9 @@ const TimeChartWidget = () => {
     } catch (error) {
       console.error('Error fetching time data:', error);
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -209,6 +251,13 @@ const TimeChartWidget = () => {
                 onClick={handleChartClick}
               />
               <Bar
+                dataKey="excessHours"
+                stackId="time"
+                fill="#9CA3AF"
+                radius={[4, 4, 0, 0]}
+                onClick={handleChartClick}
+              />
+              <Bar
                 dataKey="overtimeHours"
                 stackId="time"
                 fill="#2563EB"
@@ -232,6 +281,10 @@ const TimeChartWidget = () => {
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-[#F7941D]" />
             Plan
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-gray-400" />
+            Powyżej etatu, niezgłoszone
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-blue-600" />

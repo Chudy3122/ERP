@@ -133,6 +133,15 @@ const formatDate = (date: string) =>
     year: 'numeric',
   });
 
+const formatDaysLabel = (days: number | string) => {
+  const numericDays = Number(days);
+  const formattedDays = Number.isInteger(numericDays)
+    ? numericDays.toString()
+    : numericDays.toLocaleString('pl-PL');
+
+  return numericDays === 1 ? `${formattedDays} dzień` : `${formattedDays} dni`;
+};
+
 const AbsenceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -396,12 +405,22 @@ const AbsenceDetail = () => {
                   </span>
                 </div>
 
-                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Liczba dni</p>
-                    <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                      {request.total_days}
-                    </p>
+                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#F7941D]/25 bg-[#F7941D]/10 p-4 dark:border-[#F7941D]/30 dark:bg-[#F7941D]/15 sm:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#C96F00] dark:text-[#F8B15F]">
+                          Dni objęte wnioskiem
+                        </p>
+                        <p className="mt-2 text-3xl font-bold leading-none text-[#F7941D]">
+                          {formatDaysLabel(request.total_days)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white/75 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm dark:bg-gray-900/30 dark:text-gray-200">
+                        <Calendar className="mb-1 h-4 w-4 text-[#F7941D]" />
+                        {formatDate(request.start_date)} - {formatDate(request.end_date)}
+                      </div>
+                    </div>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
                     <p className="text-xs text-gray-500 dark:text-gray-400">Złożono</p>

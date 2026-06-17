@@ -498,6 +498,15 @@ const Absences = () => {
       year: 'numeric',
     });
 
+  const formatDaysLabel = (days: number | string) => {
+    const numericDays = Number(days);
+    const formattedDays = Number.isInteger(numericDays)
+      ? numericDays.toString()
+      : numericDays.toLocaleString('pl-PL');
+
+    return numericDays === 1 ? `${formattedDays} dzień` : `${formattedDays} dni`;
+  };
+
   const getLeaveRequestCountLabel = (count: number) => {
     if (count === 1) return '1 wniosek';
     if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)) {
@@ -1066,13 +1075,13 @@ const Absences = () => {
                                   {statusCfg.label}
                                 </span>
                               </div>
-                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                                <span>
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                <span className="inline-flex items-center rounded-lg bg-gray-50 px-3 py-1.5 font-medium text-gray-700 dark:bg-gray-700/60 dark:text-gray-200">
                                   {new Date(request.start_date).toLocaleDateString('pl-PL')} –{' '}
                                   {new Date(request.end_date).toLocaleDateString('pl-PL')}
                                 </span>
-                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                  {request.total_days} dni
+                                <span className="inline-flex items-center rounded-lg border border-[#F7941D]/25 bg-[#F7941D]/10 px-3 py-1.5 text-sm font-bold text-[#C96F00] dark:border-[#F7941D]/30 dark:bg-[#F7941D]/15 dark:text-[#F8B15F]">
+                                  {formatDaysLabel(request.total_days)}
                                 </span>
                               </div>
                               {request.reason && (
