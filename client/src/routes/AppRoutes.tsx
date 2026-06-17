@@ -6,7 +6,6 @@ import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import VideoMeeting from '../pages/VideoMeeting';
 import ChatMeet from '../pages/ChatMeet';
-import Mail from '../pages/Mail';
 import Overtime from '../pages/Overtime';
 import WorkTime from '../pages/WorkTime';
 import Admin from '../pages/Admin';
@@ -193,14 +192,6 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <TaskForm />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/mail"
-        element={
-          <PrivateRoute roles={[UserRole.ADMIN]}>
-            <Mail />
           </PrivateRoute>
         }
       />
