@@ -443,6 +443,8 @@ export default function WorkTime() {
   const [savingNotes, setSavingNotes] = useState(false);
   // Ręczne wpisy czasu są dostępne wyłącznie dla administratorów i księgowości.
   const isManager = user?.role === 'admin' || user?.role === 'kadry';
+  // Frekwencja pracowników: zarząd / kadry / księgowość / kierownik — nie zwykli pracownicy.
+  const canViewAttendance = ['admin', 'szef', 'kadry', 'ksiegowosc', 'kierownik'].includes(user?.role || '');
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
   const [savingEntry, setSavingEntry] = useState(false);
@@ -534,7 +536,7 @@ export default function WorkTime() {
   }, [dayStatus?.state, dayStatus?.currentEntry?.id, dayStatus?.totalWorkedMinutesToday]);
 
   useEffect(() => {
-    if (activeTab === 'attendance') loadAttendance();
+    if (activeTab === 'attendance' && canViewAttendance) loadAttendance();
   }, [activeTab, attendanceRange]);
 
   async function loadMyData() {
@@ -1084,7 +1086,7 @@ export default function WorkTime() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: 'my', label: 'Mój czas pracy', icon: Clock },
-            { id: 'attendance', label: 'Frekwencja pracowników', icon: Users },
+            ...(canViewAttendance ? [{ id: 'attendance', label: 'Frekwencja pracowników', icon: Users }] : []),
             ...(isManager ? [{ id: 'all', label: 'Wszystkie czasy pracy', icon: Calendar }] : []),
           ].map(({ id, label, icon: Icon }) => (
             <button
