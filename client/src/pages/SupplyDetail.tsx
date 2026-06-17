@@ -7,8 +7,10 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  MessageSquare,
   Package,
   Pencil,
+  Send,
   Trash2,
   UserRound,
   X,
@@ -24,6 +26,7 @@ import {
   SUPPLY_PRIORITY_LABELS,
   SupplyPriority,
   SupplyRequest,
+  SupplyComment,
 } from '../types/supply.types';
 
 const STATUS_CFG: Record<string, { label: string; cls: string; icon: typeof Clock }> = {
@@ -49,9 +52,37 @@ export default function SupplyDetail() {
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const [comments, setComments] = useState<SupplyComment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
+
   useEffect(() => {
     loadRequest();
+    loadComments();
   }, [id, isManager]);
+
+  const loadComments = async () => {
+    if (!id) return;
+    try {
+      setComments(await supplyApi.getSupplyComments(id));
+    } catch {
+      // Silent — user may not have access; the request load already surfaces errors.
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!id || !commentText.trim()) return;
+    try {
+      setSendingComment(true);
+      const created = await supplyApi.addSupplyComment(id, commentText.trim());
+      setComments((prev) => [...prev, created]);
+      setCommentText('');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Nie udało się dodać komentarza');
+    } finally {
+      setSendingComment(false);
+    }
+  };
 
   const loadRequest = async () => {
     if (!id) return;
@@ -293,6 +324,67 @@ export default function SupplyDetail() {
             </dl>
           </section>
         )}
+
+        {/* Comments */}
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+            <MessageSquare className="h-4 w-4 text-[#F7941D]" />
+            Komentarze
+            {comments.length > 0 && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                {comments.length}
+              </span>
+            )}
+          </h2>
+
+          <div className="mt-4 space-y-4">
+            {comments.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500">Brak komentarzy. Napisz pierwszy.</p>
+            ) : (
+              comments.map((c) => {
+                const name = c.user ? `${c.user.first_name} ${c.user.last_name}` : 'Użytkownik';
+                const initials = c.user ? `${c.user.first_name?.[0] || ''}${c.user.last_name?.[0] || ''}` : '?';
+                const mine = c.user_id === user?.id;
+                return (
+                  <div key={c.id} className="flex gap-3">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#F7941D]/10 text-xs font-bold text-[#F7941D]">
+                      {initials.toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{mine ? 'Ty' : name}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(c.created_at).toLocaleString('pl-PL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 whitespace-pre-line break-words text-sm text-gray-700 dark:text-gray-300">{c.content}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="mt-4 flex items-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-700">
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddComment(); }}
+              placeholder="Napisz komentarz… (Ctrl+Enter wysyła)"
+              rows={2}
+              className="min-h-[44px] flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+            <button
+              type="button"
+              onClick={handleAddComment}
+              disabled={sendingComment || !commentText.trim()}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e0850f] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sendingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Wyślij
+            </button>
+          </div>
+        </section>
       </div>
 
       <ConfirmDialog

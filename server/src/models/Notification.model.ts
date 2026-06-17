@@ -36,6 +36,7 @@ export enum NotificationType {
   MEETING_SCHEDULED = 'meeting_scheduled',
   // Supply / procurement
   SUPPLY_REQUEST_NEW = 'supply_request_new',
+  SUPPLY_REQUEST_COMMENT = 'supply_request_comment',
   // Projects
   PROJECT_ASSIGNED = 'project_assigned',
   // Tickets / helpdesk

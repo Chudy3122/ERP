@@ -405,6 +405,29 @@ class NotificationService {
   }
 
   /**
+   * Notify about a new comment on a supply (zaopatrzenie) request
+   */
+  async notifySupplyComment(
+    recipientId: string,
+    commenterName: string,
+    itemName: string,
+    requestId: string,
+    commenterId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: recipientId,
+      type: NotificationType.SUPPLY_REQUEST_COMMENT,
+      title: 'Nowy komentarz do zgłoszenia zaopatrzenia',
+      message: `${commenterName} skomentował zgłoszenie: ${itemName}`,
+      actionUrl: `/supply/${requestId}`,
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: commenterId,
+      relatedEntityType: 'supply_request',
+      relatedEntityId: requestId,
+    });
+  }
+
+  /**
    * Notify about time entry status
    */
   async notifyTimeEntryStatus(

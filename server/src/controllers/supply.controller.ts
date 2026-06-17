@@ -105,6 +105,58 @@ export class SupplyController {
       res.status(400).json({ message: error.message });
     }
   };
+
+  /** GET /api/supply/:id/comments — owner or manager */
+  getComments = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const data = await supplyService.getComments(req.params.id, req.user!.userId, req.user!.role);
+      res.json(data);
+    } catch (error: any) {
+      const code = /uprawnie/i.test(error.message || '') ? 403 : 400;
+      res.status(code).json({ message: error.message || 'Błąd pobierania komentarzy' });
+    }
+  };
+
+  /** POST /api/supply/:id/comments — owner or manager; notifies the other party */
+  addComment = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const commenterId = req.user!.userId;
+      const { comment, request } = await supplyService.addComment(
+        req.params.id, commenterId, req.user!.role, req.body?.content,
+      );
+
+      // Notify the other party: the request owner + managers (except the commenter).
+      try {
+        const userRepo = AppDataSource.getRepository(User);
+        const commenter = await userRepo.findOne({ where: { id: commenterId }, select: ['id', 'first_name', 'last_name'] });
+        const commenterName = commenter ? `${commenter.first_name} ${commenter.last_name}` : 'Pracownik';
+
+        const recipients = new Set<string>();
+        if (request.user_id !== commenterId) recipients.add(request.user_id);
+        const managers = await userRepo.find({
+          where: [
+            { role: UserRole.SEKRETARIAT, is_active: true },
+            { role: UserRole.ADMIN, is_active: true },
+          ],
+          select: ['id'],
+        });
+        managers.forEach((m) => { if (m.id !== commenterId) recipients.add(m.id); });
+
+        for (const recipientId of recipients) {
+          await notificationService.notifySupplyComment(
+            recipientId, commenterName, request.item_name, request.id, commenterId,
+          );
+        }
+      } catch (e) {
+        console.error('Supply comment notify error:', e);
+      }
+
+      res.status(201).json(comment);
+    } catch (error: any) {
+      const code = /uprawnie/i.test(error.message || '') ? 403 : 400;
+      res.status(code).json({ message: error.message || 'Błąd dodawania komentarza' });
+    }
+  };
 }
 
 export default new SupplyController();

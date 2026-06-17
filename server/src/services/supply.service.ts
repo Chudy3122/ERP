@@ -5,6 +5,8 @@ import {
   SupplyCategory,
   SupplyPriority,
 } from '../models/SupplyRequest.model';
+import { SupplyComment } from '../models/SupplyComment.model';
+import { UserRole } from '../models/User.model';
 
 interface CreateSupplyDto {
   item_name: string;
@@ -14,8 +16,53 @@ interface CreateSupplyDto {
   description?: string;
 }
 
+const MANAGER_ROLES: string[] = [UserRole.SEKRETARIAT, UserRole.ADMIN];
+
 export class SupplyService {
   private repo = AppDataSource.getRepository(SupplyRequest);
+  private commentRepo = AppDataSource.getRepository(SupplyComment);
+
+  /** Owner of the request or a manager (sekretariat/admin) may view/comment. */
+  private async getAccessibleRequest(requestId: string, userId: string, role: string): Promise<SupplyRequest> {
+    const request = await this.repo.findOne({ where: { id: requestId } });
+    if (!request) throw new Error('Zgłoszenie nie znalezione');
+    if (request.user_id !== userId && !MANAGER_ROLES.includes(role)) {
+      throw new Error('Brak uprawnień do tego zgłoszenia');
+    }
+    return request;
+  }
+
+  /** List comments for a request (owner or manager). */
+  async getComments(requestId: string, userId: string, role: string): Promise<SupplyComment[]> {
+    await this.getAccessibleRequest(requestId, userId, role);
+    return this.commentRepo.find({
+      where: { request_id: requestId },
+      relations: ['user'],
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  /** Add a comment (owner or manager). Returns the saved comment and the request. */
+  async addComment(
+    requestId: string,
+    userId: string,
+    role: string,
+    content: string,
+  ): Promise<{ comment: SupplyComment; request: SupplyRequest }> {
+    if (!content?.trim()) throw new Error('Komentarz nie może być pusty');
+    const request = await this.getAccessibleRequest(requestId, userId, role);
+    const created = this.commentRepo.create({
+      request_id: requestId,
+      user_id: userId,
+      content: content.trim(),
+    });
+    await this.commentRepo.save(created);
+    const comment = (await this.commentRepo.findOne({
+      where: { id: created.id },
+      relations: ['user'],
+    }))!;
+    return { comment, request };
+  }
 
   /** All requests (for sekretariat / admin) */
   async getAll(status?: string): Promise<SupplyRequest[]> {

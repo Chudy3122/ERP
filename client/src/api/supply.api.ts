@@ -1,5 +1,15 @@
 import { client } from './client';
-import { SupplyRequest, CreateSupplyRequest } from '../types/supply.types';
+import { SupplyRequest, CreateSupplyRequest, SupplyComment } from '../types/supply.types';
+
+export const getSupplyComments = async (id: string): Promise<SupplyComment[]> => {
+  const response = await client.get(`/supply/${id}/comments`);
+  return response.data;
+};
+
+export const addSupplyComment = async (id: string, content: string): Promise<SupplyComment> => {
+  const response = await client.post(`/supply/${id}/comments`, { content });
+  return response.data;
+};
 
 export const getSupplyRequests = async (status?: string): Promise<SupplyRequest[]> => {
   const response = await client.get('/supply', { params: { status } });

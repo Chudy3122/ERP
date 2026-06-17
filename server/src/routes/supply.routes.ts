@@ -24,6 +24,10 @@ router.put('/:id', supplyController.update);
 router.put('/:id/approve', requireRole(MANAGER_ROLES), supplyController.approve);
 router.put('/:id/reject', requireRole(MANAGER_ROLES), supplyController.reject);
 
+// Comments — owner or manager (enforced in service)
+router.get('/:id/comments', supplyController.getComments);
+router.post('/:id/comments', supplyController.addComment);
+
 // Delete — owner (own pending) or manager
 router.delete('/:id', supplyController.delete);
 

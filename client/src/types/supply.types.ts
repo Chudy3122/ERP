@@ -28,6 +28,15 @@ export interface CreateSupplyRequest {
   description?: string;
 }
 
+export interface SupplyComment {
+  id: string;
+  request_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  user?: { id: string; first_name: string; last_name: string; avatar_url: string | null };
+}
+
 export const SUPPLY_CATEGORY_LABELS: Record<SupplyCategory, string> = {
   office: 'Artykuły biurowe',
   equipment: 'Sprzęt',
