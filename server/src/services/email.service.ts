@@ -37,6 +37,24 @@ function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> 
   ]);
 }
 
+// Reusable IMAP connections, keyed by account id. Reconnecting + logging in on
+// every request (TLS handshake + AUTH) is the slow part; keeping the connection
+// warm and reusing it makes folder/message loads dramatically faster. Each
+// connection is closed after a short idle period. Operations on one account are
+// serialised (one IMAP connection can't safely run two ops at once).
+interface PooledImap { client: ImapFlow; idleTimer: NodeJS.Timeout; }
+const imapPool = new Map<string, PooledImap>();
+const imapQueue = new Map<string, Promise<unknown>>();
+const IMAP_IDLE_MS = 120_000;
+
+function evictImap(accountId: string) {
+  const p = imapPool.get(accountId);
+  if (!p) return;
+  clearTimeout(p.idleTimer);
+  imapPool.delete(accountId);
+  p.client.logout().catch(() => {});
+}
+
 // Public (safe) shape of an account — never includes the password.
 function sanitize(a: EmailAccount) {
   return {
@@ -162,11 +180,24 @@ export class EmailService {
 
   async deleteAccount(id: string, userId: string): Promise<void> {
     const account = await this.getOwned(id, userId);
+    evictImap(id);
     await this.repo.remove(account);
   }
 
   // ── IMAP helpers ────────────────────────────────────────────────────────────
-  private async withImap<T>(account: EmailAccount, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
+  private scheduleImapIdle(accountId: string) {
+    const p = imapPool.get(accountId);
+    if (!p) return;
+    clearTimeout(p.idleTimer);
+    p.idleTimer = setTimeout(() => evictImap(accountId), IMAP_IDLE_MS);
+  }
+
+  /** Get a warm, reusable IMAP connection for the account (creating one if needed). */
+  private async ensureImap(account: EmailAccount): Promise<ImapFlow> {
+    const existing = imapPool.get(account.id);
+    if (existing && existing.client.usable) return existing.client;
+    if (existing) evictImap(account.id);
+
     const client = new ImapFlow({
       host: account.imap_host,
       port: account.imap_port,
@@ -175,11 +206,30 @@ export class EmailService {
       logger: false,
     });
     await withTimeout(client.connect(), 25000, 'Przekroczono czas połączenia z serwerem IMAP');
-    try {
-      return await fn(client);
-    } finally {
-      await client.logout().catch(() => {});
-    }
+    const pooled: PooledImap = { client, idleTimer: setTimeout(() => evictImap(account.id), IMAP_IDLE_MS) };
+    imapPool.set(account.id, pooled);
+    client.on('error', () => evictImap(account.id));
+    client.on('close', () => { const p = imapPool.get(account.id); if (p?.client === client) { clearTimeout(p.idleTimer); imapPool.delete(account.id); } });
+    return client;
+  }
+
+  /** Run an IMAP operation on a pooled connection; serialised per account. */
+  private withImap<T>(account: EmailAccount, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
+    const prev = imapQueue.get(account.id) || Promise.resolve();
+    const run = prev.catch(() => {}).then(async () => {
+      const client = await this.ensureImap(account);
+      try {
+        const result = await fn(client);
+        this.scheduleImapIdle(account.id);
+        return result;
+      } catch (e) {
+        const p = imapPool.get(account.id);
+        if (p && !p.client.usable) evictImap(account.id);
+        throw e;
+      }
+    });
+    imapQueue.set(account.id, run.catch(() => {}));
+    return run;
   }
 
   /** List mailboxes/folders for an account. */
@@ -371,7 +421,7 @@ export class EmailService {
           references: dto.references || undefined,
           attachments,
         }),
-        30000,
+        60000,
         'Przekroczono czas wysyłki (serwer SMTP nie odpowiada — możliwa blokada portu)',
       );
     } catch (e: any) {
