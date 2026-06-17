@@ -43,6 +43,8 @@ export interface TimeEntry {
   late_minutes: number;
   is_break: boolean;
   is_manual: boolean;
+  clock_in_device?: string | null; // 'mobile' | 'tablet' | 'desktop'
+  clock_in_ip?: string | null;
   expected_clock_in: string | null;
   status: TimeEntryStatus;
   approved_by: string | null;

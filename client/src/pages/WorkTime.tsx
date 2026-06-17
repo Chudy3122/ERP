@@ -2,12 +2,26 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2 } from 'lucide-react';
+import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2, Smartphone, Monitor, Tablet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import * as userApi from '../api/user.api';
 import type { TimeEntry, DayStatus, DayState } from '../types/time.types';
 import { getFileUrl } from '../api/axios-config';
+
+// Small icon showing which device a clock-in came from (phone vs computer).
+// Helps managers spot people clocking in remotely from their phone.
+function DeviceBadge({ device, ip }: { device?: string | null; ip?: string | null }) {
+  if (!device) return null;
+  const label = device === 'mobile' ? 'Telefon' : device === 'tablet' ? 'Tablet' : 'Komputer';
+  const title = label + (ip ? ` · ${ip}` : '');
+  const icon = device === 'mobile'
+    ? <Smartphone className="h-3.5 w-3.5 text-amber-500" />
+    : device === 'tablet'
+    ? <Tablet className="h-3.5 w-3.5 text-amber-500" />
+    : <Monitor className="h-3.5 w-3.5 text-gray-400" />;
+  return <span className="inline-flex" title={title} aria-label={label}>{icon}</span>;
+}
 
 // ─── Attendance types ───────────────────────────────────────────────────────
 interface AttendanceDay {
@@ -1307,7 +1321,10 @@ export default function WorkTime() {
                             })}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-700 dark:text-gray-300 font-mono">
-                            {formatTime(entry.clock_in)}
+                            <span className="inline-flex items-center justify-center gap-1.5">
+                              {formatTime(entry.clock_in)}
+                              <DeviceBadge device={entry.clock_in_device} ip={entry.clock_in_ip} />
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-center text-gray-700 dark:text-gray-300 font-mono">
                             {entry.clock_out ? formatTime(entry.clock_out) : (
@@ -1693,7 +1710,12 @@ export default function WorkTime() {
                         <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                           <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{u ? `${u.last_name} ${u.first_name}` : '—'}</td>
                           <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{new Date(entry.clock_in).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                          <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">{fmtT(entry.clock_in)}</td>
+                          <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">
+                            <span className="inline-flex items-center gap-1.5">
+                              {fmtT(entry.clock_in)}
+                              <DeviceBadge device={entry.clock_in_device} ip={entry.clock_in_ip} />
+                            </span>
+                          </td>
                           <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">{entry.clock_out ? fmtT(entry.clock_out) : <span className="font-sans text-[#F7941D]">W pracy</span>}</td>
                           <td className="px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-white">{inProgress ? <span className="text-[#F7941D]">—</span> : formatDurationValue(entry.duration_minutes || 0)}</td>
                           <td className="px-4 py-2.5 text-sm">

@@ -64,6 +64,12 @@ export class TimeEntry {
   @Column({ type: 'boolean', default: false })
   is_manual: boolean; // true = manually added by user
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  clock_in_device: string | null; // 'mobile' | 'tablet' | 'desktop' — device used to clock in
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  clock_in_ip: string | null; // IP address the clock-in came from (audit)
+
   @Column({ type: 'uuid', nullable: true })
   approved_by: string | null;
 

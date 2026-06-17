@@ -8,6 +8,21 @@ import { User, UserRole } from '../models/User.model';
 
 const timeService = new TimeService();
 
+/** Classify the device from a browser User-Agent string (audit only). */
+function detectDevice(ua?: string): 'mobile' | 'tablet' | 'desktop' | undefined {
+  if (!ua) return undefined;
+  // Tablets first: iPad, or Android without the "Mobile" token.
+  if (/ipad|tablet|playbook|silk|kindle|(android(?!.*mobile))/i.test(ua)) return 'tablet';
+  if (/mobi|iphone|ipod|android|blackberry|iemobile|opera mini|windows phone/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
+/** Best-effort client IP behind the Render proxy. */
+function clientIp(req: Request): string | undefined {
+  const fwd = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim();
+  return fwd || req.ip || req.socket?.remoteAddress || undefined;
+}
+
 export class TimeController {
   // ===== TIME ENTRIES =====
 
@@ -24,7 +39,13 @@ export class TimeController {
       const userId = canManageTime && targetUserId ? targetUserId : req.user!.userId;
       const effClockInTime = canManageTime ? clockInTime : undefined;
 
-      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, effClockInTime);
+      // Record the device/IP only when a user clocks in for THEMSELVES, so the
+      // badge reflects the employee's actual device (not a manager acting for them).
+      const isSelf = userId === req.user!.userId;
+      const device = isSelf ? detectDevice(req.headers['user-agent']) : undefined;
+      const ip = isSelf ? clientIp(req) : undefined;
+
+      const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, effClockInTime, device, ip);
 
       res.status(201).json({
         success: true,

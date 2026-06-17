@@ -134,7 +134,14 @@ export class TimeService {
   /**
    * Clock in - Start work (first clock-in of the day gets 5-min rounding bonus)
    */
-  async clockIn(userId: string, notes?: string, expectedClockIn?: string, backdatedStart?: string): Promise<TimeEntry> {
+  async clockIn(
+    userId: string,
+    notes?: string,
+    expectedClockIn?: string,
+    backdatedStart?: string,
+    device?: string,
+    ip?: string,
+  ): Promise<TimeEntry> {
     const existingEntry = await this.timeEntryRepository.findOne({
       where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
@@ -169,6 +176,8 @@ export class TimeService {
       status: TimeEntryStatus.IN_PROGRESS,
       is_break: false,
       is_manual: isManual,
+      clock_in_device: device || null,
+      clock_in_ip: ip || null,
     });
 
     const lateMinutes = timeEntry.calculateLateArrival();
