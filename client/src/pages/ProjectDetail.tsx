@@ -211,7 +211,7 @@ const ProjectDetail = () => {
 
   const { t } = useTranslation();
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
-  const canCreateProjectTemplate = user?.role === 'admin';
+  const canCreateProjectTemplate = user?.role === 'admin' || user?.role === 'kierownik';
   // Member management is also allowed for the project's creator / manager
   const canManageMembers =
     isAdmin ||
