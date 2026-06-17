@@ -395,9 +395,12 @@ export class EmailService {
       port: account.smtp_port,
       secure: account.smtp_secure,
       auth: { user: account.username, pass: decryptSecret(account.password_encrypted) },
+      // LH's SMTP can be slow to ACK from Render's IP. Fail fast only on real
+      // connection problems; allow the actual send/ACK plenty of time so a slow
+      // but successful delivery completes instead of erroring mid-flight.
       connectionTimeout: 20000,
-      greetingTimeout: 12000,
-      socketTimeout: 20000,
+      greetingTimeout: 15000,
+      socketTimeout: 120000,
     });
 
     const attachments = (files || []).map((f) => ({
@@ -421,8 +424,8 @@ export class EmailService {
           references: dto.references || undefined,
           attachments,
         }),
-        60000,
-        'Przekroczono czas wysyłki (serwer SMTP nie odpowiada — możliwa blokada portu)',
+        120000,
+        'Przekroczono czas wysyłki (serwer SMTP nie odpowiada)',
       );
     } catch (e: any) {
       throw new Error(`Nie udało się wysłać: ${e.message || e}`);

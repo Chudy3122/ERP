@@ -94,6 +94,7 @@ export const sendMail = async (accountId: string, payload: SendMailPayload): Pro
   (payload.attachments || []).forEach((f) => form.append('attachments', f));
   // Do NOT set Content-Type manually — axios derives it from FormData together
   // with the required multipart boundary. Forcing it drops the boundary and the
-  // server can't parse the body (→ 400).
-  await apiClient.post(`/email/accounts/${accountId}/send`, form);
+  // server can't parse the body (→ 400). Give it a generous timeout because LH's
+  // SMTP can be slow to ACK from the server's IP.
+  await apiClient.post(`/email/accounts/${accountId}/send`, form, { timeout: 130000 });
 };
