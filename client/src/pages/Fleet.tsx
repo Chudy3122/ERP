@@ -33,7 +33,6 @@ function fmtRange(startIso: string, endIso: string) {
 
 export default function Fleet() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
 
   const [ctx, setCtx] = useState<FleetContext>({ canManage: false, vehicles: [] });
   const [requests, setRequests] = useState<VehicleRequest[]>([]);
@@ -112,7 +111,7 @@ export default function Fleet() {
           </button>
         </div>
 
-        {isAdmin && <VehiclePanel vehicles={ctx.vehicles} onChange={load} />}
+        {canManage && <VehiclePanel vehicles={ctx.vehicles} onChange={load} />}
 
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[#F7941D]" /></div>

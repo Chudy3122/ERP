@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Bell, Repeat, Trash2, X, Loader2 } from 'lucide-react';
+import ConfirmDialog from '../common/ConfirmDialog';
 import * as api from '../../api/personalCalendar.api';
 import {
   CalendarOccurrence, CalendarRecurrence, REMINDER_OPTIONS, RECURRENCE_OPTIONS,
@@ -44,6 +45,7 @@ export default function PersonalCalendar() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // 6-week grid starting on Monday.
   const gridStart = useMemo(() => {
@@ -134,12 +136,12 @@ export default function PersonalCalendar() {
     }
   };
 
-  const remove = async () => {
+  const doRemove = async () => {
     if (!form?.id) return;
-    if (!window.confirm('Usunąć to wydarzenie? Jeśli się powtarza, zniknie cała seria.')) return;
     setSaving(true);
     try {
       await api.deleteEvent(form.id);
+      setConfirmDelete(false);
       setForm(null);
       toast.success('Usunięto');
       loadEvents();
@@ -324,7 +326,7 @@ export default function PersonalCalendar() {
             </div>
             <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4 dark:border-gray-700">
               {form.id ? (
-                <button onClick={remove} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> Usuń</button>
+                <button onClick={() => setConfirmDelete(true)} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> Usuń</button>
               ) : <span />}
               <div className="flex gap-2">
                 <button onClick={() => setForm(null)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Anuluj</button>
@@ -334,6 +336,18 @@ export default function PersonalCalendar() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title="Usuń wydarzenie"
+        message="Czy na pewno usunąć to wydarzenie? Jeśli się powtarza, zniknie cała seria."
+        confirmText="Usuń"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="delete"
+        onConfirm={doRemove}
+        onClose={() => setConfirmDelete(false)}
+      />
     </section>
   );
 }

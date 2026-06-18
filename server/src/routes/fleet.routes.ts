@@ -4,8 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import fleetController from '../controllers/fleet.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
-import { UserRole } from '../models/User.model';
 
 const router = Router();
 
@@ -19,10 +17,9 @@ const upload = multer({
   fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
 });
 
+// Available to all authenticated users. Management actions (assign/reject,
+// vehicle CRUD) are gated per-action in the controller via canManage.
 router.use(authenticate);
-// TESTING: whole fleet module is admin-only for now. To open it to all users,
-// remove this guard (per-action manager checks already live in the controller).
-router.use(requireRole([UserRole.ADMIN]));
 
 router.get('/context', fleetController.getContext);
 

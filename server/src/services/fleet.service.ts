@@ -26,18 +26,19 @@ export class FleetService {
   private requestRepo = AppDataSource.getRepository(VehicleRequest);
   private userRepo = AppDataSource.getRepository(User);
 
-  /** Admins always manage; otherwise the user must be flagged as fleet manager. */
+  /** Admin/szef always manage; otherwise the user must be flagged as fleet manager. */
   async canManage(userId: string, role: string): Promise<boolean> {
-    if (role === UserRole.ADMIN) return true;
+    if (role === UserRole.ADMIN || role === UserRole.SZEF) return true;
     const user = await this.userRepo.findOne({ where: { id: userId }, select: ['id', 'is_fleet_manager'] });
     return !!user?.is_fleet_manager;
   }
 
-  /** All active users who should be notified about new requests (admins + fleet managers). */
+  /** Active users notified about new requests (admins + szef + fleet managers). */
   async getManagers(): Promise<User[]> {
     return this.userRepo.find({
       where: [
         { role: UserRole.ADMIN, is_active: true },
+        { role: UserRole.SZEF, is_active: true },
         { is_fleet_manager: true, is_active: true },
       ],
       select: ['id'],

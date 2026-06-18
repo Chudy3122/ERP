@@ -3,7 +3,7 @@ import fs from 'fs';
 import fleetService from '../services/fleet.service';
 import notificationService from '../services/notification.service';
 import { AppDataSource } from '../config/database';
-import { User, UserRole } from '../models/User.model';
+import { User } from '../models/User.model';
 import { cloudinary } from '../config/cloudinary';
 
 /** Upload an optional vehicle photo to Cloudinary; returns the secure URL or undefined. */
@@ -133,7 +133,7 @@ export class FleetController {
   // ── Vehicles (admin) ────────────────────────────────────────────────────────
   createVehicle = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
+      if (!(await fleetService.canManage(req.user!.userId, req.user!.role))) { res.status(403).json({ message: 'Brak uprawnień' }); return; }
       const image_url = await uploadVehicleImage(req.file);
       const vehicle = await fleetService.createVehicle({
         name: req.body?.name,
@@ -152,7 +152,7 @@ export class FleetController {
 
   updateVehicle = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
+      if (!(await fleetService.canManage(req.user!.userId, req.user!.role))) { res.status(403).json({ message: 'Brak uprawnień' }); return; }
       const image_url = await uploadVehicleImage(req.file);
       const vehicle = await fleetService.updateVehicle(req.params.id, {
         name: req.body?.name,
@@ -171,7 +171,7 @@ export class FleetController {
 
   deleteVehicle = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
+      if (!(await fleetService.canManage(req.user!.userId, req.user!.role))) { res.status(403).json({ message: 'Brak uprawnień' }); return; }
       await fleetService.deleteVehicle(req.params.id);
       res.status(204).send();
     } catch (e: any) {

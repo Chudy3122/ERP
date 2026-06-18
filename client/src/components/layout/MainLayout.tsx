@@ -322,7 +322,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Zaopatrzenie' },
     { name: 'Zaopatrzenie', href: '/supply', icon: Package },
-    { name: 'Flota', href: '/fleet', icon: Car, roles: [UserRole.ADMIN] },
+    { name: 'Flota', href: '/fleet', icon: Car },
 
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },
