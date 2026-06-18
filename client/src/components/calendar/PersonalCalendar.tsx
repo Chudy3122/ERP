@@ -154,7 +154,7 @@ export default function PersonalCalendar() {
     allDay ? 'Cały dzień' : new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <section className="flex h-full flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
@@ -220,7 +220,7 @@ export default function PersonalCalendar() {
       </div>
 
       {/* Upcoming */}
-      <div className="mt-5">
+      <div className="mt-5 flex-1">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nadchodzące</h3>
         {upcoming.length === 0 ? (
           <p className="text-sm text-gray-400">Brak nadchodzących wydarzeń w tym widoku.</p>

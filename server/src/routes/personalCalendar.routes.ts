@@ -1,14 +1,11 @@
 import { Router } from 'express';
 import personalCalendarController from '../controllers/personalCalendar.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
-import { UserRole } from '../models/User.model';
 
 const router = Router();
 
+// Personal calendar — available to all authenticated users (each sees only their own).
 router.use(authenticate);
-// Personal calendar is admin-only for now (pilot).
-router.use(requireRole([UserRole.ADMIN]));
 
 router.get('/', personalCalendarController.list);
 router.post('/', personalCalendarController.create);
