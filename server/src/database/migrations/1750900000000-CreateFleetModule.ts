@@ -30,7 +30,7 @@ export class CreateFleetModule1750900000000 implements MigrationInterface {
     // Seed the two current cars (only if not already present by name).
     for (const name of ['Golf 7', 'Hyundai i20']) {
       await queryRunner.query(
-        `INSERT INTO vehicles (name) SELECT $1 WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE name = $1)`,
+        `INSERT INTO vehicles (name) SELECT $1::varchar WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE name = $1::varchar)`,
         [name]
       );
     }
