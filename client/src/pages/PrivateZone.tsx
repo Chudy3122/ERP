@@ -201,8 +201,8 @@ export default function PrivateZone() {
           </div>
         </section>
 
-        {user?.role === 'admin' && <PersonalCalendar />}
-
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+          <div className="min-w-0 flex-1 space-y-6">
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -429,6 +429,14 @@ export default function PrivateZone() {
             })}
           </div>
         )}
+          </div>
+
+          {user?.role === 'admin' && (
+            <div className="w-full xl:w-[380px] xl:flex-shrink-0">
+              <PersonalCalendar />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Edit modal */}

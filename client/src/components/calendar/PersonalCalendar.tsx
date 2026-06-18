@@ -82,7 +82,7 @@ export default function PersonalCalendar() {
     const now = Date.now();
     return [...occurrences]
       .filter((o) => new Date(o.occurrence_date).getTime() >= now - 60 * 60 * 1000)
-      .slice(0, 6);
+      .slice(0, 3);
   }, [occurrences]);
 
   const todayKey = dateKey(new Date());
@@ -192,7 +192,7 @@ export default function PersonalCalendar() {
             <div
               key={k}
               onClick={() => openNew(day)}
-              className={`min-h-[78px] cursor-pointer rounded-lg border p-1.5 text-left transition-colors ${
+              className={`min-h-[54px] cursor-pointer rounded-lg border p-1 text-left transition-colors ${
                 inMonth ? 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700/50' : 'border-transparent bg-gray-50/60 text-gray-400 dark:bg-gray-900/30'
               }`}
             >
@@ -200,7 +200,7 @@ export default function PersonalCalendar() {
                 {day.getDate()}
               </div>
               <div className="space-y-1">
-                {dayEvents.slice(0, 3).map((o, i) => (
+                {dayEvents.slice(0, 2).map((o, i) => (
                   <button
                     key={`${o.id}-${i}`}
                     onClick={(e) => { e.stopPropagation(); openEdit(o); }}
@@ -212,7 +212,7 @@ export default function PersonalCalendar() {
                     {o.is_recurring && <Repeat className="h-2.5 w-2.5 flex-shrink-0 opacity-60" />}
                   </button>
                 ))}
-                {dayEvents.length > 3 && <div className="px-1 text-[10px] text-gray-400">+{dayEvents.length - 3} więcej</div>}
+                {dayEvents.length > 2 && <div className="px-1 text-[10px] text-gray-400">+{dayEvents.length - 2} więcej</div>}
               </div>
             </div>
           );
