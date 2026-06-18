@@ -208,7 +208,7 @@ export class TimeService {
    * End work for the day — clock-out rounded to nearest 5 min (same as clock-in);
    * if paused, just mark day as ended (no time to adjust)
    */
-  async endWork(userId: string, notes?: string): Promise<TimeEntry> {
+  async endWork(userId: string, notes?: string, device?: string, ip?: string): Promise<TimeEntry> {
     const activeEntry = await this.timeEntryRepository.findOne({
       where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
@@ -220,6 +220,8 @@ export class TimeService {
       const clockOutTime = rounded.getTime() > activeEntry.clock_in.getTime() ? rounded : now;
       activeEntry.clockOut(notes || 'Zakończenie pracy', clockOutTime);
       activeEntry.is_break = false;
+      activeEntry.clock_out_device = device || null;
+      activeEntry.clock_out_ip = ip || null;
       return await this.timeEntryRepository.save(activeEntry);
     }
 
@@ -239,6 +241,8 @@ export class TimeService {
     }
 
     lastEntry.is_break = false;
+    lastEntry.clock_out_device = device || null;
+    lastEntry.clock_out_ip = ip || null;
     return await this.timeEntryRepository.save(lastEntry);
   }
 

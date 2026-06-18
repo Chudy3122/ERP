@@ -1715,7 +1715,14 @@ export default function WorkTime() {
                               <DeviceBadge device={entry.clock_in_device} ip={entry.clock_in_ip} />
                             </span>
                           </td>
-                          <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">{entry.clock_out ? fmtT(entry.clock_out) : <span className="font-sans text-[#F7941D]">W pracy</span>}</td>
+                          <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">
+                            {entry.clock_out ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                {fmtT(entry.clock_out)}
+                                <DeviceBadge device={entry.clock_out_device} ip={entry.clock_out_ip} />
+                              </span>
+                            ) : <span className="font-sans text-[#F7941D]">W pracy</span>}
+                          </td>
                           <td className="px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-white">{inProgress ? <span className="text-[#F7941D]">—</span> : formatDurationValue(entry.duration_minutes || 0)}</td>
                           <td className="px-4 py-2.5 text-sm">
                             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${entry.is_manual ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{entry.is_manual ? 'Ręczny' : 'Automatyczny'}</span>

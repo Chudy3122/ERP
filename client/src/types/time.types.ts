@@ -45,6 +45,8 @@ export interface TimeEntry {
   is_manual: boolean;
   clock_in_device?: string | null; // 'mobile' | 'tablet' | 'desktop'
   clock_in_ip?: string | null;
+  clock_out_device?: string | null;
+  clock_out_ip?: string | null;
   expected_clock_in: string | null;
   status: TimeEntryStatus;
   approved_by: string | null;

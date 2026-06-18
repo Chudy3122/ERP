@@ -70,6 +70,12 @@ export class TimeEntry {
   @Column({ type: 'varchar', length: 100, nullable: true })
   clock_in_ip: string | null; // IP address the clock-in came from (audit)
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  clock_out_device: string | null; // device used to end work (not set on pause)
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  clock_out_ip: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   approved_by: string | null;
 
