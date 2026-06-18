@@ -423,7 +423,11 @@ function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onSta
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function WorkTime() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'my' | 'attendance' | 'all'>('my');
+  // Remember the last open tab across refreshes (e.g. stay on "Wszystkie czasy pracy").
+  const [activeTab, setActiveTab] = useState<'my' | 'attendance' | 'all'>(() => {
+    const saved = localStorage.getItem('workTime:activeTab');
+    return saved === 'attendance' || saved === 'all' ? saved : 'my';
+  });
 
   // Day state machine
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
@@ -445,6 +449,14 @@ export default function WorkTime() {
   const isManager = user?.role === 'admin' || user?.role === 'kadry';
   // Frekwencja pracowników: zarząd / kadry / księgowość / kierownik — nie zwykli pracownicy.
   const canViewAttendance = ['admin', 'szef', 'kadry', 'ksiegowosc', 'kierownik'].includes(user?.role || '');
+
+  // Persist the active tab; if a restored tab isn't allowed for this role, fall back to "my".
+  useEffect(() => { localStorage.setItem('workTime:activeTab', activeTab); }, [activeTab]);
+  useEffect(() => {
+    if (activeTab === 'all' && !isManager) setActiveTab('my');
+    else if (activeTab === 'attendance' && !canViewAttendance) setActiveTab('my');
+  }, [isManager, canViewAttendance]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
   const [savingEntry, setSavingEntry] = useState(false);
