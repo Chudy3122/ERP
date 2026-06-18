@@ -73,6 +73,10 @@ export class User {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  // Can manage the car fleet (assign/reject vehicle requests). Admins always can.
+  @Column({ type: 'boolean', default: false })
+  is_fleet_manager: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   last_login: Date | null;
 

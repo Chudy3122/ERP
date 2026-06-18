@@ -405,6 +405,55 @@ class NotificationService {
   }
 
   /**
+   * Notify fleet managers about a new car request
+   */
+  async notifyNewVehicleRequest(
+    recipientId: string,
+    requesterName: string,
+    destination: string,
+    requestId: string,
+    requesterId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: recipientId,
+      type: NotificationType.VEHICLE_REQUEST_NEW,
+      title: 'Nowe zapotrzebowanie na samochód',
+      message: `${requesterName} prosi o samochód — trasa: ${destination}`,
+      actionUrl: '/fleet',
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: requesterId,
+      relatedEntityType: 'vehicle_request',
+      relatedEntityId: requestId,
+    });
+  }
+
+  /**
+   * Notify the requester about the decision on their car request
+   */
+  async notifyVehicleRequestDecision(
+    userId: string,
+    approved: boolean,
+    destination: string,
+    vehicleName: string | null,
+    requestId: string,
+    reviewerId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      type: NotificationType.VEHICLE_REQUEST_DECISION,
+      title: approved ? 'Przydzielono samochód' : 'Zapotrzebowanie na samochód odrzucone',
+      message: approved
+        ? `Na trasę „${destination}" przydzielono: ${vehicleName ?? 'samochód'}`
+        : `Twoje zapotrzebowanie na samochód (${destination}) zostało odrzucone`,
+      actionUrl: '/fleet',
+      priority: approved ? NotificationPriority.NORMAL : NotificationPriority.HIGH,
+      relatedUserId: reviewerId,
+      relatedEntityType: 'vehicle_request',
+      relatedEntityId: requestId,
+    });
+  }
+
+  /**
    * Remind a user about an upcoming personal calendar event
    */
   async notifyCalendarReminder(

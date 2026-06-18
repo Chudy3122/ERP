@@ -41,6 +41,9 @@ export enum NotificationType {
   PROJECT_ASSIGNED = 'project_assigned',
   // Personal calendar
   CALENDAR_REMINDER = 'calendar_reminder',
+  // Fleet (car requests)
+  VEHICLE_REQUEST_NEW = 'vehicle_request_new',
+  VEHICLE_REQUEST_DECISION = 'vehicle_request_decision',
   // Tickets / helpdesk
   TICKET_NEW = 'ticket_new',
 }

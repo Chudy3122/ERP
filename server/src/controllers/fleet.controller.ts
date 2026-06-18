@@ -1,0 +1,130 @@
+import { Request, Response } from 'express';
+import fleetService from '../services/fleet.service';
+import notificationService from '../services/notification.service';
+import { AppDataSource } from '../config/database';
+import { User, UserRole } from '../models/User.model';
+
+export class FleetController {
+  /** GET /api/fleet/context — what the current user can do + the vehicle list */
+  getContext = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const canManage = await fleetService.canManage(req.user!.userId, req.user!.role);
+      const vehicles = await fleetService.listVehicles();
+      res.json({ canManage, vehicles });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  };
+
+  /** GET /api/fleet/requests — managers: all (optional ?status); others: own */
+  listRequests = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const canManage = await fleetService.canManage(req.user!.userId, req.user!.role);
+      const data = canManage
+        ? await fleetService.getAll(req.query.status as string | undefined)
+        : await fleetService.getMine(req.user!.userId);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || 'Błąd pobierania zapotrzebowań' });
+    }
+  };
+
+  createRequest = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const request = await fleetService.create(req.body, req.user!.userId);
+
+      // Notify fleet managers (admins + flagged) except the requester.
+      try {
+        const userRepo = AppDataSource.getRepository(User);
+        const requester = await userRepo.findOne({ where: { id: req.user!.userId }, select: ['id', 'first_name', 'last_name'] });
+        const requesterName = requester ? `${requester.first_name} ${requester.last_name}` : 'Pracownik';
+        const managers = await fleetService.getManagers();
+        for (const m of managers) {
+          if (m.id === req.user!.userId) continue;
+          await notificationService.notifyNewVehicleRequest(m.id, requesterName, request.destination, request.id, req.user!.userId);
+        }
+      } catch (e) {
+        console.error('Fleet notify error:', e);
+      }
+
+      res.status(201).json(request);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message || 'Błąd tworzenia zapotrzebowania' });
+    }
+  };
+
+  assign = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await fleetService.canManage(req.user!.userId, req.user!.role))) {
+        res.status(403).json({ message: 'Brak uprawnień do przydzielania pojazdów' });
+        return;
+      }
+      const { vehicleId, notes } = req.body;
+      if (!vehicleId) { res.status(400).json({ message: 'Wybierz pojazd' }); return; }
+      const request = await fleetService.assign(req.params.id, vehicleId, req.user!.userId, notes);
+      try {
+        if (request.user_id !== req.user!.userId) {
+          await notificationService.notifyVehicleRequestDecision(
+            request.user_id, true, request.destination, request.vehicle?.name ?? null, request.id, req.user!.userId,
+          );
+        }
+      } catch (e) { console.error('Fleet decision notify error:', e); }
+      res.json(request);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  };
+
+  reject = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await fleetService.canManage(req.user!.userId, req.user!.role))) {
+        res.status(403).json({ message: 'Brak uprawnień' });
+        return;
+      }
+      const request = await fleetService.reject(req.params.id, req.user!.userId, req.body?.notes);
+      try {
+        if (request.user_id !== req.user!.userId) {
+          await notificationService.notifyVehicleRequestDecision(
+            request.user_id, false, request.destination, null, request.id, req.user!.userId,
+          );
+        }
+      } catch (e) { console.error('Fleet decision notify error:', e); }
+      res.json(request);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  };
+
+  deleteRequest = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const isManager = await fleetService.canManage(req.user!.userId, req.user!.role);
+      await fleetService.delete(req.params.id, req.user!.userId, isManager);
+      res.status(204).send();
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  };
+
+  // ── Vehicles (admin) ────────────────────────────────────────────────────────
+  createVehicle = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
+      const vehicle = await fleetService.createVehicle(req.body?.name, req.body?.registration);
+      res.status(201).json(vehicle);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  };
+
+  deleteVehicle = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
+      await fleetService.deleteVehicle(req.params.id);
+      res.status(204).send();
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  };
+}
+
+export default new FleetController();

@@ -94,6 +94,7 @@ import {
   Building2,
   Shield,
   Package,
+  Car,
   ListTodo,
   PanelLeftClose,
   LayoutTemplate,
@@ -321,6 +322,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Zaopatrzenie' },
     { name: 'Zaopatrzenie', href: '/supply', icon: Package },
+    { name: 'Flota', href: '/fleet', icon: Car, roles: [UserRole.ADMIN] },
 
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },

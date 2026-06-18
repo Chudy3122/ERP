@@ -31,6 +31,7 @@ import searchRoutes from './search.routes';
 import supplyRoutes from './supply.routes';
 import personalTaskRoutes from './personalTask.routes';
 import personalCalendarRoutes from './personalCalendar.routes';
+import fleetRoutes from './fleet.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -129,6 +130,8 @@ router.use('/supply', supplyRoutes);
 router.use('/personal-tasks', personalTaskRoutes);
 
 router.use('/personal-calendar', personalCalendarRoutes);
+
+router.use('/fleet', fleetRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);
