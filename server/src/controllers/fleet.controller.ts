@@ -1,8 +1,33 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
 import fleetService from '../services/fleet.service';
 import notificationService from '../services/notification.service';
 import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
+import { cloudinary } from '../config/cloudinary';
+
+/** Upload an optional vehicle photo to Cloudinary; returns the secure URL or undefined. */
+async function uploadVehicleImage(file?: Express.Multer.File): Promise<string | undefined> {
+  if (!file) return undefined;
+  try {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'erp-vehicles',
+      transformation: [
+        { width: 1200, height: 900, crop: 'limit' },
+        { quality: 'auto', fetch_format: 'auto' },
+      ],
+    });
+    return result.secure_url;
+  } finally {
+    try { fs.unlinkSync(file.path); } catch { /* ignore */ }
+  }
+}
+
+function parseIntOrNull(v: any): number | null {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseInt(String(v), 10);
+  return isNaN(n) ? null : n;
+}
 
 export class FleetController {
   /** GET /api/fleet/context — what the current user can do + the vehicle list */
@@ -109,8 +134,36 @@ export class FleetController {
   createVehicle = async (req: Request, res: Response): Promise<void> => {
     try {
       if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
-      const vehicle = await fleetService.createVehicle(req.body?.name, req.body?.registration);
+      const image_url = await uploadVehicleImage(req.file);
+      const vehicle = await fleetService.createVehicle({
+        name: req.body?.name,
+        registration: req.body?.registration,
+        year: parseIntOrNull(req.body?.year),
+        seats: parseIntOrNull(req.body?.seats),
+        fuel_type: req.body?.fuel_type,
+        notes: req.body?.notes,
+        image_url,
+      });
       res.status(201).json(vehicle);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  };
+
+  updateVehicle = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (req.user!.role !== UserRole.ADMIN) { res.status(403).json({ message: 'Tylko administrator' }); return; }
+      const image_url = await uploadVehicleImage(req.file);
+      const vehicle = await fleetService.updateVehicle(req.params.id, {
+        name: req.body?.name,
+        registration: req.body?.registration,
+        year: parseIntOrNull(req.body?.year),
+        seats: parseIntOrNull(req.body?.seats),
+        fuel_type: req.body?.fuel_type,
+        notes: req.body?.notes,
+        image_url,
+      });
+      res.json(vehicle);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }

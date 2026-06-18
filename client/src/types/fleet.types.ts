@@ -4,7 +4,22 @@ export interface Vehicle {
   id: string;
   name: string;
   registration: string | null;
+  year: number | null;
+  seats: number | null;
+  fuel_type: string | null;
+  notes: string | null;
+  image_url: string | null;
   is_active: boolean;
+}
+
+export interface VehicleInput {
+  name: string;
+  registration?: string;
+  year?: number | null;
+  seats?: number | null;
+  fuel_type?: string;
+  notes?: string;
+  image?: File | null;
 }
 
 export interface VehicleRequest {

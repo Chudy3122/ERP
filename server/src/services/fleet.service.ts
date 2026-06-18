@@ -11,6 +11,16 @@ interface CreateRequestDto {
   passengers?: number | null;
 }
 
+interface VehicleDto {
+  name?: string;
+  registration?: string | null;
+  year?: number | null;
+  seats?: number | null;
+  fuel_type?: string | null;
+  notes?: string | null;
+  image_url?: string | null;
+}
+
 export class FleetService {
   private vehicleRepo = AppDataSource.getRepository(Vehicle);
   private requestRepo = AppDataSource.getRepository(VehicleRequest);
@@ -42,9 +52,33 @@ export class FleetService {
     });
   }
 
-  async createVehicle(name: string, registration?: string): Promise<Vehicle> {
-    if (!name?.trim()) throw new Error('Nazwa pojazdu jest wymagana');
-    const vehicle = this.vehicleRepo.create({ name: name.trim(), registration: registration?.trim() || null });
+  async createVehicle(data: VehicleDto): Promise<Vehicle> {
+    if (!data.name?.trim()) throw new Error('Nazwa pojazdu jest wymagana');
+    const vehicle = this.vehicleRepo.create({
+      name: data.name.trim(),
+      registration: data.registration?.trim() || null,
+      year: data.year ?? null,
+      seats: data.seats ?? null,
+      fuel_type: data.fuel_type?.trim() || null,
+      notes: data.notes?.trim() || null,
+      image_url: data.image_url || null,
+    });
+    return this.vehicleRepo.save(vehicle);
+  }
+
+  async updateVehicle(id: string, data: VehicleDto): Promise<Vehicle> {
+    const vehicle = await this.vehicleRepo.findOne({ where: { id } });
+    if (!vehicle) throw new Error('Pojazd nie znaleziony');
+    if (data.name !== undefined) {
+      if (!data.name.trim()) throw new Error('Nazwa pojazdu jest wymagana');
+      vehicle.name = data.name.trim();
+    }
+    if (data.registration !== undefined) vehicle.registration = data.registration?.trim() || null;
+    if (data.year !== undefined) vehicle.year = data.year ?? null;
+    if (data.seats !== undefined) vehicle.seats = data.seats ?? null;
+    if (data.fuel_type !== undefined) vehicle.fuel_type = data.fuel_type?.trim() || null;
+    if (data.notes !== undefined) vehicle.notes = data.notes?.trim() || null;
+    if (data.image_url !== undefined && data.image_url) vehicle.image_url = data.image_url;
     return this.vehicleRepo.save(vehicle);
   }
 

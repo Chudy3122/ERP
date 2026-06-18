@@ -3,12 +3,14 @@ import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  Car, Plus, Loader2, X, MapPin, Clock, Users as UsersIcon, Check, Trash2, CheckCircle2, XCircle, Ban,
+  Car, Plus, Loader2, X, MapPin, Clock, Users as UsersIcon, Check, Trash2, CheckCircle2, XCircle, Ban, Pencil, Upload,
 } from 'lucide-react';
 import * as fleetApi from '../api/fleet.api';
 import {
   Vehicle, VehicleRequest, FleetContext, VehicleRequestStatus, VEHICLE_STATUS_LABELS,
 } from '../types/fleet.types';
+
+const FUEL_OPTIONS = ['Benzyna', 'Diesel', 'Hybryda', 'Elektryczny', 'LPG'];
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -278,46 +280,160 @@ function RequestModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
 // ── Vehicles management (admin) ───────────────────────────────────────────────
 function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: () => void }) {
-  const [name, setName] = useState('');
-  const [adding, setAdding] = useState(false);
-
-  const add = async () => {
-    if (!name.trim()) return;
-    setAdding(true);
-    try {
-      await fleetApi.createVehicle(name.trim());
-      setName('');
-      onChange();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Nie udało się dodać pojazdu');
-    } finally { setAdding(false); }
-  };
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Vehicle | null>(null);
 
   const removeVehicle = async (id: string) => {
     if (!window.confirm('Wycofać ten pojazd z floty?')) return;
-    try {
-      await fleetApi.deleteVehicle(id);
-      onChange();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Nie udało się usunąć');
-    }
+    try { await fleetApi.deleteVehicle(id); onChange(); }
+    catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się usunąć'); }
   };
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Pojazdy</h2>
-      <div className="flex flex-wrap items-center gap-2">
-        {vehicles.length === 0 && <span className="text-sm text-gray-400">Brak pojazdów.</span>}
-        {vehicles.map((v) => (
-          <span key={v.id} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-sm text-gray-700 dark:border-gray-600 dark:text-gray-200">
-            <Car className="h-3.5 w-3.5 text-[#F7941D]" /> {v.name}
-            <X className="h-3.5 w-3.5 cursor-pointer text-gray-400 hover:text-red-500" onClick={() => removeVehicle(v.id)} />
-          </span>
-        ))}
-        <div className="flex items-center gap-1">
-          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder="Dodaj pojazd…" className="h-8 w-36 rounded-lg border border-gray-300 px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-          <button onClick={add} disabled={adding || !name.trim()} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#F7941D] px-2.5 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-50">
-            {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Pojazdy</h2>
+        <button onClick={() => { setEditing(null); setModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+          <Plus className="h-4 w-4" /> Dodaj pojazd
+        </button>
+      </div>
+      {vehicles.length === 0 ? (
+        <p className="text-sm text-gray-400">Brak pojazdów.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {vehicles.map((v) => (
+            <div key={v.id} className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="h-28 w-full bg-gray-100 dark:bg-gray-900/40">
+                {v.image_url
+                  ? <img src={v.image_url} alt={v.name} className="h-full w-full object-cover" />
+                  : <div className="flex h-full w-full items-center justify-center text-gray-300"><Car className="h-8 w-8" /></div>}
+              </div>
+              <div className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{v.name}</p>
+                    {v.registration && <p className="font-mono text-xs text-gray-500">{v.registration}</p>}
+                  </div>
+                  <div className="flex flex-shrink-0 gap-1">
+                    <button onClick={() => { setEditing(v); setModalOpen(true); }} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700" title="Edytuj"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => removeVehicle(v.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" title="Wycofaj"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  {v.year ? <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{v.year}</span> : null}
+                  {v.seats ? <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{v.seats} miejsc</span> : null}
+                  {v.fuel_type ? <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{v.fuel_type}</span> : null}
+                </div>
+                {v.notes && <p className="mt-1.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{v.notes}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {modalOpen && <VehicleModal vehicle={editing} onClose={() => setModalOpen(false)} onSaved={() => { setModalOpen(false); onChange(); }} />}
+    </div>
+  );
+}
+
+function VehicleModal({ vehicle, onClose, onSaved }: { vehicle: Vehicle | null; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(vehicle?.name || '');
+  const [registration, setRegistration] = useState(vehicle?.registration || '');
+  const [year, setYear] = useState(vehicle?.year ? String(vehicle.year) : '');
+  const [seats, setSeats] = useState(vehicle?.seats ? String(vehicle.seats) : '');
+  const [fuel, setFuel] = useState(vehicle?.fuel_type || '');
+  const [notes, setNotes] = useState(vehicle?.notes || '');
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(vehicle?.image_url || null);
+  const [saving, setSaving] = useState(false);
+
+  const onPick = (f: File | null) => {
+    setImage(f);
+    setPreview(f ? URL.createObjectURL(f) : (vehicle?.image_url || null));
+  };
+
+  const submit = async () => {
+    if (!name.trim()) { toast.error('Podaj nazwę pojazdu'); return; }
+    setSaving(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        registration: registration.trim(),
+        year: year ? Number(year) : null,
+        seats: seats ? Number(seats) : null,
+        fuel_type: fuel,
+        notes: notes.trim(),
+        image,
+      };
+      if (vehicle) await fleetApi.updateVehicle(vehicle.id, payload);
+      else await fleetApi.createVehicle(payload);
+      toast.success('Zapisano');
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Nie udało się zapisać');
+    } finally { setSaving(false); }
+  };
+
+  const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+  const labelCls = 'mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-2xl dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{vehicle ? 'Edytuj pojazd' : 'Nowy pojazd'}</h2>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-3 px-5 py-4">
+          {/* Photo */}
+          <div>
+            <label className={labelCls}>Zdjęcie</label>
+            <div className="flex items-center gap-3">
+              <div className="h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-900/40">
+                {preview
+                  ? <img src={preview} alt="" className="h-full w-full object-cover" />
+                  : <div className="flex h-full w-full items-center justify-center text-gray-300"><Car className="h-6 w-6" /></div>}
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                <Upload className="h-4 w-4" /> Wybierz zdjęcie
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onPick(e.target.files?.[0] || null)} />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Nazwa *</label>
+            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="np. Volkswagen Golf 7" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Nr rejestracyjny</label>
+              <input className={inputCls} value={registration} onChange={(e) => setRegistration(e.target.value)} placeholder="np. WA 12345" />
+            </div>
+            <div>
+              <label className={labelCls}>Rok</label>
+              <input type="number" className={inputCls} value={year} onChange={(e) => setYear(e.target.value)} placeholder="np. 2019" />
+            </div>
+            <div>
+              <label className={labelCls}>Liczba miejsc</label>
+              <input type="number" min={1} className={inputCls} value={seats} onChange={(e) => setSeats(e.target.value)} placeholder="np. 5" />
+            </div>
+            <div>
+              <label className={labelCls}>Paliwo</label>
+              <select className={inputCls} value={fuel} onChange={(e) => setFuel(e.target.value)}>
+                <option value="">—</option>
+                {FUEL_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Uwagi</label>
+            <textarea rows={2} className={`${inputCls} resize-y`} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="np. fotelik dziecięcy, winieta, …" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Anuluj</button>
+          <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-60">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz
           </button>
         </div>
       </div>
