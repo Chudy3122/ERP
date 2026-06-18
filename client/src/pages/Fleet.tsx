@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Car, Plus, Loader2, X, MapPin, Clock, Users as UsersIcon, Check, Trash2, CheckCircle2, XCircle, Ban, Pencil, Upload,
@@ -40,6 +41,7 @@ export default function Fleet() {
   const [showForm, setShowForm] = useState(false);
   const [assignChoice, setAssignChoice] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -82,8 +84,7 @@ export default function Fleet() {
     } finally { setBusyId(null); }
   };
 
-  const remove = async (id: string) => {
-    if (!window.confirm('Usunąć to zapotrzebowanie?')) return;
+  const doRemove = async (id: string) => {
     setBusyId(id);
     try {
       await fleetApi.deleteRequest(id);
@@ -91,7 +92,7 @@ export default function Fleet() {
       toast.success('Usunięto');
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Nie udało się usunąć');
-    } finally { setBusyId(null); }
+    } finally { setBusyId(null); setConfirmDeleteId(null); }
   };
 
   return (
@@ -180,7 +181,7 @@ export default function Fleet() {
                         </button>
                       )}
                       {canDelete && (
-                        <button onClick={() => remove(r.id)} disabled={busyId === r.id} className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20">
+                        <button onClick={() => setConfirmDeleteId(r.id)} disabled={busyId === r.id} className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20">
                           <Trash2 className="h-4 w-4" /> Usuń
                         </button>
                       )}
@@ -199,6 +200,18 @@ export default function Fleet() {
           onCreated={() => { setShowForm(false); toast.success('Zgłoszono zapotrzebowanie'); load(); }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        title="Usuń zapotrzebowanie"
+        message="Czy na pewno chcesz usunąć to zapotrzebowanie na samochód?"
+        confirmText="Usuń"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="delete"
+        onConfirm={() => { if (confirmDeleteId) doRemove(confirmDeleteId); }}
+        onClose={() => setConfirmDeleteId(null)}
+      />
     </MainLayout>
   );
 }
@@ -282,11 +295,12 @@ function RequestModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: () => void }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  const removeVehicle = async (id: string) => {
-    if (!window.confirm('Wycofać ten pojazd z floty?')) return;
+  const doRemoveVehicle = async (id: string) => {
     try { await fleetApi.deleteVehicle(id); onChange(); }
     catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się usunąć'); }
+    finally { setConfirmId(null); }
   };
 
   return (
@@ -316,7 +330,7 @@ function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: (
                   </div>
                   <div className="flex flex-shrink-0 gap-1">
                     <button onClick={() => { setEditing(v); setModalOpen(true); }} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700" title="Edytuj"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => removeVehicle(v.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" title="Wycofaj"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setConfirmId(v.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" title="Wycofaj"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">
@@ -331,6 +345,18 @@ function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: (
         </div>
       )}
       {modalOpen && <VehicleModal vehicle={editing} onClose={() => setModalOpen(false)} onSaved={() => { setModalOpen(false); onChange(); }} />}
+
+      <ConfirmDialog
+        isOpen={!!confirmId}
+        title="Wycofać pojazd?"
+        message="Pojazd zniknie z listy do wyboru. Wcześniejsze przydziały zachowają swój samochód."
+        confirmText="Wycofaj"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="delete"
+        onConfirm={() => { if (confirmId) doRemoveVehicle(confirmId); }}
+        onClose={() => setConfirmId(null)}
+      />
     </div>
   );
 }
