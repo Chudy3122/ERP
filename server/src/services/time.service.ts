@@ -190,7 +190,7 @@ export class TimeService {
   /**
    * Pause work — clock out with exact time (no rounding — avoids negative durations)
    */
-  async pauseWork(userId: string, notes?: string): Promise<TimeEntry> {
+  async pauseWork(userId: string, notes?: string, device?: string, ip?: string): Promise<TimeEntry> {
     const timeEntry = await this.timeEntryRepository.findOne({
       where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
@@ -201,6 +201,8 @@ export class TimeService {
 
     timeEntry.clockOut(notes || 'Pauza w pracy', new Date());
     timeEntry.is_break = true;
+    timeEntry.clock_out_device = device || null;
+    timeEntry.clock_out_ip = ip || null;
     return await this.timeEntryRepository.save(timeEntry);
   }
 
