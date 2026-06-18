@@ -405,6 +405,27 @@ class NotificationService {
   }
 
   /**
+   * Remind a user about an upcoming personal calendar event
+   */
+  async notifyCalendarReminder(
+    userId: string,
+    title: string,
+    whenLabel: string,
+    eventId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      type: NotificationType.CALENDAR_REMINDER,
+      title: 'Przypomnienie',
+      message: `${title} — ${whenLabel}`,
+      actionUrl: '/private-zone',
+      priority: NotificationPriority.HIGH,
+      relatedEntityType: 'calendar_event',
+      relatedEntityId: eventId,
+    });
+  }
+
+  /**
    * Notify about a new comment on a supply (zaopatrzenie) request
    */
   async notifySupplyComment(

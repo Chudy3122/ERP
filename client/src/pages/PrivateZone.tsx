@@ -4,6 +4,7 @@ import { CheckCircle2, ChevronDown, Clock3, GripVertical, ListTodo, Loader2, Loc
 import { toast } from 'react-hot-toast';
 import * as api from '../api/personalTask.api';
 import { useAuth } from '../contexts/AuthContext';
+import PersonalCalendar from '../components/calendar/PersonalCalendar';
 import { PersonalTask, PersonalTaskStatus, PERSONAL_COLUMNS } from '../types/personalTask.types';
 
 type PersonalTaskPriority = 'low' | 'medium' | 'high';
@@ -199,6 +200,8 @@ export default function PrivateZone() {
           </div>
           </div>
         </section>
+
+        {user?.role === 'admin' && <PersonalCalendar />}
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">

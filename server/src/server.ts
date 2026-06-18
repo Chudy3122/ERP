@@ -10,6 +10,7 @@ import { setupNotificationHandlers } from './sockets/notification.socket';
 import { setupMeetingHandlers } from './sockets/meeting.socket';
 import { TimeService } from './services/time.service';
 import scheduledMeetingService from './services/scheduledMeeting.service';
+import personalCalendarService from './services/personalCalendar.service';
 import { seedDepartments } from './database/seeds/seedDepartments';
 import userStatusService from './services/userStatus.service';
 
@@ -63,6 +64,13 @@ const startServer = async () => {
     setInterval(
       () => scheduledMeetingService.processDueScheduledMeetings().catch(console.error),
       30 * 1000
+    );
+
+    // Personal calendar reminders (best-effort) — fires bell reminders for upcoming
+    // events. Only runs while the server is awake (free tier may sleep).
+    setInterval(
+      () => personalCalendarService.processDueReminders().catch(console.error),
+      60 * 1000
     );
 
     // Start HTTP server

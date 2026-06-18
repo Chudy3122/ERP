@@ -39,6 +39,8 @@ export enum NotificationType {
   SUPPLY_REQUEST_COMMENT = 'supply_request_comment',
   // Projects
   PROJECT_ASSIGNED = 'project_assigned',
+  // Personal calendar
+  CALENDAR_REMINDER = 'calendar_reminder',
   // Tickets / helpdesk
   TICKET_NEW = 'ticket_new',
 }
