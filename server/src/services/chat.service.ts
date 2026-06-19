@@ -349,9 +349,7 @@ export class ChatService {
     if (channel.type === ChannelType.DIRECT) {
       throw new Error('Nie można zmienić nazwy rozmowy bezpośredniej');
     }
-    if (membership.role !== ChannelMemberRole.ADMIN) {
-      throw new Error('Tylko administrator kanału może zmienić nazwę');
-    }
+    // Any member of the group may rename it.
 
     const trimmed = (name || '').trim();
     if (!trimmed) throw new Error('Nazwa nie może być pusta');

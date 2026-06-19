@@ -184,6 +184,31 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'members' && (
             <div className="space-y-6">
+              {/* Rename group — any member can rename */}
+              {channel.type !== 'direct' && (
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Nazwa grupy</h3>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      maxLength={100}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleRename(); }}
+                      placeholder="Nazwa grupy"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      onClick={handleRename}
+                      disabled={renaming || !nameInput.trim() || nameInput.trim() === channel.name}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      {renaming ? 'Zapisywanie...' : 'Zapisz'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Add Members Section */}
               {isAdmin && nonMembers.length > 0 && (
                 <div className="bg-blue-50 rounded-md p-4">
@@ -276,31 +301,6 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
 
           {activeTab === 'settings' && isAdmin && (
             <div className="space-y-6">
-              {/* Rename group */}
-              {channel.type !== 'direct' && (
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Nazwa grupy</h3>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={nameInput}
-                      maxLength={100}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleRename(); }}
-                      placeholder="Nazwa grupy"
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <button
-                      onClick={handleRename}
-                      disabled={renaming || !nameInput.trim() || nameInput.trim() === channel.name}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                      {renaming ? 'Zapisywanie...' : 'Zapisz'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Channel Info */}
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Informacje o kanale</h3>
