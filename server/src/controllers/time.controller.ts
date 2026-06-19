@@ -69,7 +69,9 @@ export class TimeController {
     try {
       const userId = req.user!.userId;
       const { notes } = req.body;
-      const timeEntry = await timeService.clockOut(userId, notes);
+      const device = detectDevice(req.headers['user-agent']);
+      const ip = clientIp(req);
+      const timeEntry = await timeService.clockOut(userId, notes, device, ip);
       res.status(200).json({ success: true, data: timeEntry });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to clock out' });

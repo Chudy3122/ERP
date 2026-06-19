@@ -342,7 +342,7 @@ export class TimeService {
   /**
    * Clock out - End current time entry (legacy, kept for backward compatibility)
    */
-  async clockOut(userId: string, notes?: string): Promise<TimeEntry> {
+  async clockOut(userId: string, notes?: string, device?: string, ip?: string): Promise<TimeEntry> {
     const timeEntry = await this.timeEntryRepository.findOne({
       where: { user_id: userId, status: TimeEntryStatus.IN_PROGRESS },
     });
@@ -357,6 +357,8 @@ export class TimeService {
     const clockOutTime = rounded.getTime() > timeEntry.clock_in.getTime() ? rounded : now;
     timeEntry.clockOut(notes, clockOutTime);
     timeEntry.is_break = false;
+    timeEntry.clock_out_device = device || null;
+    timeEntry.clock_out_ip = ip || null;
     return await this.timeEntryRepository.save(timeEntry);
   }
 
