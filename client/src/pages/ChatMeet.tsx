@@ -35,6 +35,7 @@ import {
   LogOut,
   PhoneCall,
   ChevronRight,
+  Pencil,
 } from 'lucide-react';
 
 type SidebarTab = 'chat' | 'meetings';
@@ -173,11 +174,28 @@ const ChatMeet: React.FC = () => {
     unreadMessages,
     removeChannelMember,
     deleteChannelById,
+    renameChannel,
   } = useChatContext();
 
   // Sidebar state
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('chat');
   const [chatSearch, setChatSearch] = useState('');
+
+  // Inline group rename
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const saveChannelName = async () => {
+    if (!activeChannel) return;
+    const next = nameDraft.trim();
+    if (!next || next === activeChannel.name) { setEditingName(false); return; }
+    try {
+      await renameChannel(activeChannel.id, next);
+      setEditingName(false);
+      toast.success('Zmieniono nazwę grupy');
+    } catch (e: any) {
+      toast.error(e?.message || 'Nie udało się zmienić nazwy');
+    }
+  };
 
   // Chat channel context menu
   const [contextMenu, setContextMenu] = useState<{ channelId: string; x: number; y: number } | null>(null);
@@ -537,7 +555,7 @@ const ChatMeet: React.FC = () => {
   const activeOtherUser = activeOtherMember?.user ?? null;
   const activeUserStatus = activeOtherUser ? getUserStatus(activeOtherUser.id) : null;
   const [chatAvatarError, setChatAvatarError] = useState(false);
-  useEffect(() => { setChatAvatarError(false); }, [activeChannel?.id]);
+  useEffect(() => { setChatAvatarError(false); setEditingName(false); }, [activeChannel?.id]);
 
   return (
     <MainLayout title="Chat & Meet">
@@ -1036,9 +1054,33 @@ const ChatMeet: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-gray-900 dark:text-white truncate">
-                      {getChannelName(activeChannel)}
-                    </h2>
+                    {isGroup && editingName ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={nameDraft}
+                          maxLength={100}
+                          onChange={(e) => setNameDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveChannelName(); if (e.key === 'Escape') setEditingName(false); }}
+                          className="min-w-0 flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        />
+                        <button onClick={saveChannelName} title="Zapisz" className="rounded p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><Check className="w-4 h-4" /></button>
+                        <button onClick={() => setEditingName(false)} title="Anuluj" className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="w-4 h-4" /></button>
+                      </div>
+                    ) : (
+                      <h2 className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-white">
+                        <span className="truncate">{getChannelName(activeChannel)}</span>
+                        {isGroup && (
+                          <button
+                            onClick={() => { setNameDraft(activeChannel.name || ''); setEditingName(true); }}
+                            title="Zmień nazwę grupy"
+                            className="flex-shrink-0 rounded p-1 text-gray-400 transition-colors hover:text-[#F7941D]"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </h2>
+                    )}
                     {activeOtherUser ? (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {activeUserStatus?.status === 'online' ? 'Online' :
