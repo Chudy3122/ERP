@@ -332,6 +332,41 @@ export class ChatService {
   }
 
   /**
+   * Rename a group channel (any member may rename; DMs can't be renamed).
+   */
+  async renameChannel(channelId: string, userId: string, name: string) {
+    const membership = await this.channelMemberRepository.findOne({
+      where: { channel_id: channelId, user_id: userId },
+    });
+    if (!membership) {
+      throw new Error('You are not a member of this channel');
+    }
+
+    const channel = await this.channelRepository.findOne({ where: { id: channelId } });
+    if (!channel) {
+      throw new Error('Channel not found');
+    }
+    if (channel.type === ChannelType.DIRECT) {
+      throw new Error('Nie można zmienić nazwy rozmowy bezpośredniej');
+    }
+    if (membership.role !== ChannelMemberRole.ADMIN) {
+      throw new Error('Tylko administrator kanału może zmienić nazwę');
+    }
+
+    const trimmed = (name || '').trim();
+    if (!trimmed) throw new Error('Nazwa nie może być pusta');
+    if (trimmed.length > 100) throw new Error('Nazwa może mieć maksymalnie 100 znaków');
+
+    channel.name = trimmed;
+    await this.channelRepository.save(channel);
+
+    return this.channelRepository.findOne({
+      where: { id: channelId },
+      relations: ['members', 'members.user', 'creator'],
+    });
+  }
+
+  /**
    * Create a new message
    */
   async createMessage(

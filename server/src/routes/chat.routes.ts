@@ -15,6 +15,7 @@ router.get('/channels', chatController.getChannels);
 router.post('/channels', chatController.createChannel);
 router.post('/channels/direct', chatController.createDirectChannel);
 router.get('/channels/:id', chatController.getChannelById);
+router.put('/channels/:id', chatController.updateChannel);
 router.get('/channels/:id/messages', chatController.getChannelMessages);
 router.post('/channels/:id/messages', chatController.sendMessage);
 router.put('/channels/:id/read', chatController.markChannelRead);

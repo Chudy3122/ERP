@@ -12,6 +12,7 @@ interface ChannelSettingsModalProps {
   onAddMembers: (channelId: string, userIds: string[]) => Promise<void>;
   onRemoveMember: (channelId: string, userId: string) => Promise<void>;
   onDeleteChannel: (channelId: string) => Promise<void>;
+  onRenameChannel: (channelId: string, name: string) => Promise<void>;
   availableUsers: User[];
 }
 
@@ -23,6 +24,7 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
   onAddMembers,
   onRemoveMember,
   onDeleteChannel,
+  onRenameChannel,
   availableUsers,
 }) => {
   const { t } = useTranslation();
@@ -32,6 +34,8 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{ userId: string; name: string } | null>(null);
+  const [nameInput, setNameInput] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,8 +43,24 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
       setSelectedUsers([]);
       setError(null);
       setShowDeleteConfirm(false);
+      setNameInput(channel?.name || '');
     }
-  }, [isOpen]);
+  }, [isOpen, channel]);
+
+  const handleRename = async () => {
+    if (!channel) return;
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === channel.name) return;
+    try {
+      setRenaming(true);
+      setError(null);
+      await onRenameChannel(channel.id, trimmed);
+    } catch (err: any) {
+      setError(err.message || 'Nie udało się zmienić nazwy');
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   if (!isOpen || !channel) return null;
 
@@ -256,6 +276,31 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
 
           {activeTab === 'settings' && isAdmin && (
             <div className="space-y-6">
+              {/* Rename group */}
+              {channel.type !== 'direct' && (
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Nazwa grupy</h3>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      maxLength={100}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleRename(); }}
+                      placeholder="Nazwa grupy"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      onClick={handleRename}
+                      disabled={renaming || !nameInput.trim() || nameInput.trim() === channel.name}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      {renaming ? 'Zapisywanie...' : 'Zapisz'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Channel Info */}
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Informacje o kanale</h3>

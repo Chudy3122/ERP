@@ -79,6 +79,17 @@ export const createDirectChannel = async (data: CreateDirectChannelRequest): Pro
 };
 
 /**
+ * Rename a group channel
+ * @param channelId - Channel ID
+ * @param name - New channel name
+ * @returns Updated channel
+ */
+export const renameChannel = async (channelId: string, name: string): Promise<Channel> => {
+  const response = await apiClient.put(`/chat/channels/${channelId}`, { name });
+  return response.data.data;
+};
+
+/**
  * Add members to a channel
  * @param channelId - Channel ID
  * @param data - Member data with userIds array

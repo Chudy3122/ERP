@@ -49,6 +49,7 @@ interface ChatContextType {
   addChannelMembers: (channelId: string, userIds: string[]) => Promise<void>;
   removeChannelMember: (channelId: string, userId: string) => Promise<void>;
   deleteChannelById: (channelId: string) => Promise<void>;
+  renameChannel: (channelId: string, name: string) => Promise<void>;
 
   // Message operations
   sendMessage: (content: string, channelId?: string) => void;
@@ -662,6 +663,20 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [activeChannel]);
 
+  // Rename a group channel
+  const renameChannel = useCallback(async (channelId: string, name: string) => {
+    try {
+      const updatedChannel = await chatApi.renameChannel(channelId, name);
+      setChannels((prev) => prev.map((ch) => (ch.id === channelId ? updatedChannel : ch)));
+      if (activeChannel?.id === channelId) {
+        setActiveChannelState(updatedChannel);
+      }
+    } catch (err: any) {
+      console.error('Failed to rename channel:', err);
+      throw new Error(err.response?.data?.message || 'Failed to rename channel');
+    }
+  }, [activeChannel]);
+
   // Remove member from channel
   const removeChannelMember = useCallback(async (channelId: string, userId: string) => {
     try {
@@ -730,6 +745,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     addChannelMembers,
     removeChannelMember,
     deleteChannelById,
+    renameChannel,
     sendMessage,
     editMessage,
     deleteMessage,

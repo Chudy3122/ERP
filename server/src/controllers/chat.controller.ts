@@ -293,6 +293,30 @@ export const deleteChannel = async (req: Request, res: Response) => {
 };
 
 /**
+ * Rename a group channel
+ * PUT /api/chat/channels/:id
+ */
+export const updateChannel = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    const { name } = req.body;
+
+    const channel = await chatService.renameChannel(id, req.user.userId, name);
+
+    return res.status(200).json({ message: 'Channel updated', data: channel });
+  } catch (error) {
+    console.error('Update channel error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update channel';
+    const status = /member|Nie można|pusta|znak|administrator|Tylko/i.test(message) ? 400 : 403;
+    return res.status(status).json({ error: 'Update failed', message });
+  }
+};
+
+/**
  * Get all users for adding to channels
  * GET /api/chat/users
  */

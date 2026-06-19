@@ -13,7 +13,7 @@ interface ChatListProps {
 }
 
 const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
-  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById, getUserStatus } = useChatContext();
+  const { channels, activeChannel, loadChannels, setActiveChannel, loading, createChannel, addChannelMembers, removeChannelMember, deleteChannelById, renameChannel, getUserStatus } = useChatContext();
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -279,6 +279,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
       onAddMembers={addChannelMembers}
       onRemoveMember={removeChannelMember}
       onDeleteChannel={deleteChannelById}
+      onRenameChannel={renameChannel}
       availableUsers={availableUsers}
     />
   </>
