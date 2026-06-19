@@ -24,7 +24,7 @@ import * as projectApi from '../api/project.api';
 import * as taskApi from '../api/task.api';
 import * as adminApi from '../api/admin.api';
 import { OvertimeSummaryEntry, WorkLogType, WorkLog } from '../types/worklog.types';
-import { Project } from '../types/project.types';
+import { Project, ProjectMember } from '../types/project.types';
 import { Task } from '../types/task.types';
 import type { AdminUser } from '../types/admin.types';
 
@@ -70,6 +70,7 @@ export default function Overtime() {
   const { user } = useAuth();
   const [summary, setSummary] = useState<OvertimeSummaryEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectMembersById, setProjectMembersById] = useState<Record<string, ProjectMember[]>>({});
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -118,6 +119,13 @@ export default function Overtime() {
   const canExpand = ['admin', 'kadry', 'szef', 'kierownik'].includes(user?.role || '');
 
   const myEntry = summary.find((s) => s.user_id === user?.id);
+  const selectedProjectUserId = isAdmin && form.user_id ? form.user_id : user?.id;
+  const availableProjects = projects.filter((project) => {
+    if (!selectedProjectUserId) return false;
+
+    const members = projectMembersById[project.id] ?? project.members ?? [];
+    return members.some((member) => member.user_id === selectedProjectUserId && !member.left_at);
+  });
 
   // Admin / księgowość / szef see everyone grouped by department
   const groupByDept = ['admin', 'kadry', 'szef'].includes(user?.role || '');
@@ -212,6 +220,12 @@ export default function Overtime() {
     }
   }, [form.project_id]);
 
+  useEffect(() => {
+    if (form.project_id && !availableProjects.some((project) => project.id === form.project_id)) {
+      setForm((currentForm) => ({ ...currentForm, project_id: '', task_id: '' }));
+    }
+  }, [selectedProjectUserId, projects, projectMembersById, form.project_id]);
+
   async function fetchData() {
     setLoading(true);
     try {
@@ -220,8 +234,24 @@ export default function Overtime() {
         projectApi.getProjects(),
         worklogApi.getMyWorkLogs(),
       ]);
+      const loadedProjects = (projectsData as any).projects ?? projectsData;
+      const projectMembersResults = await Promise.all(
+        loadedProjects.map(async (project: Project) => {
+          try {
+            const members = await projectApi.getProjectMembers(project.id);
+            return { projectId: project.id, members };
+          } catch {
+            return { projectId: project.id, members: project.members ?? [] };
+          }
+        })
+      );
+      const membersMap: Record<string, ProjectMember[]> = {};
+      projectMembersResults.forEach(({ projectId, members }) => {
+        membersMap[projectId] = members;
+      });
       setSummary(summaryData);
-      setProjects((projectsData as any).projects ?? projectsData);
+      setProjects(loadedProjects);
+      setProjectMembersById(membersMap);
       setMyLogs(
         myWorkLogs
           .filter((l) => l.work_type === WorkLogType.OVERTIME || l.work_type === WorkLogType.OVERTIME_COMP)
@@ -846,11 +876,17 @@ export default function Overtime() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pracownik</label>
                   <select
                     value={form.user_id}
-                    onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                    onChange={(e) => setForm({ ...form, user_id: e.target.value, project_id: '', task_id: '' })}
                     className={selectClass}
                   >
                     <option value={user?.id ?? ''}>Ja ({user?.first_name} {user?.last_name})</option>
-                    {allUsers.filter((u) => u.id !== user?.id).map((u) => (
+                    {allUsers
+                      .filter((u) => u.id !== user?.id)
+                      .sort((firstUser, secondUser) =>
+                        firstUser.first_name.localeCompare(secondUser.first_name, 'pl', { sensitivity: 'base' }) ||
+                        firstUser.last_name.localeCompare(secondUser.last_name, 'pl', { sensitivity: 'base' })
+                      )
+                      .map((u) => (
                       <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
                     ))}
                   </select>
@@ -914,12 +950,17 @@ export default function Overtime() {
                         className={selectClass}
                       >
                         <option value="">— brak projektu —</option>
-                        {projects.map((p) => (
+                        {availableProjects.map((p) => (
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
                       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
+                    {availableProjects.length === 0 && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        Brak projektów, w których wybrany użytkownik jest członkiem zespołu.
+                      </p>
+                    )}
                   </div>
 
                   {form.project_id && (

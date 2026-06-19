@@ -118,7 +118,7 @@ const KanbanTaskTitle = ({ title }: { title: string }) => {
       {isTooltipVisible && (
         <div
           role="tooltip"
-          className="pointer-events-none absolute left-0 top-full z-40 mt-1 max-w-[260px] rounded-lg bg-gray-950 px-3 py-2 text-xs font-medium leading-relaxed text-white shadow-xl dark:bg-gray-700"
+          className="pointer-events-none absolute left-0 top-full z-40 mt-1 max-w-[320px] whitespace-normal rounded-lg bg-gray-950 px-3 py-2 text-xs font-medium leading-relaxed text-white shadow-xl [overflow-wrap:anywhere] dark:bg-gray-700"
         >
           {title}
         </div>
@@ -163,6 +163,9 @@ const ProjectDetail = () => {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const [isReorderingStages, setIsReorderingStages] = useState(false);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
   const [bulkAssigneeId, setBulkAssigneeId] = useState('');
@@ -642,6 +645,8 @@ const ProjectDetail = () => {
 
   const handleDragStart = (e: React.DragEvent, task: Task) => {
     isDraggingRef.current = true;
+    setDraggedStageId(null);
+    setDragOverColumnId(null);
     e.dataTransfer.setData('text/plain', task.id);
     e.dataTransfer.effectAllowed = 'move';
     setDraggedTask(task);
@@ -845,13 +850,156 @@ const ProjectDetail = () => {
     }
   };
 
+  const getOrderedStageIds = () => {
+    const visibleStageIds = tasksByStages
+      .map(group => group.stage?.id)
+      .filter((stageId): stageId is string => Boolean(stageId));
+    const hiddenStageIds = stages
+      .map(stage => stage.id)
+      .filter(stageId => !visibleStageIds.includes(stageId));
+
+    return [...visibleStageIds, ...hiddenStageIds];
+  };
+
+  const moveStageIdNearTarget = (
+    stageIds: string[],
+    sourceStageId: string,
+    targetStageId: string
+  ) => {
+    const sourceIndex = stageIds.indexOf(sourceStageId);
+    const targetIndex = stageIds.indexOf(targetStageId);
+
+    if (sourceIndex === -1 || targetIndex === -1) {
+      return stageIds;
+    }
+
+    const nextStageIds = stageIds.filter(stageId => stageId !== sourceStageId);
+    const targetIndexAfterRemoval = nextStageIds.indexOf(targetStageId);
+
+    if (targetIndexAfterRemoval === -1) {
+      return stageIds;
+    }
+
+    const insertIndex =
+      sourceIndex < targetIndex ? targetIndexAfterRemoval + 1 : targetIndexAfterRemoval;
+
+    nextStageIds.splice(insertIndex, 0, sourceStageId);
+    return nextStageIds;
+  };
+
+  const reorderStagesByIds = (stageList: ProjectStage[], orderedStageIds: string[]) => {
+    const orderById = new Map(orderedStageIds.map((stageId, index) => [stageId, index]));
+
+    return [...stageList]
+      .sort((firstStage, secondStage) => {
+        const firstOrder = orderById.get(firstStage.id) ?? Number.MAX_SAFE_INTEGER;
+        const secondOrder = orderById.get(secondStage.id) ?? Number.MAX_SAFE_INTEGER;
+
+        if (firstOrder !== secondOrder) {
+          return firstOrder - secondOrder;
+        }
+
+        return firstStage.position - secondStage.position;
+      })
+      .map((stage, index) => ({
+        ...stage,
+        position: index,
+      }));
+  };
+
+  const reorderTaskGroupsByStageIds = (
+    groups: { stage: ProjectStage | null; tasks: Task[] }[],
+    orderedStageIds: string[]
+  ) => {
+    const orderById = new Map(orderedStageIds.map((stageId, index) => [stageId, index]));
+
+    return [...groups].sort((firstGroup, secondGroup) => {
+      const firstStageId = firstGroup.stage?.id;
+      const secondStageId = secondGroup.stage?.id;
+
+      if (!firstStageId && !secondStageId) return 0;
+      if (!firstStageId) return 1;
+      if (!secondStageId) return -1;
+
+      return (
+        (orderById.get(firstStageId) ?? Number.MAX_SAFE_INTEGER) -
+        (orderById.get(secondStageId) ?? Number.MAX_SAFE_INTEGER)
+      );
+    });
+  };
+
+  const handleStageColumnDragStart = (e: React.DragEvent, stageId: string) => {
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    setDraggedTask(null);
+    setDraggedStageId(stageId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-kanban-stage', stageId);
+  };
+
+  const handleStageColumnDragEnd = () => {
+    setDraggedStageId(null);
+    setDragOverColumnId(null);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 0);
+  };
+
+  const handleStageColumnDragOver = (e: React.DragEvent, stageId: string | null) => {
+    if (!draggedStageId || !stageId || draggedStageId === stageId) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumnId(stageId);
+  };
+
+  const handleStageColumnDrop = async (e: React.DragEvent, targetStageId: string | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!id || !draggedStageId || !targetStageId || draggedStageId === targetStageId) {
+      setDraggedStageId(null);
+      setDragOverColumnId(null);
+      return;
+    }
+
+    const previousStages = stages;
+    const previousTasksByStages = tasksByStages;
+    const nextStageIds = moveStageIdNearTarget(
+      getOrderedStageIds(),
+      draggedStageId,
+      targetStageId
+    );
+
+    setDraggedStageId(null);
+    setDragOverColumnId(null);
+    setIsReorderingStages(true);
+    setStages(prev => reorderStagesByIds(prev, nextStageIds));
+    setTasksByStages(prev => reorderTaskGroupsByStageIds(prev, nextStageIds));
+
+    try {
+      await projectApi.reorderProjectStages(id, nextStageIds);
+    } catch (error) {
+      console.error('Failed to reorder project stages:', error);
+      setStages(previousStages);
+      setTasksByStages(previousTasksByStages);
+    } finally {
+      setIsReorderingStages(false);
+    }
+  };
+
 
   const handleStageDragOver = (e: React.DragEvent) => {
+    if (draggedStageId) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleStageDragEnter = (e: React.DragEvent, stageId: string | null) => {
+    if (draggedStageId) return;
     e.preventDefault();
     if (draggedTask && draggedTask.stage_id !== stageId) {
       setDragOverStage(stageId);
@@ -859,6 +1007,7 @@ const ProjectDetail = () => {
   };
 
   const handleStageDragLeave = (e: React.DragEvent) => {
+    if (draggedStageId) return;
     const rect = e.currentTarget.getBoundingClientRect();
     if (
       e.clientX < rect.left ||
@@ -871,6 +1020,11 @@ const ProjectDetail = () => {
   };
 
   const handleDrop = async (e: React.DragEvent, stageId: string | null) => {
+    if (draggedStageId) {
+      await handleStageColumnDrop(e, stageId);
+      return;
+    }
+
     e.preventDefault();
     setDragOverStage(null);
 
@@ -1842,6 +1996,7 @@ const ProjectDetail = () => {
           <style>{`
             .kanban-scrollbar::-webkit-scrollbar {
               height: 8px;
+              width: 8px;
             }
             .kanban-scrollbar::-webkit-scrollbar-track {
               background: rgba(156, 163, 175, 0.2);
@@ -1872,6 +2027,9 @@ const ProjectDetail = () => {
               const curSort = columnSort[stageId ?? 'null'] || 'manual';
               const sortMeta = getColumnSortMeta(curSort);
               const isOver = dragOverStage === stageId;
+              const isColumnDragged = draggedStageId === stageId;
+              const isColumnDropTarget =
+                Boolean(draggedStageId) && dragOverColumnId === stageId && draggedStageId !== stageId;
               const stageColor = stage?.color || '#6B7280';
 
               return (
@@ -1879,11 +2037,33 @@ const ProjectDetail = () => {
                   key={stageId || 'unassigned'}
                   className={`flex-shrink-0 w-[292px] rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-all duration-200 dark:border-gray-700 dark:bg-gray-900/40 ${
                     isOver ? 'ring-2 ring-[#F7941D] ring-offset-2 dark:ring-offset-gray-900' : ''
+                  } ${
+                    isColumnDropTarget ? 'ring-2 ring-[#F7941D] ring-offset-2 dark:ring-offset-gray-900' : ''
+                  } ${
+                    isColumnDragged ? 'opacity-60' : ''
                   }`}
-                  onDragOver={handleStageDragOver}
-                  onDragEnter={e => handleStageDragEnter(e, stageId)}
+                  onDragOver={e => {
+                    if (draggedStageId) {
+                      handleStageColumnDragOver(e, stageId);
+                    } else {
+                      handleStageDragOver(e);
+                    }
+                  }}
+                  onDragEnter={e => {
+                    if (draggedStageId) {
+                      handleStageColumnDragOver(e, stageId);
+                    } else {
+                      handleStageDragEnter(e, stageId);
+                    }
+                  }}
                   onDragLeave={handleStageDragLeave}
-                  onDrop={e => handleDrop(e, stageId)}
+                  onDrop={e => {
+                    if (draggedStageId) {
+                      handleStageColumnDrop(e, stageId);
+                    } else {
+                      handleDrop(e, stageId);
+                    }
+                  }}
                 >
                   {/* Column header */}
                   <div
@@ -1894,6 +2074,21 @@ const ProjectDetail = () => {
                     }}
                   >
                     <div className="flex min-w-0 items-start gap-2">
+                      {stage && (
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          draggable={!isReorderingStages}
+                          onDragStart={e => handleStageColumnDragStart(e, stage.id)}
+                          onDragEnd={handleStageColumnDragEnd}
+                          onMouseDown={event => event.stopPropagation()}
+                          title="Przeciągnij, aby zmienić kolejność kolumn"
+                          aria-label="Przeciągnij, aby zmienić kolejność kolumn"
+                          className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 cursor-grab items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/70 hover:text-gray-700 active:cursor-grabbing dark:text-gray-500 dark:hover:bg-gray-800/70 dark:hover:text-gray-200"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </div>
+                      )}
                       <div
                         className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-800"
                         style={{ backgroundColor: stageColor }}
@@ -1949,7 +2144,7 @@ const ProjectDetail = () => {
 
                   {/* Tasks container */}
                   <div
-                    className="min-h-[260px] space-y-2 p-2.5"
+                    className="min-h-[260px] max-h-[calc(100vh-330px)] space-y-2 overflow-y-auto p-2.5 kanban-scrollbar"
                     style={{
                       background: isOver
                         ? 'linear-gradient(180deg, rgba(247, 148, 29, 0.12) 0%, rgba(247, 148, 29, 0.05) 100%)'

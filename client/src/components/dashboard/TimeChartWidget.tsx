@@ -4,18 +4,21 @@ import { Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import WidgetCard from '../widgets/WidgetCard';
-import { getCurrentEntry, getUserTimeEntries } from '../../api/time.api';
+import { getCurrentEntry, getUserLeaveRequests, getUserTimeEntries } from '../../api/time.api';
 import { getMyWorkLogs } from '../../api/worklog.api';
-import { TimeEntry, TimeEntryStatus } from '../../types/time.types';
+import { LeaveStatus, LeaveType, TimeEntry, TimeEntryStatus } from '../../types/time.types';
 import { WorkLogType } from '../../types/worklog.types';
 import { DashboardWidgetEmpty, DashboardWidgetLoading } from './DashboardWidgetState';
 
 interface TimeData {
   date: string;
+  weekendHours: number;
+  leaveHours: number;
   regularHours: number;
   excessHours: number;
   overtimeHours: number;
   totalMinutes: number;
+  workMinutes: number;
   displayDate: string;
   isOvertime: boolean;
 }
@@ -44,14 +47,38 @@ const getCurrentWeekRange = () => {
   return { start, end };
 };
 
+const isWeekend = (date: Date) => {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+};
+
+const NON_WORKING_LEAVE_TYPES = new Set<LeaveType>([
+  LeaveType.VACATION,
+  LeaveType.PERSONAL,
+  LeaveType.SICK_LEAVE,
+  LeaveType.UNPAID,
+  LeaveType.PARENTAL,
+  LeaveType.MATERNITY,
+  LeaveType.PATERNITY,
+  LeaveType.CHILDCARE_188,
+  LeaveType.CARE,
+  LeaveType.OCCASIONAL,
+  LeaveType.HOLIDAY_SATURDAY,
+  LeaveType.OTHER,
+]);
+
 const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as TimeData;
+    const weekendMinutes = Math.round(data.weekendHours * 60);
+    const leaveMinutes = Math.round(data.leaveHours * 60);
     const regularMinutes = Math.round(data.regularHours * 60);
     const excessMinutes = Math.round(data.excessHours * 60);
     const overtimeMinutes = Math.round(data.overtimeHours * 60);
     const hours = Math.floor(data.totalMinutes / 60);
     const mins = data.totalMinutes % 60;
+    const leaveHours = Math.floor(leaveMinutes / 60);
+    const leaveMins = leaveMinutes % 60;
     const regularHours = Math.floor(regularMinutes / 60);
     const regularMins = regularMinutes % 60;
     const excessHours = Math.floor(excessMinutes / 60);
@@ -59,17 +86,33 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
     const overtimeHours = Math.floor(overtimeMinutes / 60);
     const overtimeMins = overtimeMinutes % 60;
 
+    if (weekendMinutes > 0) {
+      return (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3">
+          <p className="font-semibold text-gray-900 dark:text-white mb-2">{data.displayDate}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Dzień wolny od pracy</p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3">
         <p className="font-semibold text-gray-900 dark:text-white mb-2">{data.displayDate}</p>
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          Czas pracy: <span className="font-medium">{hours}h {mins}m</span>
+          Razem na wykresie: <span className="font-medium">{hours}h {mins}m</span>
         </p>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          W planie: <span className="font-medium">{regularHours}h {regularMins}m</span>
-        </p>
+        {leaveMinutes > 0 && (
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Urlop/nieobecność w ramach etatu: <span className="font-medium">{leaveHours}h {leaveMins}m</span>
+          </p>
+        )}
+        {regularMinutes > 0 && (
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Czas pracy w planie: <span className="font-medium">{regularHours}h {regularMins}m</span>
+          </p>
+        )}
         {excessMinutes > 0 && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
             Powyżej etatu, niezgłoszone jako nadgodziny:{' '}
             <span className="font-medium">{excessHours}h {excessMins}m</span>
           </p>
@@ -114,9 +157,10 @@ const TimeChartWidget = () => {
 
       const { start, end } = getCurrentWeekRange();
 
-      const [entries, workLogs, activeEntry] = await Promise.all([
+      const [entries, workLogs, leaveRequests, activeEntry] = await Promise.all([
         getUserTimeEntries(start.toISOString(), end.toISOString()),
         getMyWorkLogs(getLocalDateKey(start), getLocalDateKey(end)),
+        getUserLeaveRequests(),
         getCurrentEntry(),
       ]);
       setCurrentEntry(activeEntry);
@@ -157,21 +201,47 @@ const TimeChartWidget = () => {
           overtimeByDate[logDate] = (overtimeByDate[logDate] || 0) + minutes;
         });
 
+      const plannedMinutes = (Number(user?.working_hours_per_day) || 8) * 60;
+      const leaveByDate: Record<string, number> = {};
+      leaveRequests
+        .filter((request) =>
+          request.status === LeaveStatus.APPROVED &&
+          NON_WORKING_LEAVE_TYPES.has(request.leave_type)
+        )
+        .forEach((request) => {
+          const leaveStart = new Date(`${request.start_date.slice(0, 10)}T00:00:00`);
+          const leaveEnd = new Date(`${(request.end_date || request.start_date).slice(0, 10)}T00:00:00`);
+
+          for (let d = new Date(leaveStart); d <= leaveEnd; d.setDate(d.getDate() + 1)) {
+            const dateKey = getLocalDateKey(d);
+            leaveByDate[dateKey] = Math.min(plannedMinutes, (leaveByDate[dateKey] || 0) + plannedMinutes);
+          }
+        });
+
       dates.forEach(date => {
         const dateStr = getLocalDateKey(date);
+        const weekendDay = isWeekend(date);
         const timeEntryMinutes = entriesByDate[dateStr] || 0;
         const reportedOvertimeMinutes = overtimeByDate[dateStr] || 0;
-        const plannedMinutes = (Number(user?.working_hours_per_day) || 8) * 60;
-        const regularMinutes = Math.min(timeEntryMinutes, plannedMinutes);
-        const unreportedExcessMinutes = Math.max(0, timeEntryMinutes - plannedMinutes - reportedOvertimeMinutes);
-        const totalMinutes = regularMinutes + unreportedExcessMinutes + reportedOvertimeMinutes;
+        const leaveMinutes = weekendDay ? 0 : leaveByDate[dateStr] || 0;
+        const weekendMinutes = weekendDay && timeEntryMinutes === 0 && reportedOvertimeMinutes === 0
+          ? plannedMinutes
+          : 0;
+        const availableRegularMinutes = weekendDay ? 0 : Math.max(0, plannedMinutes - leaveMinutes);
+        const regularMinutes = Math.min(timeEntryMinutes, availableRegularMinutes);
+        const unreportedExcessMinutes = Math.max(0, timeEntryMinutes - availableRegularMinutes - reportedOvertimeMinutes);
+        const workMinutes = leaveMinutes + regularMinutes + unreportedExcessMinutes + reportedOvertimeMinutes;
+        const totalMinutes = weekendMinutes + workMinutes;
 
         chartData.push({
           date: dateStr,
+          weekendHours: parseFloat((weekendMinutes / 60).toFixed(2)),
+          leaveHours: parseFloat((leaveMinutes / 60).toFixed(2)),
           regularHours: parseFloat((regularMinutes / 60).toFixed(2)),
           excessHours: parseFloat((unreportedExcessMinutes / 60).toFixed(2)),
           overtimeHours: parseFloat((reportedOvertimeMinutes / 60).toFixed(2)),
           totalMinutes,
+          workMinutes,
           displayDate: date.toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' }),
           isOvertime: reportedOvertimeMinutes > 0,
         });
@@ -202,11 +272,52 @@ const TimeChartWidget = () => {
     );
   }
 
-  const totalMinutes = timeData.reduce((sum, day) => sum + day.totalMinutes, 0);
-  const totalHours = totalMinutes / 60;
-  const avgHours = timeData.length > 0 ? (totalHours / timeData.length).toFixed(1) : '0';
-  const daysWorked = timeData.filter(day => day.totalMinutes > 0).length;
-  const hasReportedTime = totalHours > 0;
+  const workMinutes = timeData.reduce((sum, day) => sum + day.workMinutes, 0);
+  const workHours = workMinutes / 60;
+  const avgHours = (workHours / 5).toFixed(1);
+  const daysWorked = timeData.filter(day => !isWeekend(new Date(`${day.date}T00:00:00`)) && day.workMinutes > 0).length;
+  const hasReportedTime = timeData.some(day => day.totalMinutes > 0);
+  const workdayData = timeData.filter(day => !isWeekend(new Date(`${day.date}T00:00:00`)));
+  const weekendData = timeData.filter(day => isWeekend(new Date(`${day.date}T00:00:00`)));
+  const renderTimeBars = () => (
+    <>
+      <Bar
+        dataKey="weekendHours"
+        stackId="time"
+        fill="#F3F4F6"
+        radius={[4, 4, 0, 0]}
+        onClick={handleChartClick}
+      />
+      <Bar
+        dataKey="leaveHours"
+        stackId="time"
+        fill="#9CA3AF"
+        radius={[4, 4, 0, 0]}
+        onClick={handleChartClick}
+      />
+      <Bar
+        dataKey="regularHours"
+        stackId="time"
+        fill="#F7941D"
+        radius={[4, 4, 0, 0]}
+        onClick={handleChartClick}
+      />
+      <Bar
+        dataKey="excessHours"
+        stackId="time"
+        fill="#10B981"
+        radius={[4, 4, 0, 0]}
+        onClick={handleChartClick}
+      />
+      <Bar
+        dataKey="overtimeHours"
+        stackId="time"
+        fill="#2563EB"
+        radius={[4, 4, 0, 0]}
+        onClick={handleChartClick}
+      />
+    </>
+  );
 
   return (
     <WidgetCard
@@ -217,7 +328,7 @@ const TimeChartWidget = () => {
         <div className="flex items-center gap-4 text-xs">
           <div>
             <span className="text-gray-500 dark:text-gray-400">Dni: </span>
-            <span className="font-semibold text-gray-900 dark:text-white">{daysWorked}/7</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{daysWorked}/5</span>
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400">Średnia: </span>
@@ -228,44 +339,48 @@ const TimeChartWidget = () => {
     >
       {hasReportedTime ? (
         <div className="min-h-[220px] flex-1 cursor-pointer" onClick={handleChartClick}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={timeData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis
-                dataKey="displayDate"
-                tick={{ fill: '#6B7280', fontSize: 11 }}
-                axisLine={{ stroke: '#E5E7EB' }}
-              />
-              <YAxis
-                label={{ value: 'Godziny', angle: -90, position: 'insideLeft', style: { fill: '#6B7280', fontSize: 11 } }}
-                tick={{ fill: '#6B7280', fontSize: 11 }}
-                axisLine={{ stroke: '#E5E7EB' }}
-                domain={[0, 12]}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.1)' }} />
-              <Bar
-                dataKey="regularHours"
-                stackId="time"
-                fill="#F7941D"
-                radius={[4, 4, 0, 0]}
-                onClick={handleChartClick}
-              />
-              <Bar
-                dataKey="excessHours"
-                stackId="time"
-                fill="#9CA3AF"
-                radius={[4, 4, 0, 0]}
-                onClick={handleChartClick}
-              />
-              <Bar
-                dataKey="overtimeHours"
-                stackId="time"
-                fill="#2563EB"
-                radius={[4, 4, 0, 0]}
-                onClick={handleChartClick}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex h-full min-h-[220px] items-stretch gap-4">
+            <div className="min-w-0 flex-[5]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={workdayData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis
+                    dataKey="displayDate"
+                    tick={{ fill: '#6B7280', fontSize: 11 }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                  />
+                  <YAxis
+                    label={{ value: 'Godziny', angle: -90, position: 'insideLeft', style: { fill: '#6B7280', fontSize: 11 } }}
+                    tick={{ fill: '#6B7280', fontSize: 11 }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                    domain={[0, 12]}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.1)' }} />
+                  {renderTimeBars()}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="flex w-[22%] min-w-[92px] flex-col border-l border-dashed border-gray-200 pl-3 dark:border-gray-700">
+              <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                Weekend
+              </div>
+              <div className="min-h-0 flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weekendData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                    <XAxis
+                      dataKey="displayDate"
+                      tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                      axisLine={{ stroke: '#E5E7EB' }}
+                    />
+                    <YAxis hide domain={[0, 12]} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.08)' }} />
+                    {renderTimeBars()}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <DashboardWidgetEmpty
@@ -279,12 +394,16 @@ const TimeChartWidget = () => {
         <div className="flex items-center gap-3">
           <span>Bieżący tydzień</span>
           <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-gray-400" />
+            Nieobecność
+          </span>
+          <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-[#F7941D]" />
             Plan
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-gray-400" />
-            Powyżej etatu, niezgłoszone
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Powyżej etatu
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-blue-600" />

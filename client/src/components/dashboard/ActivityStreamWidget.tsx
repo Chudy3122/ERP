@@ -7,6 +7,7 @@ import { getWorkLogById } from '../../api/worklog.api';
 import { getTicketById } from '../../api/ticket.api';
 import { ActivityLog } from '../../types/activity.types';
 import { TicketStatus } from '../../types/ticket.types';
+import { TaskStatus } from '../../types/task.types';
 import { WorkLogType } from '../../types/worklog.types';
 import { DashboardWidgetEmpty, DashboardWidgetLoading } from './DashboardWidgetState';
 
@@ -17,6 +18,14 @@ const TICKET_STATUS_LABELS: Record<string, string> = {
   [TicketStatus.RESOLVED]: 'Rozwiązane',
   [TicketStatus.REJECTED]: 'Odrzucone',
   [TicketStatus.CLOSED]: 'Zamknięte',
+};
+
+const TASK_STATUS_LABELS: Record<string, string> = {
+  [TaskStatus.TODO]: 'Do zrobienia',
+  [TaskStatus.IN_PROGRESS]: 'W trakcie',
+  [TaskStatus.REVIEW]: 'Do sprawdzenia',
+  [TaskStatus.DONE]: 'Zakończone',
+  [TaskStatus.BLOCKED]: 'Zablokowane',
 };
 
 const ActivityStreamWidget = () => {
@@ -157,15 +166,31 @@ const ActivityStreamWidget = () => {
       return getTicketActivityDescription(activity);
     }
 
-    if (!isOvertimeActivity(activity) || activity.metadata?.hours === undefined) {
+    if (activity.entity_type === 'task') {
+      return translateTaskStatuses(activity.description);
+    }
+
+    if (activity.entity_type !== 'work_log' || activity.metadata?.hours === undefined) {
       return activity.description;
     }
 
     const duration = formatHours(activity.metadata.hours);
 
-    return activity.metadata.work_type === WorkLogType.OVERTIME_COMP
-      ? `Zarejestrowano odbiór ${duration} nadgodzin`
-      : `Zalogowano ${duration} nadgodzin`;
+    switch (activity.metadata.work_type) {
+      case WorkLogType.OVERTIME:
+        return `Dodano wpis nadgodzin: ${duration}`;
+      case WorkLogType.OVERTIME_COMP:
+        return `Dodano odbiór nadgodzin: ${duration}`;
+      case WorkLogType.UNPAID:
+        return `Dodano wpis czasu niepłatnego: ${duration}`;
+      case WorkLogType.BUSINESS_TRIP:
+        return `Dodano wyjście służbowe: ${duration}`;
+      case WorkLogType.LATE:
+        return `Dodano spóźnienie: ${duration}`;
+      case WorkLogType.REGULAR:
+      default:
+        return `Dodano wpis czasu pracy: ${duration}`;
+    }
   };
 
   const getActivityActor = (activity: ActivityLog) => {
@@ -188,6 +213,14 @@ const ActivityStreamWidget = () => {
       const label = TICKET_STATUS_LABELS[value];
       return label ? `"${label}"` : match;
     });
+
+  const translateTaskStatuses = (description: string) =>
+    description
+      .replace(/"([^"]+)"/g, (match, value) => {
+        const label = TASK_STATUS_LABELS[value];
+        return label ? `"${label}"` : match;
+      })
+      .replace(/\b(todo|in_progress|review|done|blocked)\b/g, (value) => TASK_STATUS_LABELS[value] || value);
 
   const getTicketActivityDescription = (activity: ActivityLog) => {
     const actor = getActivityActor(activity);
@@ -341,7 +374,7 @@ const ActivityStreamWidget = () => {
         }
         break;
       case 'ticket':
-        navigate(`/tickets/${activity.entity_id}/edit`);
+        navigate(`/tickets/${activity.entity_id}`);
         break;
       case 'time_entry':
         navigate('/work-time');

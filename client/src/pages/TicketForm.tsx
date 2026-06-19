@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
   ArrowLeft,
@@ -58,8 +58,16 @@ import { getFileUrl } from '../api/axios-config';
 const TicketForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const isEdit = !!id;
+  const isDetailView = isEdit && !location.pathname.endsWith('/edit');
+  const pageTitle = isDetailView ? 'Szczegóły zgłoszenia' : isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie';
+  const pageDescription = isDetailView
+    ? 'Podgląd informacji, statusu i historii zgłoszenia'
+    : isEdit
+      ? 'Zaktualizuj informacje o zgłoszeniu'
+      : 'Utwórz nowe zgłoszenie problemu lub prośby';
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -453,7 +461,7 @@ const TicketForm = () => {
 
   if (isLoading) {
     return (
-      <MainLayout title={isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}>
+      <MainLayout title={pageTitle}>
         <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
             <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
@@ -465,7 +473,7 @@ const TicketForm = () => {
   }
 
   return (
-    <MainLayout title={isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}>
+    <MainLayout title={pageTitle}>
       <div className="mx-auto max-w-[1500px] space-y-6">
       {/* Header */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -490,25 +498,39 @@ const TicketForm = () => {
                 <span className="rounded-full bg-gray-100 px-2.5 py-1 font-mono text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300">{ticket.ticket_number}</span>
               )}
               <h1 className="truncate text-2xl font-semibold text-gray-950 dark:text-white">
-                {isEdit ? 'Edytuj zgłoszenie' : 'Nowe zgłoszenie'}
+                {pageTitle}
               </h1>
             </div>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {isEdit ? 'Zaktualizuj informacje o zgłoszeniu' : 'Utwórz nowe zgłoszenie problemu lub prośby'}
+              {pageDescription}
             </p>
           </div>
           </div>
         </div>
 
-        {isEdit && isAdmin && (
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-red-50 px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
-          >
-            <Trash2 className="h-4 w-4" />
-            Usuń
-          </button>
+        {isEdit && (
+          <div className="flex flex-wrap items-center gap-2">
+            {isDetailView && (
+              <button
+                type="button"
+                onClick={() => navigate(`/tickets/${id}/edit`)}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-3 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+              >
+                <Save className="h-4 w-4" />
+                Edytuj
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-red-50 px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+              >
+                <Trash2 className="h-4 w-4" />
+                Usuń
+              </button>
+            )}
+          </div>
         )}
       </div>
       </section>

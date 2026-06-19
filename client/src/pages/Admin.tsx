@@ -515,7 +515,7 @@ const Admin = () => {
             <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
               <iframe
                 className="absolute inset-0 w-full h-full"
-                src="https://www.youtube.com/embed/UI9i_fzkLa0?autoplay=1"
+                src="https://www.youtube.com/embed/9Omr7v9omIQ?autoplay=1&mute=1&playsinline=1"
                 title="Live stream"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen

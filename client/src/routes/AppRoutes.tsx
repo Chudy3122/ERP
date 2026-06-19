@@ -221,6 +221,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/tickets/:id"
+        element={
+          <PrivateRoute>
+            <TicketForm />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/tickets/:id/edit"
         element={
           <PrivateRoute>
