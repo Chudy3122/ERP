@@ -1,7 +1,11 @@
+import { IsNull } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { Vehicle } from '../models/Vehicle.model';
 import { VehicleRequest, VehicleRequestStatus } from '../models/VehicleRequest.model';
+import { VehicleReminder } from '../models/VehicleReminder.model';
+import { VehicleLogEntry } from '../models/VehicleLogEntry.model';
 import { User, UserRole } from '../models/User.model';
+import notificationService from './notification.service';
 
 interface CreateRequestDto {
   destination: string;
@@ -21,9 +25,27 @@ interface VehicleDto {
   image_url?: string | null;
 }
 
+interface ReminderDto {
+  title: string;
+  due_date: string;
+  remind_days_before?: number;
+  notes?: string | null;
+}
+
+interface LogDto {
+  entry_date: string;
+  title: string;
+  category?: string;
+  cost?: number | null;
+  mileage?: number | null;
+  notes?: string | null;
+}
+
 export class FleetService {
   private vehicleRepo = AppDataSource.getRepository(Vehicle);
   private requestRepo = AppDataSource.getRepository(VehicleRequest);
+  private reminderRepo = AppDataSource.getRepository(VehicleReminder);
+  private logRepo = AppDataSource.getRepository(VehicleLogEntry);
   private userRepo = AppDataSource.getRepository(User);
 
   /** Admin/szef always manage; otherwise the user must be flagged as fleet manager. */
@@ -177,6 +199,86 @@ export class FleetService {
       throw new Error('Brak uprawnień do usunięcia tego zapotrzebowania');
     }
     await this.requestRepo.remove(request);
+  }
+
+  // ── Reminders (terminy: przegląd, ubezpieczenie…) ───────────────────────────
+  async listReminders(vehicleId: string): Promise<VehicleReminder[]> {
+    return this.reminderRepo.find({ where: { vehicle_id: vehicleId }, order: { due_date: 'ASC' } });
+  }
+
+  async addReminder(vehicleId: string, dto: ReminderDto): Promise<VehicleReminder> {
+    if (!dto.title?.trim()) throw new Error('Nazwa terminu jest wymagana');
+    if (!dto.due_date) throw new Error('Data terminu jest wymagana');
+    const reminder = this.reminderRepo.create({
+      vehicle_id: vehicleId,
+      title: dto.title.trim(),
+      due_date: dto.due_date,
+      remind_days_before: dto.remind_days_before ?? 14,
+      notes: dto.notes?.trim() || null,
+    });
+    return this.reminderRepo.save(reminder);
+  }
+
+  async deleteReminder(id: string): Promise<void> {
+    const r = await this.reminderRepo.findOne({ where: { id } });
+    if (!r) throw new Error('Termin nie znaleziony');
+    await this.reminderRepo.remove(r);
+  }
+
+  // ── Service / expense log (dzienniczek) ─────────────────────────────────────
+  async listLog(vehicleId: string): Promise<VehicleLogEntry[]> {
+    return this.logRepo.find({
+      where: { vehicle_id: vehicleId },
+      relations: ['creator'],
+      order: { entry_date: 'DESC', created_at: 'DESC' },
+    });
+  }
+
+  async addLogEntry(vehicleId: string, dto: LogDto, userId: string): Promise<VehicleLogEntry> {
+    if (!dto.title?.trim()) throw new Error('Opis jest wymagany');
+    if (!dto.entry_date) throw new Error('Data jest wymagana');
+    const entry = this.logRepo.create({
+      vehicle_id: vehicleId,
+      entry_date: dto.entry_date,
+      title: dto.title.trim(),
+      category: dto.category || 'repair',
+      cost: dto.cost != null && !isNaN(Number(dto.cost)) ? Number(dto.cost) : null,
+      mileage: dto.mileage != null && !isNaN(Number(dto.mileage)) ? Number(dto.mileage) : null,
+      notes: dto.notes?.trim() || null,
+      created_by: userId,
+    });
+    return this.logRepo.save(entry);
+  }
+
+  async deleteLogEntry(id: string): Promise<void> {
+    const e = await this.logRepo.findOne({ where: { id } });
+    if (!e) throw new Error('Wpis nie znaleziony');
+    await this.logRepo.remove(e);
+  }
+
+  /** Background job: fire due vehicle reminders (once) to fleet managers. */
+  async processDueVehicleReminders(): Promise<void> {
+    const pending = await this.reminderRepo.find({ where: { reminded_at: IsNull() }, relations: ['vehicle'] });
+    if (!pending.length) return;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const managers = await this.getManagers();
+
+    for (const r of pending) {
+      const due = new Date(`${r.due_date}T00:00:00`);
+      const remindOn = new Date(due);
+      remindOn.setDate(remindOn.getDate() - (r.remind_days_before || 0));
+      if (today.getTime() < remindOn.getTime()) continue;
+
+      for (const m of managers) {
+        try {
+          await notificationService.notifyVehicleReminder(m.id, r.vehicle?.name || 'Pojazd', r.title, r.due_date);
+        } catch (e) {
+          console.error('Vehicle reminder notify error:', e);
+        }
+      }
+      r.reminded_at = new Date();
+      await this.reminderRepo.save(r);
+    }
   }
 }
 

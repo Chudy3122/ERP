@@ -55,6 +55,56 @@ export interface FleetContext {
   vehicles: Vehicle[];
 }
 
+export interface VehicleReminder {
+  id: string;
+  vehicle_id: string;
+  title: string;
+  due_date: string;
+  remind_days_before: number;
+  notes: string | null;
+  reminded_at: string | null;
+  created_at: string;
+}
+
+export interface VehicleReminderInput {
+  title: string;
+  due_date: string;
+  remind_days_before?: number;
+  notes?: string;
+}
+
+export type VehicleLogCategory = 'repair' | 'service' | 'expense' | 'other';
+
+export interface VehicleLogEntry {
+  id: string;
+  vehicle_id: string;
+  entry_date: string;
+  title: string;
+  category: string;
+  cost: number | string | null;
+  mileage: number | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  creator?: { id: string; first_name: string; last_name: string } | null;
+}
+
+export interface VehicleLogInput {
+  entry_date: string;
+  title: string;
+  category?: string;
+  cost?: number | null;
+  mileage?: number | null;
+  notes?: string;
+}
+
+export const LOG_CATEGORY_LABELS: Record<string, string> = {
+  repair: 'Naprawa',
+  service: 'Serwis',
+  expense: 'Wydatek',
+  other: 'Inne',
+};
+
 export const VEHICLE_STATUS_LABELS: Record<VehicleRequestStatus, string> = {
   pending: 'Oczekuje',
   approved: 'Przydzielony',

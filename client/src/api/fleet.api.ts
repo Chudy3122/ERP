@@ -1,5 +1,8 @@
 import { client } from './client';
-import { Vehicle, VehicleRequest, CreateVehicleRequestInput, FleetContext, VehicleInput } from '../types/fleet.types';
+import {
+  Vehicle, VehicleRequest, CreateVehicleRequestInput, FleetContext, VehicleInput,
+  VehicleReminder, VehicleReminderInput, VehicleLogEntry, VehicleLogInput,
+} from '../types/fleet.types';
 
 function vehicleFormData(input: VehicleInput): FormData {
   const form = new FormData();
@@ -58,4 +61,34 @@ export const updateVehicle = async (id: string, input: VehicleInput): Promise<Ve
 
 export const deleteVehicle = async (id: string): Promise<void> => {
   await client.delete(`/fleet/vehicles/${id}`);
+};
+
+// Reminders (terminy)
+export const listReminders = async (vehicleId: string): Promise<VehicleReminder[]> => {
+  const res = await client.get(`/fleet/vehicles/${vehicleId}/reminders`);
+  return res.data;
+};
+
+export const addReminder = async (vehicleId: string, input: VehicleReminderInput): Promise<VehicleReminder> => {
+  const res = await client.post(`/fleet/vehicles/${vehicleId}/reminders`, input);
+  return res.data;
+};
+
+export const deleteReminder = async (id: string): Promise<void> => {
+  await client.delete(`/fleet/reminders/${id}`);
+};
+
+// Service / expense log (dzienniczek)
+export const listLog = async (vehicleId: string): Promise<VehicleLogEntry[]> => {
+  const res = await client.get(`/fleet/vehicles/${vehicleId}/log`);
+  return res.data;
+};
+
+export const addLogEntry = async (vehicleId: string, input: VehicleLogInput): Promise<VehicleLogEntry> => {
+  const res = await client.post(`/fleet/vehicles/${vehicleId}/log`, input);
+  return res.data;
+};
+
+export const deleteLogEntry = async (id: string): Promise<void> => {
+  await client.delete(`/fleet/log/${id}`);
 };

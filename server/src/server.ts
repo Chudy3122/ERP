@@ -11,6 +11,7 @@ import { setupMeetingHandlers } from './sockets/meeting.socket';
 import { TimeService } from './services/time.service';
 import scheduledMeetingService from './services/scheduledMeeting.service';
 import personalCalendarService from './services/personalCalendar.service';
+import fleetService from './services/fleet.service';
 import { seedDepartments } from './database/seeds/seedDepartments';
 import userStatusService from './services/userStatus.service';
 
@@ -71,6 +72,13 @@ const startServer = async () => {
     setInterval(
       () => personalCalendarService.processDueReminders().catch(console.error),
       60 * 1000
+    );
+
+    // Vehicle deadline reminders (przeglądy/ubezpieczenia) — date-based, check hourly.
+    fleetService.processDueVehicleReminders().catch(console.error);
+    setInterval(
+      () => fleetService.processDueVehicleReminders().catch(console.error),
+      60 * 60 * 1000
     );
 
     // Start HTTP server

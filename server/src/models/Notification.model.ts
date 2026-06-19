@@ -44,6 +44,7 @@ export enum NotificationType {
   // Fleet (car requests)
   VEHICLE_REQUEST_NEW = 'vehicle_request_new',
   VEHICLE_REQUEST_DECISION = 'vehicle_request_decision',
+  VEHICLE_REMINDER = 'vehicle_reminder',
   // Tickets / helpdesk
   TICKET_NEW = 'ticket_new',
 }

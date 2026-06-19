@@ -428,6 +428,26 @@ class NotificationService {
   }
 
   /**
+   * Remind fleet managers about an upcoming vehicle deadline (przegląd, OC, …)
+   */
+  async notifyVehicleReminder(
+    recipientId: string,
+    vehicleName: string,
+    title: string,
+    dueDate: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: recipientId,
+      type: NotificationType.VEHICLE_REMINDER,
+      title: 'Przypomnienie — flota',
+      message: `${vehicleName}: ${title} — termin ${dueDate}`,
+      actionUrl: '/fleet',
+      priority: NotificationPriority.HIGH,
+      relatedEntityType: 'vehicle',
+    });
+  }
+
+  /**
    * Notify the requester about the decision on their car request
    */
   async notifyVehicleRequestDecision(

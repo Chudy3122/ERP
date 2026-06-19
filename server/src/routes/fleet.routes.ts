@@ -33,4 +33,12 @@ router.post('/vehicles', upload.single('image'), fleetController.createVehicle);
 router.put('/vehicles/:id', upload.single('image'), fleetController.updateVehicle);
 router.delete('/vehicles/:id', fleetController.deleteVehicle);
 
+// Vehicle reminders (przeglądy/ubezpieczenia) + service/expense log
+router.get('/vehicles/:id/reminders', fleetController.listReminders);
+router.post('/vehicles/:id/reminders', fleetController.addReminder);
+router.delete('/reminders/:id', fleetController.deleteReminder);
+router.get('/vehicles/:id/log', fleetController.listLog);
+router.post('/vehicles/:id/log', fleetController.addLogEntry);
+router.delete('/log/:id', fleetController.deleteLogEntry);
+
 export default router;

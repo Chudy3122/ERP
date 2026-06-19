@@ -5,10 +5,12 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Car, Plus, Loader2, X, MapPin, Clock, Users as UsersIcon, Check, Trash2, CheckCircle2, XCircle, Ban, Pencil, Upload,
+  Bell, Wrench, CalendarClock, BookOpen,
 } from 'lucide-react';
 import * as fleetApi from '../api/fleet.api';
 import {
   Vehicle, VehicleRequest, FleetContext, VehicleRequestStatus, VEHICLE_STATUS_LABELS,
+  VehicleReminder, VehicleLogEntry, LOG_CATEGORY_LABELS,
 } from '../types/fleet.types';
 
 const FUEL_OPTIONS = ['Benzyna', 'Diesel', 'Hybryda', 'Elektryczny', 'LPG'];
@@ -295,6 +297,7 @@ function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: (
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [detailVehicle, setDetailVehicle] = useState<Vehicle | null>(null);
 
   const doRemoveVehicle = async (id: string) => {
     try { await fleetApi.deleteVehicle(id); onChange(); }
@@ -338,12 +341,19 @@ function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: (
                   {v.fuel_type ? <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{v.fuel_type}</span> : null}
                 </div>
                 {v.notes && <p className="mt-1.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{v.notes}</p>}
+                <button
+                  onClick={() => setDetailVehicle(v)}
+                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <BookOpen className="h-3.5 w-3.5" /> Terminy i dziennik
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
       {modalOpen && <VehicleModal vehicle={editing} onClose={() => setModalOpen(false)} onSaved={() => { setModalOpen(false); onChange(); }} />}
+      {detailVehicle && <VehicleDetailModal vehicle={detailVehicle} onClose={() => setDetailVehicle(null)} />}
 
       <ConfirmDialog
         isOpen={!!confirmId}
@@ -460,6 +470,204 @@ function VehicleModal({ vehicle, onClose, onSaved }: { vehicle: Vehicle | null; 
           <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-60">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Vehicle detail: reminders (terminy) + service/expense log (dziennik) ───────
+const fmtDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('pl-PL', { day: '2-digit', month: 'short', year: 'numeric' });
+const daysUntil = (d: string) => {
+  const due = new Date(`${d}T00:00:00`).getTime();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.round((due - today.getTime()) / 86400000);
+};
+const fmtCost = (c: number | string | null) => (c == null || c === '' ? '—' : `${Number(c).toFixed(2)} zł`);
+
+function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => void }) {
+  const [tab, setTab] = useState<'reminders' | 'log'>('reminders');
+  const [reminders, setReminders] = useState<VehicleReminder[]>([]);
+  const [log, setLog] = useState<VehicleLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [r, l] = await Promise.all([fleetApi.listReminders(vehicle.id), fleetApi.listLog(vehicle.id)]);
+      setReminders(r); setLog(l);
+    } catch { toast.error('Nie udało się pobrać danych pojazdu'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [vehicle.id]);
+
+  // Reminder form
+  const [rTitle, setRTitle] = useState('');
+  const [rDate, setRDate] = useState('');
+  const [rDays, setRDays] = useState('14');
+  const [rSaving, setRSaving] = useState(false);
+  const addReminder = async () => {
+    if (!rTitle.trim() || !rDate) { toast.error('Podaj nazwę i datę terminu'); return; }
+    setRSaving(true);
+    try {
+      await fleetApi.addReminder(vehicle.id, { title: rTitle.trim(), due_date: rDate, remind_days_before: Number(rDays) || 14 });
+      setRTitle(''); setRDate(''); load();
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się dodać terminu'); }
+    finally { setRSaving(false); }
+  };
+  const delReminder = async (id: string) => {
+    try { await fleetApi.deleteReminder(id); setReminders((p) => p.filter((x) => x.id !== id)); }
+    catch { toast.error('Nie udało się usunąć'); }
+  };
+
+  // Log form
+  const [lDate, setLDate] = useState('');
+  const [lTitle, setLTitle] = useState('');
+  const [lCat, setLCat] = useState('repair');
+  const [lCost, setLCost] = useState('');
+  const [lMileage, setLMileage] = useState('');
+  const [lSaving, setLSaving] = useState(false);
+  const addLog = async () => {
+    if (!lTitle.trim() || !lDate) { toast.error('Podaj opis i datę'); return; }
+    setLSaving(true);
+    try {
+      await fleetApi.addLogEntry(vehicle.id, {
+        entry_date: lDate, title: lTitle.trim(), category: lCat,
+        cost: lCost ? Number(lCost) : null, mileage: lMileage ? Number(lMileage) : null,
+      });
+      setLTitle(''); setLCost(''); setLMileage(''); load();
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się dodać wpisu'); }
+    finally { setLSaving(false); }
+  };
+  const delLog = async (id: string) => {
+    try { await fleetApi.deleteLogEntry(id); setLog((p) => p.filter((x) => x.id !== id)); }
+    catch { toast.error('Nie udało się usunąć'); }
+  };
+
+  const totalCost = log.reduce((s, e) => s + (e.cost != null ? Number(e.cost) : 0), 0);
+  const inputCls = 'w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <Car className="h-5 w-5 text-[#F7941D]" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{vehicle.name}</h2>
+            {vehicle.registration && <span className="font-mono text-xs text-gray-400">{vehicle.registration}</span>}
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100 dark:border-gray-700">
+          <button onClick={() => setTab('reminders')} className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold ${tab === 'reminders' ? 'border-b-2 border-[#F7941D] text-[#F7941D]' : 'text-gray-500'}`}>
+            <CalendarClock className="h-4 w-4" /> Terminy
+          </button>
+          <button onClick={() => setTab('log')} className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold ${tab === 'log' ? 'border-b-2 border-[#F7941D] text-[#F7941D]' : 'text-gray-500'}`}>
+            <Wrench className="h-4 w-4" /> Dziennik
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {loading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-[#F7941D]" /></div>
+          ) : tab === 'reminders' ? (
+            <div className="space-y-4">
+              {/* Add reminder */}
+              <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/40">
+                <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">Nowy termin (np. Przegląd, Ubezpieczenie OC)</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <input className={`${inputCls} col-span-2`} value={rTitle} onChange={(e) => setRTitle(e.target.value)} placeholder="Nazwa terminu" />
+                  <input type="date" className={inputCls} value={rDate} onChange={(e) => setRDate(e.target.value)} />
+                  <div className="flex items-center gap-1">
+                    <input type="number" min={0} className={inputCls} value={rDays} onChange={(e) => setRDays(e.target.value)} title="Dni przed" />
+                    <span className="text-xs text-gray-400">dni</span>
+                  </div>
+                </div>
+                <button onClick={addReminder} disabled={rSaving} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-50">
+                  {rSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj termin
+                </button>
+              </div>
+              {/* List */}
+              {reminders.length === 0 ? (
+                <p className="text-sm text-gray-400">Brak terminów.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {reminders.map((r) => {
+                    const d = daysUntil(r.due_date);
+                    const badge = d < 0 ? { t: `${Math.abs(d)} dni po terminie`, c: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+                      : d === 0 ? { t: 'Dziś', c: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+                      : d <= r.remind_days_before ? { t: `za ${d} dni`, c: 'bg-[#F7941D]/10 text-[#F7941D]' }
+                      : { t: `za ${d} dni`, c: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
+                    return (
+                      <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 dark:border-gray-700">
+                        <div className="min-w-0">
+                          <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-white">
+                            <Bell className="h-3.5 w-3.5 text-gray-400" /> {r.title}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{fmtDate(r.due_date)} · przypomnienie {r.remind_days_before} dni przed</p>
+                        </div>
+                        <div className="flex flex-shrink-0 items-center gap-2">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.c}`}>{badge.t}</span>
+                          <button onClick={() => delReminder(r.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Add log */}
+              <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/40">
+                <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">Nowy wpis (naprawa / wydatek)</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <input type="date" className={inputCls} value={lDate} onChange={(e) => setLDate(e.target.value)} />
+                  <input className={`${inputCls} col-span-2 sm:col-span-1`} value={lTitle} onChange={(e) => setLTitle(e.target.value)} placeholder="Opis (np. Sprzęgło)" />
+                  <select className={inputCls} value={lCat} onChange={(e) => setLCat(e.target.value)}>
+                    {Object.entries(LOG_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  <input type="number" step="0.01" className={inputCls} value={lCost} onChange={(e) => setLCost(e.target.value)} placeholder="Koszt zł" />
+                  <input type="number" className={inputCls} value={lMileage} onChange={(e) => setLMileage(e.target.value)} placeholder="Przebieg km" />
+                </div>
+                <button onClick={addLog} disabled={lSaving} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-50">
+                  {lSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj wpis
+                </button>
+              </div>
+              {/* Summary */}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">{log.length} wpisów</span>
+                <span className="font-semibold text-gray-900 dark:text-white">Łącznie: {totalCost.toFixed(2)} zł</span>
+              </div>
+              {/* List */}
+              {log.length === 0 ? (
+                <p className="text-sm text-gray-400">Brak wpisów w dzienniku.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {log.map((e) => (
+                    <li key={e.id} className="flex items-start justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 dark:border-gray-700">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{e.title}</p>
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                          <span>{fmtDate(e.entry_date)}</span>
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{LOG_CATEGORY_LABELS[e.category] || e.category}</span>
+                          {e.mileage != null && <span>{e.mileage} km</span>}
+                          {e.creator && <span>· {e.creator.first_name} {e.creator.last_name}</span>}
+                        </p>
+                        {e.notes && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{e.notes}</p>}
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{fmtCost(e.cost)}</span>
+                        <button onClick={() => delLog(e.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

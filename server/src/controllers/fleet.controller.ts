@@ -178,6 +178,54 @@ export class FleetController {
       res.status(400).json({ message: e.message });
     }
   };
+
+  // ── Reminders ─────────────────────────────────────────────────────────────--
+  private async requireManager(req: Request, res: Response): Promise<boolean> {
+    if (await fleetService.canManage(req.user!.userId, req.user!.role)) return true;
+    res.status(403).json({ message: 'Brak uprawnień' });
+    return false;
+  }
+
+  listReminders = async (req: Request, res: Response): Promise<void> => {
+    try { res.json(await fleetService.listReminders(req.params.id)); }
+    catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
+
+  addReminder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await this.requireManager(req, res))) return;
+      res.status(201).json(await fleetService.addReminder(req.params.id, req.body));
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
+
+  deleteReminder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await this.requireManager(req, res))) return;
+      await fleetService.deleteReminder(req.params.id);
+      res.status(204).send();
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
+
+  // ── Service / expense log ─────────────────────────────────────────────────--
+  listLog = async (req: Request, res: Response): Promise<void> => {
+    try { res.json(await fleetService.listLog(req.params.id)); }
+    catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
+
+  addLogEntry = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await this.requireManager(req, res))) return;
+      res.status(201).json(await fleetService.addLogEntry(req.params.id, req.body, req.user!.userId));
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
+
+  deleteLogEntry = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await this.requireManager(req, res))) return;
+      await fleetService.deleteLogEntry(req.params.id);
+      res.status(204).send();
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
 }
 
 export default new FleetController();
