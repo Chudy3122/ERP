@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import {
@@ -9,19 +9,24 @@ import {
   Calendar,
   FileText,
   Loader2,
+  Paperclip,
   Plus,
   Save,
   StickyNote,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import * as invoiceApi from '../api/invoice.api';
 import * as clientApi from '../api/client.api';
 import { getProjects } from '../api/project.api';
+import { getFileUrl } from '../api/axios-config';
 import { CreateInvoiceRequest, CreateInvoiceItemRequest, InvoiceKind } from '../types/invoice.types';
 import { Client } from '../types/client.types';
 import { Project } from '../types/project.types';
 
 const VAT_RATES = [0, 5, 8, 23];
+// Cost-invoice VAT choices (gross -> net+vat); 'zw' = zwolniony (0%)
+const COST_VAT_CHOICES = ['23', '8', '5', '0', 'zw'];
 const UNITS = ['szt.', 'godz.', 'usł.', 'kg', 'mb', 'kpl.'];
 
 interface InvoiceItemForm extends CreateInvoiceItemRequest {
@@ -34,6 +39,7 @@ interface InvoiceItemForm extends CreateInvoiceItemRequest {
 const InvoiceForm = () => {
   const { t } = useTranslation('invoices');
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isEdit = !!id;
 
@@ -55,9 +61,17 @@ const InvoiceForm = () => {
     { description: '', quantity: 1, unit: 'szt.', unit_price_net: 0, vat_rate: 23 }
   ]);
 
+  // Cost-invoice (simplified) fields
+  const [grossInput, setGrossInput] = useState('');
+  const [vatChoice, setVatChoice] = useState('23');
+  const [scanFiles, setScanFiles] = useState<File[]>([]);
+  const [existingScans, setExistingScans] = useState<Array<{ name: string; url: string; size: number; uploaded_at: string }>>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const isCost = formData.kind === InvoiceKind.COST;
 
   const fieldClass =
     'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
@@ -75,6 +89,8 @@ const InvoiceForm = () => {
     loadProjects();
     if (isEdit && id) {
       loadInvoice();
+    } else if (searchParams.get('kind') === 'cost') {
+      setFormData(prev => ({ ...prev, kind: InvoiceKind.COST }));
     }
   }, [id, isEdit]);
 
@@ -125,6 +141,13 @@ const InvoiceForm = () => {
           gross_amount: item.gross_amount,
         })));
       }
+      // Cost-invoice simplified fields
+      if (invoice.kind === InvoiceKind.COST) {
+        setGrossInput(String(invoice.gross_total ?? ''));
+        const r = invoice.items?.[0]?.vat_rate;
+        setVatChoice(r !== undefined && r !== null ? String(r) : '23');
+      }
+      setExistingScans(Array.isArray(invoice.scans) ? invoice.scans : []);
     } catch (error) {
       console.error('Failed to load invoice:', error);
       setError(t('loadError'));
@@ -160,27 +183,70 @@ const InvoiceForm = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.client_id) {
-      setError(t('clientRequired'));
-      return;
+    if (isCost) {
+      const gross = parseFloat(grossInput);
+      if (!formData.issue_date) { setError('Podaj datę wystawienia faktury.'); return; }
+      if (!gross || gross <= 0) { setError('Podaj kwotę brutto.'); return; }
+    } else {
+      if (!formData.client_id) { setError(t('clientRequired')); return; }
+      if (items.length === 0 || !items.some(item => item.description.trim())) {
+        setError(t('itemsRequired'));
+        return;
+      }
     }
-
-    if (items.length === 0 || !items.some(item => item.description.trim())) {
-      setError(t('itemsRequired'));
-      return;
-    }
-
-    const validItems = items.filter(item => item.description.trim());
 
     try {
       setIsSaving(true);
+
+      if (isCost) {
+        // Simplified cost invoice: gross + VAT -> single line item
+        const gross = parseFloat(grossInput);
+        const rate = vatChoice === 'zw' ? 0 : (parseFloat(vatChoice) || 0);
+        const net = Math.round((gross / (1 + rate / 100)) * 100) / 100;
+        const costItems: CreateInvoiceItemRequest[] = [{
+          description: formData.notes?.trim() || 'Faktura kosztowa',
+          quantity: 1,
+          unit: 'szt.',
+          unit_price_net: net,
+          vat_rate: rate,
+        }];
+
+        let invoiceId = id;
+        if (isEdit && id) {
+          await invoiceApi.updateInvoice(id, {
+            client_id: formData.client_id || undefined,
+            project_id: formData.project_id || undefined,
+            issue_date: formData.issue_date,
+            due_date: formData.issue_date,
+            notes: formData.notes,
+          });
+        } else {
+          const invoice = await invoiceApi.createInvoice({
+            client_id: formData.client_id || undefined,
+            project_id: formData.project_id || undefined,
+            kind: InvoiceKind.COST,
+            issue_date: formData.issue_date,
+            due_date: formData.issue_date,
+            currency: 'PLN',
+            notes: formData.notes,
+            items: costItems,
+          });
+          invoiceId = invoice.id;
+        }
+        if (invoiceId && scanFiles.length > 0) {
+          await invoiceApi.uploadInvoiceScans(invoiceId, scanFiles);
+        }
+        navigate(`/invoices/${invoiceId}`);
+        return;
+      }
+
+      // INCOME invoice
+      const validItems = items.filter(item => item.description.trim());
       if (isEdit && id) {
-        // Update invoice
         await invoiceApi.updateInvoice(id, {
           ...formData,
           project_id: formData.project_id || undefined,
         });
-        // For simplicity, we'll reload the page - in production you'd sync items properly
         navigate(`/invoices/${id}`);
       } else {
         const invoice = await invoiceApi.createInvoice({
@@ -195,6 +261,26 @@ const InvoiceForm = () => {
       setError(error.response?.data?.message || t('saveError'));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleScanSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) setScanFiles(prev => [...prev, ...files]);
+    e.target.value = '';
+  };
+
+  const removeScanFile = (index: number) => {
+    setScanFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteExistingScan = async (url: string) => {
+    if (!id) return;
+    try {
+      await invoiceApi.deleteInvoiceScan(id, url);
+      setExistingScans(prev => prev.filter(s => s.url !== url));
+    } catch {
+      setError('Nie udało się usunąć skanu.');
     }
   };
 
@@ -236,6 +322,7 @@ const InvoiceForm = () => {
   };
 
   const totals = calculateTotals();
+  const displayGross = isCost ? (parseFloat(grossInput) || 0) : totals.gross;
 
   if (isLoading) {
     return (
@@ -287,7 +374,7 @@ const InvoiceForm = () => {
                 Wartosc brutto
               </p>
               <p className="text-xl font-semibold text-gray-950 dark:text-white">
-                {formatCurrency(totals.gross)}
+                {formatCurrency(displayGross)}
               </p>
             </div>
           </div>
@@ -330,6 +417,107 @@ const InvoiceForm = () => {
             )}
           </section>
 
+          {/* Cost invoice — simplified entry */}
+          {isCost && (
+            <section className={sectionClass}>
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-950 dark:text-white">Faktura kosztowa</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Wystarczy data, kwota brutto i stawka VAT — netto i VAT policzymy automatycznie.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div>
+                  <label htmlFor="issue_date" className={labelClass}>{t('issueDate')} *</label>
+                  <input type="date" id="issue_date" name="issue_date" value={formData.issue_date} onChange={handleChange} required className={fieldClass} />
+                </div>
+                <div>
+                  <label htmlFor="gross" className={labelClass}>Kwota brutto *</label>
+                  <input type="number" step="0.01" min="0" id="gross" value={grossInput} onChange={e => setGrossInput(e.target.value)} required className={fieldClass} placeholder="0,00" />
+                </div>
+                <div>
+                  <label htmlFor="vatChoice" className={labelClass}>VAT *</label>
+                  <select id="vatChoice" value={vatChoice} onChange={e => setVatChoice(e.target.value)} className={fieldClass}>
+                    {COST_VAT_CHOICES.map(v => <option key={v} value={v}>{v === 'zw' ? 'zw (zwolniony)' : `${v}%`}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="client_id" className={labelClass}>Dostawca</label>
+                  <select id="client_id" name="client_id" value={formData.client_id} onChange={handleChange} className={fieldClass}>
+                    <option value="">— brak / paragon —</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="project_id" className={labelClass}>{t('project')}</label>
+                  <select id="project_id" name="project_id" value={formData.project_id} onChange={handleChange} className={fieldClass}>
+                    <option value="">{t('noProject')}</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label htmlFor="notes" className={labelClass}>Opis / nazwa kosztu</label>
+                <input type="text" id="notes" name="notes" value={formData.notes} onChange={handleChange} className={fieldClass} placeholder="np. Paliwo, materiały biurowe..." />
+              </div>
+
+              {/* Scans */}
+              <div className="mt-5">
+                <label className={labelClass}>Skany / zdjęcia faktury</label>
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500 transition-colors hover:border-[#F7941D] hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700/40 dark:text-gray-400">
+                  <Upload className="h-5 w-5" />
+                  <span>Dodaj pliki (PDF, JPG, PNG) — można kilka</span>
+                  <input type="file" multiple accept="image/*,application/pdf" onChange={handleScanSelect} className="hidden" />
+                </label>
+
+                {(existingScans.length > 0 || scanFiles.length > 0) && (
+                  <ul className="mt-3 space-y-2">
+                    {existingScans.map(s => (
+                      <li key={s.url} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+                        <Paperclip className="h-4 w-4 shrink-0 text-gray-400" />
+                        <a href={getFileUrl(s.url) || '#'} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 truncate text-blue-600 hover:underline dark:text-blue-300">{s.name}</a>
+                        <button type="button" onClick={() => handleDeleteExistingScan(s.url)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                      </li>
+                    ))}
+                    {scanFiles.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+                        <Paperclip className="h-4 w-4 shrink-0 text-gray-400" />
+                        <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{f.name}</span>
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400">do wgrania</span>
+                        <button type="button" onClick={() => removeScanFile(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Computed preview */}
+              <div className="mt-5 flex justify-end">
+                <div className="w-full rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30 sm:w-80">
+                  {(() => {
+                    const gross = parseFloat(grossInput) || 0;
+                    const rate = vatChoice === 'zw' ? 0 : (parseFloat(vatChoice) || 0);
+                    const net = Math.round((gross / (1 + rate / 100)) * 100) / 100;
+                    const vat = Math.round((gross - net) * 100) / 100;
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Netto:</span><span className="text-gray-900 dark:text-white">{formatCurrency(net)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">VAT ({vatChoice === 'zw' ? 'zw' : rate + '%'}):</span><span className="text-gray-900 dark:text-white">{formatCurrency(vat)}</span></div>
+                        <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-lg font-semibold dark:border-gray-700"><span className="text-gray-900 dark:text-white">Brutto:</span><span className="text-gray-900 dark:text-white">{formatCurrency(gross)}</span></div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {!isCost && (<>
           {/* Invoice Details */}
           <section className={sectionClass}>
             <div className="mb-5 flex items-center gap-3">
@@ -595,7 +783,7 @@ const InvoiceForm = () => {
               </div>
               <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-lg font-semibold dark:border-gray-700">
                 <span className="text-gray-900 dark:text-white">{t('grossTotal')}:</span>
-                <span className="text-gray-900 dark:text-white">{formatCurrency(totals.gross)}</span>
+                <span className="text-gray-900 dark:text-white">{formatCurrency(displayGross)}</span>
               </div>
             </div>
           </div>
@@ -647,12 +835,13 @@ const InvoiceForm = () => {
             </div>
           </div>
           </section>
+          </>)}
 
         {/* Actions */}
           <section className="sticky bottom-4 z-10 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                {t('grossTotal')}: <span className="font-semibold text-gray-950 dark:text-white">{formatCurrency(totals.gross)}</span>
+                {t('grossTotal')}: <span className="font-semibold text-gray-950 dark:text-white">{formatCurrency(displayGross)}</span>
               </div>
               <div className="flex flex-wrap justify-end gap-3">
                 <button

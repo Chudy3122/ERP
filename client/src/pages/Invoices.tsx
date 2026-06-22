@@ -230,7 +230,7 @@ const Invoices = () => {
             {canEdit && (
               <button
                 type="button"
-                onClick={() => navigate('/invoices/new')}
+                onClick={() => navigate(kindFilter === InvoiceKind.COST ? '/invoices/new?kind=cost' : kindFilter === InvoiceKind.INCOME ? '/invoices/new?kind=income' : '/invoices/new')}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
               >
                 <Plus className="h-4 w-4" />
@@ -377,7 +377,7 @@ const Invoices = () => {
               {canEdit && (
                 <button
                   type="button"
-                  onClick={() => navigate('/invoices/new')}
+                  onClick={() => navigate(kindFilter === InvoiceKind.COST ? '/invoices/new?kind=cost' : kindFilter === InvoiceKind.INCOME ? '/invoices/new?kind=income' : '/invoices/new')}
                   className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
                 >
                   <Plus className="h-4 w-4" />

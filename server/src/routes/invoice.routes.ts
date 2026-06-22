@@ -1,10 +1,14 @@
 import { Router } from 'express';
+import multer from 'multer';
 import invoiceController from '../controllers/invoice.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
 
 const router = Router();
+
+// Temp disk storage; files are pushed to Cloudinary then removed
+const upload = multer({ storage: multer.diskStorage({ destination: (_req, _file, cb) => cb(null, 'uploads/') }) });
 
 // All routes require authentication
 router.use(authenticate);
@@ -65,6 +69,19 @@ router.post(
   '/:id/mark-paid',
   requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
   invoiceController.markAsPaid.bind(invoiceController)
+);
+
+// Invoice scans (receipts) — same write roles
+router.post(
+  '/:id/scans',
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
+  upload.array('files', 10),
+  invoiceController.uploadScans.bind(invoiceController)
+);
+router.delete(
+  '/:id/scans',
+  requireRole([UserRole.ADMIN, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT]),
+  invoiceController.deleteScan.bind(invoiceController)
 );
 
 // Invoice items (ADMIN, KSIEGOWOSC only)

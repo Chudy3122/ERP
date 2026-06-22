@@ -50,6 +50,7 @@ export interface Invoice {
   paid_amount: number;
   notes?: string;
   internal_notes?: string;
+  scans?: Array<{ name: string; url: string; size: number; uploaded_at: string }>;
   created_by: string;
   client?: Client;
   project?: Project;
@@ -77,7 +78,7 @@ export interface UpdateInvoiceItemRequest {
 }
 
 export interface CreateInvoiceRequest {
-  client_id: string;
+  client_id?: string;
   project_id?: string;
   kind?: InvoiceKind;
   issue_date: string;

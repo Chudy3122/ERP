@@ -4,10 +4,11 @@ import { InvoiceItem } from '../models/InvoiceItem.model';
 import { Client } from '../models/Client.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 import { Between, LessThan } from 'typeorm';
 
 interface CreateInvoiceDto {
-  client_id: string;
+  client_id?: string;
   project_id?: string;
   kind?: InvoiceKind;
   issue_date: Date;
@@ -158,13 +159,13 @@ export class InvoiceService {
    * Create a new invoice
    */
   async createInvoice(data: CreateInvoiceDto, userId: string): Promise<Invoice> {
-    // Verify client exists
-    const client = await this.clientRepository.findOne({
-      where: { id: data.client_id },
-    });
-
-    if (!client) {
-      throw new Error('Kontrahent nie znaleziony');
+    // Supplier/client is optional for cost invoices (receipts); verify only if given
+    let client: Client | null = null;
+    if (data.client_id) {
+      client = await this.clientRepository.findOne({ where: { id: data.client_id } });
+      if (!client) {
+        throw new Error('Kontrahent nie znaleziony');
+      }
     }
 
     // Generate invoice number (FV for income, FK for cost)
@@ -174,7 +175,7 @@ export class InvoiceService {
     const invoice = this.invoiceRepository.create({
       invoice_number,
       kind,
-      client_id: data.client_id,
+      client_id: data.client_id || undefined,
       project_id: data.project_id,
       issue_date: data.issue_date,
       sale_date: data.sale_date,
@@ -207,11 +208,43 @@ export class InvoiceService {
         'invoice',
         savedInvoice.id,
         `${user.first_name} ${user.last_name} utworzył fakturę ${savedInvoice.invoice_number}`,
-        { invoice_number: savedInvoice.invoice_number, client_name: client.name }
+        { invoice_number: savedInvoice.invoice_number, client_name: client?.name || '—' }
       );
     }
 
     return await this.getInvoiceById(savedInvoice.id);
+  }
+
+  /**
+   * Add scan files (receipts) to an invoice — uploaded to Cloudinary
+   */
+  async addScans(invoiceId: string, files: Express.Multer.File[]): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findOne({ where: { id: invoiceId } });
+    if (!invoice) {
+      throw new Error('Faktura nie znaleziona');
+    }
+    const existing = Array.isArray(invoice.scans) ? invoice.scans : [];
+    const added = [] as Array<{ name: string; url: string; size: number; uploaded_at: string }>;
+    for (const file of files) {
+      const url = await uploadAttachmentToCloudinary(file);
+      added.push({ name: file.originalname, url, size: file.size, uploaded_at: new Date().toISOString() });
+    }
+    invoice.scans = [...existing, ...added];
+    await this.invoiceRepository.save(invoice);
+    return await this.getInvoiceById(invoiceId);
+  }
+
+  /**
+   * Remove a scan from an invoice by its URL
+   */
+  async removeScan(invoiceId: string, url: string): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findOne({ where: { id: invoiceId } });
+    if (!invoice) {
+      throw new Error('Faktura nie znaleziona');
+    }
+    invoice.scans = (Array.isArray(invoice.scans) ? invoice.scans : []).filter((s) => s.url !== url);
+    await this.invoiceRepository.save(invoice);
+    return await this.getInvoiceById(invoiceId);
   }
 
   /**

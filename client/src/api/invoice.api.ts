@@ -50,6 +50,22 @@ export const markInvoiceAsPaid = async (id: string, paidAmount?: number): Promis
   return response.data;
 };
 
+// Invoice scans (receipts)
+
+export const uploadInvoiceScans = async (invoiceId: string, files: File[]): Promise<Invoice> => {
+  const formData = new FormData();
+  files.forEach((f) => formData.append('files', f));
+  const response = await client.post(`/invoices/${invoiceId}/scans`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const deleteInvoiceScan = async (invoiceId: string, url: string): Promise<Invoice> => {
+  const response = await client.delete(`/invoices/${invoiceId}/scans`, { data: { url } });
+  return response.data;
+};
+
 // Invoice Items API
 
 export const getInvoiceItems = async (invoiceId: string): Promise<InvoiceItem[]> => {

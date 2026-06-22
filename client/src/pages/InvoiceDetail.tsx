@@ -18,8 +18,10 @@ import {
   Loader2,
   Download,
   StickyNote,
+  Paperclip,
 } from 'lucide-react';
 import * as invoiceApi from '../api/invoice.api';
+import { getFileUrl } from '../api/axios-config';
 import { Invoice, InvoiceStatus } from '../types/invoice.types';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/auth.types';
@@ -462,6 +464,33 @@ const InvoiceDetail = () => {
               </div>
             )}
           </div>
+
+          {/* Scans */}
+          {invoice.scans && invoice.scans.length > 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300">
+                  <Paperclip className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-950 dark:text-white">Skany faktury</h3>
+              </div>
+              <ul className="space-y-2">
+                {invoice.scans.map(s => (
+                  <li key={s.url}>
+                    <a
+                      href={getFileUrl(s.url) || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-blue-600 hover:bg-gray-50 hover:underline dark:border-gray-700 dark:text-blue-300 dark:hover:bg-gray-700/40"
+                    >
+                      <Paperclip className="h-4 w-4 shrink-0 text-gray-400" />
+                      <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Dates */}
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">

@@ -20,6 +20,44 @@ export class InvoiceController {
   }
 
   /**
+   * Upload scan(s) for an invoice
+   * POST /api/invoices/:id/scans
+   */
+  async uploadScans(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const files = (req.files as Express.Multer.File[]) || [];
+      if (files.length === 0) {
+        res.status(400).json({ message: 'Brak plików' });
+        return;
+      }
+      const invoice = await invoiceService.addScans(id, files);
+      res.json(invoice);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Remove a scan from an invoice
+   * DELETE /api/invoices/:id/scans
+   */
+  async deleteScan(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { url } = req.body;
+      if (!url) {
+        res.status(400).json({ message: 'Brak adresu pliku' });
+        return;
+      }
+      const invoice = await invoiceService.removeScan(id, url);
+      res.json(invoice);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  /**
    * Get all invoices with filters
    * GET /api/invoices
    */

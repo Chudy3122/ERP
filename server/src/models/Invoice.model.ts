@@ -46,7 +46,7 @@ export class Invoice extends BaseEntity {
   })
   status: InvoiceStatus;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   client_id: string;
 
   @Column({ type: 'uuid', nullable: true })
@@ -85,10 +85,14 @@ export class Invoice extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   internal_notes: string;
 
+  // Scans/attachments for cost invoices (receipts), stored on Cloudinary
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  scans: Array<{ name: string; url: string; size: number; uploaded_at: string }>;
+
   @Column({ type: 'uuid' })
   created_by: string;
 
-  @ManyToOne(() => Client, { eager: true })
+  @ManyToOne(() => Client, { eager: true, nullable: true })
   @JoinColumn({ name: 'client_id' })
   client: Client;
 
