@@ -97,7 +97,7 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
       color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
     },
     occasional_hourly: {
-      label: 'Urlop okolicznościowy (godzinowy)',
+      label: 'Urlop wypoczynkowy (godzinowy)',
       icon: <Clock className="w-4 h-4" />,
       color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
     },
