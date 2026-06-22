@@ -148,7 +148,8 @@ export class WorkLogController {
     try {
       const { id } = req.params;
       const userId = req.user!.userId;
-      const workLog = await workLogService.updateWorkLog(id, userId, req.body);
+      const canManage = ['admin', 'kadry'].includes(req.user!.role);
+      const workLog = await workLogService.updateWorkLog(id, userId, req.body, canManage);
       res.json(workLog);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -163,8 +164,8 @@ export class WorkLogController {
     try {
       const { id } = req.params;
       const userId = req.user!.userId;
-      const isAdmin = req.user!.role === 'admin';
-      await workLogService.deleteWorkLog(id, userId, isAdmin);
+      const canManage = ['admin', 'kadry'].includes(req.user!.role);
+      await workLogService.deleteWorkLog(id, userId, canManage);
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });

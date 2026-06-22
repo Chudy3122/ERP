@@ -105,7 +105,7 @@ export class WorkLogService {
   /**
    * Update work log
    */
-  async updateWorkLog(id: string, userId: string, data: UpdateWorkLogDto): Promise<WorkLog> {
+  async updateWorkLog(id: string, userId: string, data: UpdateWorkLogDto, canManage = false): Promise<WorkLog> {
     const workLog = await this.workLogRepository.findOne({
       where: { id },
     });
@@ -114,8 +114,8 @@ export class WorkLogService {
       throw new Error('Work log not found');
     }
 
-    // Only owner can update
-    if (workLog.user_id !== userId) {
+    // Owner, or an admin/kadry managing on someone's behalf
+    if (workLog.user_id !== userId && !canManage) {
       throw new Error('Not authorized to update this work log');
     }
 
