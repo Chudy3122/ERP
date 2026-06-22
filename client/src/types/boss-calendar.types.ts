@@ -10,6 +10,8 @@ export interface BossCalendarEntry {
   description: string | null;
   type: EntryType;
   location: string | null;
+  completed: boolean;
+  completed_at: string | null;
   created_by: string;
   updated_by: string | null;
   created_at: string;

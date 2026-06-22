@@ -62,6 +62,14 @@ export class BossCalendarService {
     return this.repo.save(entry);
   }
 
+  async setCompleted(id: string, completed: boolean): Promise<BossCalendar | null> {
+    const entry = await this.repo.findOne({ where: { id } });
+    if (!entry) return null;
+    entry.completed = completed;
+    entry.completed_at = completed ? new Date() : null;
+    return this.repo.save(entry);
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.repo.delete(id);
     return (result.affected ?? 0) > 0;

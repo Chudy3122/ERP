@@ -42,6 +42,20 @@ class BossCalendarController {
     }
   }
 
+  async setCompleted(req: Request, res: Response): Promise<void> {
+    try {
+      const completed = !!req.body.completed;
+      const entry = await this.service.setCompleted(req.params.id, completed);
+      if (!entry) {
+        res.status(404).json({ message: 'Wpis nie znaleziony' });
+        return;
+      }
+      res.json(entry);
+    } catch (error) {
+      res.status(500).json({ message: 'Błąd podczas oznaczania spotkania' });
+    }
+  }
+
   async delete(req: Request, res: Response): Promise<void> {
     try {
       const deleted = await this.service.delete(req.params.id);

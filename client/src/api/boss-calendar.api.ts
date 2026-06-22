@@ -16,6 +16,11 @@ export const updateEntry = async (id: string, data: Partial<CreateEntryPayload>)
   return response.data;
 };
 
+export const setCompleted = async (id: string, completed: boolean): Promise<BossCalendarEntry> => {
+  const response = await client.patch(`/boss-calendar/${id}/complete`, { completed });
+  return response.data;
+};
+
 export const deleteEntry = async (id: string): Promise<void> => {
   await client.delete(`/boss-calendar/${id}`);
 };

@@ -5,7 +5,10 @@ import * as api from '../api/boss-calendar.api';
 import { BossCalendarEntry, CreateEntryPayload, EntryType } from '../types/boss-calendar.types';
 import {
   AlignLeft,
+  BarChart3,
   CalendarDays,
+  Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -22,7 +25,6 @@ const HOUR_START = 7;
 const HOUR_END = 20;
 const TOTAL_MINUTES = (HOUR_END - HOUR_START) * 60;
 const SLOT_PX = 60;
-const COMPLETED_ENTRIES_STORAGE_KEY = 'boss-calendar-completed-entries';
 
 const DAYS_PL = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const MONTHS_PL = [
@@ -128,6 +130,8 @@ function formatDuration(minutes: number): string {
 }
 
 const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik'];
+// Marking a meeting as finished is limited to the boss, secretariat and admins
+const CAN_COMPLETE_ROLES = ['szef', 'sekretariat', 'admin'];
 
 const EMPTY_FORM: CreateEntryPayload = {
   date: formatDate(new Date()),
@@ -142,18 +146,12 @@ const EMPTY_FORM: CreateEntryPayload = {
 export default function BossCalendar() {
   const { user } = useAuth();
   const canEdit = CAN_EDIT_ROLES.includes(user?.role || '');
+  const canComplete = CAN_COMPLETE_ROLES.includes(user?.role || '');
 
   const [weekStart, setWeekStart] = useState<Date>(getMondayOf(new Date()));
   const [selectedDay, setSelectedDay] = useState<string>(formatDate(new Date()));
   const [entries, setEntries] = useState<BossCalendarEntry[]>([]);
-  const [completedEntryIds, setCompletedEntryIds] = useState<Set<string>>(() => {
-    try {
-      const raw = window.localStorage.getItem(COMPLETED_ENTRIES_STORAGE_KEY);
-      return new Set(raw ? JSON.parse(raw) : []);
-    } catch {
-      return new Set();
-    }
-  });
+  const [monthEntries, setMonthEntries] = useState<BossCalendarEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -191,25 +189,39 @@ export default function BossCalendar() {
     load();
   }, [load]);
 
+  const monthKey = selectedDay.slice(0, 7); // YYYY-MM of the selected day
+
+  const loadMonth = useCallback(async () => {
+    const [y, m] = monthKey.split('-').map(Number);
+    const first = `${monthKey}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const last = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
+    try {
+      const data = await api.getEntries(first, last);
+      setMonthEntries(data);
+    } catch {
+      // stats are non-critical — ignore load errors
+    }
+  }, [monthKey]);
+
   useEffect(() => {
-    window.localStorage.setItem(
-      COMPLETED_ENTRIES_STORAGE_KEY,
-      JSON.stringify(Array.from(completedEntryIds))
-    );
-  }, [completedEntryIds]);
+    loadMonth();
+  }, [loadMonth]);
 
-  const isEntryCompleted = (entryId: string) => completedEntryIds.has(entryId);
+  const applyCompleted = (id: string, completed: boolean, completedAt: string | null) => {
+    const patch = (e: BossCalendarEntry) => (e.id === id ? { ...e, completed, completed_at: completedAt } : e);
+    setEntries((prev) => prev.map(patch));
+    setMonthEntries((prev) => prev.map(patch));
+    setSelectedEntry((prev) => (prev && prev.id === id ? { ...prev, completed, completed_at: completedAt } : prev));
+  };
 
-  const toggleEntryCompleted = (entryId: string, completed: boolean) => {
-    setCompletedEntryIds((current) => {
-      const next = new Set(current);
-      if (completed) {
-        next.add(entryId);
-      } else {
-        next.delete(entryId);
-      }
-      return next;
-    });
+  const toggleEntryCompleted = async (entryId: string, completed: boolean) => {
+    try {
+      const updated = await api.setCompleted(entryId, completed);
+      applyCompleted(entryId, updated.completed, updated.completed_at);
+    } catch {
+      toast.error('Nie udało się zaktualizować statusu spotkania');
+    }
   };
 
   const openCreate = (date?: string) => {
@@ -280,6 +292,7 @@ export default function BossCalendar() {
       }
       closeModal();
       load();
+      loadMonth();
     } catch {
       toast.error('Nie udało się zapisać wpisu');
     } finally {
@@ -294,6 +307,7 @@ export default function BossCalendar() {
       setSelectedEntry(null);
       toast.success('Wpis usunięty');
       load();
+      loadMonth();
     } catch {
       toast.error('Nie udało się usunąć wpisu');
     }
@@ -330,9 +344,7 @@ export default function BossCalendar() {
   const formTypeConfig = TYPE_CONFIG[form.type];
   const selectedDayEntries = entriesByDay(selectedDay);
   const selectedDayMeetingEntries = selectedDayEntries.filter((entry) => entry.type === 'meeting');
-  const selectedDayCompletedMeetingEntries = selectedDayMeetingEntries.filter((entry) =>
-    isEntryCompleted(entry.id)
-  );
+  const selectedDayCompletedMeetingEntries = selectedDayMeetingEntries.filter((entry) => entry.completed);
   const selectedDayMeetingsMinutes = selectedDayMeetingEntries.reduce(
     (sum, entry) => sum + getEntryDurationMinutes(entry),
     0
@@ -346,6 +358,29 @@ export default function BossCalendar() {
     day: '2-digit',
     month: 'long',
   });
+
+  const summarize = (list: BossCalendarEntry[]) => {
+    const meetings = list.filter((e) => e.type === 'meeting');
+    return {
+      meetings: meetings.length,
+      completed: meetings.filter((e) => e.completed).length,
+      minutes: meetings.reduce((sum, e) => sum + getEntryDurationMinutes(e), 0),
+    };
+  };
+
+  const daySummary = summarize(selectedDayEntries);
+  const weekSummary = summarize(entries);
+  const monthSummary = summarize(monthEntries);
+  const monthLabel = parseLocalDate(`${monthKey}-01`).toLocaleDateString('pl-PL', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const periodSummaries = [
+    { key: 'day', label: 'Dzień', sub: selectedDayLabel, data: daySummary },
+    { key: 'week', label: 'Tydzień', sub: weekLabel(), data: weekSummary },
+    { key: 'month', label: 'Miesiąc', sub: monthLabel, data: monthSummary },
+  ];
 
   const statCards = [
     { label: 'Wpisy w tygodniu', value: entries.length, dot: 'bg-[#F7941D]' },
@@ -623,7 +658,8 @@ export default function BossCalendar() {
                           const isRangeEnd = dayStr === rangeEnd;
                           const rangeLabel = isRangeStart ? 'Start' : isRangeEnd ? 'Koniec' : 'Kont.';
                           const rangeDays = getRangeDays(entry.date, rangeEnd);
-                          const isCompleted = isEntryCompleted(entry.id);
+                          const isCompleted = entry.completed;
+                          const isMeeting = entry.type === 'meeting';
 
                           return (
                             <div
@@ -639,14 +675,18 @@ export default function BossCalendar() {
                             >
                               <div className="flex items-start justify-between gap-1">
                                 <div className="flex min-w-0 items-start gap-1.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={isCompleted}
-                                    aria-label="Oznacz jako zakończone"
-                                    className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-emerald-500"
-                                    onClick={(event) => event.stopPropagation()}
-                                    onChange={(event) => toggleEntryCompleted(entry.id, event.target.checked)}
-                                  />
+                                  {isMeeting && canComplete ? (
+                                    <input
+                                      type="checkbox"
+                                      checked={isCompleted}
+                                      aria-label="Oznacz jako zakończone"
+                                      className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-emerald-500"
+                                      onClick={(event) => event.stopPropagation()}
+                                      onChange={(event) => toggleEntryCompleted(entry.id, event.target.checked)}
+                                    />
+                                  ) : isCompleted ? (
+                                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                  ) : null}
                                   <div className={`min-w-0 truncate text-xs font-semibold ${cfg.text} ${isCompleted ? 'line-through' : ''}`}>
                                     {entry.title}
                                   </div>
@@ -678,6 +718,101 @@ export default function BossCalendar() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Meeting statistics */}
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
+              <BarChart3 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-950 dark:text-white">Statystyki spotkań</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Podsumowanie dnia, tygodnia i miesiąca oraz rozpis wybranego dnia.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {periodSummaries.map((p) => (
+              <div key={p.key} className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.label}</p>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400" title={p.sub}>{p.sub}</p>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xl font-bold text-gray-950 dark:text-white">{p.data.meetings}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">spotkań</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{p.data.completed}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">zakończ.</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-[#b76612] dark:text-orange-300">{formatDuration(p.data.minutes)}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">czas</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Selected-day breakdown: who / where / when */}
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+              Spotkania — <span className="capitalize">{selectedDayLabel}</span>
+            </p>
+            {selectedDayMeetingEntries.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-900/30">
+                Brak spotkań w tym dniu.
+              </p>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
+                    <tr>
+                      <th className="px-3 py-2">Kiedy</th>
+                      <th className="px-3 py-2">Spotkanie / z kim</th>
+                      <th className="px-3 py-2">Gdzie</th>
+                      <th className="px-3 py-2 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {selectedDayMeetingEntries.map((entry) => (
+                      <tr key={entry.id} className="cursor-pointer transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-700/30" onClick={() => openDetails(entry)}>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-700 dark:text-gray-300">
+                          {entry.start_time}–{entry.end_time}
+                          <span className="ml-1 text-xs text-gray-400">({formatDuration(getEntryDurationMinutes(entry))})</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className={`font-medium text-gray-900 dark:text-white ${entry.completed ? 'line-through opacity-70' : ''}`}>{entry.title}</div>
+                          {entry.description && (
+                            <div className="truncate text-xs text-gray-500 dark:text-gray-400" title={entry.description}>{entry.description}</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                          {entry.location ? (
+                            <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-gray-400" />{entry.location}</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {entry.completed ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                              <Check className="h-3 w-3" /> Zakończone
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300">Zaplanowane</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -895,7 +1030,8 @@ export default function BossCalendar() {
             const rangeEnd = selectedEntry.end_date || selectedEntry.date;
             const isMultiDayEntry = rangeEnd !== selectedEntry.date;
             const rangeDays = getRangeDays(selectedEntry.date, rangeEnd);
-            const isSelectedEntryCompleted = isEntryCompleted(selectedEntry.id);
+            const isSelectedEntryCompleted = selectedEntry.completed;
+            const isSelectedMeeting = selectedEntry.type === 'meeting';
 
             return (
               <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl dark:bg-gray-800">
@@ -920,26 +1056,33 @@ export default function BossCalendar() {
                 </div>
 
                 <div className="space-y-4 px-6 py-5">
-                  <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                    isSelectedEntryCompleted
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-200'
-                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300 dark:hover:bg-gray-700/70'
-                  }`}>
-                    <span>
-                      <span className="block text-sm font-semibold">
-                        {isSelectedEntryCompleted ? 'Spotkanie zakończone' : 'Oznacz spotkanie jako zakończone'}
+                  {isSelectedMeeting && canComplete ? (
+                    <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                      isSelectedEntryCompleted
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-200'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300 dark:hover:bg-gray-700/70'
+                    }`}>
+                      <span>
+                        <span className="block text-sm font-semibold">
+                          {isSelectedEntryCompleted ? 'Spotkanie zakończone' : 'Oznacz spotkanie jako zakończone'}
+                        </span>
+                        <span className="mt-0.5 block text-xs opacity-75">
+                          Status widoczny dla wszystkich.
+                        </span>
                       </span>
-                      <span className="mt-0.5 block text-xs opacity-75">
-                        Status zapisywany lokalnie w przeglądarce.
-                      </span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={isSelectedEntryCompleted}
-                      className="h-5 w-5 shrink-0 rounded border-gray-300 accent-emerald-500"
-                      onChange={(event) => toggleEntryCompleted(selectedEntry.id, event.target.checked)}
-                    />
-                  </label>
+                      <input
+                        type="checkbox"
+                        checked={isSelectedEntryCompleted}
+                        className="h-5 w-5 shrink-0 rounded border-gray-300 accent-emerald-500"
+                        onChange={(event) => toggleEntryCompleted(selectedEntry.id, event.target.checked)}
+                      />
+                    </label>
+                  ) : isSelectedMeeting && isSelectedEntryCompleted ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-200">
+                      <CheckCircle2 className="h-5 w-5" />
+                      Spotkanie zakończone
+                    </div>
+                  ) : null}
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">

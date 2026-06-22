@@ -49,6 +49,13 @@ export class BossCalendar {
   @Column({ type: 'varchar', length: 255, nullable: true })
   location: string | null;
 
+  // Meeting marked as finished — shared for everyone (set by szef/sekretariat/admin)
+  @Column({ type: 'boolean', default: false })
+  completed: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  completed_at: Date | null;
+
   @Column({ type: 'uuid' })
   created_by: string;
 
