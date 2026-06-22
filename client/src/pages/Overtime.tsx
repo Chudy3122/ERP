@@ -229,10 +229,13 @@ export default function Overtime() {
   async function fetchData() {
     setLoading(true);
     try {
+      // Wide range so forward-dated time-off (odbiór nadgodzin "do przodu") and
+      // older entries are visible — not just the default last-30-days-to-today window.
+      const _ty = new Date().getFullYear();
       const [summaryData, projectsData, myWorkLogs] = await Promise.all([
         worklogApi.getOvertimeSummary(),
         projectApi.getProjects(),
-        worklogApi.getMyWorkLogs(),
+        worklogApi.getMyWorkLogs(`${_ty - 1}-01-01`, `${_ty + 1}-12-31`),
       ]);
       const loadedProjects = (projectsData as any).projects ?? projectsData;
       const projectMembersResults = await Promise.all(
