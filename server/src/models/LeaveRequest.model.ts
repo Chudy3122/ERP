@@ -21,13 +21,14 @@ export enum LeaveType {
   CHILDCARE_188 = 'childcare_188',// Opieka nad dzieckiem do 14 lat (art. 188)
   CARE = 'care',                  // Urlop opiekuńczy (art. 173¹)
   OCCASIONAL = 'occasional',      // Urlop okolicznościowy
+  OCCASIONAL_HOURLY = 'occasional_hourly', // Urlop okolicznościowy godzinowy — odlicza godziny (ułamek dnia)
   REMOTE_WORK = 'remote_work',    // Praca zdalna (art. 67³³)
   HOLIDAY_SATURDAY = 'holiday_saturday', // Dzień wolny za święto w sobotę — nie odlicza urlopu
   OTHER = 'other',                // Inne
 }
 
-// Tylko te typy odliczają dni z rocznej puli urlopowej
-export const DEDUCTING_LEAVE_TYPES: LeaveType[] = [LeaveType.VACATION, LeaveType.PERSONAL];
+// Tylko te typy odliczają dni z rocznej puli urlopowej (godzinowy odlicza ułamek dnia)
+export const DEDUCTING_LEAVE_TYPES: LeaveType[] = [LeaveType.VACATION, LeaveType.PERSONAL, LeaveType.OCCASIONAL_HOURLY];
 
 export enum LeaveStatus {
   PENDING = 'pending',
@@ -56,8 +57,20 @@ export class LeaveRequest {
   @Column({ type: 'date' })
   end_date: Date;
 
-  @Column({ type: 'integer' })
-  total_days: number; // Calculated based on start/end dates
+  // Day-equivalent deducted from the pool. Fractional for hourly leave
+  // (hours / working_hours_per_day). double precision so sums stay numeric.
+  @Column({ type: 'double precision' })
+  total_days: number;
+
+  // Hourly leave (occasional_hourly): the time window and computed hours.
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  start_time: string | null;
+
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  end_time: string | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  hours: number | null;
 
   @Column({ type: 'text', nullable: true })
   reason: string | null;

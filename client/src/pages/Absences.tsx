@@ -28,7 +28,7 @@ import type { TeamAvailability } from '../api/calendar.api';
 
 type LeaveType =
   | 'vacation' | 'personal' | 'sick_leave' | 'unpaid' | 'parental'
-  | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
+  | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional' | 'occasional_hourly'
   | 'remote_work' | 'holiday_saturday' | 'other';
 
 type RequestDateField = 'submitted' | 'absence';
@@ -42,7 +42,7 @@ const isAbsenceTab = (value: string | null): value is AbsenceTab =>
   Boolean(value && absenceTabs.includes(value as AbsenceTab));
 
 // Tylko te typy odliczają dni z puli urlopowej
-const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal'];
+const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal', 'occasional_hourly'];
 
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> =
   {
@@ -94,6 +94,11 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
     occasional: {
       label: 'Urlop okolicznościowy',
       icon: <Calendar className="w-4 h-4" />,
+      color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
+    },
+    occasional_hourly: {
+      label: 'Urlop okolicznościowy (godzinowy)',
+      icon: <Clock className="w-4 h-4" />,
       color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
     },
     remote_work: {
@@ -187,8 +192,11 @@ const Absences = () => {
     leave_type: 'vacation' as LeaveType,
     start_date: '',
     end_date: '',
+    start_time: '',
+    end_time: '',
     reason: '',
   });
+  const isHourlyForm = formData.leave_type === 'occasional_hourly';
   const [formUserId, setFormUserId] = useState('');
   const [directoryUsers, setDirectoryUsers] = useState<{ id: string; first_name: string; last_name: string; email: string }[]>([]);
 
@@ -406,7 +414,18 @@ const Absences = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (leaveDateMode === 'multiple' && selectedLeaveDates.length === 0) {
+    const isHourly = formData.leave_type === 'occasional_hourly';
+
+    if (isHourly && (!formData.start_date || !formData.start_time || !formData.end_time)) {
+      toast.error('Podaj dzień oraz godziny od i do');
+      return;
+    }
+    if (isHourly && formData.end_time <= formData.start_time) {
+      toast.error('Godzina „do" musi być po „od"');
+      return;
+    }
+
+    if (!isHourly && leaveDateMode === 'multiple' && selectedLeaveDates.length === 0) {
       toast.error('Dodaj przynajmniej jeden dzień nieobecności');
       return;
     }
@@ -414,7 +433,18 @@ const Absences = () => {
     setIsSubmittingLeave(true);
 
     try {
-      if (leaveDateMode === 'multiple') {
+      if (isHourly) {
+        await timeApi.createLeaveRequest({
+          leaveType: formData.leave_type as any,
+          startDate: formData.start_date,
+          endDate: formData.start_date,
+          startTime: formData.start_time,
+          endTime: formData.end_time,
+          reason: formData.reason,
+          ...(canViewAllAbsences && formUserId ? { userId: formUserId } : {}),
+        });
+        toast.success('Wniosek został złożony');
+      } else if (leaveDateMode === 'multiple') {
         const results = await Promise.allSettled(
           selectedLeaveDates.map(date =>
             timeApi.createLeaveRequest({
@@ -461,7 +491,7 @@ const Absences = () => {
       setLeaveDateMode('range');
       setMultipleDateDraft('');
       setSelectedLeaveDates([]);
-      setFormData({ leave_type: 'vacation', start_date: '', end_date: '', reason: '' });
+      setFormData({ leave_type: 'vacation', start_date: '', end_date: '', start_time: '', end_time: '', reason: '' });
       setFormUserId('');
       await loadData();
     } catch (error: any) {
@@ -502,9 +532,20 @@ const Absences = () => {
     const numericDays = Number(days);
     const formattedDays = Number.isInteger(numericDays)
       ? numericDays.toString()
-      : numericDays.toLocaleString('pl-PL');
+      : numericDays.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
 
     return numericDays === 1 ? `${formattedDays} dzień` : `${formattedDays} dni`;
+  };
+
+  // Hourly leave shows hours + time window; everything else shows days.
+  const formatLeaveDuration = (req: LeaveRequest) => {
+    if (req.leave_type === 'occasional_hourly') {
+      const h = req.hours != null ? Number(req.hours) : null;
+      const hLabel = h != null ? `${h.toLocaleString('pl-PL', { maximumFractionDigits: 2 })} h` : '';
+      const window = req.start_time && req.end_time ? ` (${req.start_time}–${req.end_time})` : '';
+      return `${hLabel}${window}`.trim() || formatDaysLabel(req.total_days);
+    }
+    return formatDaysLabel(req.total_days);
   };
 
   const getLeaveRequestCountLabel = (count: number) => {
@@ -1081,7 +1122,7 @@ const Absences = () => {
                                   {new Date(request.end_date).toLocaleDateString('pl-PL')}
                                 </span>
                                 <span className="inline-flex items-center rounded-lg border border-[#F7941D]/25 bg-[#F7941D]/10 px-3 py-1.5 text-sm font-bold text-[#C96F00] dark:border-[#F7941D]/30 dark:bg-[#F7941D]/15 dark:text-[#F8B15F]">
-                                  {formatDaysLabel(request.total_days)}
+                                  {formatLeaveDuration(request)}
                                 </span>
                               </div>
                               {request.reason && (
@@ -1392,7 +1433,7 @@ const Absences = () => {
                           <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                             {fmt(request.start_date)}{request.end_date && request.end_date !== request.start_date ? ` – ${fmt(request.end_date)}` : ''}
                           </td>
-                          <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{request.total_days}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{formatLeaveDuration(request)}</td>
                           <td className="px-4 py-3 text-center">
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusCfg.classes}`}>{statusCfg.label}</span>
                           </td>
@@ -1811,12 +1852,51 @@ const Absences = () => {
                   >
                     {(Object.keys(leaveTypeConfig) as LeaveType[]).map(type => (
                       <option key={type} value={type}>
-                        {leaveTypeConfig[type].label}{DEDUCTING_TYPES.includes(type) ? ' (odlicza dni)' : ''}
+                        {leaveTypeConfig[type].label}{type === 'occasional_hourly' ? ' (odlicza godziny)' : DEDUCTING_TYPES.includes(type) ? ' (odlicza dni)' : ''}
                       </option>
                     ))}
                   </select>
                 </div>
 
+                {isHourlyForm && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Dzień *</label>
+                      <input
+                        type="date"
+                        value={formData.start_date}
+                        onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Od *</label>
+                      <input
+                        type="time"
+                        value={formData.start_time}
+                        onChange={e => setFormData({ ...formData, start_time: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Do *</label>
+                      <input
+                        type="time"
+                        value={formData.end_time}
+                        onChange={e => setFormData({ ...formData, end_time: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    <p className="sm:col-span-3 text-xs text-gray-500 dark:text-gray-400">
+                      Godziny zostaną odjęte z puli urlopu wypoczynkowego (przeliczone wg etatu).
+                    </p>
+                  </div>
+                )}
+
+                {!isHourlyForm && (<>
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Sposób wyboru terminu
@@ -1969,6 +2049,8 @@ const Absences = () => {
                       </div>
                     )}
                   </div>
+                )}
+                </>
                 )}
 
                 <div>

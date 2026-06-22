@@ -18,6 +18,7 @@ export enum LeaveType {
   CHILDCARE_188 = 'childcare_188',
   CARE = 'care',
   OCCASIONAL = 'occasional',
+  OCCASIONAL_HOURLY = 'occasional_hourly',
   REMOTE_WORK = 'remote_work',
   HOLIDAY_SATURDAY = 'holiday_saturday',
   OTHER = 'other',
@@ -81,6 +82,9 @@ export interface LeaveRequest {
   start_date: string;
   end_date: string;
   total_days: number;
+  start_time?: string | null;
+  end_time?: string | null;
+  hours?: number | null;
   reason: string | null;
   status: LeaveStatus;
   reviewed_by: string | null;
@@ -160,6 +164,8 @@ export interface CreateLeaveRequest {
   startDate: string;
   endDate: string;
   reason?: string;
+  startTime?: string; // occasional_hourly: HH:MM
+  endTime?: string;   // occasional_hourly: HH:MM
   userId?: string; // admin/kadry: file on behalf of another employee
 }
 

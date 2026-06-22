@@ -573,8 +573,34 @@ export class TimeService {
     leaveType: LeaveType,
     startDate: Date,
     endDate: Date,
-    reason?: string
+    reason?: string,
+    startTime?: string,
+    endTime?: string,
   ): Promise<LeaveRequest> {
+    // Hourly occasional leave: single day, time window → fractional day-equivalent
+    // deducted from the regular leave pool (hours / working_hours_per_day).
+    if (leaveType === LeaveType.OCCASIONAL_HOURLY) {
+      if (!startTime || !endTime) throw new Error('Podaj godzinę od i do');
+      const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+      const minutes = toMin(endTime) - toMin(startTime);
+      if (minutes <= 0) throw new Error('Godzina „do" musi być po „od"');
+      const hours = minutes / 60;
+      const user = await this.userRepository.findOne({ where: { id: userId }, select: ['id', 'working_hours_per_day'] });
+      const hpd = Number(user?.working_hours_per_day) || 8;
+      const hourly = this.leaveRequestRepository.create({
+        user_id: userId,
+        leave_type: leaveType,
+        start_date: startDate,
+        end_date: startDate,
+        start_time: startTime,
+        end_time: endTime,
+        hours,
+        total_days: hours / hpd,
+        reason,
+      });
+      return await this.leaveRequestRepository.save(hourly);
+    }
+
     // Validate dates
     if (startDate > endDate) {
       throw new Error('Start date must be before or equal to end date');
