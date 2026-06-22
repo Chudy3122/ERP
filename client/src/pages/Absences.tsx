@@ -1850,9 +1850,11 @@ const Absences = () => {
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     required
                   >
-                    {(Object.keys(leaveTypeConfig) as LeaveType[]).map(type => (
+                    {(Object.keys(leaveTypeConfig) as LeaveType[])
+                      .filter(type => type !== 'occasional_hourly')
+                      .map(type => (
                       <option key={type} value={type}>
-                        {leaveTypeConfig[type].label}{type === 'occasional_hourly' ? ' (odlicza godziny)' : DEDUCTING_TYPES.includes(type) ? ' (odlicza dni)' : ''}
+                        {leaveTypeConfig[type].label}{DEDUCTING_TYPES.includes(type) ? ' (odlicza dni)' : ''}
                       </option>
                     ))}
                   </select>
