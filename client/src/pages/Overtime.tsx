@@ -422,7 +422,7 @@ export default function Overtime() {
     return 'text-gray-500';
   };
 
-  const selectClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+  const selectClass = 'w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white';
   const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
   const renderOvertimeRow = (entry: OvertimeSummaryEntry) => (

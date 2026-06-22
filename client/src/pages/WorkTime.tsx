@@ -6,7 +6,8 @@ import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loa
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import * as userApi from '../api/user.api';
-import type { TimeEntry, DayStatus, DayState } from '../types/time.types';
+import type { TimeEntry, DayStatus, DayState, LeaveRequest } from '../types/time.types';
+import { LeaveStatus, LeaveType } from '../types/time.types';
 import { getFileUrl } from '../api/axios-config';
 
 // Small icon showing which device a clock-in came from (phone vs computer).
@@ -42,6 +43,10 @@ interface AttendanceData {
   users: AttendanceUser[];
   dates: string[];
 }
+interface AttendanceLeaveInfo {
+  label: string;
+  type: LeaveType;
+}
 type AttendanceRange = 'week' | '14' | '30';
 type HistoryDateFilter = 'all' | 'week' | 'month';
 type HistoryTypeFilter = 'all' | 'manual' | 'active';
@@ -53,6 +58,33 @@ function getLocalDateKey(date: Date) {
 
 function todayStr() {
   return getLocalDateKey(new Date());
+}
+
+function getDateKey(value: string | Date) {
+  if (typeof value === 'string') {
+    const dateMatch = value.match(/^\d{4}-\d{2}-\d{2}/);
+    if (dateMatch) return dateMatch[0];
+  }
+
+  return getLocalDateKey(new Date(value));
+}
+
+function getAttendanceLeaveLabel(type: LeaveType) {
+  switch (type) {
+    case LeaveType.SICK_LEAVE:
+      return 'L4';
+    case LeaveType.REMOTE_WORK:
+      return 'Zdalnie';
+    case LeaveType.CARE:
+      return 'Opieka';
+    case LeaveType.CHILDCARE_188:
+      return 'Opieka 188';
+    case LeaveType.OCCASIONAL:
+    case LeaveType.OCCASIONAL_HOURLY:
+      return 'Okolicznościowy';
+    default:
+      return 'Urlop';
+  }
 }
 
 function getCurrentWeekRange() {
@@ -465,6 +497,7 @@ export default function WorkTime() {
 
   // Attendance state
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
+  const [attendanceLeaveRequests, setAttendanceLeaveRequests] = useState<LeaveRequest[]>([]);
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>('week');
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
@@ -642,8 +675,14 @@ export default function WorkTime() {
   async function loadAttendance() {
     setLoadingAttendance(true);
     try {
-      const data = await timeApi.getAttendance(getAttendanceRequestParams(attendanceRange));
+      const [data, leaveRequests] = await Promise.all([
+        timeApi.getAttendance(getAttendanceRequestParams(attendanceRange)),
+        timeApi.getAllLeaveRequests().catch(() => timeApi.getManageableLeaveRequests()).catch(() => []),
+      ]);
       setAttendance(data);
+      setAttendanceLeaveRequests(
+        leaveRequests.filter(request => request.status === LeaveStatus.APPROVED)
+      );
     } catch {
       toast.error('Błąd ładowania frekwencji');
     } finally {
@@ -756,6 +795,25 @@ export default function WorkTime() {
       day.date === todayStr() &&
       isCurrentUserWorkingToday,
     );
+  };
+  const getAttendanceLeaveInfo = (
+    employeeId: string,
+    date: string
+  ): AttendanceLeaveInfo | null => {
+    const leave = attendanceLeaveRequests.find(request => {
+      if (request.user_id !== employeeId) return false;
+
+      const startDate = getDateKey(request.start_date);
+      const endDate = getDateKey(request.end_date);
+      return date >= startDate && date <= endDate;
+    });
+
+    return leave
+      ? {
+          label: getAttendanceLeaveLabel(leave.leave_type),
+          type: leave.leave_type,
+        }
+      : null;
   };
   const currentlyWorkingCount = attendance && todayAttendanceIndex >= 0
     ? attendance.users.filter((employee) => {
@@ -1515,6 +1573,7 @@ export default function WorkTime() {
 
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Legenda:</span>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-400" /> Urlop / nieobecnosc</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#F7941D]" /> Aktualnie w pracy</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Zakończona zmiana</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Brak wpisu</div>
@@ -1589,6 +1648,7 @@ export default function WorkTime() {
                           const displayClockIn = isToday && u.id === user?.id && currentEntry
                             ? currentEntry.clock_in
                             : day.clock_in;
+                          const leaveInfo = getAttendanceLeaveInfo(u.id, day.date);
                           return (
                             <td key={day.date} className={`px-3 py-2 text-center ${isToday ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}>
                               {displayClockIn ? (
@@ -1606,6 +1666,13 @@ export default function WorkTime() {
                                     {isWorking ? 'W pracy' : formatDuration(day.duration_minutes)}
                                   </div>
                                 </div>
+                              ) : leaveInfo ? (
+                                <span className="inline-flex min-w-[96px] flex-col items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-semibold text-violet-700 shadow-sm dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">
+                                  <span>{leaveInfo.label}</span>
+                                  <span className="mt-0.5 text-[10px] font-medium opacity-70">
+                                    Nieobecnosc
+                                  </span>
+                                </span>
                               ) : (
                                 <span className="inline-flex min-w-[96px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50 px-2 py-2 text-xs font-medium text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600">
                                   Brak

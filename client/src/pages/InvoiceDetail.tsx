@@ -142,7 +142,7 @@ const InvoiceDetail = () => {
         <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
             <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
-            <span className="text-sm font-medium">Ladowanie faktury...</span>
+            <span className="text-sm font-medium">Ładowanie faktury...</span>
           </div>
         </div>
       </MainLayout>
@@ -177,13 +177,13 @@ const InvoiceDetail = () => {
             type="button"
             onClick={() => navigate('/invoices')}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            aria-label="Powrot do listy faktur"
+            aria-label="Powrót do listy faktur"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
-              Szczegoly faktury
+              Szczegóły faktury
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">

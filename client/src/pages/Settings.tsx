@@ -6,6 +6,7 @@ import * as notificationPreferenceApi from '../api/notificationPreference.api';
 import { changePasswordApi } from '../api/auth.api';
 import { toast } from 'react-toastify';
 import { confirmDialog } from '../utils/confirm';
+import { syncNotificationAudioPreferences } from '../utils/audio';
 import type { NotificationPreference, UpdateNotificationPreferencesData } from '../api/notificationPreference.api';
 import {
   Sun,
@@ -82,6 +83,7 @@ const Settings: React.FC = () => {
       setNotifLoading(true);
       const prefs = await notificationPreferenceApi.getMyPreferences();
       setNotifPrefs(prefs);
+      syncNotificationAudioPreferences(prefs);
     } catch (error) {
       console.error('Failed to load notification preferences:', error);
     } finally {
@@ -95,6 +97,7 @@ const Settings: React.FC = () => {
       setNotifSaving(true);
       const updated = await notificationPreferenceApi.updatePreferences(updates);
       setNotifPrefs(updated);
+      syncNotificationAudioPreferences(updated);
     } catch (error) {
       console.error('Failed to update notification preferences:', error);
     } finally {
@@ -108,6 +111,7 @@ const Settings: React.FC = () => {
       setNotifSaving(true);
       const reset = await notificationPreferenceApi.resetToDefault();
       setNotifPrefs(reset);
+      syncNotificationAudioPreferences(reset);
     } catch (error) {
       console.error('Failed to reset notification preferences:', error);
     } finally {

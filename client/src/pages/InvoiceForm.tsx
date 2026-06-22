@@ -334,7 +334,7 @@ const InvoiceForm = () => {
         <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
             <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
-            <span className="text-sm font-medium">Ladowanie faktury...</span>
+            <span className="text-sm font-medium">Ładowanie faktury...</span>
           </div>
         </div>
       </MainLayout>
@@ -351,7 +351,7 @@ const InvoiceForm = () => {
                 type="button"
                 onClick={() => navigate('/invoices')}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                aria-label="Powrot do listy faktur"
+                aria-label="Powrót do listy faktur"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
@@ -375,7 +375,7 @@ const InvoiceForm = () => {
 
             <div className="rounded-xl border border-[#F7941D]/20 bg-[#F7941D]/10 px-4 py-2 text-right dark:bg-[#F7941D]/15">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D] dark:text-orange-300">
-                Wartosc brutto
+                Wartość brutto
               </p>
               <p className="text-xl font-semibold text-gray-950 dark:text-white">
                 {formatCurrency(displayGross)}
@@ -670,7 +670,7 @@ const InvoiceForm = () => {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('items')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Pozycje faktury i automatyczne przeliczenie wartosci.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Pozycje faktury i automatyczne przeliczenie wartości.</p>
               </div>
             </div>
             <button
@@ -805,7 +805,7 @@ const InvoiceForm = () => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-950 dark:text-white">{t('additionalInfo')}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Uwagi widoczne na fakturze oraz notatki wewnetrzne.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Uwagi widoczne na fakturze oraz notatki wewnętrzne.</p>
             </div>
           </div>
 

@@ -22,6 +22,7 @@ const HOUR_START = 7;
 const HOUR_END = 20;
 const TOTAL_MINUTES = (HOUR_END - HOUR_START) * 60;
 const SLOT_PX = 60;
+const COMPLETED_ENTRIES_STORAGE_KEY = 'boss-calendar-completed-entries';
 
 const DAYS_PL = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const MONTHS_PL = [
@@ -111,6 +112,21 @@ function getRangeDays(startDate: string, endDate?: string | null): number {
   return Math.max(1, Math.round(diff / 86400000) + 1);
 }
 
+function getEntryDurationMinutes(entry: BossCalendarEntry): number {
+  return Math.max(0, toMinutes(entry.end_time) - toMinutes(entry.start_time));
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes <= 0) return '0 min';
+
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+
+  if (hours === 0) return `${restMinutes} min`;
+  if (restMinutes === 0) return `${hours}h`;
+  return `${hours}h ${String(restMinutes).padStart(2, '0')}min`;
+}
+
 const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik'];
 
 const EMPTY_FORM: CreateEntryPayload = {
@@ -128,7 +144,16 @@ export default function BossCalendar() {
   const canEdit = CAN_EDIT_ROLES.includes(user?.role || '');
 
   const [weekStart, setWeekStart] = useState<Date>(getMondayOf(new Date()));
+  const [selectedDay, setSelectedDay] = useState<string>(formatDate(new Date()));
   const [entries, setEntries] = useState<BossCalendarEntry[]>([]);
+  const [completedEntryIds, setCompletedEntryIds] = useState<Set<string>>(() => {
+    try {
+      const raw = window.localStorage.getItem(COMPLETED_ENTRIES_STORAGE_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  });
   const [loading, setLoading] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -142,6 +167,13 @@ export default function BossCalendar() {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const from = formatDate(weekDays[0]);
   const to = formatDate(weekDays[6]);
+
+  useEffect(() => {
+    if (selectedDay < from || selectedDay > to) {
+      const today = formatDate(new Date());
+      setSelectedDay(today >= from && today <= to ? today : from);
+    }
+  }, [from, selectedDay, to]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -158,6 +190,27 @@ export default function BossCalendar() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      COMPLETED_ENTRIES_STORAGE_KEY,
+      JSON.stringify(Array.from(completedEntryIds))
+    );
+  }, [completedEntryIds]);
+
+  const isEntryCompleted = (entryId: string) => completedEntryIds.has(entryId);
+
+  const toggleEntryCompleted = (entryId: string, completed: boolean) => {
+    setCompletedEntryIds((current) => {
+      const next = new Set(current);
+      if (completed) {
+        next.add(entryId);
+      } else {
+        next.delete(entryId);
+      }
+      return next;
+    });
+  };
 
   const openCreate = (date?: string) => {
     setEditingEntry(null);
@@ -275,6 +328,24 @@ export default function BossCalendar() {
   const formRangeEnd = multiDay ? (form.end_date || form.date) : form.date;
   const formRangeDays = form.date ? getRangeDays(form.date, formRangeEnd) : 1;
   const formTypeConfig = TYPE_CONFIG[form.type];
+  const selectedDayEntries = entriesByDay(selectedDay);
+  const selectedDayMeetingEntries = selectedDayEntries.filter((entry) => entry.type === 'meeting');
+  const selectedDayCompletedMeetingEntries = selectedDayMeetingEntries.filter((entry) =>
+    isEntryCompleted(entry.id)
+  );
+  const selectedDayMeetingsMinutes = selectedDayMeetingEntries.reduce(
+    (sum, entry) => sum + getEntryDurationMinutes(entry),
+    0
+  );
+  const selectedDayTotalMinutes = selectedDayEntries.reduce(
+    (sum, entry) => sum + getEntryDurationMinutes(entry),
+    0
+  );
+  const selectedDayLabel = parseLocalDate(selectedDay).toLocaleDateString('pl-PL', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+  });
 
   const statCards = [
     { label: 'Wpisy w tygodniu', value: entries.length, dot: 'bg-[#F7941D]' },
@@ -332,6 +403,51 @@ export default function BossCalendar() {
               </div>
             </div>
           ))}
+        </section>
+
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                Podsumowanie dnia
+              </p>
+              <h2 className="mt-1 text-lg font-bold capitalize text-gray-950 dark:text-white">
+                {selectedDayLabel}
+              </h2>
+            </div>
+            <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-5">
+              <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Wpisy</p>
+                <p className="mt-1 text-xl font-bold text-gray-950 dark:text-white">
+                  {selectedDayEntries.length}
+                </p>
+              </div>
+              <div className="rounded-lg bg-orange-50 px-3 py-2 dark:bg-orange-900/20">
+                <p className="text-xs font-medium text-[#b76612] dark:text-orange-200">Spotkania</p>
+                <p className="mt-1 text-xl font-bold text-gray-950 dark:text-white">
+                  {selectedDayMeetingEntries.length}
+                </p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 px-3 py-2 dark:bg-emerald-900/20">
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-200">Zakończone</p>
+                <p className="mt-1 text-xl font-bold text-gray-950 dark:text-white">
+                  {selectedDayCompletedMeetingEntries.length}
+                </p>
+              </div>
+              <div className="rounded-lg bg-orange-50 px-3 py-2 dark:bg-orange-900/20">
+                <p className="text-xs font-medium text-[#b76612] dark:text-orange-200">Czas spotkań</p>
+                <p className="mt-1 text-xl font-bold text-gray-950 dark:text-white">
+                  {formatDuration(selectedDayMeetingsMinutes)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-gray-900/40">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Zajęty czas</p>
+                <p className="mt-1 text-xl font-bold text-gray-950 dark:text-white">
+                  {formatDuration(selectedDayTotalMinutes)}
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -402,12 +518,19 @@ export default function BossCalendar() {
                   {weekDays.map((day, index) => {
                     const dayStr = formatDate(day);
                     const isToday = dayStr === todayStr;
+                    const isSelected = dayStr === selectedDay;
                     const dayEntriesCount = entriesByDay(dayStr).length;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={index}
-                        className={`border-r border-gray-200 py-3 text-center last:border-r-0 dark:border-gray-700 ${
-                          isToday ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10' : 'bg-white dark:bg-gray-800'
+                        onClick={() => setSelectedDay(dayStr)}
+                        className={`border-r border-gray-200 py-3 text-center transition-colors last:border-r-0 dark:border-gray-700 ${
+                          isSelected
+                            ? 'bg-[#F7941D]/15 ring-2 ring-inset ring-[#F7941D]/40 dark:bg-[#F7941D]/15'
+                            : isToday
+                              ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10'
+                              : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/60'
                         }`}
                       >
                         <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -421,7 +544,7 @@ export default function BossCalendar() {
                             {dayEntriesCount} wpis{dayEntriesCount === 1 ? '' : 'y'}
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -442,15 +565,21 @@ export default function BossCalendar() {
                   {weekDays.map((day, dayIndex) => {
                     const dayStr = formatDate(day);
                     const isToday = dayStr === todayStr;
+                    const isSelected = dayStr === selectedDay;
                     const dayEntries = entriesByDay(dayStr);
 
                     return (
                       <div
                         key={dayIndex}
                         className={`relative border-r border-gray-200 last:border-r-0 dark:border-gray-700 ${
-                          isToday ? 'bg-[#F7941D]/5 dark:bg-[#F7941D]/5' : 'bg-white dark:bg-gray-800'
+                          isSelected
+                            ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10'
+                            : isToday
+                              ? 'bg-[#F7941D]/5 dark:bg-[#F7941D]/5'
+                              : 'bg-white dark:bg-gray-800'
                         }`}
                         style={{ height: SLOT_PX * (HOUR_END - HOUR_START) }}
+                        onClick={() => setSelectedDay(dayStr)}
                       >
                         {hours.map((hour) => (
                           <div
@@ -469,7 +598,13 @@ export default function BossCalendar() {
                         ))}
 
                         {canEdit && (
-                          <div className="absolute inset-0 cursor-pointer" onClick={() => openCreate(dayStr)} />
+                          <div
+                            className="absolute inset-0 cursor-pointer"
+                            onClick={() => {
+                              setSelectedDay(dayStr);
+                              openCreate(dayStr);
+                            }}
+                          />
                         )}
 
                         {dayEntries.map((entry) => {
@@ -488,19 +623,34 @@ export default function BossCalendar() {
                           const isRangeEnd = dayStr === rangeEnd;
                           const rangeLabel = isRangeStart ? 'Start' : isRangeEnd ? 'Koniec' : 'Kont.';
                           const rangeDays = getRangeDays(entry.date, rangeEnd);
+                          const isCompleted = isEntryCompleted(entry.id);
 
                           return (
                             <div
                               key={entry.id}
                               style={{ top, height: Math.max(height, 26), left: 4, right: 4 }}
-                              className={`absolute z-10 cursor-pointer select-none overflow-hidden rounded-lg border-l-4 px-2 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${cfg.bg} ${cfg.border}`}
+                              className={`absolute z-10 cursor-pointer select-none overflow-hidden rounded-lg border-l-4 px-2 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${cfg.bg} ${cfg.border} ${
+                                isCompleted ? 'opacity-70 ring-1 ring-emerald-300 dark:ring-emerald-500/70' : ''
+                              }`}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 openDetails(entry);
                               }}
                             >
                               <div className="flex items-start justify-between gap-1">
-                                <div className={`min-w-0 truncate text-xs font-semibold ${cfg.text}`}>{entry.title}</div>
+                                <div className="flex min-w-0 items-start gap-1.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={isCompleted}
+                                    aria-label="Oznacz jako zakończone"
+                                    className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300 accent-emerald-500"
+                                    onClick={(event) => event.stopPropagation()}
+                                    onChange={(event) => toggleEntryCompleted(entry.id, event.target.checked)}
+                                  />
+                                  <div className={`min-w-0 truncate text-xs font-semibold ${cfg.text} ${isCompleted ? 'line-through' : ''}`}>
+                                    {entry.title}
+                                  </div>
+                                </div>
                                 {isMultiDay && (
                                   <span className={`shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-bold uppercase ${cfg.text} dark:bg-gray-900/30`}>
                                     {rangeLabel}
@@ -510,6 +660,7 @@ export default function BossCalendar() {
                               {height >= 36 && (
                                 <div className={`truncate text-xs ${cfg.text} opacity-75`}>
                                   {entry.start_time}-{entry.end_time}
+                                  {isCompleted ? ' · zakończone' : ''}
                                 </div>
                               )}
                               {height >= 48 && isMultiDay && (
@@ -744,6 +895,7 @@ export default function BossCalendar() {
             const rangeEnd = selectedEntry.end_date || selectedEntry.date;
             const isMultiDayEntry = rangeEnd !== selectedEntry.date;
             const rangeDays = getRangeDays(selectedEntry.date, rangeEnd);
+            const isSelectedEntryCompleted = isEntryCompleted(selectedEntry.id);
 
             return (
               <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl dark:bg-gray-800">
@@ -768,6 +920,27 @@ export default function BossCalendar() {
                 </div>
 
                 <div className="space-y-4 px-6 py-5">
+                  <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                    isSelectedEntryCompleted
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-200'
+                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300 dark:hover:bg-gray-700/70'
+                  }`}>
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        {isSelectedEntryCompleted ? 'Spotkanie zakończone' : 'Oznacz spotkanie jako zakończone'}
+                      </span>
+                      <span className="mt-0.5 block text-xs opacity-75">
+                        Status zapisywany lokalnie w przeglądarce.
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={isSelectedEntryCompleted}
+                      className="h-5 w-5 shrink-0 rounded border-gray-300 accent-emerald-500"
+                      onChange={(event) => toggleEntryCompleted(selectedEntry.id, event.target.checked)}
+                    />
+                  </label>
+
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
                       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">

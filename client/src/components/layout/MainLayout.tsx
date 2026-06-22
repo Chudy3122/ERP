@@ -14,8 +14,9 @@ import IncomingCallOverlay from '../meeting/IncomingCallOverlay';
 import { useChatContext } from '../../contexts/ChatContext';
 import GlobalSearch from './GlobalSearch';
 import * as notificationApi from '../../api/notification.api';
+import * as notificationPreferenceApi from '../../api/notificationPreference.api';
 import { getFileUrl } from '../../api/axios-config';
-import { unlockAudio } from '../../utils/audio';
+import { syncNotificationAudioPreferences, unlockAudio } from '../../utils/audio';
 const cleanNotifMsg = (msg: string) =>
   msg.replace(/\s*\((vacation|sick_leave|personal|unpaid|parental|other)\)/gi, '').trim();
 
@@ -198,6 +199,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       document.removeEventListener('click', unlockAudio);
       document.removeEventListener('keydown', unlockAudio);
     };
+  }, []);
+
+  useEffect(() => {
+    notificationPreferenceApi.getMyPreferences()
+      .then(syncNotificationAudioPreferences)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -59,6 +59,7 @@ const Notifications = () => {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -91,12 +92,36 @@ const Notifications = () => {
     });
   };
 
+  const markNotificationAsRead = async (notification: Notification) => {
+    if (notification.is_read || markingNotificationId === notification.id) {
+      return;
+    }
+
+    try {
+      setMarkingNotificationId(notification.id);
+      await notificationApi.markAsRead(notification.id);
+
+      setNotifications((prev) => {
+        if (unreadOnly) {
+          return prev.filter((item) => item.id !== notification.id);
+        }
+
+        return prev.map((item) =>
+          item.id === notification.id ? { ...item, is_read: true } : item,
+        );
+      });
+
+      if (unreadOnly) {
+        setTotalNotifications((current) => Math.max(0, current - 1));
+      }
+    } finally {
+      setMarkingNotificationId(null);
+    }
+  };
+
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
-      await notificationApi.markAsRead(notification.id);
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item)),
-      );
+      await markNotificationAsRead(notification);
     }
 
     const targetUrl = getNotificationTargetUrl(notification);
@@ -109,7 +134,14 @@ const Notifications = () => {
     try {
       setIsMarkingAll(true);
       await notificationApi.markAllAsRead();
-      setNotifications((prev) => prev.map((notification) => ({ ...notification, is_read: true })));
+      setNotifications((prev) =>
+        unreadOnly ? [] : prev.map((notification) => ({ ...notification, is_read: true })),
+      );
+      if (unreadOnly) {
+        setTotalNotifications(0);
+        setTotalPages(1);
+        setPage(1);
+      }
     } finally {
       setIsMarkingAll(false);
     }
@@ -204,10 +236,17 @@ const Notifications = () => {
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {notifications.map((notification) => (
-                <button
+                <div
                   key={notification.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleNotificationClick(notification)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleNotificationClick(notification);
+                    }
+                  }}
                   className={`flex w-full items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
                     !notification.is_read ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''
                   }`}
@@ -240,7 +279,26 @@ const Notifications = () => {
                       {formatDate(notification.created_at)}
                     </span>
                   </span>
-                </button>
+                  {!notification.is_read && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        markNotificationAsRead(notification);
+                      }}
+                      disabled={markingNotificationId === notification.id}
+                      className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-white text-blue-600 transition-colors hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-gray-800 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                      title="Oznacz jako przeczytane"
+                      aria-label={`Oznacz jako przeczytane: ${notification.title}`}
+                    >
+                      {markingNotificationId === notification.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}

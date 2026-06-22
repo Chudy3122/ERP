@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
 import {
@@ -30,21 +30,61 @@ import { UserRole } from '../types/auth.types';
 
 type ViewFilter = 'all' | 'active' | 'completed' | 'planning';
 type ProjectTypeFilter = 'all' | 'ongoing' | 'deadline';
+type ProjectOwnershipFilter = 'all' | 'mine' | 'created' | 'other';
 
 const Projects = () => {
   const { t } = useTranslation('projects');
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStatistics>>({});
   const [projectMembersById, setProjectMembersById] = useState<Record<string, ProjectMember[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
-  const [priorityFilter, setPriorityFilter] = useState<ProjectPriority | ''>('');
-  const [projectTypeFilter, setProjectTypeFilter] = useState<ProjectTypeFilter>('all');
-  const [projectPage, setProjectPage] = useState(1);
-  const [projectPageSize, setProjectPageSize] = useState<10 | 30 | 50>(10);
+  const [viewFilter, setViewFilter] = useState<ViewFilter>(
+    (searchParams.get('status') as ViewFilter) || 'all'
+  );
+  const [priorityFilter, setPriorityFilter] = useState<ProjectPriority | ''>(
+    (searchParams.get('priority') as ProjectPriority | '') || ''
+  );
+  const [projectTypeFilter, setProjectTypeFilter] = useState<ProjectTypeFilter>(
+    (searchParams.get('type') as ProjectTypeFilter) || 'all'
+  );
+  const [projectOwnershipFilter, setProjectOwnershipFilter] = useState<ProjectOwnershipFilter>(
+    (searchParams.get('scope') as ProjectOwnershipFilter) || 'all'
+  );
+  const [projectPage, setProjectPage] = useState(() =>
+    Math.max(1, Number(searchParams.get('page')) || 1)
+  );
+  const [projectPageSize, setProjectPageSize] = useState<10 | 30 | 50>(() => {
+    const size = Number(searchParams.get('pageSize'));
+    return size === 30 || size === 50 ? size : 10;
+  });
   const navigate = useNavigate();
+
+  const projectsReturnTo = `${location.pathname}${location.search}`;
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+
+    if (projectPage > 1) nextParams.set('page', String(projectPage));
+    if (projectPageSize !== 10) nextParams.set('pageSize', String(projectPageSize));
+    if (viewFilter !== 'all') nextParams.set('status', viewFilter);
+    if (priorityFilter) nextParams.set('priority', priorityFilter);
+    if (projectTypeFilter !== 'all') nextParams.set('type', projectTypeFilter);
+    if (projectOwnershipFilter !== 'all') nextParams.set('scope', projectOwnershipFilter);
+
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    projectPage,
+    projectPageSize,
+    viewFilter,
+    priorityFilter,
+    projectTypeFilter,
+    projectOwnershipFilter,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     const timeout = window.setTimeout(
@@ -60,7 +100,7 @@ const Projects = () => {
 
   useEffect(() => {
     setProjectPage(1);
-  }, [viewFilter, priorityFilter, projectTypeFilter, projectPageSize]);
+  }, [viewFilter, priorityFilter, projectTypeFilter, projectOwnershipFilter, projectPageSize]);
 
   const loadProjects = async (overrideFilters?: {
     search?: string;
@@ -129,6 +169,7 @@ const Projects = () => {
     setSearchQuery('');
     setPriorityFilter('');
     setProjectTypeFilter('all');
+    setProjectOwnershipFilter('all');
     setViewFilter('all');
     setProjectPage(1);
     loadProjects({ search: '', priority: '' });
@@ -249,6 +290,21 @@ const Projects = () => {
     return project.manager || project.creator;
   };
 
+  const getEffectiveProjectOwnerId = (project: Project) => {
+    return getProjectDisplayOwner(project)?.id || project.created_by;
+  };
+
+  const isCurrentUserProjectMember = (project: Project) => {
+    if (!user?.id) return false;
+
+    const activeMembers = projectMembersById[project.id] ?? project.members ?? [];
+    return activeMembers.some(member => member.user_id === user.id && !member.left_at);
+  };
+
+  const isProjectCreatedByCurrentUser = (project: Project) => {
+    return Boolean(user?.id && getEffectiveProjectOwnerId(project) === user.id);
+  };
+
   const isOverdue = (dateString: string) => {
     return new Date(dateString) < new Date();
   };
@@ -264,8 +320,15 @@ const Projects = () => {
       projectTypeFilter === 'all' ||
       (projectTypeFilter === 'ongoing' && !project.target_end_date) ||
       (projectTypeFilter === 'deadline' && Boolean(project.target_end_date));
+    const matchesOwnership =
+      projectOwnershipFilter === 'all' ||
+      (projectOwnershipFilter === 'mine' && isCurrentUserProjectMember(project)) ||
+      (projectOwnershipFilter === 'created' && isProjectCreatedByCurrentUser(project)) ||
+      (projectOwnershipFilter === 'other' &&
+        !isCurrentUserProjectMember(project) &&
+        !isProjectCreatedByCurrentUser(project));
 
-    return matchesView && matchesType;
+    return matchesView && matchesType && matchesOwnership;
   });
   const projectTotalPages = Math.max(1, Math.ceil(filteredProjects.length / projectPageSize));
   const projectStartIndex = (projectPage - 1) * projectPageSize;
@@ -282,14 +345,19 @@ const Projects = () => {
   const completedProjects = projects.filter(p => p.status === 'completed').length;
   const planningProjects = projects.filter(p => p.status === 'planning').length;
 
-  // Calculate average progress
+  const deadlineProjectStats = projects
+    .filter(project => Boolean(project.target_end_date))
+    .map(project => projectStats[project.id])
+    .filter(Boolean);
+
+  // Calculate average progress only for projects with an end date.
   const avgProgress =
-    Object.values(projectStats).length > 0
+    deadlineProjectStats.length > 0
       ? Math.round(
-          Object.values(projectStats).reduce((acc, stats) => acc + stats.completion_percentage, 0) /
-            Object.values(projectStats).length
+          deadlineProjectStats.reduce((acc, stats) => acc + stats.completion_percentage, 0) /
+            deadlineProjectStats.length
         )
-      : 0;
+      : null;
 
   const viewTabs = [
     { key: 'all', label: t('all'), count: totalProjects },
@@ -297,7 +365,12 @@ const Projects = () => {
     { key: 'planning', label: t('statusPlanning'), count: planningProjects },
     { key: 'completed', label: t('statusCompleted'), count: completedProjects },
   ];
-  const hasProjectFilters = Boolean(searchQuery || priorityFilter || projectTypeFilter !== 'all');
+  const hasProjectFilters = Boolean(
+    searchQuery ||
+      priorityFilter ||
+      projectTypeFilter !== 'all' ||
+      projectOwnershipFilter !== 'all'
+  );
 
   useEffect(() => {
     if (projectPage > projectTotalPages) {
@@ -336,7 +409,9 @@ const Projects = () => {
               </button>
             )}
             <button
-              onClick={() => navigate('/projects/new')}
+              onClick={() =>
+                navigate(`/projects/new?returnTo=${encodeURIComponent(projectsReturnTo)}`)
+              }
               className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               <Plus className="w-5 h-5" />
@@ -386,7 +461,9 @@ const Projects = () => {
                 <TrendingUp className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-600">{avgProgress}%</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {avgProgress !== null ? `${avgProgress}%` : '—'}
+                </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('avgProgress')}</p>
               </div>
             </div>
@@ -487,6 +564,22 @@ const Projects = () => {
               </select>
             </div>
 
+            <div className="min-w-[210px]">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Zakres
+              </label>
+              <select
+                value={projectOwnershipFilter}
+                onChange={e => setProjectOwnershipFilter(e.target.value as ProjectOwnershipFilter)}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="all">Wszystkie projekty</option>
+                <option value="mine">Moje projekty</option>
+                <option value="created">Utworzone przeze mnie</option>
+                <option value="other">Inne</option>
+              </select>
+            </div>
+
             <div className="flex items-center gap-2 pt-5">
               <button
                 type="button"
@@ -540,7 +633,9 @@ const Projects = () => {
               {viewFilter !== 'all' ? t('changeFilter') : t('createFirst')}
             </p>
             <button
-              onClick={() => navigate('/projects/new')}
+              onClick={() =>
+                navigate(`/projects/new?returnTo=${encodeURIComponent(projectsReturnTo)}`)
+              }
               className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               <Plus className="w-5 h-5" />
@@ -577,7 +672,11 @@ const Projects = () => {
                   <button
                     type="button"
                     key={project.id}
-                    onClick={() => navigate(`/projects/${project.id}`)}
+                    onClick={() =>
+                      navigate(
+                        `/projects/${project.id}?returnTo=${encodeURIComponent(projectsReturnTo)}`
+                      )
+                    }
                     className="group grid w-full grid-cols-1 gap-3 px-4 py-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F7941D]/30 dark:hover:bg-gray-700 lg:grid-cols-12 lg:items-center lg:gap-4"
                   >
                     {/* Project Info */}
@@ -644,7 +743,11 @@ const Projects = () => {
 
                     {/* Progress */}
                     <div className="lg:col-span-1">
-                      {stats ? (
+                      {!project.target_end_date ? (
+                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-700/70 dark:text-slate-200">
+                          Stały
+                        </span>
+                      ) : stats ? (
                         <div className="flex items-center gap-2 lg:block">
                           <div className="h-1.5 w-24 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600 lg:w-full">
                             <div

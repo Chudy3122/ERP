@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
   ArrowLeft,
@@ -29,8 +29,10 @@ import { useAuth } from '../contexts/AuthContext';
 const ProjectForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const isEdit = !!id;
+  const projectListReturnTo = searchParams.get('returnTo') || '/projects';
 
   const [formData, setFormData] = useState<CreateProjectRequest>({
     name: '',
@@ -147,7 +149,7 @@ const ProjectForm = () => {
           }
         }
       }
-      navigate('/projects');
+      navigate(projectListReturnTo);
     } catch (error: any) {
       console.error('Failed to save project:', error);
       setError(error.response?.data?.message || 'Nie udało się zapisać projektu');
@@ -259,7 +261,7 @@ const ProjectForm = () => {
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-wrap items-start gap-4">
             <button
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate(projectListReturnTo)}
               className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-300 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10"
               aria-label="Wróć do listy projektów"
             >
@@ -776,7 +778,7 @@ const ProjectForm = () => {
           <div className="mt-6 flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate(projectListReturnTo)}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Anuluj

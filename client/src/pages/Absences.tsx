@@ -674,7 +674,7 @@ const Absences = () => {
       label: 'Praca zdalna — pozostało',
       value: fmtD(balance?.remoteRemaining),
       hint: balance
-        ? `${fmtHrs(balance.remoteRemaining)} · ${fmtD(balance.remoteUsed)}/${fmtD(balance.remoteAllowance)} wyk.`
+        ? `${fmtHrs(balance.remoteRemaining)} · ${fmtD(balance.remoteUsed)}/${fmtD(balance.remoteAllowance)} wyk. (${fmtD(balance.remoteUsedBaseline)} baza + ${fmtD(balance.remoteUsedRequests)} z wniosków)`
         : undefined,
       subHint: balance
         ? `Po uwzględnieniu oczekujących: ${fmtD(remoteRemainingAfterPending)} dni (${fmtHrs(remoteRemainingAfterPending)})`
@@ -1622,6 +1622,12 @@ const Absences = () => {
                                 onChange={e => handleAllocationDraftChange(row.id, 'remoteUsed', e.target.value)}
                                 className={inputCls}
                               />
+                              {row.remoteUsedRequests > 0 && (
+                                <div className="mt-0.5 text-[10px] text-gray-400">+{fmtD(row.remoteUsedRequests)} z wniosków</div>
+                              )}
+                              <div className="mt-0.5 text-[10px] font-semibold text-purple-500 dark:text-purple-300">
+                                Razem: {fmtD((Number.isFinite(remoteUsedV) ? remoteUsedV : row.remoteUsedBaseline) + row.remoteUsedRequests)}
+                              </div>
                             </td>
                             <td className="px-3 py-4 text-center">
                               <div className="text-sm font-bold text-purple-600 dark:text-purple-400">{fmtD(liveRemoteAvailable)}</div>

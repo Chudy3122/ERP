@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
   LayoutDashboard,
@@ -130,7 +130,9 @@ const KanbanTaskTitle = ({ title }: { title: string }) => {
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const projectListReturnTo = searchParams.get('returnTo') || '/projects';
   const columnSortStorageKey = `erp:project-kanban-sort:${user?.id || 'current-user'}:${id || 'unknown-project'}`;
   const activeTabStorageKey = `erp:project-active-tab:${user?.id || 'current-user'}:${id || 'unknown-project'}`;
   const searchQueryStorageKey = `erp:project-kanban-search:${user?.id || 'current-user'}:${id || 'unknown-project'}`;
@@ -168,6 +170,8 @@ const ProjectDetail = () => {
   const [isReorderingStages, setIsReorderingStages] = useState(false);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
+  const [deleteKanbanTask, setDeleteKanbanTask] = useState<{ id: string; title: string } | null>(null);
+  const [isDeletingKanbanTask, setIsDeletingKanbanTask] = useState(false);
   const [bulkAssigneeId, setBulkAssigneeId] = useState('');
   const [bulkUnassignId, setBulkUnassignId] = useState('');
   const [isBulkAssigning, setIsBulkAssigning] = useState(false);
@@ -710,6 +714,39 @@ const ProjectDetail = () => {
         tasks: group.tasks.map(task => (task.id === taskId ? updater(task) : task)),
       }))
     );
+  };
+
+  const removeTaskFromStages = (taskId: string) => {
+    setTasksByStages(prev =>
+      prev.map(group => ({
+        ...group,
+        tasks: group.tasks.filter(task => task.id !== taskId),
+      }))
+    );
+  };
+
+  const handleOpenDeleteKanbanTask = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    task: Task
+  ) => {
+    event.stopPropagation();
+    setDeleteKanbanTask({ id: task.id, title: task.title });
+  };
+
+  const handleConfirmDeleteKanbanTask = async () => {
+    if (!deleteKanbanTask) return;
+
+    try {
+      setIsDeletingKanbanTask(true);
+      await taskApi.deleteTask(deleteKanbanTask.id);
+      removeTaskFromStages(deleteKanbanTask.id);
+      setDeleteKanbanTask(null);
+      loadStatistics();
+    } catch (error) {
+      console.error('Failed to delete kanban task:', error);
+    } finally {
+      setIsDeletingKanbanTask(false);
+    }
   };
 
   const removeAssigneeFromTaskState = (taskId: string, userId: string, nextAssigneeIds: string[]) => {
@@ -1510,7 +1547,7 @@ const ProjectDetail = () => {
           <AlertCircle className="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <h2 className="text-lg font-medium text-gray-900">Projekt nie znaleziony</h2>
           <button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(projectListReturnTo)}
             className="mt-4 text-blue-600 hover:text-blue-700"
           >
             Wróć do listy projektów
@@ -1553,7 +1590,7 @@ const ProjectDetail = () => {
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
           <button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(projectListReturnTo)}
             className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             {t('projects.title')}
@@ -1722,7 +1759,7 @@ const ProjectDetail = () => {
           )}
 
           {/* Progress bar */}
-          {statistics && (
+          {statistics && !isOngoingProject && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
@@ -2230,8 +2267,21 @@ const ProjectDetail = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="rounded-md p-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                              <GripVertical className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600" />
+                            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                              <button
+                                type="button"
+                                onMouseDown={event => event.stopPropagation()}
+                                onClick={event => handleOpenDeleteKanbanTask(event, task)}
+                                disabled={isDeletingKanbanTask}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-600 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                                title="Usuń zadanie"
+                                aria-label={`Usuń zadanie: ${task.title}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                              <div className="rounded-md p-0.5">
+                                <GripVertical className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600" />
+                              </div>
                             </div>
                           </div>
 
@@ -2725,7 +2775,11 @@ const ProjectDetail = () => {
           </h3>
           <div className="space-y-4">
             <button
-              onClick={() => navigate(`/projects/${id}/edit`)}
+              onClick={() =>
+                navigate(
+                  `/projects/${id}/edit?returnTo=${encodeURIComponent(projectListReturnTo)}`
+                )
+              }
               className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
               <Edit3 className="w-4 h-4" />
@@ -3036,6 +3090,19 @@ const ProjectDetail = () => {
         variant="danger"
         icon="delete"
         loading={isDeletingFile !== null}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteKanbanTask !== null}
+        onClose={() => setDeleteKanbanTask(null)}
+        onConfirm={handleConfirmDeleteKanbanTask}
+        title="Usunąć zadanie?"
+        message={`Zadanie „${deleteKanbanTask?.title || ''}” zostanie trwale usunięte z projektu.`}
+        confirmText="Usuń zadanie"
+        cancelText={t('common.cancel')}
+        variant="danger"
+        icon="delete"
+        loading={isDeletingKanbanTask}
       />
 
     </MainLayout>
