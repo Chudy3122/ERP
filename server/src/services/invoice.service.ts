@@ -11,7 +11,7 @@ interface CreateInvoiceDto {
   client_id?: string;
   project_id?: string;
   kind?: InvoiceKind;
-  external_number?: string;
+  invoice_number?: string;
   issue_date: Date;
   sale_date?: Date;
   due_date: Date;
@@ -25,7 +25,7 @@ interface CreateInvoiceDto {
 interface UpdateInvoiceDto {
   client_id?: string;
   project_id?: string;
-  external_number?: string;
+  invoice_number?: string;
   issue_date?: Date;
   sale_date?: Date;
   due_date?: Date;
@@ -170,13 +170,20 @@ export class InvoiceService {
       }
     }
 
-    // Generate invoice number (FV for income, FK for cost)
+    // Use the number the user typed (if any), otherwise auto-generate (FV income / FK cost)
     const kind = data.kind || InvoiceKind.INCOME;
-    const invoice_number = await this.generateInvoiceNumber(new Date(data.issue_date), kind);
+    let invoice_number = data.invoice_number?.trim();
+    if (invoice_number) {
+      const exists = await this.invoiceRepository.findOne({ where: { invoice_number } });
+      if (exists) {
+        throw new Error('Faktura o tym numerze już istnieje');
+      }
+    } else {
+      invoice_number = await this.generateInvoiceNumber(new Date(data.issue_date), kind);
+    }
 
     const invoice = this.invoiceRepository.create({
       invoice_number,
-      external_number: data.external_number,
       kind,
       client_id: data.client_id || undefined,
       project_id: data.project_id,
@@ -330,6 +337,22 @@ export class InvoiceService {
     // Don't allow editing paid or cancelled invoices
     if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.CANCELLED) {
       throw new Error('Nie można edytować opłaconej lub anulowanej faktury');
+    }
+
+    // Allow editing the invoice number, but keep it unique and never blank it out
+    if (data.invoice_number !== undefined) {
+      const num = (data.invoice_number || '').trim();
+      if (!num) {
+        delete (data as any).invoice_number;
+      } else {
+        if (num !== invoice.invoice_number) {
+          const exists = await this.invoiceRepository.findOne({ where: { invoice_number: num } });
+          if (exists && exists.id !== invoice.id) {
+            throw new Error('Faktura o tym numerze już istnieje');
+          }
+        }
+        data.invoice_number = num;
+      }
     }
 
     Object.assign(invoice, data);

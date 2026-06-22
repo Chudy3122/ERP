@@ -36,10 +36,6 @@ export class Invoice extends BaseEntity {
   @Column({ length: 50, unique: true })
   invoice_number: string;
 
-  // Number printed on the source document (supplier's invoice / receipt) — cost invoices
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  external_number: string;
-
   @Column({ type: 'varchar', length: 10, default: InvoiceKind.INCOME })
   kind: InvoiceKind;
 
