@@ -6,6 +6,7 @@ import { Task } from '../models/Task.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
 import notificationService from './notification.service';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 import { IsNull, In } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -521,13 +522,15 @@ export class ProjectService {
     const attachments: ProjectAttachment[] = [];
 
     for (const file of files) {
+      // Persist to Cloudinary (Render disk is ephemeral → files vanish on redeploy)
+      const url = await uploadAttachmentToCloudinary(file);
       const attachment = this.projectAttachmentRepository.create({
         project_id: projectId,
         file_name: file.filename,
         original_name: file.originalname,
         file_type: file.mimetype,
         file_size: file.size,
-        file_url: `/uploads/${file.filename}`,
+        file_url: url,
         uploaded_by: userId,
       });
 
