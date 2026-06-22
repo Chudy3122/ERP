@@ -49,6 +49,7 @@ const InvoiceForm = () => {
     client_id: '',
     project_id: '',
     kind: InvoiceKind.INCOME,
+    external_number: '',
     issue_date: new Date().toISOString().split('T')[0],
     sale_date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -120,6 +121,7 @@ const InvoiceForm = () => {
         client_id: invoice.client_id,
         project_id: invoice.project_id || '',
         kind: invoice.kind || InvoiceKind.INCOME,
+        external_number: invoice.external_number || '',
         issue_date: invoice.issue_date.split('T')[0],
         sale_date: invoice.sale_date ? invoice.sale_date.split('T')[0] : '',
         due_date: invoice.due_date.split('T')[0],
@@ -216,6 +218,7 @@ const InvoiceForm = () => {
           await invoiceApi.updateInvoice(id, {
             client_id: formData.client_id || undefined,
             project_id: formData.project_id || undefined,
+            external_number: formData.external_number || undefined,
             issue_date: formData.issue_date,
             due_date: formData.issue_date,
             notes: formData.notes,
@@ -224,6 +227,7 @@ const InvoiceForm = () => {
           const invoice = await invoiceApi.createInvoice({
             client_id: formData.client_id || undefined,
             project_id: formData.project_id || undefined,
+            external_number: formData.external_number || undefined,
             kind: InvoiceKind.COST,
             issue_date: formData.issue_date,
             due_date: formData.issue_date,
@@ -431,6 +435,10 @@ const InvoiceForm = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div>
+                  <label htmlFor="external_number" className={labelClass}>Nr faktury (z dokumentu)</label>
+                  <input type="text" id="external_number" name="external_number" value={formData.external_number} onChange={handleChange} className={fieldClass} placeholder="np. FV 123/2026" />
+                </div>
                 <div>
                   <label htmlFor="issue_date" className={labelClass}>{t('issueDate')} *</label>
                   <input type="date" id="issue_date" name="issue_date" value={formData.issue_date} onChange={handleChange} required className={fieldClass} />

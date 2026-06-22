@@ -11,6 +11,7 @@ interface CreateInvoiceDto {
   client_id?: string;
   project_id?: string;
   kind?: InvoiceKind;
+  external_number?: string;
   issue_date: Date;
   sale_date?: Date;
   due_date: Date;
@@ -24,6 +25,7 @@ interface CreateInvoiceDto {
 interface UpdateInvoiceDto {
   client_id?: string;
   project_id?: string;
+  external_number?: string;
   issue_date?: Date;
   sale_date?: Date;
   due_date?: Date;
@@ -174,6 +176,7 @@ export class InvoiceService {
 
     const invoice = this.invoiceRepository.create({
       invoice_number,
+      external_number: data.external_number,
       kind,
       client_id: data.client_id || undefined,
       project_id: data.project_id,

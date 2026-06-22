@@ -193,6 +193,11 @@ const InvoiceDetail = () => {
                 <h1 className="truncate text-2xl font-semibold text-gray-950 dark:text-white">
                   {invoice.invoice_number}
                 </h1>
+                {invoice.external_number && (
+                  <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Nr faktury: {invoice.external_number}
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {t('createdOn', { date: formatDate(invoice.created_at) })}
                 </p>
