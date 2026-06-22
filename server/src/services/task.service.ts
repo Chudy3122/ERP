@@ -4,6 +4,7 @@ import { TaskAttachment } from '../models/TaskAttachment.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
 import { deleteFile } from '../config/multer';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 import { Between, In } from 'typeorm';
 
 interface CreateTaskDto {
@@ -398,13 +399,14 @@ export class TaskService {
     const attachments: TaskAttachment[] = [];
 
     for (const file of files) {
+      const url = await uploadAttachmentToCloudinary(file);
       const attachment = this.taskAttachmentRepository.create({
         task_id: taskId,
         file_name: file.filename,
         original_name: file.originalname,
         file_type: file.mimetype,
         file_size: file.size,
-        file_url: `/uploads/attachments/${file.filename}`,
+        file_url: url,
         uploaded_by: userId,
       });
 

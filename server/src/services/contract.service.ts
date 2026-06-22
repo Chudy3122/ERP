@@ -6,6 +6,7 @@ import { Client } from '../models/Client.model';
 import notificationService from './notification.service';
 import activityService from './activity.service';
 import { NotificationType } from '../models/Notification.model';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 
 interface ContractFilters {
   status?: ContractStatus;
@@ -373,13 +374,14 @@ class ContractService {
   ): Promise<ContractAttachment> {
     const contract = await this.getContractById(contractId);
 
+    const url = await uploadAttachmentToCloudinary(file);
     const attachment = this.attachmentRepository.create({
       contract_id: contractId,
       file_name: file.filename,
       original_name: file.originalname,
       file_type: file.mimetype,
       file_size: file.size,
-      file_url: `/uploads/contracts/${file.filename}`,
+      file_url: url,
       uploaded_by: userId,
     });
 

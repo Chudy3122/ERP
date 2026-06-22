@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { Attachment } from '../models/Attachment.model';
 import { Message } from '../models/Message.model';
 import { deleteFile } from '../config/multer';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 
 export class FileService {
   private attachmentRepository: Repository<Attachment>;
@@ -21,17 +22,18 @@ export class FileService {
     messageId: string,
     userId: string
   ): Promise<Attachment[]> {
-    const attachments = files.map((file) => {
+    const attachments = await Promise.all(files.map(async (file) => {
+      const url = await uploadAttachmentToCloudinary(file);
       return this.attachmentRepository.create({
         message_id: messageId,
         file_name: file.originalname,
         file_type: file.mimetype,
         file_size: file.size,
         storage_key: file.filename,
-        file_url: `/uploads/attachments/${file.filename}`,
+        file_url: url,
         uploaded_by: userId,
       });
-    });
+    }));
 
     return await this.attachmentRepository.save(attachments);
   }

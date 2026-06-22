@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import procedureService from '../services/procedure.service';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 
 export class ProcedureController {
   async getAll(req: Request, res: Response): Promise<void> {
@@ -72,11 +73,11 @@ export class ProcedureController {
         res.status(400).json({ message: 'Brak plików' });
         return;
       }
-      const mapped = files.map((f) => ({
+      const mapped = await Promise.all(files.map(async (f) => ({
         name: f.originalname,
-        url: `/uploads/attachments/${f.filename}`,
+        url: await uploadAttachmentToCloudinary(f),
         size: f.size,
-      }));
+      })));
       const procedure = await procedureService.addAttachments(req.params.id, mapped);
       if (!procedure) {
         res.status(404).json({ message: 'Procedura nie znaleziona' });

@@ -7,7 +7,7 @@ import { cloudinary } from '../config/cloudinary';
  * to Cloudinary to survive. resource_type 'auto' handles images, PDFs, docs, etc.
  * The local temp file is removed afterwards.
  */
-export async function uploadAttachmentToCloudinary(file: Express.Multer.File): Promise<string> {
+export async function uploadAttachmentToCloudinary(file: { path: string }): Promise<string> {
   try {
     const result = await cloudinary.uploader.upload(file.path, {
       folder: 'erp-attachments',

@@ -55,7 +55,6 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   const { t } = useTranslation();
   const { user } = useAuth();
   const isOwnMessage = message.sender_id === user?.id;
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -260,14 +259,14 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                 {isImage(attachment.file_type) ? (
                   // Image preview
                   <a
-                    href={`${API_BASE_URL}${attachment.file_url}`}
+                    href={getFileUrl(attachment.file_url) || ''}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block hover:opacity-90 transition-opacity"
                   >
                     <div className="relative rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md bg-gray-50 dark:bg-gray-800">
                       <img
-                        src={`${API_BASE_URL}${attachment.file_url}`}
+                        src={getFileUrl(attachment.file_url) || ''}
                         alt={attachment.file_name}
                         className="w-full max-h-96 object-contain"
                         loading="lazy"
@@ -278,7 +277,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                 ) : (
                   // File download card
                   <a
-                    href={`${API_BASE_URL}${attachment.file_url}`}
+                    href={getFileUrl(attachment.file_url) || ''}
                     download={attachment.file_name}
                     className={`flex items-center gap-3 p-3 rounded-md border ${
                       isOwnMessage

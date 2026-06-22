@@ -6,6 +6,7 @@ import { User, UserRole } from '../models/User.model';
 import activityService from './activity.service';
 import notificationService from './notification.service';
 import { deleteFile } from '../config/multer';
+import { uploadAttachmentToCloudinary } from '../utils/uploadAttachment';
 
 interface CreateTicketDto {
   title: string;
@@ -416,13 +417,14 @@ export class TicketService {
     const attachments: TicketAttachment[] = [];
 
     for (const file of files) {
+      const url = await uploadAttachmentToCloudinary(file);
       const attachment = this.ticketAttachmentRepository.create({
         ticket_id: ticketId,
         file_name: file.filename,
         original_name: file.originalname,
         file_type: file.mimetype,
         file_size: file.size,
-        file_url: `/uploads/attachments/${file.filename}`,
+        file_url: url,
         uploaded_by: userId,
       });
 
