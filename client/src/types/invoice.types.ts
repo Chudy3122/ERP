@@ -35,6 +35,7 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   invoice_number: string;
+  company?: string | null;
   status: InvoiceStatus;
   kind: InvoiceKind;
   client_id: string;
@@ -82,6 +83,7 @@ export interface CreateInvoiceRequest {
   project_id?: string;
   kind?: InvoiceKind;
   invoice_number?: string;
+  company?: string;
   issue_date: string;
   sale_date?: string;
   due_date: string;
@@ -96,6 +98,7 @@ export interface UpdateInvoiceRequest {
   client_id?: string;
   project_id?: string;
   invoice_number?: string;
+  company?: string;
   issue_date?: string;
   sale_date?: string;
   due_date?: string;

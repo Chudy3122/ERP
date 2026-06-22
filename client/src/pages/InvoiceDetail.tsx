@@ -201,6 +201,11 @@ const InvoiceDetail = () => {
                 <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
                 {statusConfig.label}
               </span>
+              {invoice.company && (
+                <span className="inline-flex items-center rounded-full bg-[#F7941D]/10 px-3 py-1 text-sm font-semibold text-[#b76612] dark:bg-[#F7941D]/15 dark:text-orange-200">
+                  {invoice.company}
+                </span>
+              )}
             </div>
           </div>
         </div>

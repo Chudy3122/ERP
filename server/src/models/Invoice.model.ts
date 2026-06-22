@@ -39,6 +39,10 @@ export class Invoice extends BaseEntity {
   @Column({ type: 'varchar', length: 10, default: InvoiceKind.INCOME })
   kind: InvoiceKind;
 
+  // Which of our companies the invoice concerns (Marsoft, ITComplete, ...)
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  company: string | null;
+
   @Column({
     type: 'enum',
     enum: InvoiceStatus,

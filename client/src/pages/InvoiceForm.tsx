@@ -27,6 +27,14 @@ import { Project } from '../types/project.types';
 const VAT_RATES = [0, 5, 8, 23];
 // Cost-invoice VAT choices (gross -> net+vat); 'zw' = zwolniony (0%)
 const COST_VAT_CHOICES = ['23', '8', '5', '0', 'zw'];
+// Our companies the invoice can be assigned to
+const COMPANIES = [
+  'Marsoft',
+  'Centrum Transformacji Biznesowej',
+  'Polskie Towarzystwo Mieszkaniowe',
+  'ITComplete',
+  'Fundacja Zarządzania i Innowacji',
+];
 const UNITS = ['szt.', 'godz.', 'usł.', 'kg', 'mb', 'kpl.'];
 
 interface InvoiceItemForm extends CreateInvoiceItemRequest {
@@ -50,6 +58,7 @@ const InvoiceForm = () => {
     project_id: '',
     kind: InvoiceKind.INCOME,
     invoice_number: '',
+    company: '',
     issue_date: new Date().toISOString().split('T')[0],
     sale_date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -122,6 +131,7 @@ const InvoiceForm = () => {
         project_id: invoice.project_id || '',
         kind: invoice.kind || InvoiceKind.INCOME,
         invoice_number: invoice.invoice_number || '',
+        company: invoice.company || '',
         issue_date: invoice.issue_date.split('T')[0],
         sale_date: invoice.sale_date ? invoice.sale_date.split('T')[0] : '',
         due_date: invoice.due_date.split('T')[0],
@@ -185,6 +195,8 @@ const InvoiceForm = () => {
     e.preventDefault();
     setError('');
 
+    if (!formData.company) { setError('Wybierz firmę, której dotyczy faktura.'); return; }
+
     if (isCost) {
       const gross = parseFloat(grossInput);
       if (!formData.issue_date) { setError('Podaj datę wystawienia faktury.'); return; }
@@ -219,6 +231,7 @@ const InvoiceForm = () => {
             client_id: formData.client_id || undefined,
             project_id: formData.project_id || undefined,
             invoice_number: formData.invoice_number?.trim() || undefined,
+            company: formData.company || undefined,
             issue_date: formData.issue_date,
             due_date: formData.issue_date,
             notes: formData.notes,
@@ -228,6 +241,7 @@ const InvoiceForm = () => {
             client_id: formData.client_id || undefined,
             project_id: formData.project_id || undefined,
             invoice_number: formData.invoice_number?.trim() || undefined,
+            company: formData.company || undefined,
             kind: InvoiceKind.COST,
             issue_date: formData.issue_date,
             due_date: formData.issue_date,
@@ -419,6 +433,27 @@ const InvoiceForm = () => {
             {formData.kind === InvoiceKind.COST && (
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Faktura kosztowa — koszt, który Ty masz opłacić. Kontrahent = dostawca.</p>
             )}
+          </section>
+
+          {/* Company selector */}
+          <section className={sectionClass}>
+            <label className={labelClass}>Firma, której dotyczy faktura *</label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              {COMPANIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, company: c }))}
+                  className={`rounded-lg border-2 px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                    formData.company === c
+                      ? 'border-[#F7941D] bg-[#F7941D]/10 text-[#b76612] dark:text-orange-200'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </section>
 
           {/* Cost invoice — simplified entry */}
