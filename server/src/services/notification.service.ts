@@ -381,6 +381,31 @@ class NotificationService {
   }
 
   /**
+   * Notify the boss about a new entry added to the boss calendar
+   */
+  async notifyBossCalendarEntry(
+    userId: string,
+    title: string,
+    dateLabel: string,
+    timeLabel: string,
+    entryId: string,
+    creatorName: string,
+    creatorId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      type: NotificationType.BOSS_CALENDAR_NEW,
+      title: 'Nowy wpis w kalendarzu',
+      message: `${creatorName} dodał wpis "${title}" (${dateLabel}, ${timeLabel})`,
+      actionUrl: '/boss-calendar',
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: creatorId,
+      relatedEntityType: 'boss_calendar',
+      relatedEntityId: entryId,
+    });
+  }
+
+  /**
    * Notify an admin about a newly created ticket (zgłoszenie)
    */
   async notifyNewTicket(

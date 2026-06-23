@@ -1,6 +1,8 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { BossCalendar, BossCalendarEntryType } from '../models/BossCalendar.model';
+import { User, UserRole } from '../models/User.model';
+import notificationService from './notification.service';
 
 interface CreateEntryDto {
   date: string;
@@ -73,5 +75,34 @@ export class BossCalendarService {
   async delete(id: string): Promise<boolean> {
     const result = await this.repo.delete(id);
     return (result.affected ?? 0) > 0;
+  }
+
+  /**
+   * Notify the boss(es) about a newly added calendar entry.
+   * The creator (if they are a boss) is not notified about their own entry.
+   */
+  async notifyNewEntry(entry: BossCalendar, creatorId: string): Promise<void> {
+    const userRepo = AppDataSource.getRepository(User);
+    const bosses = await userRepo.find({ where: { role: UserRole.SZEF, is_active: true } });
+    if (bosses.length === 0) return;
+
+    const creator = await userRepo.findOne({ where: { id: creatorId } });
+    const creatorName = creator ? `${creator.first_name} ${creator.last_name}` : 'Ktoś';
+    const dateLabel =
+      entry.end_date && entry.end_date !== entry.date ? `${entry.date} – ${entry.end_date}` : entry.date;
+    const timeLabel = `${entry.start_time}–${entry.end_time}`;
+
+    for (const boss of bosses) {
+      if (boss.id === creatorId) continue;
+      await notificationService.notifyBossCalendarEntry(
+        boss.id,
+        entry.title,
+        dateLabel,
+        timeLabel,
+        entry.id,
+        creatorName,
+        creatorId,
+      );
+    }
   }
 }

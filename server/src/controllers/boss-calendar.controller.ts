@@ -22,6 +22,8 @@ class BossCalendarController {
     try {
       const userId = req.user!.userId;
       const entry = await this.service.create({ ...req.body, created_by: userId });
+      // Notify the boss about the new entry (don't fail creation if this errors)
+      this.service.notifyNewEntry(entry, userId).catch(() => undefined);
       res.status(201).json(entry);
     } catch (error) {
       res.status(500).json({ message: 'Błąd podczas tworzenia wpisu' });
