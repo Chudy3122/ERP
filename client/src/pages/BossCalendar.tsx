@@ -262,6 +262,10 @@ export default function BossCalendar() {
       toast.warning('Tytuł jest wymagany');
       return;
     }
+    if (!form.description?.trim()) {
+      toast.warning('Opis jest wymagany - wskaż temat spotkania');
+      return;
+    }
     if (!form.date || !form.start_time || !form.end_time) {
       toast.warning('Uzupełnij datę i godziny');
       return;
@@ -965,13 +969,13 @@ export default function BossCalendar() {
 
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <AlignLeft className="h-3.5 w-3.5" /> Opis
+                  <AlignLeft className="h-3.5 w-3.5" /> Opis * - wskaż temat spotkania
                 </label>
                 <textarea
                   value={form.description ?? ''}
                   onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                   rows={2}
-                  placeholder="Dodatkowe informacje..."
+                  placeholder="Np. temat spotkania, cel rozmowy albo najważniejsze ustalenia"
                   className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>

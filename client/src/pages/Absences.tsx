@@ -523,6 +523,20 @@ const Absences = () => {
     }
   };
 
+  const refreshLeaveViews = async () => {
+    await loadData();
+
+    if (canViewAllAbsences) {
+      timeApi.getAllLeaveRequests()
+        .then(setAllRequests)
+        .catch(() => setAllRequests([]));
+    }
+
+    if (activeTab === 'calendar') {
+      await loadCalendar();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -575,7 +589,7 @@ const Absences = () => {
           setSelectedLeaveDates(failedDates);
           if (createdCount > 0) {
             toast.error(`Utworzono ${createdCount} wniosków. Nie udało się zapisać ${failedDates.length}.`);
-            await loadData();
+            await refreshLeaveViews();
           } else {
             const firstError = results.find(result => result.status === 'rejected');
             const message = firstError?.status === 'rejected'
@@ -605,7 +619,7 @@ const Absences = () => {
       setSelectedLeaveDates([]);
       setFormData({ leave_type: 'vacation', start_date: '', end_date: '', start_time: '', end_time: '', reason: '' });
       setFormUserId('');
-      await loadData();
+      await refreshLeaveViews();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się utworzyć wniosku');
     } finally {
@@ -672,7 +686,7 @@ const Absences = () => {
     try {
       await timeApi.approveLeaveRequest(requestId);
       toast.success('Wniosek zatwierdzony');
-      loadData();
+      refreshLeaveViews();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się zatwierdzić wniosku');
     }
@@ -682,7 +696,7 @@ const Absences = () => {
     try {
       await timeApi.rejectLeaveRequest(requestId);
       toast.success('Wniosek odrzucony');
-      loadData();
+      refreshLeaveViews();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się odrzucić wniosku');
     }
@@ -692,7 +706,7 @@ const Absences = () => {
     try {
       await timeApi.revertLeaveRequest(requestId);
       toast.success('Cofnięto do oczekujących');
-      loadData();
+      refreshLeaveViews();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się cofnąć wniosku');
     }
@@ -703,7 +717,7 @@ const Absences = () => {
     try {
       await timeApi.adminCancelLeaveRequest(cancelId);
       toast.success('Wniosek anulowany');
-      loadData();
+      refreshLeaveViews();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Nie udało się anulować wniosku');
     } finally {
