@@ -46,6 +46,7 @@ interface AttendanceData {
 interface AttendanceLeaveInfo {
   label: string;
   type: LeaveType;
+  status: string;
 }
 type AttendanceRange = 'week' | '14' | '30';
 type HistoryDateFilter = 'all' | 'week' | 'month';
@@ -680,8 +681,12 @@ export default function WorkTime() {
         timeApi.getAllLeaveRequests().catch(() => timeApi.getManageableLeaveRequests()).catch(() => []),
       ]);
       setAttendance(data);
+      // Show approved AND pending absences (mirrors the team calendar in Nieobecności)
       setAttendanceLeaveRequests(
-        leaveRequests.filter(request => request.status === LeaveStatus.APPROVED)
+        leaveRequests.filter(
+          request =>
+            request.status === LeaveStatus.APPROVED || request.status === LeaveStatus.PENDING
+        )
       );
     } catch {
       toast.error('Błąd ładowania frekwencji');
@@ -800,18 +805,21 @@ export default function WorkTime() {
     employeeId: string,
     date: string
   ): AttendanceLeaveInfo | null => {
-    const leave = attendanceLeaveRequests.find(request => {
+    const matches = attendanceLeaveRequests.filter(request => {
       if (request.user_id !== employeeId) return false;
 
       const startDate = getDateKey(request.start_date);
       const endDate = getDateKey(request.end_date);
       return date >= startDate && date <= endDate;
     });
+    // Prefer an approved leave over a pending one on the same day
+    const leave = matches.find(r => r.status === LeaveStatus.APPROVED) || matches[0];
 
     return leave
       ? {
           label: getAttendanceLeaveLabel(leave.leave_type),
           type: leave.leave_type,
+          status: leave.status,
         }
       : null;
   };
@@ -1667,10 +1675,14 @@ export default function WorkTime() {
                                   </div>
                                 </div>
                               ) : leaveInfo ? (
-                                <span className="inline-flex min-w-[96px] flex-col items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-semibold text-violet-700 shadow-sm dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">
+                                <span className={`inline-flex min-w-[96px] flex-col items-center justify-center rounded-lg border px-2 py-1.5 text-xs font-semibold shadow-sm ${
+                                  leaveInfo.status === LeaveStatus.PENDING
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
+                                    : 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300'
+                                }`}>
                                   <span>{leaveInfo.label}</span>
                                   <span className="mt-0.5 text-[10px] font-medium opacity-70">
-                                    Nieobecność
+                                    {leaveInfo.status === LeaveStatus.PENDING ? 'oczekuje' : 'Nieobecność'}
                                   </span>
                                 </span>
                               ) : (
