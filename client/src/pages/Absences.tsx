@@ -8,7 +8,7 @@ import {
   X,
   Clock,
   Home,
-  Umbrella,
+  Plane,
   Heart,
   Loader2,
   MoreHorizontal,
@@ -67,7 +67,7 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
   {
     vacation: {
       label: 'Urlop wypoczynkowy',
-      icon: <Umbrella className="w-4 h-4" />,
+      icon: <Plane className="w-4 h-4" />,
       color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/30',
     },
     personal: {
@@ -190,6 +190,8 @@ const Absences = () => {
   const [calendarDays, setCalendarDays] = useState(7);
   const [showCalendarWeekends, setShowCalendarWeekends] = useState(true);
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
+  // All team leave requests (approved + pending) for the calendar — visible to everyone
+  const [calendarLeaves, setCalendarLeaves] = useState<LeaveRequest[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [overviewRows, setOverviewRows] = useState<LeaveOverviewRow[]>([]);
   const [managementSearch, setManagementSearch] = useState('');
@@ -387,10 +389,26 @@ const Absences = () => {
       const end = new Date(calendarDate);
       end.setDate(end.getDate() + calendarDays - 1);
       end.setHours(23, 59, 59, 999);
-      const data = await calendarApi.getTeamAvailability(start.toISOString(), end.toISOString());
+      const [data, events] = await Promise.all([
+        calendarApi.getTeamAvailability(start.toISOString(), end.toISOString()),
+        calendarApi.getTeamCalendarEvents(start.toISOString(), end.toISOString()),
+      ]);
       setAvailability(data);
+      // Map team leave events (approved + pending) to LeaveRequest shape for the overlay
+      const leaves = events
+        .filter(e => e.type === 'leave')
+        .map(e => ({
+          id: e.id,
+          user_id: e.userId,
+          start_date: e.start,
+          end_date: e.end || e.start,
+          leave_type: e.details?.leaveType,
+          status: e.status,
+        })) as unknown as LeaveRequest[];
+      setCalendarLeaves(leaves);
     } catch {
       setAvailability([]);
+      setCalendarLeaves([]);
     } finally {
       setCalendarLoading(false);
     }
@@ -411,7 +429,7 @@ const Absences = () => {
       : s === 'remote'
         ? <Home className="h-4 w-4" />
         : s === 'on_leave'
-          ? <Umbrella className="h-4 w-4" />
+          ? <Plane className="h-4 w-4" />
           : <X className="h-4 w-4" />;
   const calStatusText = (s: string) =>
     s === 'working' ? 'Pracuje' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Brak';
@@ -438,11 +456,12 @@ const Absences = () => {
     return 'text-gray-500 dark:text-gray-400';
   };
 
+  // Everyone sees the whole team's leaves in the calendar — including unapproved
+  // (pending) ones, just like admins. Own requests are merged in for completeness.
   const calendarLeaveRequests = Array.from(
     new Map(
       [
-        ...(canViewAllAbsences ? allRequests : []),
-        ...(canReviewLeave ? pendingRequests : []),
+        ...calendarLeaves,
         ...leaveRequests,
       ].map(request => [request.id, request])
     ).values()
