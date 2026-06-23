@@ -7,11 +7,15 @@ import { cloudinary } from '../config/cloudinary';
  * to Cloudinary to survive. resource_type 'auto' handles images, PDFs, docs, etc.
  * The local temp file is removed afterwards.
  */
-export async function uploadAttachmentToCloudinary(file: { path: string }): Promise<string> {
+export async function uploadAttachmentToCloudinary(file: { path: string; mimetype?: string }): Promise<string> {
+  // Images go as 'image' (preview/transform); everything else (PDF, DOCX, XLSX...)
+  // as 'raw'. Cloudinary blocks PDF delivery under /image/upload by default, so a
+  // PDF uploaded as an image returns "Nie udało się wczytać dokumentu PDF".
+  const isImage = (file.mimetype || '').startsWith('image/');
   try {
     const result = await cloudinary.uploader.upload(file.path, {
       folder: 'erp-attachments',
-      resource_type: 'auto',
+      resource_type: isImage ? 'image' : 'raw',
       use_filename: true,
       unique_filename: true,
     });
