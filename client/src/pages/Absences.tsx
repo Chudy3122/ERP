@@ -414,7 +414,7 @@ const Absences = () => {
           ? <Umbrella className="h-4 w-4" />
           : <X className="h-4 w-4" />;
   const calStatusText = (s: string) =>
-    s === 'working' ? 'Pracuje' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Nieobecny';
+    s === 'working' ? 'Pracuje' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Brak';
 
   const getCalendarRequestIcon = (request: LeaveRequest) => {
     const config = leaveTypeConfig[request.leave_type as LeaveType];
@@ -1850,7 +1850,7 @@ const Absences = () => {
                 ['working', 'Pracuje'],
                 ['remote', 'Praca zdalna'],
                 ['on_leave', 'Urlop'],
-                ['absent', 'Nieobecny'],
+                ['absent', 'Brak'],
               ].map(([s, label]) => (
                 <div key={s} className="flex items-center gap-1.5">
                   <span
