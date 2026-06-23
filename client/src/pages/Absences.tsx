@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
@@ -34,6 +34,25 @@ type LeaveType =
 type RequestDateField = 'submitted' | 'absence';
 type AbsenceTab = 'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report';
 type LeaveDateMode = 'range' | 'multiple';
+
+function getDateKey(value: string | Date) {
+  if (typeof value === 'string') {
+    const dateMatch = value.match(/^\d{4}-\d{2}-\d{2}/);
+    if (dateMatch) return dateMatch[0];
+  }
+
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getMondayOfWeek(value: Date) {
+  const date = new Date(value);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
 
 const ABSENCES_ACTIVE_TAB_KEY = 'erp:absences:active-tab';
 const absenceTabs: AbsenceTab[] = ['my', 'pending', 'calendar', 'management', 'all', 'report'];
@@ -121,6 +140,8 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
 const Absences = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const calendarTopScrollRef = useRef<HTMLDivElement | null>(null);
+  const calendarTableScrollRef = useRef<HTMLDivElement | null>(null);
   const canManageLeavePlans = ['admin', 'kadry'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
   const canViewAllAbsences = ['admin', 'kadry'].includes(user?.role || '');
@@ -165,8 +186,9 @@ const Absences = () => {
   const [requestDateTo, setRequestDateTo] = useState('');
 
   // Calendar tab state
-  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarDate, setCalendarDate] = useState(() => getMondayOfWeek(new Date()));
   const [calendarDays, setCalendarDays] = useState(7);
+  const [showCalendarWeekends, setShowCalendarWeekends] = useState(true);
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [overviewRows, setOverviewRows] = useState<LeaveOverviewRow[]>([]);
@@ -224,7 +246,7 @@ const Absences = () => {
   }, [activeTab, canManageLeavePlans]);
 
   useEffect(() => {
-    if (activeTab === 'all' && canViewAllAbsences) {
+    if ((activeTab === 'all' || activeTab === 'calendar') && canViewAllAbsences) {
       setAllLoading(true);
       timeApi.getAllLeaveRequests()
         .then(setAllRequests)
@@ -383,12 +405,102 @@ const Absences = () => {
           ? 'bg-amber-100 text-amber-800 border-amber-200'
           : 'bg-gray-100 text-gray-500 border-gray-200';
 
-  const calStatusIcon = (s: string) => (s === 'working' ? '✓' : s === 'remote' ? '🏠' : s === 'on_leave' ? '✈' : '–');
+  const calStatusIcon = (s: string) =>
+    s === 'working'
+      ? <Clock className="h-4 w-4" />
+      : s === 'remote'
+        ? <Home className="h-4 w-4" />
+        : s === 'on_leave'
+          ? <Umbrella className="h-4 w-4" />
+          : <X className="h-4 w-4" />;
   const calStatusText = (s: string) =>
     s === 'working' ? 'Pracuje' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Nieobecny';
 
+  const getCalendarRequestIcon = (request: LeaveRequest) => {
+    const config = leaveTypeConfig[request.leave_type as LeaveType];
+    if (config?.icon) return config.icon;
+    return calStatusIcon(request.leave_type === 'remote_work' ? 'remote' : 'on_leave');
+  };
+
+  const getCalendarRequestStatusLabel = (status: string) => {
+    if (status === 'pending') return 'oczekuje';
+    if (status === 'approved') return 'zatwierdzone';
+    if (status === 'rejected') return 'odrzucone';
+    if (status === 'cancelled') return 'anulowane';
+    return status;
+  };
+
+  const getCalendarRequestStatusClass = (status: string) => {
+    if (status === 'pending') return 'text-yellow-700 dark:text-yellow-300';
+    if (status === 'approved') return 'text-emerald-700 dark:text-emerald-300';
+    if (status === 'rejected') return 'text-red-700 dark:text-red-300';
+    if (status === 'cancelled') return 'text-gray-500 dark:text-gray-400';
+    return 'text-gray-500 dark:text-gray-400';
+  };
+
+  const calendarLeaveRequests = Array.from(
+    new Map(
+      [
+        ...(canViewAllAbsences ? allRequests : []),
+        ...(canReviewLeave ? pendingRequests : []),
+        ...leaveRequests,
+      ].map(request => [request.id, request])
+    ).values()
+  );
+
+  const getCalendarLeaveRequest = (userId: string, date: string) =>
+    calendarLeaveRequests.find(request =>
+      request.user_id === userId &&
+      getDateKey(request.start_date) <= date &&
+      getDateKey(request.end_date) >= date &&
+      !(isWeekendDate(date) && request.leave_type !== 'remote_work')
+    );
+
   const formatCalDate = (d: string) =>
     new Date(d).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  const formatCalendarRange = () => {
+    const start = new Date(calendarDate);
+    const end = new Date(calendarDate);
+    end.setDate(end.getDate() + calendarDays - 1);
+
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const sameMonth = sameYear && start.getMonth() === end.getMonth();
+    const startFormat: Intl.DateTimeFormatOptions = sameMonth
+      ? { day: 'numeric' }
+      : sameYear
+        ? { day: 'numeric', month: 'long' }
+        : { day: 'numeric', month: 'long', year: 'numeric' };
+    const endFormat: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+
+    return `${start.toLocaleDateString('pl-PL', startFormat)} - ${end.toLocaleDateString('pl-PL', endFormat)}`;
+  };
+
+  const isWeekendDate = (date: string) => {
+    const day = new Date(`${getDateKey(date)}T00:00:00`).getDay();
+    return day === 0 || day === 6;
+  };
+
+  const visibleAvailability = showCalendarWeekends
+    ? availability
+    : availability.filter(day => !isWeekendDate(day.date));
+  const todayCalendarDate = getDateKey(new Date());
+  const calendarNeedsHorizontalScroll = visibleAvailability.length > 7;
+  const calendarScrollWidth = calendarNeedsHorizontalScroll
+    ? 180 + visibleAvailability.length * 112
+    : undefined;
+
+  const syncCalendarScroll = (source: 'top' | 'table') => {
+    const top = calendarTopScrollRef.current;
+    const table = calendarTableScrollRef.current;
+    if (!top || !table) return;
+
+    if (source === 'top') {
+      table.scrollLeft = top.scrollLeft;
+    } else {
+      top.scrollLeft = table.scrollLeft;
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -1672,10 +1784,10 @@ const Absences = () => {
                   Poprzedni tydzień
                 </button>
                 <button
-                  onClick={() => setCalendarDate(new Date())}
+                  onClick={() => setCalendarDate(getMondayOfWeek(new Date()))}
                   className="rounded-lg bg-[#F7941D] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#d87f16]"
                 >
-                  Dzisiaj
+                  Ten tydzień
                 </button>
                 <button
                   onClick={() => {
@@ -1688,38 +1800,57 @@ const Absences = () => {
                   Następny tydzień
                 </button>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Widok:</span>
                 <select
                   value={calendarDays}
                   onChange={e => setCalendarDays(Number(e.target.value))}
                   className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value={7}>7 dni</option>
-                  <option value={14}>14 dni</option>
-                  <option value={30}>30 dni</option>
+                  <option value={7}>1 tydzień</option>
+                  <option value={14}>2 tygodnie</option>
+                  <option value={30}>Miesiąc</option>
                 </select>
+                <button
+                  type="button"
+                  onClick={() => setShowCalendarWeekends(value => !value)}
+                  className={`h-10 rounded-lg px-3 text-sm font-semibold transition-colors ${
+                    showCalendarWeekends
+                      ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                      : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {showCalendarWeekends ? 'Ukryj weekend' : 'Pokaż weekend'}
+                </button>
               </div>
+            </div>
+
+            <div className="-mt-2 px-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+              Zakres: <span className="text-gray-700 dark:text-gray-200">{formatCalendarRange()}</span>
             </div>
 
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
               <span className="font-medium">Legenda:</span>
               {[
-                ['working', 'Pracuje', '✓'],
-                ['remote', 'Praca zdalna', '🏠'],
-                ['on_leave', 'Urlop', '✈'],
-                ['absent', 'Nieobecny', '–'],
-              ].map(([s, label, icon]) => (
+                ['working', 'Pracuje'],
+                ['remote', 'Praca zdalna'],
+                ['on_leave', 'Urlop'],
+                ['absent', 'Nieobecny'],
+              ].map(([s, label]) => (
                 <div key={s} className="flex items-center gap-1.5">
                   <span
-                    className={`w-7 h-7 rounded border flex items-center justify-center text-xs ${calStatusColor(s)}`}
+                    className={`w-7 h-7 rounded border flex items-center justify-center text-xs [&_svg]:h-4 [&_svg]:w-4 ${calStatusColor(s)}`}
                   >
-                    {icon}
+                    {calStatusIcon(s)}
                   </span>
                   {label}
                 </div>
               ))}
+              <span className="hidden h-5 w-px bg-gray-200 dark:bg-gray-700 sm:inline-block" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Notka w komórce pokazuje status wniosku: oczekuje, zatwierdzone, odrzucone albo anulowane.
+              </span>
             </div>
 
             {/* Table */}
@@ -1729,25 +1860,59 @@ const Absences = () => {
               </div>
             ) : (
               <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                {calendarNeedsHorizontalScroll && (
+                  <div
+                    ref={calendarTopScrollRef}
+                    onScroll={() => syncCalendarScroll('top')}
+                    className="overflow-x-auto border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/30"
+                  >
+                    <div style={{ width: calendarScrollWidth, height: 1 }} />
+                  </div>
+                )}
+                <div
+                  ref={calendarTableScrollRef}
+                  onScroll={() => syncCalendarScroll('table')}
+                  className="overflow-x-auto"
+                >
+                  <table
+                    className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                    style={calendarScrollWidth ? { minWidth: calendarScrollWidth } : undefined}
+                  >
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
                           Pracownik
                         </th>
-                        {availability.map(day => (
-                          <th
-                            key={day.date}
-                            className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[110px]"
-                          >
-                            {formatCalDate(day.date)}
-                          </th>
-                        ))}
+                        {visibleAvailability.map(day => {
+                          const isWeekend = isWeekendDate(day.date);
+                          const isToday = day.date === todayCalendarDate;
+
+                          return (
+                            <th
+                              key={day.date}
+                              className={`px-2 py-3 text-center text-xs font-medium uppercase tracking-wider ${
+                                isToday
+                                  ? 'min-w-[110px] border-x border-[#F7941D]/30 bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300'
+                                  : isWeekend
+                                  ? 'min-w-[64px] bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                                  : 'min-w-[110px] text-gray-500 dark:text-gray-300'
+                              }`}
+                            >
+                              <span className={isWeekend && !isToday ? 'block text-[10px]' : ''}>
+                                {formatCalDate(day.date)}
+                              </span>
+                              {isToday && (
+                                <span className="mt-1 block text-[10px] font-bold normal-case tracking-normal">
+                                  Dziś
+                                </span>
+                              )}
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                      {availability.length > 0 &&
+                      {visibleAvailability.length > 0 &&
                         availability[0].users.map((u, i) => (
                           <tr
                             key={u.id}
@@ -1760,27 +1925,82 @@ const Absences = () => {
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white sticky left-0 bg-inherit z-10">
                               {u.name}
                             </td>
-                            {availability.map(day => {
+                            {visibleAvailability.map(day => {
+                              const isWeekend = isWeekendDate(day.date);
+                              const isToday = day.date === todayCalendarDate;
                               const du = day.users.find(x => x.id === u.id);
                               if (!du)
                                 return (
                                   <td
                                     key={day.date}
-                                    className="px-3 py-3 text-center text-gray-400"
+                                    className={`text-center text-gray-400 ${
+                                      isToday
+                                        ? 'border-x border-[#F7941D]/20 bg-[#F7941D]/5 px-3 py-3 dark:bg-[#F7941D]/10'
+                                        : isWeekend
+                                          ? 'bg-gray-50 px-1 py-2 dark:bg-gray-900/30'
+                                          : 'px-3 py-3'
+                                    }`}
                                   >
                                     —
                                   </td>
                                 );
+                              const leaveRequest = getCalendarLeaveRequest(u.id, day.date);
+                              const displayStatus = leaveRequest
+                                ? leaveRequest.leave_type === 'remote_work'
+                                  ? 'remote'
+                                  : 'on_leave'
+                                : du.status;
+                              const displayLabel = leaveRequest
+                                ? leaveTypeConfig[leaveRequest.leave_type as LeaveType]?.label || calStatusText(displayStatus)
+                                : calStatusText(displayStatus);
+                              const details = leaveRequest
+                                ? `${displayLabel} - ${getCalendarRequestStatusLabel(leaveRequest.status)}`
+                                : du.details;
+                              const displayIcon = leaveRequest
+                                ? getCalendarRequestIcon(leaveRequest)
+                                : calStatusIcon(displayStatus);
+
                               return (
-                                <td key={day.date} className="px-3 py-3 text-center">
+                                <td
+                                  key={day.date}
+                                  className={`text-center ${
+                                    isToday
+                                      ? 'border-x border-[#F7941D]/20 bg-[#F7941D]/5 px-3 py-3 dark:bg-[#F7941D]/10'
+                                      : isWeekend
+                                        ? 'bg-gray-50 px-1 py-2 dark:bg-gray-900/30'
+                                        : 'px-3 py-3'
+                                  }`}
+                                >
                                   <div
-                                    className={`inline-flex h-14 min-w-[90px] flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-xs font-semibold ${calStatusColor(du.status)}`}
-                                    title={du.details}
+                                    className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-semibold ${
+                                      isToday
+                                        ? 'min-h-16 w-[104px] max-w-[104px] px-2 py-1.5 ring-1 ring-[#F7941D]/30'
+                                        : isWeekend
+                                        ? 'min-h-12 w-[48px] max-w-[48px] px-1 py-1 opacity-70'
+                                        : 'min-h-16 w-[104px] max-w-[104px] px-2 py-1.5'
+                                    } ${calStatusColor(displayStatus)}`}
+                                    title={details}
                                   >
-                                    <span>{calStatusIcon(du.status)}</span>
-                                    <span>{calStatusText(du.status)}</span>
-                                    {(du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (
-                                      <span className="text-[10px] font-normal leading-none opacity-90">{du.details}</span>
+                                    <span className="flex h-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4">
+                                      {displayIcon}
+                                    </span>
+                                    {!isWeekend && (
+                                      <span className="block w-full truncate text-center">
+                                        {displayLabel}
+                                      </span>
+                                    )}
+                                    {leaveRequest && !isWeekend && (
+                                      <span className={`block w-full truncate text-center text-[10px] font-semibold leading-none ${getCalendarRequestStatusClass(leaveRequest.status)}`}>
+                                        {getCalendarRequestStatusLabel(leaveRequest.status)}
+                                      </span>
+                                    )}
+                                    {leaveRequest && isWeekend && (
+                                      <span className={`block w-full truncate text-center text-[9px] font-semibold leading-none ${getCalendarRequestStatusClass(leaveRequest.status)}`}>
+                                        {getCalendarRequestStatusLabel(leaveRequest.status)}
+                                      </span>
+                                    )}
+                                    {!isWeekend && !leaveRequest && (du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (
+                                      <span className="block w-full truncate text-center text-[10px] font-normal leading-none opacity-90">{du.details}</span>
                                     )}
                                   </div>
                                 </td>
@@ -1788,7 +2008,7 @@ const Absences = () => {
                             })}
                           </tr>
                         ))}
-                      {availability.length === 0 && (
+                      {visibleAvailability.length === 0 && (
                         <tr>
                           <td colSpan={99} className="text-center py-12 text-gray-400 text-sm">
                             Brak danych

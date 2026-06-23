@@ -1573,7 +1573,7 @@ export default function WorkTime() {
 
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Legenda:</span>
-            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-400" /> Urlop / nieobecnosc</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-400" /> Urlop / Nieobecność</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#F7941D]" /> Aktualnie w pracy</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Zakończona zmiana</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Brak wpisu</div>
@@ -1670,7 +1670,7 @@ export default function WorkTime() {
                                 <span className="inline-flex min-w-[96px] flex-col items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-semibold text-violet-700 shadow-sm dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">
                                   <span>{leaveInfo.label}</span>
                                   <span className="mt-0.5 text-[10px] font-medium opacity-70">
-                                    Nieobecnosc
+                                    Nieobecność
                                   </span>
                                 </span>
                               ) : (
