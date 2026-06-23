@@ -437,6 +437,11 @@ const Invoices = () => {
                                 <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                                   {formatDate(invoice.issue_date)}
                                 </p>
+                                {invoice.company && (
+                                  <span className="mt-1 inline-flex items-center rounded-full bg-[#F7941D]/10 px-2 py-0.5 text-[11px] font-semibold text-[#b76612] dark:bg-[#F7941D]/15 dark:text-orange-200">
+                                    {invoice.company}
+                                  </span>
+                                )}
                               </div>
                             </button>
                           </td>
