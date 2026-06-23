@@ -693,6 +693,13 @@
   dependencies:
     undici-types "~6.21.0"
 
+"@types/nodemailer@^8.0.1":
+  version "8.0.1"
+  resolved "https://registry.npmjs.org/@types/nodemailer/-/nodemailer-8.0.1.tgz"
+  integrity sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw==
+  dependencies:
+    "@types/node" "*"
+
 "@types/pdfkit@^0.17.4":
   version "0.17.4"
   resolved "https://registry.npmjs.org/@types/pdfkit/-/pdfkit-0.17.4.tgz"
@@ -1921,13 +1928,11 @@ engine.io@~6.6.0:
     express-rate-limit "^7.1.5"
     express-validator "^7.0.1"
     helmet "^7.1.0"
-    imapflow "^1.4.1"
     joi "^17.11.0"
     jsonwebtoken "^9.0.2"
-    mailparser "^3.9.10"
     mime-types "^3.0.2"
     multer "^1.4.5-lts.1"
-    nodemailer "^9.0.0"
+    nodemailer "^9.0.1"
     openai "^6.16.0"
     pdfkit "^0.17.2"
     pg "^8.11.3"
@@ -3490,6 +3495,11 @@ node-releases@^2.0.27:
   version "2.0.27"
   resolved "https://registry.npmjs.org/node-releases/-/node-releases-2.0.27.tgz"
   integrity sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==
+
+nodemailer@^9.0.1:
+  version "9.0.1"
+  resolved "https://registry.npmjs.org/nodemailer/-/nodemailer-9.0.1.tgz"
+  integrity sha512-Gwv8SQewT616ZM/URn0H54b8PWo/Wum7md3EW2aWy1lO27+WZCX+Xyak3J+NlmHUjDh5ME+uesJUDRbR3Ye8Bw==
 
 nodemon@^3.0.2:
   version "3.1.11"

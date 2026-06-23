@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { BossCalendar, BossCalendarEntryType } from '../models/BossCalendar.model';
 import { User, UserRole } from '../models/User.model';
 import notificationService from './notification.service';
+import { sendEmail } from '../utils/email';
 
 interface CreateEntryDto {
   date: string;
@@ -103,6 +104,30 @@ export class BossCalendarService {
         creatorName,
         creatorId,
       );
+
+      // Also e-mail the boss (no-op if SMTP isn't configured; never breaks creation)
+      if (boss.email) {
+        const lines = [
+          `${creatorName} dodał nowy wpis w kalendarzu szefa:`,
+          ``,
+          `• Tytuł: ${entry.title}`,
+          `• Termin: ${dateLabel}, ${timeLabel}`,
+          entry.location ? `• Miejsce: ${entry.location}` : '',
+          entry.description ? `\n${entry.description}` : '',
+        ].filter(Boolean);
+        sendEmail({
+          to: boss.email,
+          subject: `Nowy wpis w kalendarzu: ${entry.title}`,
+          text: lines.join('\n'),
+          html: `<p>${creatorName} dodał nowy wpis w kalendarzu szefa:</p>
+<ul>
+  <li><strong>Tytuł:</strong> ${entry.title}</li>
+  <li><strong>Termin:</strong> ${dateLabel}, ${timeLabel}</li>
+  ${entry.location ? `<li><strong>Miejsce:</strong> ${entry.location}</li>` : ''}
+</ul>
+${entry.description ? `<p>${entry.description}</p>` : ''}`,
+        }).catch((err) => console.error('[email] boss calendar notify failed:', err?.message || err));
+      }
     }
   }
 }
