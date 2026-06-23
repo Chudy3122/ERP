@@ -145,12 +145,15 @@ const Absences = () => {
   const canManageLeavePlans = ['admin', 'kadry'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
   const canViewAllAbsences = ['admin', 'kadry'].includes(user?.role || '');
+  // Merged "Wszystkie nieobecności" tab (view + approve/reject) — boss included
+  const canManageAbsences = ['admin', 'kadry', 'szef'].includes(user?.role || '');
   const activeTabStorageKey = `${ABSENCES_ACTIVE_TAB_KEY}:${user?.id || 'current-user'}`;
 
   const canOpenAbsenceTab = (tab: AbsenceTab) => {
-    if (tab === 'pending') return canReviewLeave;
+    if (tab === 'pending') return false; // merged into "Wszystkie nieobecności"
     if (tab === 'management') return canManageLeavePlans;
-    if (tab === 'all' || tab === 'report') return canViewAllAbsences;
+    if (tab === 'all') return canManageAbsences;
+    if (tab === 'report') return canViewAllAbsences;
     return true;
   };
 
@@ -248,14 +251,14 @@ const Absences = () => {
   }, [activeTab, canManageLeavePlans]);
 
   useEffect(() => {
-    if ((activeTab === 'all' || activeTab === 'calendar') && canViewAllAbsences) {
+    if (activeTab === 'all' && canManageAbsences) {
       setAllLoading(true);
       timeApi.getAllLeaveRequests()
         .then(setAllRequests)
         .catch(() => setAllRequests([]))
         .finally(() => setAllLoading(false));
     }
-  }, [activeTab, canViewAllAbsences]);
+  }, [activeTab, canManageAbsences]);
 
   useEffect(() => {
     if (canViewAllAbsences && directoryUsers.length === 0) {
@@ -895,13 +898,36 @@ const Absences = () => {
       .includes(normalizedManagementSearch);
   });
 
+  const allStatusCounts = allRequests.reduce(
+    (acc, r) => {
+      if (r.status in acc) acc[r.status as keyof typeof acc] += 1;
+      return acc;
+    },
+    { pending: 0, approved: 0, rejected: 0, cancelled: 0 }
+  );
+
   const allSearchNorm = allSearch.trim().toLowerCase();
   const filteredAllRequests = allRequests
     .filter(r => {
-      // Name filter — strictly by last name
+      // Search across everything: name, e-mail, type, reason, status, dates
       if (allSearchNorm) {
         const u = (r as any).user;
-        if (!(u?.last_name || '').toLowerCase().includes(allSearchNorm)) return false;
+        const typeLabel = leaveTypeConfig[r.leave_type as LeaveType]?.label || '';
+        const statusLabel = getStatusConfig(r.status).label;
+        const haystack = [
+          u?.first_name,
+          u?.last_name,
+          u?.email,
+          typeLabel,
+          r.reason,
+          statusLabel,
+          r.start_date?.slice(0, 10),
+          (r.end_date || '').slice(0, 10),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(allSearchNorm)) return false;
       }
       // Date-range overlap: absence [start..end] intersects [from..to]
       const start = r.start_date?.slice(0, 10);
@@ -995,25 +1021,6 @@ const Absences = () => {
               >
                 Moje wnioski
               </button>
-              {canReviewLeave && (
-                <button
-                  onClick={() => setActiveTab('pending')}
-                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                    activeTab === 'pending'
-                      ? 'bg-[#F7941D] text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Zarządzaj wnioskami
-                  {pendingRequests.filter(r => r.status === 'pending').length > 0 && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs ${activeTab === 'pending' ? 'bg-white/20 text-white' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}
-                    >
-                      {pendingRequests.filter(r => r.status === 'pending').length}
-                    </span>
-                  )}
-                </button>
-              )}
               <button
                 onClick={() => setActiveTab('calendar')}
                 className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
@@ -1025,7 +1032,7 @@ const Absences = () => {
                 <Users className="h-4 w-4" />
                 Kalendarz zespołu
               </button>
-              {canViewAllAbsences && (
+              {canManageAbsences && (
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
@@ -1486,13 +1493,13 @@ const Absences = () => {
         )}
 
         {/* All absences tab (admin / kadry) */}
-        {activeTab === 'all' && canViewAllAbsences && (
+        {activeTab === 'all' && canManageAbsences && (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wszystkie nieobecności</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Wnioski wszystkich pracowników. Filtruj po nazwisku i zakresie dat, sortuj po dacie.
+                  Wnioski wszystkich pracowników — przeglądaj, zatwierdzaj i odrzucaj. Szukaj po dowolnym polu, filtruj po dacie.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1502,7 +1509,7 @@ const Absences = () => {
                     type="search"
                     value={allSearch}
                     onChange={e => setAllSearch(e.target.value)}
-                    placeholder="Szukaj po nazwisku..."
+                    placeholder="Szukaj (nazwisko, e-mail, typ, status, powód)..."
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
@@ -1535,6 +1542,20 @@ const Absences = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3 border-b border-gray-100 p-4 dark:border-gray-700 sm:grid-cols-4">
+              {([
+                ['Oczekujące', allStatusCounts.pending, 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300'],
+                ['Zatwierdzone', allStatusCounts.approved, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'],
+                ['Odrzucone', allStatusCounts.rejected, 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'],
+                ['Anulowane', allStatusCounts.cancelled, 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'],
+              ] as [string, number, string][]).map(([label, count, cls]) => (
+                <div key={label} className={`rounded-xl px-4 py-3 ${cls}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
+                  <p className="mt-1 text-2xl font-bold">{count}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
@@ -1549,13 +1570,14 @@ const Absences = () => {
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dni</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Uzasadnienie</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Akcje</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-700 dark:bg-gray-800">
                   {allLoading ? (
-                    <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie…</td></tr>
+                    <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie…</td></tr>
                   ) : filteredAllRequests.length === 0 ? (
-                    <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Brak nieobecności.</td></tr>
+                    <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Brak nieobecności.</td></tr>
                   ) : (
                     filteredAllRequests.map(request => {
                       const u = (request as any).user;
@@ -1584,6 +1606,43 @@ const Absences = () => {
                           </td>
                           <td className="px-4 py-3 max-w-[260px] truncate text-sm text-gray-600 dark:text-gray-400" title={request.reason || ''}>
                             {request.reason || '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                            {request.status === 'pending' && (
+                              <div className="inline-flex gap-2">
+                                <button
+                                  onClick={() => handleApprove(request.id)}
+                                  className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                >
+                                  Zatwierdź
+                                </button>
+                                <button
+                                  onClick={() => handleReject(request.id)}
+                                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                                >
+                                  Odrzuć
+                                </button>
+                              </div>
+                            )}
+                            {(request.status === 'approved' || request.status === 'rejected') && (
+                              <div className="inline-flex gap-2">
+                                <button
+                                  onClick={() => handleRevert(request.id)}
+                                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                                >
+                                  Cofnij do oczekujących
+                                </button>
+                                <button
+                                  onClick={() => setCancelId(request.id)}
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+                                >
+                                  Anuluj
+                                </button>
+                              </div>
+                            )}
+                            {request.status === 'cancelled' && (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
                           </td>
                         </tr>
                       );
