@@ -51,6 +51,43 @@ const withInlineEmoji = (text: string): React.ReactNode[] => {
   return nodes;
 };
 
+// Turn URLs in text into clickable links; non-URL parts still get emoji handling.
+const URL_RE = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+const withLinks = (text: string, isOwnMessage: boolean): React.ReactNode[] => {
+  const nodes: React.ReactNode[] = [];
+  const re = new RegExp(URL_RE);
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const raw = match[0];
+    const start = match.index;
+    if (start > lastIndex) nodes.push(...withInlineEmoji(text.slice(lastIndex, start)));
+    // Trailing punctuation usually isn't part of the URL
+    let url = raw;
+    let trailing = '';
+    const tm = url.match(/[).,!?;:]+$/);
+    if (tm) { trailing = tm[0]; url = url.slice(0, -trailing.length); }
+    const href = url.startsWith('http') ? url : `https://${url}`;
+    nodes.push(
+      <a
+        key={`l${key++}`}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`underline break-all hover:opacity-80 ${isOwnMessage ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    if (trailing) nodes.push(trailing);
+    lastIndex = start + raw.length;
+  }
+  if (lastIndex < text.length) nodes.push(...withInlineEmoji(text.slice(lastIndex)));
+  return nodes;
+};
+
 const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = false }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -176,7 +213,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                 </a>
               );
             }
-            return <p key={idx} className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{withInlineEmoji(line)}</p>;
+            return <p key={idx} className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{withLinks(line, isOwnMessage)}</p>;
           })}
         </div>
       );
@@ -189,7 +226,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
       return <p className={`${sizeClass} leading-tight whitespace-pre-wrap break-words`}>{content}</p>;
     }
 
-    return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{withInlineEmoji(content)}</p>;
+    return <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{withLinks(content, isOwnMessage)}</p>;
   };
 
   if (message.message_type === 'system') {
