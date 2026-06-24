@@ -2697,6 +2697,11 @@ const ProjectDetail = () => {
                             {attachment.uploader &&
                               ` • ${attachment.uploader.first_name} ${attachment.uploader.last_name}`}
                           </p>
+                          {attachment.source === 'task' && (
+                            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+                              Z zadania{attachment.task_title ? `: ${attachment.task_title}` : ''}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -2708,18 +2713,20 @@ const ProjectDetail = () => {
                         >
                           <Download className="w-4 h-4" />
                         </a>
-                        <button
-                          onClick={() => setShowDeleteFileConfirm(attachment.id)}
-                          disabled={isDeletingFile === attachment.id}
-                          className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
-                          title="Usuń"
-                        >
-                          {isDeletingFile === attachment.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
+                        {attachment.source !== 'task' && (
+                          <button
+                            onClick={() => setShowDeleteFileConfirm(attachment.id)}
+                            disabled={isDeletingFile === attachment.id}
+                            className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
+                            title="Usuń"
+                          >
+                            {isDeletingFile === attachment.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

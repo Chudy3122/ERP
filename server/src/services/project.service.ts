@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/database';
 import { Project, ProjectStatus, ProjectPriority } from '../models/Project.model';
 import { ProjectMember, ProjectMemberRole } from '../models/ProjectMember.model';
 import { ProjectAttachment } from '../models/ProjectAttachment.model';
+import { TaskAttachment } from '../models/TaskAttachment.model';
 import { Task } from '../models/Task.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
@@ -40,6 +41,7 @@ export class ProjectService {
   private projectRepository = AppDataSource.getRepository(Project);
   private projectMemberRepository = AppDataSource.getRepository(ProjectMember);
   private projectAttachmentRepository = AppDataSource.getRepository(ProjectAttachment);
+  private taskAttachmentRepository = AppDataSource.getRepository(TaskAttachment);
   private taskRepository = AppDataSource.getRepository(Task);
   private userRepository = AppDataSource.getRepository(User);
 
@@ -557,12 +559,56 @@ export class ProjectService {
   /**
    * Get project attachments
    */
-  async getProjectAttachments(projectId: string): Promise<ProjectAttachment[]> {
-    return await this.projectAttachmentRepository.find({
+  async getProjectAttachments(projectId: string): Promise<any[]> {
+    // Project's own files
+    const projectAtts = await this.projectAttachmentRepository.find({
       where: { project_id: projectId },
       relations: ['uploader'],
       order: { created_at: 'DESC' },
     });
+
+    // Files attached to any task that belongs to this project — surfaced here too
+    const taskAtts = await this.taskAttachmentRepository
+      .createQueryBuilder('ta')
+      .leftJoinAndSelect('ta.uploader', 'uploader')
+      .leftJoin('ta.task', 'task')
+      .addSelect(['task.id', 'task.title'])
+      .where('task.project_id = :projectId', { projectId })
+      .getMany();
+
+    const projectItems = projectAtts.map((a) => ({
+      id: a.id,
+      project_id: a.project_id,
+      file_name: a.file_name,
+      original_name: a.original_name,
+      file_type: a.file_type,
+      file_size: Number(a.file_size),
+      file_url: a.file_url,
+      uploaded_by: a.uploaded_by,
+      uploader: a.uploader,
+      created_at: a.created_at,
+      source: 'project' as const,
+    }));
+
+    const taskItems = taskAtts.map((a) => ({
+      id: a.id,
+      project_id: projectId,
+      file_name: a.file_name,
+      original_name: a.original_name,
+      file_type: a.file_type,
+      file_size: Number(a.file_size),
+      file_url: a.file_url,
+      uploaded_by: a.uploaded_by,
+      uploader: a.uploader,
+      created_at: a.created_at,
+      source: 'task' as const,
+      task_id: a.task_id,
+      task_title: (a as any).task?.title || null,
+    }));
+
+    return [...projectItems, ...taskItems].sort(
+      (x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime()
+    );
   }
 
   /**

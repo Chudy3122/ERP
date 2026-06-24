@@ -133,6 +133,10 @@ export interface ProjectAttachment {
   uploaded_by?: string;
   uploader?: User;
   created_at: string;
+  // 'task' when the file actually lives on a task within the project
+  source?: 'project' | 'task';
+  task_id?: string;
+  task_title?: string | null;
 }
 
 export interface ProjectActivity {
