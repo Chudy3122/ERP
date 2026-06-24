@@ -1,6 +1,7 @@
 import { AppDataSource } from '../config/database';
 import { Task, TaskStatus, TaskPriority } from '../models/Task.model';
 import { TaskAttachment } from '../models/TaskAttachment.model';
+import { ProjectAttachment } from '../models/ProjectAttachment.model';
 import { User } from '../models/User.model';
 import activityService from './activity.service';
 import { deleteFile } from '../config/multer';
@@ -39,6 +40,7 @@ interface UpdateTaskDto {
 export class TaskService {
   private taskRepository = AppDataSource.getRepository(Task);
   private taskAttachmentRepository = AppDataSource.getRepository(TaskAttachment);
+  private projectAttachmentRepository = AppDataSource.getRepository(ProjectAttachment);
   private userRepository = AppDataSource.getRepository(User);
 
   /**
@@ -430,6 +432,58 @@ export class TaskService {
     }
 
     return attachments;
+  }
+
+  /**
+   * Link existing project files to a task (no re-upload — same Cloudinary file).
+   * Only files from the task's own project can be linked; already-linked files are skipped.
+   */
+  async linkProjectAttachments(
+    taskId: string,
+    attachmentIds: string[],
+    userId: string
+  ): Promise<TaskAttachment[]> {
+    const task = await this.getTaskById(taskId);
+    if (!attachmentIds || attachmentIds.length === 0) return [];
+
+    const projectFiles = await this.projectAttachmentRepository.find({
+      where: { id: In(attachmentIds), project_id: task.project_id },
+    });
+
+    // Skip files already linked to this task (same URL)
+    const existing = await this.taskAttachmentRepository.find({ where: { task_id: taskId } });
+    const existingUrls = new Set(existing.map((a) => a.file_url));
+
+    const created: TaskAttachment[] = [];
+    for (const pf of projectFiles) {
+      if (existingUrls.has(pf.file_url)) continue;
+      const attachment = this.taskAttachmentRepository.create({
+        task_id: taskId,
+        file_name: pf.file_name,
+        original_name: pf.original_name,
+        file_type: pf.file_type,
+        file_size: pf.file_size,
+        file_url: pf.file_url, // same stored file — a link, not a copy
+        uploaded_by: userId,
+      });
+      created.push(await this.taskAttachmentRepository.save(attachment));
+    }
+
+    if (created.length > 0) {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        await activityService.logActivity(
+          userId,
+          'linked_task_attachment',
+          'task',
+          taskId,
+          `${user.first_name} ${user.last_name} podpiął ${created.length} plik(ów) z projektu do zadania "${task.title}"`,
+          { file_count: created.length }
+        );
+      }
+    }
+
+    return created;
   }
 
   /**

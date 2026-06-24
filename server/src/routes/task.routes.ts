@@ -36,6 +36,7 @@ router.put('/:id/status', taskController.updateTaskStatus.bind(taskController));
 
 // Task attachments
 router.post('/:id/attachments', upload.array('files', 10), taskController.uploadAttachments.bind(taskController));
+router.post('/:id/attachments/link', taskController.linkAttachments.bind(taskController));
 router.get('/:id/attachments', taskController.getAttachments.bind(taskController));
 router.delete('/:id/attachments/:attachmentId', taskController.deleteAttachment.bind(taskController));
 

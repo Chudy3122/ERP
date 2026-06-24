@@ -80,6 +80,12 @@ export const getTaskAttachments = async (taskId: string): Promise<TaskAttachment
   return response.data;
 };
 
+// Link existing project files to a task (same stored file, no re-upload)
+export const linkProjectFilesToTask = async (taskId: string, attachmentIds: string[]): Promise<TaskAttachment[]> => {
+  const response = await client.post(`/tasks/${taskId}/attachments/link`, { attachmentIds });
+  return response.data;
+};
+
 export const deleteTaskAttachment = async (taskId: string, attachmentId: string): Promise<void> => {
   await client.delete(`/tasks/${taskId}/attachments/${attachmentId}`);
 };

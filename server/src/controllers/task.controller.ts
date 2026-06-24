@@ -235,6 +235,26 @@ export class TaskController {
   }
 
   /**
+   * Link existing project files to a task
+   * POST /api/tasks/:id/attachments/link  { attachmentIds: string[] }
+   */
+  async linkAttachments(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const attachmentIds: string[] = req.body?.attachmentIds || [];
+      if (!Array.isArray(attachmentIds) || attachmentIds.length === 0) {
+        res.status(400).json({ message: 'Brak plików do podpięcia' });
+        return;
+      }
+      const attachments = await taskService.linkProjectAttachments(id, attachmentIds, userId);
+      res.status(201).json(attachments);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  /**
    * Get task attachments
    * GET /api/tasks/:id/attachments
    */

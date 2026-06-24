@@ -590,21 +590,25 @@ export class ProjectService {
       source: 'project' as const,
     }));
 
-    const taskItems = taskAtts.map((a) => ({
-      id: a.id,
-      project_id: projectId,
-      file_name: a.file_name,
-      original_name: a.original_name,
-      file_type: a.file_type,
-      file_size: Number(a.file_size),
-      file_url: a.file_url,
-      uploaded_by: a.uploaded_by,
-      uploader: a.uploader,
-      created_at: a.created_at,
-      source: 'task' as const,
-      task_id: a.task_id,
-      task_title: (a as any).task?.title || null,
-    }));
+    // A file linked from the project into a task shares its URL — don't list it twice
+    const projectUrls = new Set(projectItems.map((p) => p.file_url));
+    const taskItems = taskAtts
+      .filter((a) => !projectUrls.has(a.file_url))
+      .map((a) => ({
+        id: a.id,
+        project_id: projectId,
+        file_name: a.file_name,
+        original_name: a.original_name,
+        file_type: a.file_type,
+        file_size: Number(a.file_size),
+        file_url: a.file_url,
+        uploaded_by: a.uploaded_by,
+        uploader: a.uploader,
+        created_at: a.created_at,
+        source: 'task' as const,
+        task_id: a.task_id,
+        task_title: (a as any).task?.title || null,
+      }));
 
     return [...projectItems, ...taskItems].sort(
       (x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime()

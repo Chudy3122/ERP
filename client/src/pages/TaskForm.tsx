@@ -28,7 +28,7 @@ import {
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
 import { Task, TaskAttachment, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority } from '../types/task.types';
-import { Project, ProjectMember } from '../types/project.types';
+import { Project, ProjectMember, ProjectAttachment } from '../types/project.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 
@@ -79,6 +79,13 @@ const TaskForm = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Link project files
+  const [showProjectFiles, setShowProjectFiles] = useState(false);
+  const [projectFiles, setProjectFiles] = useState<ProjectAttachment[]>([]);
+  const [loadingProjectFiles, setLoadingProjectFiles] = useState(false);
+  const [selectedProjectFileIds, setSelectedProjectFileIds] = useState<Set<string>>(new Set());
+  const [linkingFiles, setLinkingFiles] = useState(false);
 
 
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
@@ -413,6 +420,46 @@ const TaskForm = () => {
     } catch (error: any) {
       console.error('Failed to delete attachment:', error);
       setError(error.response?.data?.message || 'Nie udało się usunąć załącznika');
+    }
+  };
+
+  // ── Link existing project files to this task ──────────────────────────────
+  const openProjectFilesModal = async () => {
+    if (!formData.project_id) return;
+    setShowProjectFiles(true);
+    setLoadingProjectFiles(true);
+    setSelectedProjectFileIds(new Set());
+    try {
+      const all = await projectApi.getProjectAttachments(formData.project_id);
+      const linkedUrls = new Set(attachments.map(a => a.file_url));
+      // Only the project's own files, not already linked to this task
+      setProjectFiles(all.filter(f => f.source !== 'task' && !linkedUrls.has(f.file_url)));
+    } catch {
+      setProjectFiles([]);
+    } finally {
+      setLoadingProjectFiles(false);
+    }
+  };
+
+  const toggleProjectFile = (fileId: string) => {
+    setSelectedProjectFileIds(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId); else next.add(fileId);
+      return next;
+    });
+  };
+
+  const handleLinkProjectFiles = async () => {
+    if (!id || selectedProjectFileIds.size === 0) return;
+    try {
+      setLinkingFiles(true);
+      const linked = await taskApi.linkProjectFilesToTask(id, Array.from(selectedProjectFileIds));
+      setAttachments(prev => [...linked, ...prev]);
+      setShowProjectFiles(false);
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Nie udało się podpiąć plików');
+    } finally {
+      setLinkingFiles(false);
     }
   };
 
@@ -896,14 +943,26 @@ const TaskForm = () => {
                     </span>
                   )}
                 </h2>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Dodaj
-                </button>
+                <div className="flex items-center gap-2">
+                  {formData.project_id && (
+                    <button
+                      type="button"
+                      onClick={openProjectFilesModal}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      Z projektu
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Dodaj
+                  </button>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1242,6 +1301,61 @@ const TaskForm = () => {
                   'Usuń zadanie'
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pick existing project files to link to this task */}
+      {showProjectFiles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Pliki z projektu</h3>
+              <button type="button" onClick={() => setShowProjectFiles(false)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-5">
+              {loadingProjectFiles ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#F7941D]" /></div>
+              ) : projectFiles.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Brak plików projektu do podpięcia.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {projectFiles.map(f => (
+                    <li key={f.id}>
+                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/40">
+                        <input
+                          type="checkbox"
+                          checked={selectedProjectFileIds.has(f.id)}
+                          onChange={() => toggleProjectFile(f.id)}
+                          className="h-4 w-4 rounded border-gray-300 accent-[#F7941D]"
+                        />
+                        <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                        <span className="min-w-0 flex-1 truncate text-sm text-gray-800 dark:text-gray-200">{f.original_name}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Zaznaczone: {selectedProjectFileIds.size}</span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowProjectFiles(false)} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                  Anuluj
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLinkProjectFiles}
+                  disabled={selectedProjectFileIds.size === 0 || linkingFiles}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {linkingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                  Podepnij
+                </button>
+              </div>
             </div>
           </div>
         </div>
