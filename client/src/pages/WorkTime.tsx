@@ -126,6 +126,8 @@ function getAttendanceLeaveClass(type: LeaveType) {
     : 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300';
 }
 
+const WORKING_STATUS_CLASSES = 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300';
+
 function getCurrentWeekRange(weeks = 1) {
   const today = new Date();
   const start = new Date(today);
@@ -1653,8 +1655,8 @@ export default function WorkTime() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Dni w zakresie</p>
                 <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{attendanceDaysCount}</p>
               </div>
-              <div className="rounded-xl bg-orange-50 p-3 dark:bg-orange-900/10">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Aktualnie w pracy</p>
+              <div className="rounded-xl bg-yellow-50 p-3 dark:bg-yellow-900/10">
+                <p className="text-xs font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">Aktualnie w pracy</p>
                 <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{currentlyWorkingCount}</p>
               </div>
               <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-900/10">
@@ -1668,7 +1670,7 @@ export default function WorkTime() {
             <span className="font-semibold text-gray-700 dark:text-gray-300">Legenda:</span>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-purple-400" /> Praca zdalna</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-orange-400" /> Urlop / Nieobecność</div>
-            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#F7941D]" /> Aktualnie w pracy</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-yellow-500" /> Aktualnie w pracy</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Zakończona zmiana</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Brak wpisu</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700" /> Weekend</div>
@@ -1767,11 +1769,11 @@ export default function WorkTime() {
                               {hasWorkRecord ? (
                                 <div className={`inline-flex min-w-[96px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-xs shadow-sm ${
                                   isWorking
-                                    ? 'border-[#F7941D]/30 bg-orange-50 text-[#F7941D] dark:bg-orange-900/10'
+                                    ? WORKING_STATUS_CLASSES
                                     : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/10 dark:text-emerald-400'
                                 }`}>
                                   <div className="flex items-center gap-1 font-mono font-medium">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${isWorking ? 'bg-[#F7941D] animate-pulse' : 'bg-emerald-500'}`} />
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isWorking ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-500'}`} />
                                     {displayClockIn ? formatTime(displayClockIn) : 'Wpis'}
                                     {!isWorking && day.clock_out && ` – ${formatTime(day.clock_out)}`}
                                   </div>
