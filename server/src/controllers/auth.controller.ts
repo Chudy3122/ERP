@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
+import { detectDevice } from '../utils/device';
 
 const authService = new AuthService();
 
@@ -58,8 +59,9 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Login user
-    const result = await authService.login({ email, password });
+    // Login user (device used to enforce desktop-only accounts)
+    const device = detectDevice(req.headers['user-agent']);
+    const result = await authService.login({ email, password }, device);
 
     return res.status(200).json({
       message: 'Login successful',

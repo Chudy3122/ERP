@@ -73,6 +73,10 @@ export class User {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  // When true, this account cannot log in from a mobile/tablet — desktop only.
+  @Column({ type: 'boolean', default: false })
+  desktop_only: boolean;
+
   // Can manage the car fleet (assign/reject vehicle requests). Admins always can.
   @Column({ type: 'boolean', default: false })
   is_fleet_manager: boolean;

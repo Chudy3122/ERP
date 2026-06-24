@@ -83,7 +83,7 @@ export class AuthService {
   /**
    * Login user
    */
-  async login(data: LoginDTO): Promise<AuthResponse> {
+  async login(data: LoginDTO, device?: 'mobile' | 'tablet' | 'desktop'): Promise<AuthResponse> {
     // Find user by email (include password_hash for verification)
     const user = await this.userRepository
       .createQueryBuilder('user')
@@ -104,6 +104,11 @@ export class AuthService {
     const isPasswordValid = await user.verifyPassword(data.password);
     if (!isPasswordValid) {
       throw new Error('Invalid email or password');
+    }
+
+    // Desktop-only accounts can't sign in from a phone/tablet
+    if (user.desktop_only && (device === 'mobile' || device === 'tablet')) {
+      throw new Error('To konto może logować się tylko z komputera.');
     }
 
     // Targeted update of last_login (avoids rewriting the whole row / entity hooks).
