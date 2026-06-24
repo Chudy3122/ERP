@@ -16,6 +16,8 @@ import {
   Search,
   Users,
   ArrowUpDown,
+  UsersRound,
+  Stethoscope,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,6 +36,19 @@ type LeaveType =
 type RequestDateField = 'submitted' | 'absence';
 type AbsenceTab = 'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report';
 type LeaveDateMode = 'range' | 'multiple';
+type RequestPageSize = 10 | 30 | 50;
+
+type RequestListState = {
+  page?: number;
+  pageSize?: RequestPageSize;
+  search?: string;
+  statusFilter?: 'all' | 'pending' | 'approved' | 'rejected' | 'cancelled';
+  dateField?: RequestDateField;
+  sortAsc?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
+  scrollY?: number;
+};
 
 function getDateKey(value: string | Date) {
   if (typeof value === 'string') {
@@ -55,85 +70,94 @@ function getMondayOfWeek(value: Date) {
 }
 
 const ABSENCES_ACTIVE_TAB_KEY = 'erp:absences:active-tab';
+const ABSENCES_REQUEST_LIST_STATE_KEY = 'erp:absences:request-list-state';
 const absenceTabs: AbsenceTab[] = ['my', 'pending', 'calendar', 'management', 'all', 'report'];
 
 const isAbsenceTab = (value: string | null): value is AbsenceTab =>
   Boolean(value && absenceTabs.includes(value as AbsenceTab));
 
 // Tylko te typy odliczają dni z puli urlopowej
-const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal', 'occasional_hourly'];
+const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal'];
+const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30';
+const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30';
+const GRAY_LEAVE_COLOR = 'text-gray-600 bg-gray-100 dark:bg-gray-700';
+const PINK_LEAVE_COLOR = 'text-rose-500 bg-rose-50 dark:bg-rose-900/20';
+const PURPLE_LEAVE_COLOR = 'text-purple-600 bg-purple-50 dark:bg-purple-900/30';
+const YELLOW_LEAVE_COLOR = 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-300';
+const ORANGE_LEAVE_COLOR = 'text-orange-600 bg-orange-50 dark:bg-orange-900/30';
+const GREEN_LEAVE_COLOR = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30';
 
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> =
   {
     vacation: {
       label: 'Urlop wypoczynkowy',
       icon: <Plane className="w-4 h-4" />,
-      color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/30',
+      color: BLUE_LEAVE_COLOR,
     },
     personal: {
       label: 'Urlop na żądanie',
       icon: <Calendar className="w-4 h-4" />,
-      color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/30',
+      color: BLUE_LEAVE_COLOR,
     },
     sick_leave: {
-      label: 'Zwolnienie lekarskie',
-      icon: <Heart className="w-4 h-4" />,
-      color: 'text-red-500 bg-red-50 dark:bg-red-900/30',
+      label: 'L4',
+      icon: <Stethoscope className="w-4 h-4" />,
+      color: RED_LEAVE_COLOR,
     },
     unpaid: {
       label: 'Urlop bezpłatny',
       icon: <MoreHorizontal className="w-4 h-4" />,
-      color: 'text-gray-500 bg-gray-100 dark:bg-gray-700',
+      color: GRAY_LEAVE_COLOR,
     },
     parental: {
       label: 'Urlop rodzicielski',
       icon: <Heart className="w-4 h-4" />,
-      color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/30',
+      color: PINK_LEAVE_COLOR,
     },
     maternity: {
       label: 'Urlop macierzyński',
       icon: <Heart className="w-4 h-4" />,
-      color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/30',
+      color: PINK_LEAVE_COLOR,
     },
     paternity: {
       label: 'Urlop ojcowski',
       icon: <Heart className="w-4 h-4" />,
-      color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30',
+      color: PINK_LEAVE_COLOR,
     },
     childcare_188: {
-      label: 'Opieka nad dzieckiem do 14 lat (art. 188)',
-      icon: <Heart className="w-4 h-4" />,
-      color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/30',
+      label: 'Opieka nad dzieckiem do 14 lat',
+      icon: <UsersRound className="w-4 h-4" />,
+      color: YELLOW_LEAVE_COLOR,
     },
     care: {
-      label: 'Urlop opiekuńczy (art. 173¹)',
+      label: 'Urlop opiekuńczy',
       icon: <Heart className="w-4 h-4" />,
-      color: 'text-teal-500 bg-teal-50 dark:bg-teal-900/30',
+      color: PINK_LEAVE_COLOR,
     },
     occasional: {
       label: 'Urlop okolicznościowy',
       icon: <Calendar className="w-4 h-4" />,
-      color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
+      color: ORANGE_LEAVE_COLOR,
     },
     occasional_hourly: {
-      label: 'Urlop wypoczynkowy (godzinowy)',
-      icon: <Clock className="w-4 h-4" />,
-      color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/30',
+      label: 'Urlop okolicznościowy',
+      icon: <Calendar className="w-4 h-4" />,
+      color: ORANGE_LEAVE_COLOR,
     },
     remote_work: {
       label: 'Praca zdalna',
       icon: <Home className="w-4 h-4" />,
-      color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30',
+      color: PURPLE_LEAVE_COLOR,
     },
     holiday_saturday: {
       label: 'Dzień wolny za święto w sobotę',
-      icon: <CalendarDays className="w-4 h-4" />,
-      color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
+      icon: <Calendar className="w-4 h-4" />,
+      color: GREEN_LEAVE_COLOR,
     },
     other: {
       label: 'Inne',
       icon: <MoreHorizontal className="w-4 h-4" />,
-      color: 'text-gray-500 bg-gray-100 dark:bg-gray-700',
+      color: GRAY_LEAVE_COLOR,
     },
   };
 
@@ -148,6 +172,19 @@ const Absences = () => {
   // Merged "Wszystkie nieobecności" tab (view + approve/reject) — boss included
   const canManageAbsences = ['admin', 'kadry', 'szef'].includes(user?.role || '');
   const activeTabStorageKey = `${ABSENCES_ACTIVE_TAB_KEY}:${user?.id || 'current-user'}`;
+  const requestListStateStorageKey = `${ABSENCES_REQUEST_LIST_STATE_KEY}:${user?.id || 'current-user'}`;
+  const hasMountedRequestFiltersRef = useRef(false);
+  const hasMountedRequestPersistenceRef = useRef(false);
+  const hasRestoredRequestScrollRef = useRef(false);
+
+  const getStoredRequestListState = (): RequestListState => {
+    try {
+      const rawState = sessionStorage.getItem(requestListStateStorageKey);
+      return rawState ? JSON.parse(rawState) : {};
+    } catch {
+      return {};
+    }
+  };
 
   const canOpenAbsenceTab = (tab: AbsenceTab) => {
     if (tab === 'pending') return false; // merged into "Wszystkie nieobecności"
@@ -179,14 +216,18 @@ const Absences = () => {
   const [allSortAsc, setAllSortAsc] = useState(false);
   const [allDateFrom, setAllDateFrom] = useState('');
   const [allDateTo, setAllDateTo] = useState('');
-  const [requestPage, setRequestPage] = useState(1);
-  const [requestPageSize, setRequestPageSize] = useState<10 | 30 | 50>(10);
-  const [requestSearch, setRequestSearch] = useState('');
-  const [requestStatusFilter, setRequestStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'>('all');
-  const [requestDateField, setRequestDateField] = useState<RequestDateField>('absence');
-  const [requestSortAsc, setRequestSortAsc] = useState(false);
-  const [requestDateFrom, setRequestDateFrom] = useState('');
-  const [requestDateTo, setRequestDateTo] = useState('');
+  const [requestPage, setRequestPage] = useState(() => getStoredRequestListState().page || 1);
+  const [requestPageSize, setRequestPageSize] = useState<RequestPageSize>(() => getStoredRequestListState().pageSize || 10);
+  const [requestSearch, setRequestSearch] = useState(() => getStoredRequestListState().search || '');
+  const [requestStatusFilter, setRequestStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'>(() =>
+    getStoredRequestListState().statusFilter || 'all'
+  );
+  const [requestDateField, setRequestDateField] = useState<RequestDateField>(() =>
+    getStoredRequestListState().dateField || 'absence'
+  );
+  const [requestSortAsc, setRequestSortAsc] = useState(() => getStoredRequestListState().sortAsc || false);
+  const [requestDateFrom, setRequestDateFrom] = useState(() => getStoredRequestListState().dateFrom || '');
+  const [requestDateTo, setRequestDateTo] = useState(() => getStoredRequestListState().dateTo || '');
 
   // Calendar tab state
   const [calendarDate, setCalendarDate] = useState(() => getMondayOfWeek(new Date()));
@@ -226,6 +267,22 @@ const Absences = () => {
   const isHourlyForm = formData.leave_type === 'occasional_hourly';
   const [formUserId, setFormUserId] = useState('');
   const [directoryUsers, setDirectoryUsers] = useState<{ id: string; first_name: string; last_name: string; email: string }[]>([]);
+
+  const saveRequestListState = (scrollY = window.scrollY) => {
+    const state: RequestListState = {
+      page: requestPage,
+      pageSize: requestPageSize,
+      search: requestSearch,
+      statusFilter: requestStatusFilter,
+      dateField: requestDateField,
+      sortAsc: requestSortAsc,
+      dateFrom: requestDateFrom,
+      dateTo: requestDateTo,
+      scrollY,
+    };
+
+    sessionStorage.setItem(requestListStateStorageKey, JSON.stringify(state));
+  };
 
   useEffect(() => {
     if (!canOpenAbsenceTab(activeTab)) {
@@ -282,9 +339,32 @@ const Absences = () => {
   }, [activeTab, canViewAllAbsences, reportUserId, reportMonth]);
 
   useEffect(() => {
+    if (!hasMountedRequestFiltersRef.current) {
+      hasMountedRequestFiltersRef.current = true;
+      return;
+    }
+
     setRequestPage(1);
   }, [
     activeTab,
+    requestPageSize,
+    requestSearch,
+    requestStatusFilter,
+    requestDateField,
+    requestSortAsc,
+    requestDateFrom,
+    requestDateTo,
+  ]);
+
+  useEffect(() => {
+    if (!hasMountedRequestPersistenceRef.current) {
+      hasMountedRequestPersistenceRef.current = true;
+      return;
+    }
+
+    saveRequestListState();
+  }, [
+    requestPage,
     requestPageSize,
     requestSearch,
     requestStatusFilter,
@@ -421,9 +501,9 @@ const Absences = () => {
     s === 'working'
       ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
       : s === 'remote'
-        ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
+        ? 'bg-purple-100 text-purple-800 border-purple-200 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
         : s === 'on_leave'
-          ? 'bg-amber-100 text-amber-800 border-amber-200'
+          ? 'bg-orange-100 text-orange-800 border-orange-200 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
           : 'bg-gray-100 text-gray-500 border-gray-200';
 
   const calStatusIcon = (s: string) =>
@@ -452,7 +532,7 @@ const Absences = () => {
   };
 
   const getCalendarRequestStatusClass = (status: string) => {
-    if (status === 'pending') return 'text-yellow-700 dark:text-yellow-300';
+    if (status === 'pending') return 'text-amber-700 dark:text-amber-300';
     if (status === 'approved') return 'text-emerald-700 dark:text-emerald-300';
     if (status === 'rejected') return 'text-red-700 dark:text-red-300';
     if (status === 'cancelled') return 'text-gray-500 dark:text-gray-400';
@@ -751,7 +831,7 @@ const Absences = () => {
     const configs: Record<string, { label: string; classes: string }> = {
       pending: {
         label: 'Oczekujące',
-        classes: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+        classes: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
       },
       approved: {
         label: 'Zatwierdzone',
@@ -887,6 +967,22 @@ const Absences = () => {
     currentRequests.length > 0
       ? `${requestStartIndex + 1}-${requestEndIndex} z ${currentRequests.length}`
       : '0 z 0';
+
+  useEffect(() => {
+    if (activeTab !== 'my' || isLoading || hasRestoredRequestScrollRef.current) return;
+
+    const storedState = getStoredRequestListState();
+    if (typeof storedState.scrollY !== 'number') {
+      hasRestoredRequestScrollRef.current = true;
+      return;
+    }
+
+    window.setTimeout(() => {
+      window.scrollTo({ top: storedState.scrollY || 0, behavior: 'auto' });
+      hasRestoredRequestScrollRef.current = true;
+    }, 0);
+  }, [activeTab, isLoading, paginatedRequests.length]);
+
   const normalizedManagementSearch = managementSearch.trim().toLowerCase();
   const filteredManagementUsers = overviewRows.filter(row => {
     if (!normalizedManagementSearch) return true;
@@ -947,6 +1043,11 @@ const Absences = () => {
       setRequestPage(requestTotalPages);
     }
   }, [requestPage, requestTotalPages]);
+
+  const openLeaveRequestDetail = (requestId: string) => {
+    saveRequestListState(window.scrollY);
+    navigate(`/absences/${requestId}`);
+  };
 
   return (
     <MainLayout title="Nieobecności">
@@ -1182,7 +1283,7 @@ const Absences = () => {
               {activeTab === 'pending' && baseRequests.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
                   {[
-                    ['Oczekujące', requestStatusCounts.pending, 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300'],
+                    ['Oczekujące', requestStatusCounts.pending, 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'],
                     ['Zatwierdzone', requestStatusCounts.approved, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'],
                     ['Odrzucone', requestStatusCounts.rejected, 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'],
                     ['Anulowane', requestStatusCounts.cancelled, 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'],
@@ -1241,10 +1342,10 @@ const Absences = () => {
                         role="button"
                         tabIndex={0}
                         key={request.id}
-                        onClick={() => navigate(`/absences/${request.id}`)}
+                        onClick={() => openLeaveRequestDetail(request.id)}
                         onKeyDown={event => {
                           if (event.key === 'Enter' || event.key === ' ') {
-                            navigate(`/absences/${request.id}`);
+                            openLeaveRequestDetail(request.id);
                           }
                         }}
                         className="block w-full p-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -1544,7 +1645,7 @@ const Absences = () => {
 
             <div className="grid grid-cols-2 gap-3 border-b border-gray-100 p-4 dark:border-gray-700 sm:grid-cols-4">
               {([
-                ['Oczekujące', allStatusCounts.pending, 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300'],
+                ['Oczekujące', allStatusCounts.pending, 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'],
                 ['Zatwierdzone', allStatusCounts.approved, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'],
                 ['Odrzucone', allStatusCounts.rejected, 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'],
                 ['Anulowane', allStatusCounts.cancelled, 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'],
@@ -1587,7 +1688,7 @@ const Absences = () => {
                       return (
                         <tr
                           key={request.id}
-                          onClick={() => navigate(`/absences/${request.id}`)}
+                          onClick={() => openLeaveRequestDetail(request.id)}
                           className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                         >
                           <td className="px-4 py-3">

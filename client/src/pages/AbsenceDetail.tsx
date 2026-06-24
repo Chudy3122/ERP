@@ -9,7 +9,7 @@ import {
   Clock,
   Home,
   MoreHorizontal,
-  Umbrella,
+  Plane,
   XCircle,
   Heart,
   User,
@@ -19,6 +19,8 @@ import {
   RotateCcw,
   ShieldAlert,
   Trash2,
+  UsersRound,
+  Stethoscope,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as timeApi from '../api/time.api';
@@ -31,71 +33,80 @@ type LeaveType =
   | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
   | 'remote_work' | 'holiday_saturday' | 'other';
 
+const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30';
+const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30';
+const GRAY_LEAVE_COLOR = 'text-gray-600 bg-gray-100 dark:bg-gray-700';
+const PINK_LEAVE_COLOR = 'text-rose-500 bg-rose-50 dark:bg-rose-900/20';
+const PURPLE_LEAVE_COLOR = 'text-purple-600 bg-purple-50 dark:bg-purple-900/30';
+const YELLOW_LEAVE_COLOR = 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-300';
+const ORANGE_LEAVE_COLOR = 'text-orange-600 bg-orange-50 dark:bg-orange-900/30';
+const GREEN_LEAVE_COLOR = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30';
+
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> = {
   vacation: {
     label: 'Urlop wypoczynkowy',
-    icon: <Umbrella className="h-5 w-5" />,
-    color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30',
+    icon: <Plane className="h-5 w-5" />,
+    color: BLUE_LEAVE_COLOR,
   },
   personal: {
     label: 'Urlop na żądanie',
     icon: <Calendar className="h-5 w-5" />,
-    color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
+    color: BLUE_LEAVE_COLOR,
   },
   sick_leave: {
-    label: 'L4 / Zwolnienie lekarskie',
-    icon: <Heart className="h-5 w-5" />,
-    color: 'text-red-600 bg-red-50 dark:bg-red-900/30',
+    label: 'L4',
+    icon: <Stethoscope className="h-5 w-5" />,
+    color: RED_LEAVE_COLOR,
   },
   unpaid: {
     label: 'Urlop bezpłatny',
     icon: <MoreHorizontal className="h-5 w-5" />,
-    color: 'text-gray-600 bg-gray-100 dark:bg-gray-700',
+    color: GRAY_LEAVE_COLOR,
   },
   parental: {
     label: 'Urlop rodzicielski',
     icon: <Heart className="h-5 w-5" />,
-    color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/30',
+    color: PINK_LEAVE_COLOR,
   },
   maternity: {
     label: 'Urlop macierzyński',
     icon: <Heart className="h-5 w-5" />,
-    color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/30',
+    color: PINK_LEAVE_COLOR,
   },
   paternity: {
     label: 'Urlop ojcowski',
     icon: <Heart className="h-5 w-5" />,
-    color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30',
+    color: PINK_LEAVE_COLOR,
   },
   childcare_188: {
     label: 'Opieka nad dzieckiem do 14 lat',
-    icon: <Heart className="h-5 w-5" />,
-    color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30',
+    icon: <UsersRound className="h-5 w-5" />,
+    color: YELLOW_LEAVE_COLOR,
   },
   care: {
     label: 'Urlop opiekuńczy',
     icon: <Heart className="h-5 w-5" />,
-    color: 'text-teal-600 bg-teal-50 dark:bg-teal-900/30',
+    color: PINK_LEAVE_COLOR,
   },
   occasional: {
     label: 'Urlop okolicznościowy',
     icon: <Calendar className="h-5 w-5" />,
-    color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/30',
+    color: ORANGE_LEAVE_COLOR,
   },
   remote_work: {
     label: 'Praca zdalna',
     icon: <Home className="h-5 w-5" />,
-    color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30',
+    color: PURPLE_LEAVE_COLOR,
   },
   holiday_saturday: {
     label: 'Dzień wolny za święto w sobotę',
     icon: <Calendar className="h-5 w-5" />,
-    color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
+    color: GREEN_LEAVE_COLOR,
   },
   other: {
     label: 'Inne',
     icon: <MoreHorizontal className="h-5 w-5" />,
-    color: 'text-gray-600 bg-gray-100 dark:bg-gray-700',
+    color: GRAY_LEAVE_COLOR,
   },
 };
 
@@ -103,7 +114,7 @@ const getStatusConfig = (status: string) => {
   const configs: Record<string, { label: string; classes: string; icon: React.ReactNode }> = {
     pending: {
       label: 'Oczekujące',
-      classes: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+      classes: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
       icon: <Clock className="h-4 w-4" />,
     },
     approved: {

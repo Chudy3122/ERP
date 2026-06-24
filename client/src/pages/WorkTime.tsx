@@ -48,7 +48,8 @@ interface AttendanceLeaveInfo {
   type: LeaveType;
   status: string;
 }
-type AttendanceRange = 'week' | '14' | '30';
+type AttendanceRange = 'week' | '2weeks' | '4weeks';
+type AttendanceSort = 'first_name' | 'last_name';
 type HistoryDateFilter = 'all' | 'week' | 'month';
 type HistoryTypeFilter = 'all' | 'manual' | 'active';
 
@@ -70,40 +71,92 @@ function getDateKey(value: string | Date) {
   return getLocalDateKey(new Date(value));
 }
 
+function isWeekendDate(date: string) {
+  const day = new Date(`${getDateKey(date)}T00:00:00`).getDay();
+  return day === 0 || day === 6;
+}
+
 function getAttendanceLeaveLabel(type: LeaveType) {
   switch (type) {
+    case LeaveType.VACATION:
+      return 'Urlop wypoczynkowy';
+    case LeaveType.PERSONAL:
+      return 'Urlop na żądanie';
     case LeaveType.SICK_LEAVE:
       return 'L4';
+    case LeaveType.UNPAID:
+      return 'Urlop bezpłatny';
+    case LeaveType.PARENTAL:
+      return 'Urlop rodzicielski';
+    case LeaveType.MATERNITY:
+      return 'Urlop macierzyński';
+    case LeaveType.PATERNITY:
+      return 'Urlop ojcowski';
     case LeaveType.REMOTE_WORK:
-      return 'Zdalnie';
+      return 'Praca zdalna';
     case LeaveType.CARE:
-      return 'Opieka';
+      return 'Urlop opiekuńczy';
     case LeaveType.CHILDCARE_188:
-      return 'Opieka 188';
+      return 'Opieka nad dzieckiem do 14 lat';
     case LeaveType.OCCASIONAL:
     case LeaveType.OCCASIONAL_HOURLY:
       return 'Okolicznościowy';
+    case LeaveType.HOLIDAY_SATURDAY:
+      return 'Dzień wolny za święto w sobotę';
     default:
-      return 'Urlop';
+      return 'Inna nieobecność';
   }
 }
 
-function getCurrentWeekRange() {
+function getAttendanceLeaveStatusLabel(status: string) {
+  if (status === LeaveStatus.PENDING) return 'oczekuje';
+  if (status === LeaveStatus.APPROVED) return 'zatwierdzone';
+  return 'nieobecność';
+}
+
+function getAttendanceLeaveStatusClass(status: string) {
+  if (status === LeaveStatus.APPROVED) return 'text-emerald-700 dark:text-emerald-300';
+  if (status === LeaveStatus.PENDING) return 'text-amber-700 dark:text-amber-300';
+  return 'opacity-70';
+}
+
+function getAttendanceLeaveClass(type: LeaveType) {
+  return type === LeaveType.REMOTE_WORK
+    ? 'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
+    : 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300';
+}
+
+function getCurrentWeekRange(weeks = 1) {
   const today = new Date();
   const start = new Date(today);
   const day = start.getDay();
   start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  end.setDate(start.getDate() + weeks * 7 - 1);
   end.setHours(23, 59, 59, 999);
   return { start, end };
 }
 
 function getAttendanceRequestParams(range: AttendanceRange) {
-  if (range !== 'week') return Number(range);
-  const { start, end } = getCurrentWeekRange();
+  const weeks = range === '4weeks' ? 4 : range === '2weeks' ? 2 : 1;
+  const { start, end } = getCurrentWeekRange(weeks);
   return { startDate: start.toISOString(), endDate: end.toISOString() };
+}
+
+function formatAttendanceRangeLabel(range: AttendanceRange) {
+  const weeks = range === '4weeks' ? 4 : range === '2weeks' ? 2 : 1;
+  const { start, end } = getCurrentWeekRange(weeks);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+  const startFormat: Intl.DateTimeFormatOptions = sameMonth
+    ? { day: 'numeric' }
+    : sameYear
+      ? { day: 'numeric', month: 'long' }
+      : { day: 'numeric', month: 'long', year: 'numeric' };
+  const endFormat: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+
+  return `${start.toLocaleDateString('pl-PL', startFormat)} - ${end.toLocaleDateString('pl-PL', endFormat)}`;
 }
 
 function formatTime(date: string | Date | null) {
@@ -500,6 +553,7 @@ export default function WorkTime() {
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [attendanceLeaveRequests, setAttendanceLeaveRequests] = useState<LeaveRequest[]>([]);
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>('week');
+  const [attendanceSort, setAttendanceSort] = useState<AttendanceSort>('first_name');
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   // All-entries tab (admin/kadry): edit everyone's work time
@@ -792,6 +846,18 @@ export default function WorkTime() {
   const todayAttendanceIndex = attendance?.dates.findIndex((date) => date === todayStr()) ?? -1;
   const attendanceEmployeesCount = attendance?.users.length ?? 0;
   const attendanceDaysCount = attendance?.dates.length ?? 0;
+  const sortedAttendanceUsers = attendance
+    ? [...attendance.users].sort((a, b) => {
+        const firstValue = attendanceSort === 'first_name'
+          ? `${a.first_name} ${a.last_name}`
+          : `${a.last_name} ${a.first_name}`;
+        const secondValue = attendanceSort === 'first_name'
+          ? `${b.first_name} ${b.last_name}`
+          : `${b.last_name} ${b.first_name}`;
+
+        return firstValue.localeCompare(secondValue, 'pl');
+      })
+    : [];
   const isCurrentUserWorkingToday = state === 'working' && Boolean(currentEntry);
   const isAttendanceDayWorking = (day: AttendanceDay, employeeId: string) => {
     if (day.status === 'in_progress') return true;
@@ -810,7 +876,9 @@ export default function WorkTime() {
 
       const startDate = getDateKey(request.start_date);
       const endDate = getDateKey(request.end_date);
-      return date >= startDate && date <= endDate;
+      return date >= startDate &&
+        date <= endDate &&
+        !(isWeekendDate(date) && request.leave_type !== LeaveType.REMOTE_WORK);
     });
     // Prefer an approved leave over a pending one on the same day
     const leave = matches.find(r => r.status === LeaveStatus.APPROVED) || matches[0];
@@ -1540,8 +1608,8 @@ export default function WorkTime() {
               <div className="flex flex-wrap items-center gap-2">
                 {([
                   { value: 'week', label: 'Bieżący tydzień' },
-                  { value: '14', label: '14 dni' },
-                  { value: '30', label: '30 dni' },
+                  { value: '2weeks', label: '2 tygodnie' },
+                  { value: '4weeks', label: '4 tygodnie' },
                 ] as { value: AttendanceRange; label: string }[]).map(({ value, label }) => (
                   <button
                     key={value}
@@ -1557,6 +1625,23 @@ export default function WorkTime() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-1">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Zakres: <span className="text-gray-700 dark:text-gray-200">{formatAttendanceRangeLabel(attendanceRange)}</span>
+              </p>
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                Sortuj:
+                <select
+                  value={attendanceSort}
+                  onChange={(event) => setAttendanceSort(event.target.value as AttendanceSort)}
+                  className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-800 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="last_name">po nazwisku</option>
+                  <option value="first_name">po imieniu</option>
+                </select>
+              </label>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1581,10 +1666,12 @@ export default function WorkTime() {
 
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Legenda:</span>
-            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-400" /> Urlop / Nieobecność</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-purple-400" /> Praca zdalna</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-orange-400" /> Urlop / Nieobecność</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#F7941D]" /> Aktualnie w pracy</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Zakończona zmiana</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Brak wpisu</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700" /> Weekend</div>
           </div>
 
           {loadingAttendance ? (
@@ -1613,10 +1700,13 @@ export default function WorkTime() {
                       {attendance.dates.map((date) => {
                         const { day, date: dateLabel } = formatDateHeader(date);
                         const isToday = date === todayStr();
+                        const isWeekend = isWeekendDate(date);
                         return (
                           <th key={date} className={`min-w-[118px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider ${
                             isToday
                               ? 'bg-orange-50 text-[#F7941D] dark:bg-orange-900/20'
+                              : isWeekend
+                                ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
                               : 'text-gray-500 dark:text-gray-400'
                           }`}>
                             <div>{day}</div>
@@ -1627,7 +1717,7 @@ export default function WorkTime() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {attendance.users.map((u, i) => (
+                    {sortedAttendanceUsers.map((u, i) => (
                       <tr key={u.id} className={`${i % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-700/20'} ${u.id === user?.id ? 'ring-1 ring-inset ring-[#F7941D]/30' : ''}`}>
                         <td className={`sticky left-0 z-10 border-r border-gray-100 px-4 py-3 dark:border-gray-700 ${
                           i % 2 === 0
@@ -1653,13 +1743,28 @@ export default function WorkTime() {
                         {u.days.map((day) => {
                           const isWorking = isAttendanceDayWorking(day, u.id);
                           const isToday = day.date === todayStr();
+                          const isWeekend = isWeekendDate(day.date);
                           const displayClockIn = isToday && u.id === user?.id && currentEntry
                             ? currentEntry.clock_in
                             : day.clock_in;
+                          const hasWorkRecord = Boolean(displayClockIn || day.duration_minutes);
                           const leaveInfo = getAttendanceLeaveInfo(u.id, day.date);
+                          const leaveStatusLabel = leaveInfo
+                            ? getAttendanceLeaveStatusLabel(leaveInfo.status)
+                            : undefined;
+                          const leaveTitle = leaveInfo ? `${leaveInfo.label} - ${leaveStatusLabel}` : undefined;
                           return (
-                            <td key={day.date} className={`px-3 py-2 text-center ${isToday ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}>
-                              {displayClockIn ? (
+                            <td
+                              key={day.date}
+                              className={`px-3 py-2 text-center ${
+                                isToday
+                                  ? 'bg-orange-50/50 dark:bg-orange-900/10'
+                                  : isWeekend
+                                    ? 'bg-gray-50/80 dark:bg-gray-900/30'
+                                    : ''
+                              }`}
+                            >
+                              {hasWorkRecord ? (
                                 <div className={`inline-flex min-w-[96px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-xs shadow-sm ${
                                   isWorking
                                     ? 'border-[#F7941D]/30 bg-orange-50 text-[#F7941D] dark:bg-orange-900/10'
@@ -1667,7 +1772,7 @@ export default function WorkTime() {
                                 }`}>
                                   <div className="flex items-center gap-1 font-mono font-medium">
                                     <span className={`w-1.5 h-1.5 rounded-full ${isWorking ? 'bg-[#F7941D] animate-pulse' : 'bg-emerald-500'}`} />
-                                    {formatTime(displayClockIn)}
+                                    {displayClockIn ? formatTime(displayClockIn) : 'Wpis'}
                                     {!isWorking && day.clock_out && ` – ${formatTime(day.clock_out)}`}
                                   </div>
                                   <div className="text-[10px] opacity-70">
@@ -1675,19 +1780,19 @@ export default function WorkTime() {
                                   </div>
                                 </div>
                               ) : leaveInfo ? (
-                                <span className={`inline-flex min-w-[96px] flex-col items-center justify-center rounded-lg border px-2 py-1.5 text-xs font-semibold shadow-sm ${
-                                  leaveInfo.status === LeaveStatus.PENDING
-                                    ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
-                                    : 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300'
-                                }`}>
-                                  <span>{leaveInfo.label}</span>
-                                  <span className="mt-0.5 text-[10px] font-medium opacity-70">
-                                    {leaveInfo.status === LeaveStatus.PENDING ? 'oczekuje' : 'Nieobecność'}
+                                <span className={`inline-flex min-w-[96px] flex-col items-center justify-center rounded-lg border px-2 py-1.5 text-xs font-semibold shadow-sm ${getAttendanceLeaveClass(leaveInfo.type)}`} title={leaveTitle}>
+                                  <span className="block max-w-[84px] truncate text-center">{leaveInfo.label}</span>
+                                  <span className={`mt-0.5 text-[10px] font-semibold ${getAttendanceLeaveStatusClass(leaveInfo.status)}`}>
+                                    {leaveStatusLabel}
                                   </span>
                                 </span>
                               ) : (
-                                <span className="inline-flex min-w-[96px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50 px-2 py-2 text-xs font-medium text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600">
-                                  Brak
+                                <span className={`inline-flex min-w-[96px] items-center justify-center rounded-lg border px-2 py-2 text-xs font-medium ${
+                                  isWeekend
+                                    ? 'border-gray-100 bg-gray-100 text-gray-400 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-500'
+                                    : 'border-gray-100 bg-gray-50 text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600'
+                                }`}>
+                                  {isWeekend ? 'Wolne' : 'Brak'}
                                 </span>
                               )}
                             </td>
