@@ -102,7 +102,7 @@ export class TimeEntry {
     if (!this.clock_out) return 0;
 
     const diff = this.clock_out.getTime() - this.clock_in.getTime();
-    return Math.floor(diff / (1000 * 60)); // Minutes
+    return Math.max(0, Math.floor(diff / (1000 * 60))); // Minutes (never negative)
   }
 
   calculateOvertime(standardWorkMinutes: number = 480): number {

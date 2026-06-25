@@ -23,6 +23,37 @@ function roundToNearest5Min(date: Date): Date {
   return new Date(Math.floor(date.getTime() / ms5) * ms5);
 }
 
+// The company opens at 07:00 (Europe/Warsaw). A work day never starts earlier.
+const OPENING_HOUR = 7;
+
+function warsawParts(d: Date) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(d);
+  const m: Record<string, string> = {};
+  for (const p of parts) m[p.type] = p.value;
+  let hour = parseInt(m.hour, 10);
+  if (hour === 24) hour = 0; // en-GB can emit "24" at midnight
+  return { year: +m.year, month: +m.month, day: +m.day, hour, minute: +m.minute, second: +m.second };
+}
+
+// UTC instant for a given Warsaw wall-clock time (DST-aware)
+function warsawWallClockToDate(year: number, month: number, day: number, hour: number, minute: number, second: number): Date {
+  const guess = Date.UTC(year, month - 1, day, hour, minute, second);
+  const p = warsawParts(new Date(guess));
+  const asIfUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return new Date(guess - (asIfUtc - guess));
+}
+
+// If the moment is before 07:00 Warsaw, snap it to 07:00 Warsaw the same day.
+function clampToOpeningHour(now: Date): Date {
+  const p = warsawParts(now);
+  if (p.hour >= OPENING_HOUR) return now;
+  return warsawWallClockToDate(p.year, p.month, p.day, OPENING_HOUR, 0, 0);
+}
+
 function getLocalDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -166,6 +197,8 @@ export class TimeService {
       });
       // Only the first clock-in of the day gets the 5-minute floor rounding
       clockInTime = todayCount === 0 ? roundToNearest5Min(new Date()) : new Date();
+      // Company opens at 07:00 — clocking in earlier still starts the day at 07:00
+      clockInTime = clampToOpeningHour(clockInTime);
     }
 
     const timeEntry = this.timeEntryRepository.create({
