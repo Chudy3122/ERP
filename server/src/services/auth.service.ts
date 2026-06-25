@@ -139,7 +139,7 @@ export class AuthService {
   /**
    * Refresh access token using refresh token
    */
-  async refreshAccessToken(refreshTokenString: string): Promise<AuthResponse> {
+  async refreshAccessToken(refreshTokenString: string, device?: 'mobile' | 'tablet' | 'desktop'): Promise<AuthResponse> {
     // Verify refresh token
     const payload = verifyRefreshToken(refreshTokenString);
 
@@ -160,6 +160,11 @@ export class AuthService {
 
     if (!user || !user.is_active) {
       throw new Error('User not found or inactive');
+    }
+
+    // Desktop-only accounts can't keep a session alive from a phone/tablet
+    if (user.desktop_only && (device === 'mobile' || device === 'tablet')) {
+      throw new Error('To konto może logować się tylko z komputera.');
     }
 
     // Generate new token pair

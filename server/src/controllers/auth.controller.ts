@@ -91,7 +91,8 @@ export const refreshToken = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await authService.refreshAccessToken(refreshToken);
+    const device = detectDevice(req.headers['user-agent']);
+    const result = await authService.refreshAccessToken(refreshToken, device);
 
     return res.status(200).json({
       message: 'Token refreshed successfully',

@@ -1,5 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.utils';
+import { detectDevice } from '../utils/device';
+import { AppDataSource } from '../config/database';
+import { User } from '../models/User.model';
+
+const DESKTOP_ONLY_MSG = 'To konto może logować się tylko z komputera.';
+
+/** Block desktop-only accounts coming from a phone/tablet. */
+async function blockedDesktopOnly(req: Request, payload: { userId: string; desktop_only?: boolean }): Promise<boolean> {
+  const device = detectDevice(req.headers['user-agent']);
+  if (device !== 'mobile' && device !== 'tablet') return false;
+  if (payload.desktop_only === true) return true;
+  // Older tokens issued before this flag existed — fall back to a quick DB check
+  if (payload.desktop_only === undefined) {
+    const u = await AppDataSource.getRepository(User).findOne({
+      where: { id: payload.userId },
+      select: ['id', 'desktop_only'],
+    });
+    return !!u?.desktop_only;
+  }
+  return false;
+}
 
 /**
  * Middleware to authenticate requests using JWT
@@ -20,6 +41,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     // Verify token
     const payload = verifyAccessToken(token);
+
+    // Desktop-only accounts may not use the app from a phone/tablet
+    if (await blockedDesktopOnly(req, payload)) {
+      return res.status(401).json({ error: 'Unauthorized', message: DESKTOP_ONLY_MSG });
+    }
 
     // Attach user info to request
     req.user = payload;
