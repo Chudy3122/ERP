@@ -161,6 +161,8 @@ const ClockInWidget = () => {
 
   const isClockedIn = currentEntry && currentEntry.status === TimeEntryStatus.IN_PROGRESS;
   const clockInTime = currentEntry ? new Date(currentEntry.clock_in).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : null;
+  // Clocked in before the company opens — work time starts later (at clock_in)
+  const notStartedYet = !!(isClockedIn && currentEntry && new Date(currentEntry.clock_in).getTime() > Date.now());
   const workingHoursPerDay = Number(user?.working_hours_per_day) || 8;
   const expectedClockInTime = currentEntry?.expected_clock_in
     ? currentEntry.expected_clock_in.slice(0, 5)
@@ -271,13 +273,21 @@ const ClockInWidget = () => {
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs font-medium text-green-700 dark:text-green-400">W pracy</span>
               </div>
-              <div className="mt-2 font-mono text-2xl font-bold text-gray-900 dark:text-white tracking-wider">
-                {formatElapsedSec(elapsedSec)}
-              </div>
-              <div className="mt-1 flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                <LogIn className="w-3 h-3" />
-                Rozpoczęto o {clockInTime}
-              </div>
+              {notStartedYet ? (
+                <div className="mt-2 rounded-lg bg-[#F7941D]/10 px-3 py-2 text-sm font-semibold text-[#b76612] dark:bg-[#F7941D]/15 dark:text-orange-300">
+                  Czas pracy firmy rozpocznie się o {clockInTime}
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 font-mono text-2xl font-bold text-gray-900 dark:text-white tracking-wider">
+                    {formatElapsedSec(elapsedSec)}
+                  </div>
+                  <div className="mt-1 flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <LogIn className="w-3 h-3" />
+                    Rozpoczęto o {clockInTime}
+                  </div>
+                </>
+              )}
               {shouldShowLateNotice && (
                 <div className="mt-1 inline-flex items-center justify-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
                   <AlertTriangle className="w-3 h-3" />

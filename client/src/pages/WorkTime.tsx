@@ -867,6 +867,8 @@ export default function WorkTime() {
   const plannedMinutes = (Number(user?.working_hours_per_day) || 8) * 60;
   const workedMinutes = Math.floor(elapsed / 60);
   const remainingMinutes = Math.max(0, plannedMinutes - workedMinutes);
+  // Clocked in before the company opens — work time starts at clock_in (e.g. 07:00)
+  const notStartedYet = !!(state === 'working' && currentEntry && new Date(currentEntry.clock_in).getTime() > Date.now());
   const statusLabel = state === 'working'
     ? 'W pracy'
     : state === 'paused'
@@ -973,9 +975,15 @@ export default function WorkTime() {
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
               Aktualna sesja
             </p>
-            <div className="font-mono text-5xl font-black tracking-wider text-gray-900 dark:text-white">
-              {formatElapsed(elapsed)}
-            </div>
+            {notStartedYet ? (
+              <div className="max-w-md text-center text-lg font-semibold text-[#b76612] dark:text-orange-300">
+                Czas pracy firmy rozpocznie się o {formatTime(currentEntry.clock_in)}
+              </div>
+            ) : (
+              <div className="font-mono text-5xl font-black tracking-wider text-gray-900 dark:text-white">
+                {formatElapsed(elapsed)}
+              </div>
+            )}
           </div>
 
           <div className="mt-4 grid w-full max-w-xl grid-cols-1 gap-3 text-left sm:grid-cols-2">
