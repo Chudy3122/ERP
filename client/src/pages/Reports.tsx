@@ -22,6 +22,17 @@ const Reports: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
 
+  const formatHoursMinutes = (value: number) => {
+    const totalMinutes = Math.round(value * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0 && minutes === 0) return '0h';
+    if (minutes === 0) return `${hours}h`;
+    if (hours === 0) return `${minutes}min`;
+    return `${hours}h ${String(minutes).padStart(2, '0')}min`;
+  };
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -301,7 +312,7 @@ const Reports: React.FC = () => {
                 {t('entriesFound', { defaultValue: 'Znaleziono', count: reportData.entries.length })} {reportData.entries.length} {t('entries', { defaultValue: 'wpisów' })}
               </h3>
               <p className="text-sm text-slate-600">
-                {t('dailyAverage', { defaultValue: 'Średnia dzienna:' })} {reportData.summary.averageHoursPerDay.toFixed(2)} {t('hours', { defaultValue: 'godzin' })}
+                {t('dailyAverage', { defaultValue: 'Średnia dzienna:' })} {formatHoursMinutes(reportData.summary.averageHoursPerDay)}
               </p>
             </div>
           </>

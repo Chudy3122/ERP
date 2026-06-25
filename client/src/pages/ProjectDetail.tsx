@@ -1355,6 +1355,17 @@ const ProjectDetail = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const formatHoursMinutes = (value: number) => {
+    const totalMinutes = Math.round(value * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0 && minutes === 0) return '0h';
+    if (minutes === 0) return `${hours}h`;
+    if (hours === 0) return `${minutes}min`;
+    return `${hours}h ${String(minutes).padStart(2, '0')}min`;
+  };
+
   const getActivityIcon = (action: string) => {
     if (action.includes('created_project')) return FolderOpen;
     if (action.includes('created_task') || action.includes('completed_task')) return CheckSquare;
@@ -1793,7 +1804,7 @@ const ProjectDetail = () => {
                     {t('timeTracking.totalHours')}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {timeStats.totalHours.toFixed(1)}h
+                    {formatHoursMinutes(timeStats.totalHours)}
                   </p>
                 </div>
                 <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
@@ -1801,7 +1812,7 @@ const ProjectDetail = () => {
                     Płatne
                   </p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {timeStats.billableHours.toFixed(1)}h
+                    {formatHoursMinutes(timeStats.billableHours)}
                   </p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
@@ -1809,7 +1820,7 @@ const ProjectDetail = () => {
                     Niepłatne
                   </p>
                   <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">
-                    {timeStats.nonBillableHours.toFixed(1)}h
+                    {formatHoursMinutes(timeStats.nonBillableHours)}
                   </p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
@@ -1836,7 +1847,7 @@ const ProjectDetail = () => {
                           {item.user_name}
                         </span>
                         <span className="font-bold text-gray-900 dark:text-white">
-                          {item.hours.toFixed(1)}h
+                          {formatHoursMinutes(item.hours)}
                         </span>
                       </div>
                     ))}

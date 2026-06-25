@@ -52,6 +52,17 @@ const isWeekend = (date: Date) => {
   return day === 0 || day === 6;
 };
 
+const formatHoursMinutes = (value: number) => {
+  const totalMinutes = Math.round(value * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0 && minutes === 0) return '0h';
+  if (minutes === 0) return `${hours}h`;
+  if (hours === 0) return `${minutes}min`;
+  return `${hours}h ${String(minutes).padStart(2, '0')}min`;
+};
+
 const NON_WORKING_LEAVE_TYPES = new Set<LeaveType>([
   LeaveType.VACATION,
   LeaveType.PERSONAL,
@@ -274,7 +285,7 @@ const TimeChartWidget = () => {
 
   const workMinutes = timeData.reduce((sum, day) => sum + day.workMinutes, 0);
   const workHours = workMinutes / 60;
-  const avgHours = (workHours / 5).toFixed(1);
+  const avgHours = formatHoursMinutes(workHours / 5);
   const daysWorked = timeData.filter(day => !isWeekend(new Date(`${day.date}T00:00:00`)) && day.workMinutes > 0).length;
   const hasReportedTime = timeData.some(day => day.totalMinutes > 0);
   const workdayData = timeData.filter(day => !isWeekend(new Date(`${day.date}T00:00:00`)));
@@ -332,7 +343,7 @@ const TimeChartWidget = () => {
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400">Średnia: </span>
-            <span className="font-semibold text-gray-900 dark:text-white">{avgHours}h</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{avgHours}</span>
           </div>
         </div>
       }
