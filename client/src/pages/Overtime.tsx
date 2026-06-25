@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 import * as worklogApi from '../api/worklog.api';
 import * as projectApi from '../api/project.api';
 import * as taskApi from '../api/task.api';
-import * as adminApi from '../api/admin.api';
+import * as userApi from '../api/user.api';
 import { OvertimeSummaryEntry, WorkLogType, WorkLog } from '../types/worklog.types';
 import { Project, ProjectMember } from '../types/project.types';
 import { Task } from '../types/task.types';
@@ -86,7 +86,8 @@ export default function Overtime() {
     user_id: '',
   });
 
-  const isAdmin = user?.role === 'admin';
+  // Kadry get the same full overtime management as admin (log/edit/delete for anyone)
+  const isAdmin = user?.role === 'admin' || user?.role === 'kadry';
   const canManageEntries = user?.role === 'admin' || user?.role === 'kadry';
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   // Manage-entries modal (admin: view/delete a user's overtime entries)
@@ -289,7 +290,7 @@ export default function Overtime() {
           .sort((a, b) => new Date(b.work_date).getTime() - new Date(a.work_date).getTime())
       );
       if (isAdmin && allUsers.length === 0) {
-        adminApi.getUsers().then((u) => setAllUsers(u.filter((x) => x.is_active))).catch(() => {});
+        userApi.getDirectory().then((u) => setAllUsers(u.filter((x) => x.is_active))).catch(() => {});
       }
     } catch {
       toast.error('Błąd ładowania danych');
