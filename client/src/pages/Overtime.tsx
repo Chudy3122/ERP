@@ -108,6 +108,10 @@ export default function Overtime() {
     work_type: WorkLogType.OVERTIME,
   });
   const [myLogs, setMyLogs] = useState<WorkLog[]>([]);
+  const [myLogsTypeFilter, setMyLogsTypeFilter] = useState<ManageTypeFilter>('all');
+  const [myLogsSort, setMyLogsSort] = useState<ManageSort>('newest');
+  const [myLogsPage, setMyLogsPage] = useState(1);
+  const [myLogsPageSize, setMyLogsPageSize] = useState<10 | 30 | 50>(10);
   // Expandable team rows: view a person's entries inline (for those who see more than themselves)
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [expandedLogs, setExpandedLogs] = useState<WorkLog[]>([]);
@@ -192,6 +196,22 @@ export default function Overtime() {
     { length: Math.min(5, manageTotalPages) },
     (_, index) => visiblePageStart + index,
   );
+  const filteredMyLogs = myLogs
+    .filter((log) => myLogsTypeFilter === 'all' || log.work_type === myLogsTypeFilter)
+    .sort((a, b) => {
+      const difference = new Date(b.work_date).getTime() - new Date(a.work_date).getTime();
+      return myLogsSort === 'newest' ? difference : -difference;
+    });
+  const myLogsTotalPages = Math.max(1, Math.ceil(filteredMyLogs.length / myLogsPageSize));
+  const myLogsPageStart = (myLogsPage - 1) * myLogsPageSize;
+  const paginatedMyLogs = filteredMyLogs.slice(myLogsPageStart, myLogsPageStart + myLogsPageSize);
+  const myLogsRangeStart = filteredMyLogs.length === 0 ? 0 : myLogsPageStart + 1;
+  const myLogsRangeEnd = Math.min(myLogsPageStart + myLogsPageSize, filteredMyLogs.length);
+  const myLogsVisiblePageStart = Math.max(1, Math.min(myLogsPage - 2, myLogsTotalPages - 4));
+  const visibleMyLogsPages = Array.from(
+    { length: Math.min(5, myLogsTotalPages) },
+    (_, index) => myLogsVisiblePageStart + index,
+  );
 
   useEffect(() => {
     fetchData();
@@ -204,6 +224,14 @@ export default function Overtime() {
   useEffect(() => {
     setManagePage((page) => Math.min(page, manageTotalPages));
   }, [manageTotalPages]);
+
+  useEffect(() => {
+    setMyLogsPage(1);
+  }, [myLogsTypeFilter, myLogsSort, myLogsPageSize]);
+
+  useEffect(() => {
+    setMyLogsPage((page) => Math.min(page, myLogsTotalPages));
+  }, [myLogsTotalPages]);
 
   // Load tasks when project changes
   useEffect(() => {
@@ -685,12 +713,42 @@ export default function Overtime() {
         {/* My overtime / time-off entries (date + comment) */}
         {myLogs.length > 0 && (
           <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
-              <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Moje wpisy</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Moje wpisy</h2>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={myLogsTypeFilter}
+                  onChange={(e) => setMyLogsTypeFilter(e.target.value as ManageTypeFilter)}
+                  aria-label="Filtruj moje wpisy"
+                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <option value="all">Wszystkie</option>
+                  <option value={WorkLogType.OVERTIME}>Nadgodziny</option>
+                  <option value={WorkLogType.OVERTIME_COMP}>Odbiór</option>
+                </select>
+                <select
+                  value={myLogsSort}
+                  onChange={(e) => setMyLogsSort(e.target.value as ManageSort)}
+                  aria-label="Sortuj moje wpisy"
+                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <option value="newest">Najnowsze</option>
+                  <option value="oldest">Najstarsze</option>
+                </select>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600">
+                  {filteredMyLogs.length} z {myLogs.length} wpisów
+                </span>
+              </div>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
-              {myLogs.map((log) => {
+              {filteredMyLogs.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                  Brak wpisów dla wybranego filtra.
+                </div>
+              ) : paginatedMyLogs.map((log) => {
                 const isOvertime = log.work_type === WorkLogType.OVERTIME;
                 return (
                   <div key={log.id} className="flex items-center gap-3 px-4 py-3">
@@ -714,6 +772,66 @@ export default function Overtime() {
                   </div>
                 );
               })}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              <div className="flex flex-wrap items-center gap-3">
+                <span>
+                  Wyświetlane <strong className="font-semibold text-gray-700 dark:text-gray-200">{myLogsRangeStart}-{myLogsRangeEnd}</strong> z {filteredMyLogs.length} wpisów
+                </span>
+                <label className="flex items-center gap-2">
+                  <span>Na stronie</span>
+                  <select
+                    value={myLogsPageSize}
+                    onChange={(e) => setMyLogsPageSize(Number(e.target.value) as 10 | 30 | 50)}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <option value={10}>10</option>
+                    <option value={30}>30</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+              </div>
+
+              {filteredMyLogs.length > myLogsPageSize && (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMyLogsPage((page) => Math.max(1, page - 1))}
+                    disabled={myLogsPage === 1}
+                    aria-label="Poprzednia strona"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  {visibleMyLogsPages.map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setMyLogsPage(page)}
+                      aria-label={`Strona ${page}`}
+                      aria-current={myLogsPage === page ? 'page' : undefined}
+                      className={`h-9 min-w-9 rounded-lg px-2 text-xs font-semibold transition-colors ${
+                        myLogsPage === page
+                          ? 'bg-[#F7941D] text-white'
+                          : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setMyLogsPage((page) => Math.min(myLogsTotalPages, page + 1))}
+                    disabled={myLogsPage === myLogsTotalPages}
+                    aria-label="Następna strona"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
