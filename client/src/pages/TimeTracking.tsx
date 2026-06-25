@@ -5,9 +5,16 @@ import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as timeApi from '../api/time.api';
 import type { TimeEntry, TimeStats } from '../types/time.types';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  isMobileTimeTrackingBlocked,
+  MOBILE_TIME_TRACKING_BLOCK_MESSAGE,
+} from '../utils/timeTrackingAccess';
 
 const TimeTracking: React.FC = () => {
   const { t } = useTranslation('timeTracking');
+  const { user } = useAuth();
+  const isTimeTrackingBlocked = isMobileTimeTrackingBlocked(user?.email);
   // Attendance state
   const [currentEntry, setCurrentEntry] = useState<TimeEntry | null>(null);
   const [recentEntries, setRecentEntries] = useState<TimeEntry[]>([]);
@@ -43,6 +50,11 @@ const TimeTracking: React.FC = () => {
   };
 
   const handleClockIn = async () => {
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     try {
       setLoading(true);
       const entry = await timeApi.clockIn({ expectedClockIn: expectedClockIn + ':00' });
@@ -56,6 +68,11 @@ const TimeTracking: React.FC = () => {
   };
 
   const handleClockOut = async () => {
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     try {
       setLoading(true);
       await timeApi.clockOut();
@@ -117,6 +134,11 @@ const TimeTracking: React.FC = () => {
         {error && (
           <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">{error}</div>
         )}
+        {isTimeTrackingBlocked && (
+          <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            {MOBILE_TIME_TRACKING_BLOCK_MESSAGE}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Clock In/Out Card */}
@@ -148,7 +170,7 @@ const TimeTracking: React.FC = () => {
 
                   <button
                     onClick={handleClockOut}
-                    disabled={loading}
+                    disabled={loading || isTimeTrackingBlocked}
                     className="w-full py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-500 font-medium text-sm transition-colors duration-200"
                   >
                     {t('clockOut')}
@@ -174,7 +196,7 @@ const TimeTracking: React.FC = () => {
 
                   <button
                     onClick={handleClockIn}
-                    disabled={loading}
+                    disabled={loading || isTimeTrackingBlocked}
                     className="w-full py-2.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 font-medium text-sm transition-colors duration-200"
                   >
                     {t('clockIn')}

@@ -98,6 +98,7 @@ import {
   Car,
   ListTodo,
   PanelLeftClose,
+  PanelLeftOpen,
   LayoutTemplate,
 } from 'lucide-react';
 
@@ -454,9 +455,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
           <button
             onClick={toggleSidebarCollapsed}
             title="Ukryj menu"
-            className="hidden lg:flex absolute right-3 items-center justify-center rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
+            aria-label="Ukryj menu"
+            className="group hidden lg:flex absolute right-3 h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm transition-all hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300"
           >
-            <PanelLeftClose className="w-5 h-5" />
+            <PanelLeftClose className="h-[18px] w-[18px] transition-transform group-hover:-translate-x-0.5" />
           </button>
         </div>
 
@@ -508,9 +510,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               <button
                 onClick={toggleSidebarCollapsed}
                 title="Pokaż menu"
-                className="hidden lg:inline-flex rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
+                aria-label="Pokaż menu"
+                className="group hidden h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition-all hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/15 dark:hover:text-orange-300 lg:inline-flex"
               >
-                <Menu className="w-6 h-6" />
+                <PanelLeftOpen className="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5" />
               </button>
             )}
             {title && (

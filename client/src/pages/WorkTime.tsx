@@ -9,6 +9,10 @@ import * as userApi from '../api/user.api';
 import type { TimeEntry, DayStatus, DayState, LeaveRequest } from '../types/time.types';
 import { LeaveStatus, LeaveType } from '../types/time.types';
 import { getFileUrl } from '../api/axios-config';
+import {
+  isMobileTimeTrackingBlocked,
+  MOBILE_TIME_TRACKING_BLOCK_MESSAGE,
+} from '../utils/timeTrackingAccess';
 
 // Small icon showing which device a clock-in came from (phone vs computer).
 // Helps managers spot people clocking in remotely from their phone.
@@ -225,7 +229,17 @@ function getFilteredHistoryEntries(
 }
 
 // ─── Manual Entry Modal ───────────────────────────────────────────────────────
-function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; onSaved: () => Promise<void>; users: { id: string; first_name: string; last_name: string }[] }) {
+function ManualEntryModal({
+  onClose,
+  onSaved,
+  users,
+  isTimeTrackingBlocked = false,
+}: {
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+  users: { id: string; first_name: string; last_name: string }[];
+  isTimeTrackingBlocked?: boolean;
+}) {
   const [date, setDate] = useState(todayStr());
   const [clockIn, setClockIn] = useState('09:00');
   const [clockOut, setClockOut] = useState('17:00');
@@ -256,6 +270,11 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
       toast.error('Zakończenie musi być później niż rozpoczęcie');
       return;
     }
+    if (mode === 'start' && isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     setSaving(true);
     try {
       if (mode === 'start') {
@@ -427,7 +446,7 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
             </button>
             <button
               type="submit"
-              disabled={saving || (mode === 'full' && isInvalidTimeRange)}
+              disabled={saving || (mode === 'full' && isInvalidTimeRange) || (mode === 'start' && isTimeTrackingBlocked)}
               className="flex-1 rounded-lg bg-[#F7941D] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? 'Zapisywanie...' : mode === 'start' ? 'Uruchom timer' : 'Dodaj wpis'}
@@ -440,7 +459,15 @@ function ManualEntryModal({ onClose, onSaved, users }: { onClose: () => void; on
 }
 
 // ─── Start-from-time Modal (backdated clock-in → live timer) ──────────────────
-function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onStarted: () => Promise<void> }) {
+function StartFromTimeModal({
+  onClose,
+  onStarted,
+  isTimeTrackingBlocked = false,
+}: {
+  onClose: () => void;
+  onStarted: () => Promise<void>;
+  isTimeTrackingBlocked?: boolean;
+}) {
   const now = new Date();
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const [date, setDate] = useState(todayStr());
@@ -449,6 +476,11 @@ function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onSta
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     const [y, mo, d] = date.split('-').map(Number);
     const [h, mi] = start.split(':').map(Number);
     const startDate = new Date(y, mo - 1, d, h, mi, 0, 0);
@@ -498,7 +530,7 @@ function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onSta
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
-            <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
+            <button type="submit" disabled={saving || isTimeTrackingBlocked} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />} Rozpocznij
             </button>
           </div>
@@ -511,6 +543,7 @@ function StartFromTimeModal({ onClose, onStarted }: { onClose: () => void; onSta
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function WorkTime() {
   const { user } = useAuth();
+  const isTimeTrackingBlocked = isMobileTimeTrackingBlocked(user?.email);
   // Remember the last open tab across refreshes (e.g. stay on "Wszystkie czasy pracy").
   const [activeTab, setActiveTab] = useState<'my' | 'attendance' | 'all'>(() => {
     const saved = localStorage.getItem('workTime:activeTab');
@@ -753,6 +786,11 @@ export default function WorkTime() {
 
   // ── Action handlers ───────────────────────────────────────────────────────
   async function handleStartWork() {
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     setClocking(true);
     try {
       const entry = await timeApi.clockIn({ notes: 'Rozpoczęcie pracy' });
@@ -766,6 +804,11 @@ export default function WorkTime() {
   }
 
   async function handleResume() {
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     setClocking(true);
     try {
       const entry = await timeApi.clockIn({ notes: 'Wznowienie pracy' });
@@ -779,6 +822,11 @@ export default function WorkTime() {
   }
 
   async function handlePause() {
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     setClocking(true);
     try {
       const entry = await timeApi.pauseWork();
@@ -792,6 +840,11 @@ export default function WorkTime() {
   }
 
   async function handleEndWork() {
+    if (isTimeTrackingBlocked) {
+      toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     setClocking(true);
     try {
       const entry = await timeApi.endWork();
@@ -947,7 +1000,7 @@ export default function WorkTime() {
           <div className="mt-6 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center">
             <button
               onClick={handlePause}
-              disabled={clocking}
+              disabled={clocking || isTimeTrackingBlocked}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               <Pause className="w-5 h-5" />
@@ -955,7 +1008,7 @@ export default function WorkTime() {
             </button>
             <button
               onClick={handleEndWork}
-              disabled={clocking}
+              disabled={clocking || isTimeTrackingBlocked}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               <Square className="w-5 h-5" />
@@ -990,7 +1043,7 @@ export default function WorkTime() {
           <div className="mt-6 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center">
             <button
               onClick={handleResume}
-              disabled={clocking}
+              disabled={clocking || isTimeTrackingBlocked}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-60"
             >
               <Play className="w-5 h-5" />
@@ -998,7 +1051,7 @@ export default function WorkTime() {
             </button>
             <button
               onClick={handleEndWork}
-              disabled={clocking}
+              disabled={clocking || isTimeTrackingBlocked}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               <Square className="w-5 h-5" />
@@ -1032,7 +1085,7 @@ export default function WorkTime() {
 
           <button
             onClick={handleStartWork}
-            disabled={clocking}
+            disabled={clocking || isTimeTrackingBlocked}
             className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-60"
           >
             <Play className="w-5 h-5" />
@@ -1052,7 +1105,7 @@ export default function WorkTime() {
         </p>
         <button
           onClick={handleStartWork}
-          disabled={clocking}
+          disabled={clocking || isTimeTrackingBlocked}
           className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-60"
         >
           <Play className="w-5 h-5" />
@@ -1100,10 +1153,19 @@ export default function WorkTime() {
   return (
     <MainLayout title="Czas pracy">
       {isManager && showManualEntry && (
-        <ManualEntryModal onClose={() => setShowManualEntry(false)} onSaved={loadMyData} users={managerUsers} />
+        <ManualEntryModal
+          onClose={() => setShowManualEntry(false)}
+          onSaved={loadMyData}
+          users={managerUsers}
+          isTimeTrackingBlocked={isTimeTrackingBlocked}
+        />
       )}
       {isManager && showStartManual && (
-        <StartFromTimeModal onClose={() => setShowStartManual(false)} onStarted={loadMyData} />
+        <StartFromTimeModal
+          onClose={() => setShowStartManual(false)}
+          onStarted={loadMyData}
+          isTimeTrackingBlocked={isTimeTrackingBlocked}
+        />
       )}
 
       {editNotesEntry && (
@@ -1210,7 +1272,14 @@ export default function WorkTime() {
         <div className="flex flex-wrap gap-2">
           {isManager && (
             <button
-              onClick={() => setShowStartManual(true)}
+              onClick={() => {
+                if (isTimeTrackingBlocked) {
+                  toast.error(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+                  return;
+                }
+                setShowStartManual(true);
+              }}
+              disabled={isTimeTrackingBlocked}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               <Play className="w-4 h-4 text-[#F7941D]" />
@@ -1228,6 +1297,12 @@ export default function WorkTime() {
           )}
         </div>
       </div>
+
+      {isTimeTrackingBlocked && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 shadow-sm dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          {MOBILE_TIME_TRACKING_BLOCK_MESSAGE}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200 dark:border-gray-700">

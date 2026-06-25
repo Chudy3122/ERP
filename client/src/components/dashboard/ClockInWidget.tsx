@@ -6,6 +6,10 @@ import * as timeApi from '../../api/time.api';
 import { TimeEntry, TimeEntryStatus } from '../../types/time.types';
 import WidgetCard from '../widgets/WidgetCard';
 import { DashboardWidgetLoading } from './DashboardWidgetState';
+import {
+  isMobileTimeTrackingBlocked,
+  MOBILE_TIME_TRACKING_BLOCK_MESSAGE,
+} from '../../utils/timeTrackingAccess';
 
 const getTodayRange = () => {
   const start = new Date();
@@ -53,6 +57,7 @@ const ClockInWidget = () => {
   const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isTimeTrackingBlocked = isMobileTimeTrackingBlocked(user?.email);
 
   useEffect(() => {
     loadClockWidgetData();
@@ -117,6 +122,11 @@ const ClockInWidget = () => {
   };
 
   const handleClockIn = async (notes: string = 'Rozpoczęcie pracy') => {
+    if (isTimeTrackingBlocked) {
+      setError(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     try {
       setIsClocking(true);
       setError('');
@@ -131,6 +141,11 @@ const ClockInWidget = () => {
   };
 
   const handleClockOut = async (notes: string = 'Zakończenie pracy') => {
+    if (isTimeTrackingBlocked) {
+      setError(MOBILE_TIME_TRACKING_BLOCK_MESSAGE);
+      return;
+    }
+
     try {
       setIsClocking(true);
       setError('');
@@ -206,6 +221,11 @@ const ClockInWidget = () => {
             {error}
           </div>
         )}
+        {isTimeTrackingBlocked && !error && (
+          <div className="mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+            {MOBILE_TIME_TRACKING_BLOCK_MESSAGE}
+          </div>
+        )}
 
         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700/50">
@@ -278,7 +298,7 @@ const ClockInWidget = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleClockOut('Pauza w pracy')}
-                disabled={isClocking}
+                disabled={isClocking || isTimeTrackingBlocked}
                 className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               >
                 {isClocking ? (
@@ -291,7 +311,7 @@ const ClockInWidget = () => {
 
               <button
                 onClick={() => handleClockOut('Zakończenie pracy')}
-                disabled={isClocking}
+                disabled={isClocking || isTimeTrackingBlocked}
                 className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
               >
                 {isClocking ? (
@@ -323,7 +343,7 @@ const ClockInWidget = () => {
               onClick={() =>
                 handleClockIn(hasReportedTimeToday ? 'Wznowienie pracy' : 'Rozpoczęcie pracy')
               }
-              disabled={isClocking}
+              disabled={isClocking || isTimeTrackingBlocked}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#F7941D] hover:bg-[#e08317] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
               {isClocking ? (
