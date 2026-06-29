@@ -5,6 +5,12 @@ import { Task } from '../models/Task.model';
 import { ActivityLog } from '../models/ActivityLog.model';
 import { User } from '../models/User.model';
 
+// Overtime is rounded to the nearest 5 minutes (1/12 h)
+const OVERTIME_TYPES = [WorkLogType.OVERTIME, WorkLogType.OVERTIME_COMP];
+function roundHoursTo5Min(hours: number): number {
+  return Math.round((hours || 0) * 12) / 12;
+}
+
 interface CreateWorkLogDto {
   task_id?: string;
   project_id?: string;
@@ -64,15 +70,18 @@ export class WorkLogService {
       taskTitle = task.title;
     }
 
+    const workType = data.work_type ?? WorkLogType.REGULAR;
+    const hours = OVERTIME_TYPES.includes(workType) ? roundHoursTo5Min(data.hours) : data.hours;
+
     const workLog = this.workLogRepository.create({
       user_id: userId,
       task_id: data.task_id,
       project_id: projectId,
       work_date: new Date(data.work_date),
-      hours: data.hours,
+      hours,
       description: data.description,
       is_billable: data.is_billable ?? false,
-      work_type: data.work_type ?? WorkLogType.REGULAR,
+      work_type: workType,
     });
 
     const savedLog = await this.workLogRepository.save(workLog);
@@ -126,6 +135,10 @@ export class WorkLogService {
     if (data.description !== undefined) workLog.description = data.description;
     if (data.is_billable !== undefined) workLog.is_billable = data.is_billable;
     if (data.work_type !== undefined) workLog.work_type = data.work_type;
+    // Keep overtime rounded to 5 minutes after edits too
+    if (OVERTIME_TYPES.includes(workLog.work_type)) {
+      workLog.hours = roundHoursTo5Min(workLog.hours);
+    }
 
     const updated = await this.workLogRepository.save(workLog);
 

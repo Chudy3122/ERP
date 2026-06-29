@@ -191,12 +191,8 @@ export class TimeService {
       clockInTime = t;
       isManual = true;
     } else {
-      const { start, end } = todayRange();
-      const todayCount = await this.timeEntryRepository.count({
-        where: { user_id: userId, clock_in: Between(start, end) },
-      });
-      // Only the first clock-in of the day gets the 5-minute floor rounding
-      clockInTime = todayCount === 0 ? roundToNearest5Min(new Date()) : new Date();
+      // Round every clock-in (start of day and resume after a break) to 5 minutes
+      clockInTime = roundToNearest5Min(new Date());
       // Company opens at 07:00 — clocking in earlier still starts the day at 07:00
       clockInTime = clampToOpeningHour(clockInTime);
     }
@@ -221,7 +217,7 @@ export class TimeService {
   }
 
   /**
-   * Pause work — clock out with exact time (no rounding — avoids negative durations)
+   * Pause work — clock out rounded to nearest 5 min (guarded against negative duration)
    */
   async pauseWork(userId: string, notes?: string, device?: string, ip?: string): Promise<TimeEntry> {
     const timeEntry = await this.timeEntryRepository.findOne({
@@ -232,7 +228,11 @@ export class TimeService {
       throw new Error('Brak aktywnej sesji pracy do zapauzowania');
     }
 
-    timeEntry.clockOut(notes || 'Pauza w pracy', new Date());
+    // Round the pause time to nearest 5 min; never before clock_in (no negative duration)
+    const now = new Date();
+    const rounded = roundToNearest5Min(now);
+    const clockOutTime = rounded.getTime() > timeEntry.clock_in.getTime() ? rounded : now;
+    timeEntry.clockOut(notes || 'Pauza w pracy', clockOutTime);
     timeEntry.is_break = true;
     timeEntry.clock_out_device = device || null;
     timeEntry.clock_out_ip = ip || null;
