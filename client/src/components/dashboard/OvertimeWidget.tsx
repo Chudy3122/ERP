@@ -7,6 +7,24 @@ import { OvertimeSummaryEntry } from '../../types/worklog.types';
 import WidgetCard from '../widgets/WidgetCard';
 import { DashboardWidgetEmpty, DashboardWidgetLoading } from './DashboardWidgetState';
 
+function formatHM(value: number | string): string {
+  const numericValue = Number(value) || 0;
+  const sign = numericValue < 0 ? '-' : '';
+  const absoluteValue = Math.abs(numericValue);
+  let hours = Math.floor(absoluteValue);
+  let minutes = Math.round((absoluteValue - hours) * 60);
+
+  if (minutes === 60) {
+    hours += 1;
+    minutes = 0;
+  }
+
+  if (hours === 0 && minutes === 0) return '0h';
+  if (minutes === 0) return `${sign}${hours}h`;
+  if (hours === 0) return `${sign}${minutes}min`;
+  return `${sign}${hours}h ${String(minutes).padStart(2, '0')}min`;
+}
+
 const OvertimeWidget = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -77,7 +95,7 @@ const OvertimeWidget = () => {
                 </span>
               </div>
               <div className={`mt-2 text-2xl font-bold font-mono tracking-wide ${balanceColor}`}>
-                {entry.balance > 0 ? '+' : ''}{entry.balance.toFixed(1)}h
+                {entry.balance > 0 ? '+' : ''}{formatHM(entry.balance)}
               </div>
             </div>
 
@@ -85,11 +103,11 @@ const OvertimeWidget = () => {
             <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
               <div className="text-center">
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Przepracowane</p>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{entry.total_overtime.toFixed(1)}h</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{formatHM(entry.total_overtime)}</p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Odebrane</p>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{entry.total_collected.toFixed(1)}h</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{formatHM(entry.total_collected)}</p>
               </div>
             </div>
 

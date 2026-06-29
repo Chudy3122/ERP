@@ -69,6 +69,17 @@ function getMondayOfWeek(value: Date) {
   return date;
 }
 
+function formatHoursMinutes(value: number) {
+  const totalMinutes = Math.round(value * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0 && minutes === 0) return '0h';
+  if (minutes === 0) return `${hours}h`;
+  if (hours === 0) return `${minutes}min`;
+  return `${hours}h ${String(minutes).padStart(2, '0')}min`;
+}
+
 const ABSENCES_ACTIVE_TAB_KEY = 'erp:absences:active-tab';
 const ABSENCES_REQUEST_LIST_STATE_KEY = 'erp:absences:request-list-state';
 const absenceTabs: AbsenceTab[] = ['my', 'pending', 'calendar', 'management', 'all', 'report'];
@@ -1580,8 +1591,8 @@ const Absences = () => {
                             <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">
                               {r.leave ? (leaveTypeConfig[r.leave.leave_type as LeaveType]?.label || r.leave.leave_type) : ''}
                             </td>
-                            <td className="px-4 py-1.5 text-center text-sm text-blue-600 dark:text-blue-400">{r.ot > 0 ? `${r.ot}h` : ''}</td>
-                            <td className="px-4 py-1.5 text-center text-sm text-emerald-600 dark:text-emerald-400">{r.comp > 0 ? `${r.comp}h` : ''}</td>
+                            <td className="px-4 py-1.5 text-center text-sm text-blue-600 dark:text-blue-400">{r.ot > 0 ? formatHoursMinutes(r.ot) : ''}</td>
+                            <td className="px-4 py-1.5 text-center text-sm text-emerald-600 dark:text-emerald-400">{r.comp > 0 ? formatHoursMinutes(r.comp) : ''}</td>
                           </tr>
                         );
                       })}
