@@ -81,6 +81,13 @@ const startServer = async () => {
       60 * 60 * 1000
     );
 
+    // Auto-close forgotten work sessions for users with an auto_close limit (check every 5 min)
+    timeService.autoCloseStaleWorkEntries().catch(console.error);
+    setInterval(
+      () => timeService.autoCloseStaleWorkEntries().catch(console.error),
+      5 * 60 * 1000
+    );
+
     // Start HTTP server
     httpServer.listen(PORT, () => {
       console.log(`

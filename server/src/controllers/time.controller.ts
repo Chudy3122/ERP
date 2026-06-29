@@ -17,6 +17,20 @@ function detectDevice(ua?: string): 'mobile' | 'tablet' | 'desktop' | undefined 
   return 'desktop';
 }
 
+/** Device for audit. Accounts flagged force_desktop_device always read as desktop. */
+async function resolveDevice(
+  req: Request,
+  userId: string,
+): Promise<'mobile' | 'tablet' | 'desktop' | undefined> {
+  const device = detectDevice(req.headers['user-agent']);
+  if (!device) return device;
+  const u = await AppDataSource.getRepository(User).findOne({
+    where: { id: userId },
+    select: ['id', 'force_desktop_device'],
+  });
+  return u?.force_desktop_device ? 'desktop' : device;
+}
+
 /** Best-effort client IP behind the Render proxy. */
 function clientIp(req: Request): string | undefined {
   const fwd = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim();
@@ -42,7 +56,7 @@ export class TimeController {
       // Record the device/IP only when a user clocks in for THEMSELVES, so the
       // badge reflects the employee's actual device (not a manager acting for them).
       const isSelf = userId === req.user!.userId;
-      const device = isSelf ? detectDevice(req.headers['user-agent']) : undefined;
+      const device = isSelf ? await resolveDevice(req, userId) : undefined;
       const ip = isSelf ? clientIp(req) : undefined;
 
       const timeEntry = await timeService.clockIn(userId, notes, expectedClockIn, effClockInTime, device, ip);
@@ -69,7 +83,7 @@ export class TimeController {
     try {
       const userId = req.user!.userId;
       const { notes } = req.body;
-      const device = detectDevice(req.headers['user-agent']);
+      const device = await resolveDevice(req, userId);
       const ip = clientIp(req);
       const timeEntry = await timeService.clockOut(userId, notes, device, ip);
       res.status(200).json({ success: true, data: timeEntry });
@@ -100,7 +114,7 @@ export class TimeController {
     try {
       const userId = req.user!.userId;
       const { notes } = req.body;
-      const device = detectDevice(req.headers['user-agent']);
+      const device = await resolveDevice(req, userId);
       const ip = clientIp(req);
       const timeEntry = await timeService.pauseWork(userId, notes, device, ip);
       res.status(200).json({ success: true, data: timeEntry });
@@ -117,7 +131,7 @@ export class TimeController {
     try {
       const userId = req.user!.userId;
       const { notes } = req.body;
-      const device = detectDevice(req.headers['user-agent']);
+      const device = await resolveDevice(req, userId);
       const ip = clientIp(req);
       const timeEntry = await timeService.endWork(userId, notes, device, ip);
       res.status(200).json({ success: true, data: timeEntry });

@@ -1,4 +1,4 @@
-import { Between, Repository } from 'typeorm';
+import { Between, Not, IsNull, Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../models/LeaveRequest.model';
@@ -279,6 +279,36 @@ export class TimeService {
     lastEntry.clock_out_device = device || null;
     lastEntry.clock_out_ip = ip || null;
     return await this.timeEntryRepository.save(lastEntry);
+  }
+
+  /**
+   * Auto-close active work sessions for users with an auto_close_after_minutes limit.
+   * Caps a forgotten session at clock_in + limit. Runs periodically from server.ts.
+   */
+  async autoCloseStaleWorkEntries(): Promise<void> {
+    const users = await this.userRepository.find({
+      where: { auto_close_after_minutes: Not(IsNull()) },
+      select: ['id', 'auto_close_after_minutes'],
+    });
+
+    for (const u of users) {
+      const limitMin = u.auto_close_after_minutes;
+      if (!limitMin || limitMin <= 0) continue;
+
+      const entry = await this.timeEntryRepository.findOne({
+        where: { user_id: u.id, status: TimeEntryStatus.IN_PROGRESS },
+      });
+      if (!entry) continue;
+
+      const limitMs = limitMin * 60 * 1000;
+      const clockInMs = new Date(entry.clock_in).getTime();
+      if (Date.now() - clockInMs < limitMs) continue;
+
+      const hoursLabel = Number.isInteger(limitMin / 60) ? `${limitMin / 60}h` : `${limitMin} min`;
+      entry.clockOut(`Automatyczne zakończenie pracy po ${hoursLabel}`, new Date(clockInMs + limitMs));
+      entry.is_break = false;
+      await this.timeEntryRepository.save(entry);
+    }
   }
 
   /**

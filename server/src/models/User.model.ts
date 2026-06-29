@@ -77,6 +77,14 @@ export class User {
   @Column({ type: 'boolean', default: false })
   desktop_only: boolean;
 
+  // When true, time-tracking always records this account's device as "desktop".
+  @Column({ type: 'boolean', default: false })
+  force_desktop_device: boolean;
+
+  // When set, an active work session is auto-closed after this many minutes.
+  @Column({ type: 'integer', nullable: true })
+  auto_close_after_minutes: number | null;
+
   // Can manage the car fleet (assign/reject vehicle requests). Admins always can.
   @Column({ type: 'boolean', default: false })
   is_fleet_manager: boolean;
