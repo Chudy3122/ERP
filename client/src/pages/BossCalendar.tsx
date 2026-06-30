@@ -133,6 +133,8 @@ function formatDuration(minutes: number): string {
 }
 
 const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik'];
+// Person pre-selected by default on new meetings (the boss)
+const DEFAULT_PARTICIPANT_EMAIL = 'marcin.rokoszewski@itcomplete.pl';
 // Marking a meeting as finished is limited to the boss, secretariat and admins
 const CAN_COMPLETE_ROLES = ['szef', 'sekretariat', 'admin'];
 
@@ -172,7 +174,9 @@ export default function BossCalendar() {
   useEffect(() => {
     userApi.getDirectory().then((u) => setUsers(u.filter((x) => x.is_active))).catch(() => {});
   }, []);
-  const bossIds = users.filter((u) => u.role === 'szef').map((u) => u.id);
+  // Only this person is pre-selected on new meetings (other szef-role users aren't)
+  const defaultParticipantIds = users.filter((u) => u.email === DEFAULT_PARTICIPANT_EMAIL).map((u) => u.id);
+  const isSzef = (id: string) => users.find((u) => u.id === id)?.role === 'szef';
   const userName = (id: string) => {
     const u = users.find((x) => x.id === id);
     return u ? `${u.first_name} ${u.last_name}` : id;
@@ -245,7 +249,7 @@ export default function BossCalendar() {
     setMultiDay(false);
     setParticipantSearch('');
     // Boss is included by default on new meetings
-    setForm({ ...EMPTY_FORM, date: date ?? formatDate(new Date()), participant_ids: bossIds });
+    setForm({ ...EMPTY_FORM, date: date ?? formatDate(new Date()), participant_ids: defaultParticipantIds });
     setModalOpen(true);
   };
 
@@ -996,7 +1000,7 @@ export default function BossCalendar() {
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     {form.participant_ids!.map((id) => (
                       <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 px-2 py-0.5 text-xs font-medium text-[#b76612] dark:bg-[#F7941D]/15 dark:text-orange-200">
-                        {userName(id)}{bossIds.includes(id) ? ' (szef)' : ''}
+                        {userName(id)}{isSzef(id) ? ' (szef)' : ''}
                         <button
                           type="button"
                           onClick={() => setForm((c) => ({ ...c, participant_ids: (c.participant_ids || []).filter((x) => x !== id) }))}
@@ -1219,7 +1223,7 @@ export default function BossCalendar() {
                       <div className="flex flex-wrap gap-1.5">
                         {selectedEntry.participant_ids.map((id) => (
                           <span key={id} className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                            {userName(id)}{bossIds.includes(id) ? ' (szef)' : ''}
+                            {userName(id)}{isSzef(id) ? ' (szef)' : ''}
                           </span>
                         ))}
                       </div>
