@@ -406,6 +406,35 @@ class NotificationService {
   }
 
   /**
+   * Notify a boss-calendar meeting participant — on create ('new') or change ('update')
+   */
+  async notifyBossCalendarParticipant(
+    userId: string,
+    kind: 'new' | 'update',
+    title: string,
+    dateLabel: string,
+    timeLabel: string,
+    entryId: string,
+    actorName: string,
+    actorId: string,
+  ): Promise<Notification> {
+    const isUpdate = kind === 'update';
+    return this.createNotification({
+      userId,
+      type: isUpdate ? NotificationType.BOSS_CALENDAR_UPDATE : NotificationType.BOSS_CALENDAR_NEW,
+      title: isUpdate ? 'Zmiana w spotkaniu' : 'Nowe spotkanie',
+      message: isUpdate
+        ? `${actorName} zmienił spotkanie "${title}" (${dateLabel}, ${timeLabel})`
+        : `${actorName} dodał Cię do spotkania "${title}" (${dateLabel}, ${timeLabel})`,
+      actionUrl: '/boss-calendar',
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: actorId,
+      relatedEntityType: 'boss_calendar',
+      relatedEntityId: entryId,
+    });
+  }
+
+  /**
    * Notify an admin about a newly created ticket (zgłoszenie)
    */
   async notifyNewTicket(

@@ -49,6 +49,10 @@ export class BossCalendar {
   @Column({ type: 'varchar', length: 255, nullable: true })
   location: string | null;
 
+  // Meeting participants (user ids). Boss is included by default on the client.
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  participant_ids: string[];
+
   // Meeting marked as finished — shared for everyone (set by szef/sekretariat/admin)
   @Column({ type: 'boolean', default: false })
   completed: boolean;

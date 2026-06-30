@@ -49,6 +49,7 @@ export enum NotificationType {
   TICKET_NEW = 'ticket_new',
   // Boss calendar
   BOSS_CALENDAR_NEW = 'boss_calendar_new',
+  BOSS_CALENDAR_UPDATE = 'boss_calendar_update',
 }
 
 export enum NotificationPriority {

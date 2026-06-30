@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../api/boss-calendar.api';
+import * as userApi from '../api/user.api';
+import type { AdminUser } from '../types/admin.types';
 import { BossCalendarEntry, CreateEntryPayload, EntryType } from '../types/boss-calendar.types';
 import {
   AlignLeft,
@@ -17,6 +19,7 @@ import {
   MapPin,
   Plus,
   Trash2,
+  Users,
   X,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -139,6 +142,7 @@ const EMPTY_FORM: CreateEntryPayload = {
   end_time: '10:00',
   title: '',
   description: '',
+  participant_ids: [],
   type: 'meeting',
   location: '',
 };
@@ -161,6 +165,18 @@ export default function BossCalendar() {
   const [multiDay, setMultiDay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Directory for the participant picker; boss(es) are pre-selected on new meetings
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [participantSearch, setParticipantSearch] = useState('');
+  useEffect(() => {
+    userApi.getDirectory().then((u) => setUsers(u.filter((x) => x.is_active))).catch(() => {});
+  }, []);
+  const bossIds = users.filter((u) => u.role === 'szef').map((u) => u.id);
+  const userName = (id: string) => {
+    const u = users.find((x) => x.id === id);
+    return u ? `${u.first_name} ${u.last_name}` : id;
+  };
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const from = formatDate(weekDays[0]);
@@ -227,7 +243,9 @@ export default function BossCalendar() {
   const openCreate = (date?: string) => {
     setEditingEntry(null);
     setMultiDay(false);
-    setForm({ ...EMPTY_FORM, date: date ?? formatDate(new Date()) });
+    setParticipantSearch('');
+    // Boss is included by default on new meetings
+    setForm({ ...EMPTY_FORM, date: date ?? formatDate(new Date()), participant_ids: bossIds });
     setModalOpen(true);
   };
 
@@ -235,6 +253,7 @@ export default function BossCalendar() {
     setSelectedEntry(null);
     setEditingEntry(entry);
     setMultiDay(!!entry.end_date && entry.end_date !== entry.date);
+    setParticipantSearch('');
     setForm({
       date: entry.date,
       end_date: entry.end_date ?? undefined,
@@ -244,6 +263,7 @@ export default function BossCalendar() {
       description: entry.description ?? '',
       type: entry.type,
       location: entry.location ?? '',
+      participant_ids: Array.isArray(entry.participant_ids) ? entry.participant_ids : [],
     });
     setModalOpen(true);
   };
@@ -967,6 +987,62 @@ export default function BossCalendar() {
                 />
               </div>
 
+              {/* Participants picker */}
+              <div>
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Users className="h-3.5 w-3.5" /> Uczestnicy
+                </label>
+                {(form.participant_ids?.length ?? 0) > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {form.participant_ids!.map((id) => (
+                      <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 px-2 py-0.5 text-xs font-medium text-[#b76612] dark:bg-[#F7941D]/15 dark:text-orange-200">
+                        {userName(id)}{bossIds.includes(id) ? ' (szef)' : ''}
+                        <button
+                          type="button"
+                          onClick={() => setForm((c) => ({ ...c, participant_ids: (c.participant_ids || []).filter((x) => x !== id) }))}
+                          className="leading-none hover:opacity-70"
+                          aria-label="Usuń uczestnika"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="search"
+                  value={participantSearch}
+                  onChange={(e) => setParticipantSearch(e.target.value)}
+                  placeholder="Szukaj pracownika..."
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+                <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                  {users
+                    .filter((u) => `${u.first_name} ${u.last_name}`.toLowerCase().includes(participantSearch.trim().toLowerCase()))
+                    .map((u) => {
+                      const checked = (form.participant_ids || []).includes(u.id);
+                      return (
+                        <label key={u.id} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => setForm((c) => {
+                              const cur = c.participant_ids || [];
+                              return { ...c, participant_ids: checked ? cur.filter((x) => x !== u.id) : [...cur, u.id] };
+                            })}
+                            className="h-4 w-4 rounded border-gray-300 accent-[#F7941D]"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-gray-200">{u.first_name} {u.last_name}</span>
+                          {u.role === 'szef' && (
+                            <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/20 dark:text-red-300">Szef</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                </div>
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Szef jest dodany domyślnie. Uczestnicy dostaną powiadomienie o spotkaniu i jego zmianach.</p>
+              </div>
+
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <AlignLeft className="h-3.5 w-3.5" /> Opis * - wskaż temat spotkania
@@ -1133,6 +1209,22 @@ export default function BossCalendar() {
                       {selectedEntry.description || 'Brak dodatkowego opisu.'}
                     </p>
                   </div>
+
+                  {selectedEntry.participant_ids && selectedEntry.participant_ids.length > 0 && (
+                    <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <Users className="h-4 w-4 text-[#F7941D]" />
+                        Uczestnicy ({selectedEntry.participant_ids.length})
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedEntry.participant_ids.map((id) => (
+                          <span key={id} className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                            {userName(id)}{bossIds.includes(id) ? ' (szef)' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/60">

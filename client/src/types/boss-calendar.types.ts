@@ -10,6 +10,7 @@ export interface BossCalendarEntry {
   description: string | null;
   type: EntryType;
   location: string | null;
+  participant_ids: string[];
   completed: boolean;
   completed_at: string | null;
   created_by: string;
@@ -32,4 +33,5 @@ export interface CreateEntryPayload {
   description?: string;
   type: EntryType;
   location?: string;
+  participant_ids?: string[];
 }

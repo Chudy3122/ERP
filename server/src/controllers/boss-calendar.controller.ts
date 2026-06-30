@@ -22,8 +22,8 @@ class BossCalendarController {
     try {
       const userId = req.user!.userId;
       const entry = await this.service.create({ ...req.body, created_by: userId });
-      // Notify the boss about the new entry (don't fail creation if this errors)
-      this.service.notifyNewEntry(entry, userId).catch(() => undefined);
+      // Notify participants about the new meeting (don't fail creation if this errors)
+      this.service.notifyParticipants(entry, userId, 'new').catch(() => undefined);
       res.status(201).json(entry);
     } catch (error) {
       res.status(500).json({ message: 'Błąd podczas tworzenia wpisu' });
@@ -38,6 +38,8 @@ class BossCalendarController {
         res.status(404).json({ message: 'Wpis nie znaleziony' });
         return;
       }
+      // Notify participants about the change (don't fail the update if this errors)
+      this.service.notifyParticipants(entry, userId, 'update').catch(() => undefined);
       res.json(entry);
     } catch (error) {
       res.status(500).json({ message: 'Błąd podczas aktualizacji wpisu' });

@@ -1,7 +1,7 @@
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { BossCalendar, BossCalendarEntryType } from '../models/BossCalendar.model';
-import { User, UserRole } from '../models/User.model';
+import { User } from '../models/User.model';
 import notificationService from './notification.service';
 
 interface CreateEntryDto {
@@ -13,6 +13,7 @@ interface CreateEntryDto {
   description?: string;
   type?: BossCalendarEntryType;
   location?: string;
+  participant_ids?: string[];
   created_by: string;
 }
 
@@ -25,6 +26,7 @@ interface UpdateEntryDto {
   description?: string;
   type?: BossCalendarEntryType;
   location?: string;
+  participant_ids?: string[];
   updated_by: string;
 }
 
@@ -53,7 +55,9 @@ export class BossCalendarService {
   }
 
   async create(dto: CreateEntryDto): Promise<BossCalendar> {
-    const entry = this.repo.create(dto);
+    // The creator is always part of the meeting (so they get future change notices)
+    const participant_ids = Array.from(new Set([...(dto.participant_ids || []), dto.created_by]));
+    const entry = this.repo.create({ ...dto, participant_ids });
     return this.repo.save(entry);
   }
 
@@ -61,6 +65,9 @@ export class BossCalendarService {
     const entry = await this.repo.findOne({ where: { id } });
     if (!entry) return null;
     Object.assign(entry, dto);
+    if (dto.participant_ids) {
+      entry.participant_ids = Array.from(new Set([...dto.participant_ids, entry.created_by]));
+    }
     return this.repo.save(entry);
   }
 
@@ -78,30 +85,35 @@ export class BossCalendarService {
   }
 
   /**
-   * Notify the boss(es) about a newly added calendar entry.
-   * The creator (if they are a boss) is not notified about their own entry.
+   * Notify meeting participants on create ('new') or change ('update').
+   * The person performing the action is never notified about their own action.
    */
-  async notifyNewEntry(entry: BossCalendar, creatorId: string): Promise<void> {
-    const userRepo = AppDataSource.getRepository(User);
-    const bosses = await userRepo.find({ where: { role: UserRole.SZEF, is_active: true } });
-    if (bosses.length === 0) return;
+  async notifyParticipants(entry: BossCalendar, actorId: string, kind: 'new' | 'update'): Promise<void> {
+    const ids = (Array.isArray(entry.participant_ids) ? entry.participant_ids : []).filter(
+      (id) => id && id !== actorId,
+    );
+    if (ids.length === 0) return;
 
-    const creator = await userRepo.findOne({ where: { id: creatorId } });
-    const creatorName = creator ? `${creator.first_name} ${creator.last_name}` : 'Ktoś';
+    const userRepo = AppDataSource.getRepository(User);
+    const recipients = await userRepo.find({ where: { id: In(ids), is_active: true } });
+    if (recipients.length === 0) return;
+
+    const actor = await userRepo.findOne({ where: { id: actorId } });
+    const actorName = actor ? `${actor.first_name} ${actor.last_name}` : 'Ktoś';
     const dateLabel =
       entry.end_date && entry.end_date !== entry.date ? `${entry.date} – ${entry.end_date}` : entry.date;
     const timeLabel = `${entry.start_time}–${entry.end_time}`;
 
-    for (const boss of bosses) {
-      if (boss.id === creatorId) continue;
-      await notificationService.notifyBossCalendarEntry(
-        boss.id,
+    for (const r of recipients) {
+      await notificationService.notifyBossCalendarParticipant(
+        r.id,
+        kind,
         entry.title,
         dateLabel,
         timeLabel,
         entry.id,
-        creatorName,
-        creatorId,
+        actorName,
+        actorId,
       );
     }
   }
