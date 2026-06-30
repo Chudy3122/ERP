@@ -107,6 +107,29 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setSelectedFiles((prev) => [...prev, ...files].slice(0, 5)); // Max 5 files
   };
 
+  // Paste images from the clipboard (Ctrl+V) as attachments
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const images: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        // Clipboard images are usually unnamed → give them a sensible filename
+        const ext = item.type.split('/')[1] || 'png';
+        const named = file.name && file.name !== 'image.png'
+          ? file
+          : new File([file], `wklejony-${Date.now()}.${ext}`, { type: item.type });
+        images.push(named);
+      }
+    }
+    if (images.length > 0) {
+      e.preventDefault();
+      handleFilesSelected(images);
+    }
+  };
+
   // Remove selected file
   const handleRemoveFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
@@ -294,6 +317,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             value={content}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={placeholder}
             disabled={disabled || isUploading}
             rows={1}
