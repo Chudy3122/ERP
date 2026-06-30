@@ -598,6 +598,7 @@ export default function WorkTime() {
   const [allFrom, setAllFrom] = useState(monthStartStr);
   const [allTo, setAllTo] = useState(todayStr());
   const [allSearch, setAllSearch] = useState('');
+  const [summaryUserId, setSummaryUserId] = useState('');
   const [allTypeFilter, setAllTypeFilter] = useState<'all' | 'auto' | 'manual'>('all');
   const [allStatusFilter, setAllStatusFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
   const [allSort, setAllSort] = useState<'date_desc' | 'date_asc' | 'name' | 'duration_desc'>('date_desc');
@@ -1157,6 +1158,21 @@ export default function WorkTime() {
   const allTotalPages = Math.max(1, Math.ceil(allFilteredEntries.length / allPageSize));
   const allPageStart = (allPage - 1) * allPageSize;
   const allPageEntries = allFilteredEntries.slice(allPageStart, allPageStart + allPageSize);
+
+  // ── Per-employee period summary (sum of worked time in the selected range) ──
+  const summaryUsers = Array.from(
+    new Map(
+      allEntries.map((e) => {
+        const u = (e as any).user;
+        return [e.user_id, u ? `${u.last_name} ${u.first_name}` : e.user_id] as [string, string];
+      })
+    ).entries()
+  )
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  const summaryEntries = summaryUserId ? allEntries.filter((e) => e.user_id === summaryUserId) : [];
+  const summaryMinutes = summaryEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+  const summaryDayCount = new Set(summaryEntries.map((e) => String(e.clock_in).slice(0, 10))).size;
 
   return (
     <MainLayout title="Czas pracy">
@@ -1943,6 +1959,47 @@ export default function WorkTime() {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Per-employee period summary */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Podsumowanie pracownika</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Suma przepracowanego czasu w wybranym okresie ({allFrom || '—'} – {allTo || '—'}).
+                </p>
+              </div>
+              <div className="min-w-[240px]">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
+                <select
+                  value={summaryUserId}
+                  onChange={(e) => setSummaryUserId(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">— wybierz pracownika —</option>
+                  {summaryUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {summaryUserId && (
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg bg-[#F7941D]/10 px-3 py-2 dark:bg-[#F7941D]/15">
+                  <p className="text-xs font-medium text-[#b76612] dark:text-orange-200">Łączny czas pracy</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{formatDuration(summaryMinutes)}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Dni z pracą</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{summaryDayCount}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Wpisy</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{summaryEntries.length}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Table */}
