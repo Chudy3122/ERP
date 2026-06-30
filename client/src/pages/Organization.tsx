@@ -25,6 +25,17 @@ import { useAuth } from '../contexts/AuthContext';
 
 type ViewMode = 'list' | 'chart';
 
+// Role badges in the list view — mirror the colours/labels used in the org chart,
+// so a department's managers (and other special roles) match the schema view.
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+  szef: { label: 'Szef', cls: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' },
+  admin: { label: 'Administrator', cls: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300' },
+  kierownik: { label: 'Kierownik', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300' },
+  ksiegowosc: { label: 'Księgowość', cls: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' },
+  kadry: { label: 'Kadry', cls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300' },
+  sekretariat: { label: 'Sekretariat', cls: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' },
+};
+
 const Organization = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -418,11 +429,15 @@ const Organization = () => {
                               </p>
                             </div>
 
-                            {employee.id === selectedDepartment.head_id && (
+                            {employee.id === selectedDepartment.head_id ? (
                               <span className="rounded-full bg-[#F7941D]/10 px-2.5 py-1 text-xs font-semibold text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
                                 {t('organization.departmentHead')}
                               </span>
-                            )}
+                            ) : ROLE_BADGE[(employee as any).role] ? (
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ROLE_BADGE[(employee as any).role].cls}`}>
+                                {ROLE_BADGE[(employee as any).role].label}
+                              </span>
+                            ) : null}
 
                             {isAdmin && (
                               <button
