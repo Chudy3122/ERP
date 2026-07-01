@@ -1,4 +1,4 @@
-import { Between, Not, IsNull, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../models/LeaveRequest.model';
@@ -25,6 +25,9 @@ function roundToNearest5Min(date: Date): Date {
 
 // The company opens at 07:00 (Europe/Warsaw). A work day never starts earlier.
 const OPENING_HOUR = 7;
+
+// Default cap for a forgotten active work session (12h); per-user setting overrides it.
+const DEFAULT_AUTO_CLOSE_MINUTES = 720;
 
 function warsawParts(d: Date) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -282,23 +285,27 @@ export class TimeService {
   }
 
   /**
-   * Auto-close active work sessions for users with an auto_close_after_minutes limit.
-   * Caps a forgotten session at clock_in + limit. Runs periodically from server.ts.
+   * Auto-close forgotten active work sessions. Everyone is capped at 12h by default;
+   * a per-user auto_close_after_minutes overrides that (e.g. Mateusz = 8h). Runs from server.ts.
    */
   async autoCloseStaleWorkEntries(): Promise<void> {
+    const entries = await this.timeEntryRepository.find({
+      where: { status: TimeEntryStatus.IN_PROGRESS },
+    });
+    if (entries.length === 0) return;
+
+    const userIds = Array.from(new Set(entries.map((e) => e.user_id)));
     const users = await this.userRepository.find({
-      where: { auto_close_after_minutes: Not(IsNull()) },
+      where: { id: In(userIds) },
       select: ['id', 'auto_close_after_minutes'],
     });
+    const limitByUser = new Map(
+      users.map((u) => [u.id, u.auto_close_after_minutes ?? DEFAULT_AUTO_CLOSE_MINUTES]),
+    );
 
-    for (const u of users) {
-      const limitMin = u.auto_close_after_minutes;
+    for (const entry of entries) {
+      const limitMin = limitByUser.get(entry.user_id) ?? DEFAULT_AUTO_CLOSE_MINUTES;
       if (!limitMin || limitMin <= 0) continue;
-
-      const entry = await this.timeEntryRepository.findOne({
-        where: { user_id: u.id, status: TimeEntryStatus.IN_PROGRESS },
-      });
-      if (!entry) continue;
 
       const limitMs = limitMin * 60 * 1000;
       const clockInMs = new Date(entry.clock_in).getTime();
