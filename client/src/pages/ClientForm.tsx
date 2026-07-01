@@ -5,7 +5,6 @@ import MainLayout from '../components/layout/MainLayout';
 import {
   AlertCircle,
   ArrowLeft,
-  BadgeCheck,
   Building2,
   ClipboardList,
   FileText,
@@ -17,6 +16,26 @@ import {
 } from 'lucide-react';
 import * as clientApi from '../api/client.api';
 import { CreateClientRequest, ClientType } from '../types/client.types';
+
+const digitsOnly = (value: string, maxLength?: number) => {
+  const normalized = value.replace(/\D/g, '');
+  return typeof maxLength === 'number' ? normalized.slice(0, maxLength) : normalized;
+};
+
+const normalizePhone = (value: string) => {
+  const trimmedValue = value.trim();
+  const hasCountryPrefix = trimmedValue.startsWith('+');
+  const digits = digitsOnly(trimmedValue, hasCountryPrefix ? 11 : 9);
+
+  return hasCountryPrefix ? `+${digits}` : digits;
+};
+
+const normalizePostalCode = (value: string) => {
+  const digits = digitsOnly(value, 5);
+
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+};
 
 const ClientForm = () => {
   const { t } = useTranslation('clients');
@@ -65,15 +84,15 @@ const ClientForm = () => {
       const client = await clientApi.getClientById(id!);
       setFormData({
         name: client.name,
-        nip: client.nip || '',
-        regon: client.regon || '',
+        nip: digitsOnly(client.nip || '', 10),
+        regon: digitsOnly(client.regon || '', 14),
         street: client.street || '',
         city: client.city || '',
-        postal_code: client.postal_code || '',
+        postal_code: normalizePostalCode(client.postal_code || ''),
         country: client.country || 'Polska',
         contact_person: client.contact_person || '',
         email: client.email || '',
-        phone: client.phone || '',
+        phone: normalizePhone(client.phone || ''),
         client_type: client.client_type,
         is_active: client.is_active,
         notes: client.notes || '',
@@ -92,6 +111,31 @@ const ClientForm = () => {
 
     if (!formData.name.trim()) {
       setError(t('nameRequired'));
+      return;
+    }
+
+    if (formData.nip && formData.nip.length !== 10) {
+      setError('NIP powinien zawierać dokładnie 10 cyfr.');
+      return;
+    }
+
+    if (formData.regon && ![9, 14].includes(formData.regon.length)) {
+      setError('REGON powinien zawierać 9 albo 14 cyfr.');
+      return;
+    }
+
+    if (formData.phone && !/^(\d{9}|\+48\d{9})$/.test(formData.phone)) {
+      setError('Telefon powinien mieć 9 cyfr albo format +48XXXXXXXXX.');
+      return;
+    }
+
+    if (formData.postal_code && !/^\d{2}-\d{3}$/.test(formData.postal_code)) {
+      setError('Kod pocztowy powinien mieć format 00-000.');
+      return;
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email.trim())) {
+      setError('Podaj poprawny adres e-mail.');
       return;
     }
 
@@ -122,9 +166,21 @@ const ClientForm = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    let nextValue = value;
+
+    if (name === 'nip') {
+      nextValue = digitsOnly(value, 10);
+    } else if (name === 'regon') {
+      nextValue = digitsOnly(value, 14);
+    } else if (name === 'phone') {
+      nextValue = normalizePhone(value);
+    } else if (name === 'postal_code') {
+      nextValue = normalizePostalCode(value);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : nextValue,
     }));
   };
 
@@ -228,9 +284,13 @@ const ClientForm = () => {
                   name="nip"
                   value={formData.nip}
                   onChange={handleChange}
+                  inputMode="numeric"
+                  pattern="\d{10}"
+                  maxLength={10}
                   className={fieldClass}
                   placeholder="0000000000"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">10 cyfr, bez spacji i myślników.</p>
               </div>
 
               <div>
@@ -243,9 +303,13 @@ const ClientForm = () => {
                   name="regon"
                   value={formData.regon}
                   onChange={handleChange}
+                  inputMode="numeric"
+                  pattern="\d{9}|\d{14}"
+                  maxLength={14}
                   className={fieldClass}
                   placeholder="000000000"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">9 albo 14 cyfr.</p>
               </div>
 
               <div>
@@ -320,6 +384,9 @@ const ClientForm = () => {
                     name="postal_code"
                     value={formData.postal_code}
                     onChange={handleChange}
+                    inputMode="numeric"
+                    pattern="\d{2}-\d{3}"
+                    maxLength={6}
                     className={fieldClass}
                     placeholder="00-000"
                   />
@@ -413,10 +480,14 @@ const ClientForm = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      inputMode="tel"
+                      pattern="(\d{9}|\+48\d{9})"
+                      maxLength={12}
                       className={`${fieldClass} pl-9`}
-                      placeholder="+48 000 000 000"
+                      placeholder="123456789"
                     />
                   </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Wpisz 9 cyfr albo numer z prefiksem +48.</p>
                 </div>
               </div>
             </div>
@@ -444,35 +515,27 @@ const ClientForm = () => {
             />
           </section>
 
-          <section className="sticky bottom-4 z-10 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <BadgeCheck className="h-4 w-4 text-[#F7941D]" />
-                <span>{isEdit ? t('editClient') : t('newClient')}</span>
-              </div>
-              <div className="flex flex-wrap justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate('/clients')}
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                >
-                  {t('cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {isEdit ? t('save') : t('create')}
-                </button>
-              </div>
-            </div>
-          </section>
+          <div className="flex flex-wrap justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate('/clients')}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {isEdit ? t('save') : t('create')}
+            </button>
+          </div>
         </form>
       </div>
     </MainLayout>
