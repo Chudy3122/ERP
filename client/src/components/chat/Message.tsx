@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Message as MessageType } from '../../types/chat.types';
+import type { Message as MessageType, MessageReaction } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { getFileUrl } from '../../api/axios-config';
 import { reactToMessage } from '../../api/chat.api';
@@ -102,11 +102,16 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   const [senderAvatarError, setSenderAvatarError] = useState(false);
   const [ownAvatarError, setOwnAvatarError] = useState(false);
   const [showReactionBar, setShowReactionBar] = useState(false);
+  // Local copy so the reaction shows instantly (socket broadcast reconciles it)
+  const [localReactions, setLocalReactions] = useState<MessageReaction[]>(message.reactions || []);
+  useEffect(() => {
+    setLocalReactions(message.reactions || []);
+  }, [message.reactions]);
 
   // Aggregate reactions by emoji (count + whether the current user reacted)
   const reactionGroups = (() => {
     const map = new Map<string, { emoji: string; count: number; mine: boolean }>();
-    for (const r of message.reactions || []) {
+    for (const r of localReactions) {
       const g = map.get(r.emoji) || { emoji: r.emoji, count: 0, mine: false };
       g.count += 1;
       if (r.user_id === user?.id) g.mine = true;
@@ -117,10 +122,19 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
 
   const handleReact = async (emoji: string) => {
     setShowReactionBar(false);
+    if (!user) return;
+    const prev = localReactions;
+    // Optimistic: one reaction per user (same emoji toggles off, different replaces)
+    const mine = prev.find((r) => r.user_id === user.id);
+    const next =
+      mine && mine.emoji === emoji
+        ? prev.filter((r) => r.user_id !== user.id)
+        : [...prev.filter((r) => r.user_id !== user.id), { id: `temp-${Date.now()}`, emoji, user_id: user.id }];
+    setLocalReactions(next);
     try {
-      await reactToMessage(message.id, emoji); // socket broadcast updates the UI
+      await reactToMessage(message.id, emoji);
     } catch {
-      /* ignore — reaction is best-effort */
+      setLocalReactions(prev); // revert on failure
     }
   };
 
