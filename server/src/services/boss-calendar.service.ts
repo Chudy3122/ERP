@@ -55,8 +55,9 @@ export class BossCalendarService {
   }
 
   async create(dto: CreateEntryDto): Promise<BossCalendar> {
-    // The creator is always part of the meeting (so they get future change notices)
-    const participant_ids = Array.from(new Set([...(dto.participant_ids || []), dto.created_by]));
+    // The creator is NOT auto-added — they can create a meeting for others they
+    // don't attend. They only become a participant if they pick themselves.
+    const participant_ids = Array.from(new Set(dto.participant_ids || []));
     const entry = this.repo.create({ ...dto, participant_ids });
     return this.repo.save(entry);
   }
@@ -66,7 +67,7 @@ export class BossCalendarService {
     if (!entry) return null;
     Object.assign(entry, dto);
     if (dto.participant_ids) {
-      entry.participant_ids = Array.from(new Set([...dto.participant_ids, entry.created_by]));
+      entry.participant_ids = Array.from(new Set(dto.participant_ids));
     }
     return this.repo.save(entry);
   }
