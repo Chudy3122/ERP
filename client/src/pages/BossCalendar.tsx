@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../api/boss-calendar.api';
@@ -153,6 +153,9 @@ export default function BossCalendar() {
   const { user } = useAuth();
   const canEdit = CAN_EDIT_ROLES.includes(user?.role || '');
   const canComplete = CAN_COMPLETE_ROLES.includes(user?.role || '');
+  // Drag-and-drop rescheduling — boss and admins only
+  const canDrag = ['szef', 'admin'].includes(user?.role || '');
+  const dragRef = useRef<{ id: string; durationMin: number; grabOffsetPx: number } | null>(null);
 
   const [weekStart, setWeekStart] = useState<Date>(getMondayOf(new Date()));
   const [selectedDay, setSelectedDay] = useState<string>(formatDate(new Date()));
@@ -338,6 +341,48 @@ export default function BossCalendar() {
       loadMonth();
     } catch {
       toast.error('Nie udało się usunąć wpisu');
+    }
+  };
+
+  // ── Drag & drop rescheduling (boss/admin) ────────────────────────────────
+  const fmtHM = (min: number) => {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, entry: BossCalendarEntry) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    dragRef.current = {
+      id: entry.id,
+      durationMin: Math.max(5, toMinutes(entry.end_time) - toMinutes(entry.start_time)),
+      grabOffsetPx: event.clientY - rect.top,
+    };
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDropOnDay = async (event: React.DragEvent<HTMLDivElement>, dayStr: string) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag) return;
+    event.preventDefault();
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const topPx = event.clientY - rect.top - drag.grabOffsetPx;
+    // Snap the start to the nearest 5 minutes, keep it inside the visible hours
+    let minutesFromTop = Math.round((topPx / SLOT_PX) * 60 / 5) * 5;
+    minutesFromTop = Math.max(0, Math.min(minutesFromTop, TOTAL_MINUTES - drag.durationMin));
+    const startMin = HOUR_START * 60 + minutesFromTop;
+    const start_time = fmtHM(startMin);
+    const end_time = fmtHM(startMin + drag.durationMin);
+
+    try {
+      await api.updateEntry(drag.id, { date: dayStr, start_time, end_time });
+      toast.success('Przeniesiono spotkanie');
+      load();
+      loadMonth();
+    } catch {
+      toast.error('Nie udało się przenieść spotkania');
     }
   };
 
@@ -643,6 +688,8 @@ export default function BossCalendar() {
                         }`}
                         style={{ height: SLOT_PX * (HOUR_END - HOUR_START) }}
                         onClick={() => setSelectedDay(dayStr)}
+                        onDragOver={canDrag ? (e) => e.preventDefault() : undefined}
+                        onDrop={canDrag ? (e) => handleDropOnDay(e, dayStr) : undefined}
                       >
                         {hours.map((hour) => (
                           <div
@@ -689,11 +736,15 @@ export default function BossCalendar() {
                           const isCompleted = entry.completed;
                           const isMeeting = entry.type === 'meeting';
 
+                          const isDraggable = canDrag && !isMultiDay;
+
                           return (
                             <div
                               key={entry.id}
+                              draggable={isDraggable}
+                              onDragStart={isDraggable ? (event) => handleDragStart(event, entry) : undefined}
                               style={{ top, height: Math.max(height, 26), left: 4, right: 4 }}
-                              className={`absolute z-10 cursor-pointer select-none overflow-hidden rounded-lg border-l-4 px-2 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${cfg.bg} ${cfg.border} ${
+                              className={`absolute z-10 select-none overflow-hidden rounded-lg border-l-4 px-2 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${cfg.bg} ${cfg.border} ${
                                 isCompleted ? 'opacity-70 ring-1 ring-emerald-300 dark:ring-emerald-500/70' : ''
                               }`}
                               onClick={(event) => {
