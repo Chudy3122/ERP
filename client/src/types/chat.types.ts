@@ -54,6 +54,13 @@ export interface Message {
   updated_at: string;
   sender?: User;
   attachments?: Attachment[];
+  reactions?: MessageReaction[];
+}
+
+export interface MessageReaction {
+  id: string;
+  emoji: string;
+  user_id: string;
 }
 
 export interface Attachment {

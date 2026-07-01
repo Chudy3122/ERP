@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import type { Message as MessageType } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { getFileUrl } from '../../api/axios-config';
+import { reactToMessage } from '../../api/chat.api';
 import ConfirmDialog from '../common/ConfirmDialog';
+
+// A few basic reactions (Messenger-style)
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😠'];
 
 interface MessageProps {
   message: MessageType;
@@ -97,6 +101,28 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   const [editContent, setEditContent] = useState('');
   const [senderAvatarError, setSenderAvatarError] = useState(false);
   const [ownAvatarError, setOwnAvatarError] = useState(false);
+  const [showReactionBar, setShowReactionBar] = useState(false);
+
+  // Aggregate reactions by emoji (count + whether the current user reacted)
+  const reactionGroups = (() => {
+    const map = new Map<string, { emoji: string; count: number; mine: boolean }>();
+    for (const r of message.reactions || []) {
+      const g = map.get(r.emoji) || { emoji: r.emoji, count: 0, mine: false };
+      g.count += 1;
+      if (r.user_id === user?.id) g.mine = true;
+      map.set(r.emoji, g);
+    }
+    return Array.from(map.values());
+  })();
+
+  const handleReact = async (emoji: string) => {
+    setShowReactionBar(false);
+    try {
+      await reactToMessage(message.id, emoji); // socket broadcast updates the UI
+    } catch {
+      /* ignore — reaction is best-effort */
+    }
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -349,14 +375,41 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
           </div>
         )}
 
+        {/* Reactions */}
+        {reactionGroups.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {reactionGroups.map((g) => (
+              <button
+                key={g.emoji}
+                onClick={() => handleReact(g.emoji)}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                  g.mine
+                    ? 'border-[#F7941D]/40 bg-[#F7941D]/10 text-[#b76612] dark:text-orange-200'
+                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-300'
+                }`}
+              >
+                <span className="text-sm leading-none">{g.emoji}</span>
+                <span className="font-medium">{g.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Timestamp and Actions */}
         <div className="flex items-center gap-2 mt-1 px-1">
           <p className="text-[10px] text-gray-400">{formatTime(message.created_at)}</p>
 
-          {/* Action buttons (only for own messages, shown on hover) */}
-          {isOwnMessage && !message.is_deleted && (
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {onEdit && (
+          {/* Hover actions: react (everyone) + edit/delete (own) */}
+          {!message.is_deleted && (
+            <div className="relative flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => setShowReactionBar((v) => !v)}
+                className="text-sm leading-none text-gray-400 hover:scale-110 transition-transform"
+                title="Dodaj reakcję"
+              >
+                🙂
+              </button>
+              {isOwnMessage && onEdit && (
                 <button
                   onClick={() => {
                     setEditContent(message.content);
@@ -368,7 +421,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                   {t('chat:edit')}
                 </button>
               )}
-              {onDelete && (
+              {isOwnMessage && onDelete && (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="text-[10px] text-gray-400 hover:text-red-600 font-medium transition-colors"
@@ -376,6 +429,20 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                 >
                   {t('chat:delete')}
                 </button>
+              )}
+
+              {showReactionBar && (
+                <div className={`absolute bottom-full z-20 mb-1 flex gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${isOwnMessage ? 'right-0' : 'left-0'}`}>
+                  {QUICK_REACTIONS.map((e) => (
+                    <button
+                      key={e}
+                      onClick={() => handleReact(e)}
+                      className="text-lg leading-none transition-transform hover:scale-125"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}

@@ -6,7 +6,7 @@ import { ChannelMember } from '../models/ChannelMember.model';
 import { AppDataSource } from '../config/database';
 import { User } from '../models/User.model';
 import { getIO } from '../config/socket';
-import { broadcastNewMessage } from '../sockets/chatBroadcast';
+import { broadcastNewMessage, broadcastReactionUpdate } from '../sockets/chatBroadcast';
 
 const chatService = new ChatService();
 
@@ -41,6 +41,32 @@ export const sendMessage = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Send message error:', error);
     return res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to send message' });
+  }
+};
+
+/**
+ * Toggle a reaction on a message
+ * POST /api/chat/messages/:messageId/react  { emoji }
+ */
+export const reactToMessage = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const { messageId } = req.params;
+    const emoji = (req.body?.emoji || '').trim();
+    if (!emoji) return res.status(400).json({ message: 'Brak emoji' });
+
+    const { channelId } = await chatService.toggleReaction(messageId, req.user.userId, emoji);
+
+    try {
+      await broadcastReactionUpdate(getIO(), messageId);
+    } catch (e) {
+      console.error('Chat reaction broadcast error:', e);
+    }
+
+    return res.status(200).json({ success: true, channelId });
+  } catch (error) {
+    console.error('React to message error:', error);
+    return res.status(400).json({ message: error instanceof Error ? error.message : 'Failed to react' });
   }
 };
 

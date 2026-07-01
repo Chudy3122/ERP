@@ -1,10 +1,35 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { AppDataSource } from '../config/database';
 import { Message } from '../models/Message.model';
+import { MessageReaction } from '../models/MessageReaction.model';
 import { Channel } from '../models/Channel.model';
 import { ChannelMember } from '../models/ChannelMember.model';
 import { User } from '../models/User.model';
 import notificationService from '../services/notification.service';
+
+/**
+ * Push updated reactions of a message to every channel member's personal room.
+ */
+export async function broadcastReactionUpdate(io: SocketIOServer, messageId: string): Promise<void> {
+  const messageRepository = AppDataSource.getRepository(Message);
+  const reactionRepository = AppDataSource.getRepository(MessageReaction);
+  const channelMemberRepository = AppDataSource.getRepository(ChannelMember);
+
+  const message = await messageRepository.findOne({ where: { id: messageId } });
+  if (!message) return;
+
+  const reactions = await reactionRepository.find({ where: { message_id: messageId } });
+  const payload = {
+    messageId,
+    channelId: message.channel_id,
+    reactions: reactions.map((r) => ({ id: r.id, emoji: r.emoji, user_id: r.user_id })),
+  };
+
+  const members = await channelMemberRepository.find({ where: { channel_id: message.channel_id } });
+  for (const member of members) {
+    io.to(`user:${member.user_id}`).emit('chat:message_reaction', payload);
+  }
+}
 
 /**
  * Deliver a new chat message to every channel member reliably.

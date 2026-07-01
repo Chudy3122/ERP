@@ -11,6 +11,7 @@ import {
 import { Channel } from './Channel.model';
 import { User } from './User.model';
 import { Attachment } from './Attachment.model';
+import { MessageReaction } from './MessageReaction.model';
 
 export enum MessageType {
   TEXT = 'text',
@@ -69,6 +70,9 @@ export class Message {
   // Relations
   @OneToMany(() => Attachment, attachment => attachment.message)
   attachments: Attachment[];
+
+  @OneToMany(() => MessageReaction, reaction => reaction.message)
+  reactions: MessageReaction[];
 
   // Mark message as edited
   edit(newContent: string): void {

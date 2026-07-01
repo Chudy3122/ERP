@@ -52,6 +52,13 @@ export const sendMessage = async (channelId: string, content: string): Promise<M
 };
 
 /**
+ * Toggle a reaction (emoji) on a message
+ */
+export const reactToMessage = async (messageId: string, emoji: string): Promise<void> => {
+  await apiClient.post(`/chat/messages/${messageId}/react`, { emoji });
+};
+
+/**
  * Mark a channel as read (updates last_read_at → clears unread badge)
  */
 export const markChannelRead = async (channelId: string): Promise<void> => {

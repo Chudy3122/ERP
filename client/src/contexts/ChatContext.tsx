@@ -255,6 +255,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       }
     });
 
+    socket.on('chat:message_reaction', (data: { messageId: string; channelId: string; reactions: Message['reactions'] }) => {
+      if (data.channelId === activeChannelRef.current?.id) {
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === data.messageId ? { ...msg, reactions: data.reactions } : msg))
+        );
+      }
+    });
+
     // Typing indicator
     socket.on('chat:user_typing', (data: { userId: string; channelId: string; username: string }) => {
       console.log('⌨️ User typing:', data);
@@ -368,6 +376,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       socket.off('chat:new_message');
       socket.off('chat:message_edited');
       socket.off('chat:message_deleted');
+      socket.off('chat:message_reaction');
       socket.off('chat:user_typing');
       socket.off('chat:error');
       socket.off('status:online_users');

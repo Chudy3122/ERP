@@ -2,12 +2,14 @@ import { AppDataSource } from '../config/database';
 import { Channel, ChannelType } from '../models/Channel.model';
 import { ChannelMember, ChannelMemberRole } from '../models/ChannelMember.model';
 import { Message, MessageType } from '../models/Message.model';
+import { MessageReaction } from '../models/MessageReaction.model';
 import { User } from '../models/User.model';
 
 export class ChatService {
   private channelRepository = AppDataSource.getRepository(Channel);
   private channelMemberRepository = AppDataSource.getRepository(ChannelMember);
   private messageRepository = AppDataSource.getRepository(Message);
+  private messageReactionRepository = AppDataSource.getRepository(MessageReaction);
   private userRepository = AppDataSource.getRepository(User);
 
   /**
@@ -216,7 +218,7 @@ export class ChatService {
 
     const [messages, total] = await this.messageRepository.findAndCount({
       where: { channel_id: channelId },
-      relations: ['sender', 'attachments'],
+      relations: ['sender', 'attachments', 'reactions'],
       order: { created_at: 'DESC' },
       take: limit,
       skip: offset,
@@ -228,6 +230,44 @@ export class ChatService {
       limit,
       offset,
     };
+  }
+
+  /**
+   * Toggle a user's reaction on a message (one reaction per user — Messenger-style).
+   * Same emoji again removes it; a different emoji replaces it. Returns channelId.
+   */
+  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<{ channelId: string }> {
+    const message = await this.messageRepository.findOne({ where: { id: messageId } });
+    if (!message) throw new Error('Message not found');
+
+    const membership = await this.channelMemberRepository.findOne({
+      where: { channel_id: message.channel_id, user_id: userId },
+    });
+    if (!membership) throw new Error('Not a member of this channel');
+
+    const existing = await this.messageReactionRepository.findOne({
+      where: { message_id: messageId, user_id: userId },
+    });
+
+    if (existing) {
+      if (existing.emoji === emoji) {
+        await this.messageReactionRepository.remove(existing); // toggle off
+      } else {
+        existing.emoji = emoji; // replace with the new reaction
+        await this.messageReactionRepository.save(existing);
+      }
+    } else {
+      await this.messageReactionRepository.save(
+        this.messageReactionRepository.create({ message_id: messageId, user_id: userId, emoji }),
+      );
+    }
+
+    return { channelId: message.channel_id };
+  }
+
+  /** All reactions for a message (id, emoji, user_id) — used for broadcasting. */
+  async getMessageReactions(messageId: string): Promise<MessageReaction[]> {
+    return this.messageReactionRepository.find({ where: { message_id: messageId } });
   }
 
   /**
