@@ -4,6 +4,9 @@ import { BossCalendar, BossCalendarEntryType } from '../models/BossCalendar.mode
 import { User } from '../models/User.model';
 import notificationService from './notification.service';
 
+// The boss — always a participant of boss-calendar meetings (the module is about him)
+const BOSS_EMAIL = 'marcin.rokoszewski@itcomplete.pl';
+
 interface CreateEntryDto {
   date: string;
   end_date?: string | null;
@@ -54,10 +57,19 @@ export class BossCalendarService {
     return this.repo.findOne({ where: { id }, relations: ['creator'] });
   }
 
+  /** The boss is always kept in a meeting's participant list. */
+  private async withBoss(ids: string[]): Promise<string[]> {
+    const boss = await AppDataSource.getRepository(User).findOne({
+      where: { email: BOSS_EMAIL },
+      select: ['id'],
+    });
+    return Array.from(new Set([...ids, ...(boss ? [boss.id] : [])]));
+  }
+
   async create(dto: CreateEntryDto): Promise<BossCalendar> {
     // The creator is NOT auto-added — they can create a meeting for others they
-    // don't attend. They only become a participant if they pick themselves.
-    const participant_ids = Array.from(new Set(dto.participant_ids || []));
+    // don't attend. The boss, however, is always included.
+    const participant_ids = await this.withBoss(dto.participant_ids || []);
     const entry = this.repo.create({ ...dto, participant_ids });
     return this.repo.save(entry);
   }
@@ -67,7 +79,7 @@ export class BossCalendarService {
     if (!entry) return null;
     Object.assign(entry, dto);
     if (dto.participant_ids) {
-      entry.participant_ids = Array.from(new Set(dto.participant_ids));
+      entry.participant_ids = await this.withBoss(dto.participant_ids);
     }
     return this.repo.save(entry);
   }
