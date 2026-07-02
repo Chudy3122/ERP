@@ -13,6 +13,7 @@ import ChatMeetToast from '../notifications/ChatMeetToast';
 import IncomingCallOverlay from '../meeting/IncomingCallOverlay';
 import { useChatContext } from '../../contexts/ChatContext';
 import GlobalSearch from './GlobalSearch';
+import GameModal from '../game/GameModal';
 import * as notificationApi from '../../api/notification.api';
 import * as notificationPreferenceApi from '../../api/notificationPreference.api';
 import { getFileUrl } from '../../api/axios-config';
@@ -87,6 +88,7 @@ import {
   Menu,
   X,
   Bell,
+  Gamepad2,
   ChevronDown,
   Check,
   User,
@@ -159,6 +161,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   };
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [navbarStatus, setNavbarStatus] = useState<StatusType>(StatusType.ONLINE);
@@ -536,6 +539,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
+            {/* Game (admin only for now) */}
+            {user?.role === UserRole.ADMIN && (
+              <button
+                onClick={() => setGameOpen(true)}
+                title="Gra"
+                className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:text-gray-400 dark:hover:bg-gray-700"
+              >
+                <Gamepad2 className="w-5 h-5" />
+              </button>
+            )}
+
             {/* Notifications Bell */}
             <div className="relative">
               <button
@@ -760,6 +774,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
 
       {/* Incoming video call overlay (Teams-style, global) */}
       <IncomingCallOverlay />
+
+      {gameOpen && <GameModal onClose={() => setGameOpen(false)} />}
     </div>
   );
 };
