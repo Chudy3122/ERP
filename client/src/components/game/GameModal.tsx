@@ -28,6 +28,8 @@ export default function GameModal({ onClose }: GameModalProps) {
   const playerX = useRef(W / 2 - PLAYER_W / 2);
   const prevX = useRef(playerX.current);
   const walkPhase = useRef(0);
+  const movingRef = useRef(false);
+  const moveDirRef = useRef(0);
   const obstacles = useRef<Obstacle[]>([]);
   const particles = useRef<Particle[]>([]);
   const buildings = useRef<Building[]>([]);
@@ -148,7 +150,9 @@ export default function GameModal({ onClose }: GameModalProps) {
 
   const drawPlayer = useCallback((ctx: CanvasRenderingContext2D) => {
     const cx = playerX.current + PLAYER_W / 2;
-    const swing = statusRef.current === 'playing' ? Math.sin(walkPhase.current) * 4 : 0;
+    const moving = statusRef.current === 'playing' && movingRef.current;
+    const swing = moving ? Math.sin(walkPhase.current) * 4 : 0;
+    const lean = moving ? moveDirRef.current * 2.5 : 0; // upper-body lean into motion
 
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -156,43 +160,80 @@ export default function GameModal({ onClose }: GameModalProps) {
     ctx.ellipse(cx, GROUND_Y + 2, 15, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Legs
-    ctx.strokeStyle = '#1e3a8a';
-    ctx.lineWidth = 4;
+    // Legs (trousers) — feet stay planted when idle
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 4.5;
     ctx.lineCap = 'round';
+    const lFoot = cx - 4 + swing;
+    const rFoot = cx + 4 - swing;
     ctx.beginPath();
-    ctx.moveTo(cx - 3, PLAYER_Y + 32);
-    ctx.lineTo(cx - 4 + swing, GROUND_Y);
-    ctx.moveTo(cx + 3, PLAYER_Y + 32);
-    ctx.lineTo(cx + 4 - swing, GROUND_Y);
+    ctx.moveTo(cx - 3, PLAYER_Y + 33);
+    ctx.lineTo(lFoot, GROUND_Y - 2);
+    ctx.moveTo(cx + 3, PLAYER_Y + 33);
+    ctx.lineTo(rFoot, GROUND_Y - 2);
+    ctx.stroke();
+    // Shoes
+    ctx.fillStyle = '#111827';
+    ctx.beginPath();
+    ctx.ellipse(lFoot, GROUND_Y - 1, 4, 2.4, 0, 0, Math.PI * 2);
+    ctx.ellipse(rFoot, GROUND_Y - 1, 4, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Torso: shirt + hi-vis vest
+    const bx = cx + lean;
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.roundRect(bx - 8, PLAYER_Y + 16, 16, 19, 4);
+    ctx.fill();
+    ctx.fillStyle = '#f97316'; // vest
+    ctx.beginPath();
+    ctx.roundRect(bx - 7, PLAYER_Y + 17, 14, 17, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; // reflective stripes
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx - 4, PLAYER_Y + 18);
+    ctx.lineTo(bx - 4, PLAYER_Y + 33);
+    ctx.moveTo(bx + 4, PLAYER_Y + 18);
+    ctx.lineTo(bx + 4, PLAYER_Y + 33);
+    ctx.moveTo(bx - 6, PLAYER_Y + 26);
+    ctx.lineTo(bx + 6, PLAYER_Y + 26);
     ctx.stroke();
 
-    // Body
-    ctx.fillStyle = '#2563eb';
-    ctx.beginPath();
-    ctx.roundRect(cx - 8, PLAYER_Y + 16, 16, 18, 4);
-    ctx.fill();
-    // Arms
+    // Arms + hands
     ctx.strokeStyle = '#f3c19b';
     ctx.lineWidth = 3.5;
+    const laX = bx - 11;
+    const laY = PLAYER_Y + 31 - swing;
+    const raX = bx + 11;
+    const raY = PLAYER_Y + 31 + swing;
     ctx.beginPath();
-    ctx.moveTo(cx - 8, PLAYER_Y + 20);
-    ctx.lineTo(cx - 12, PLAYER_Y + 30 - swing);
-    ctx.moveTo(cx + 8, PLAYER_Y + 20);
-    ctx.lineTo(cx + 12, PLAYER_Y + 30 + swing);
+    ctx.moveTo(bx - 7, PLAYER_Y + 20);
+    ctx.lineTo(laX, laY);
+    ctx.moveTo(bx + 7, PLAYER_Y + 20);
+    ctx.lineTo(raX, raY);
     ctx.stroke();
-
-    // Head
     ctx.fillStyle = '#f3c19b';
     ctx.beginPath();
-    ctx.arc(cx, PLAYER_Y + 9, 7, 0, Math.PI * 2);
+    ctx.arc(laX, laY, 2.2, 0, Math.PI * 2);
+    ctx.arc(raX, raY, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    const hx = cx + lean;
+    ctx.fillStyle = '#f3c19b';
+    ctx.beginPath();
+    ctx.arc(hx, PLAYER_Y + 9, 7, 0, Math.PI * 2);
     ctx.fill();
     // Hard hat
     ctx.fillStyle = '#facc15';
     ctx.beginPath();
-    ctx.arc(cx, PLAYER_Y + 7, 7.5, Math.PI, 0);
+    ctx.arc(hx, PLAYER_Y + 7, 7.5, Math.PI, 0);
     ctx.fill();
-    ctx.fillRect(cx - 9, PLAYER_Y + 6, 18, 2.5);
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(hx - 1.5, PLAYER_Y - 0.5, 3, 3); // hat ridge
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(hx - 9, PLAYER_Y + 6, 18, 2.5); // brim
   }, []);
 
   const draw = useCallback(() => {
@@ -282,11 +323,17 @@ export default function GameModal({ onClose }: GameModalProps) {
       const speed = playing ? 3 + s * 0.15 : 0;
 
       if (playing) {
-        // Walk animation + foot dust when moving
-        walkPhase.current += 0.35 * dt;
-        const moved = Math.abs(playerX.current - prevX.current);
-        if (moved > 1.5 && Math.random() < 0.4) {
-          puff(playerX.current + PLAYER_W / 2, GROUND_Y, ['rgba(120,120,120,0.7)'], 1, 1);
+        // Walk animation only while actually moving; stand still otherwise
+        const dx = playerX.current - prevX.current;
+        const moved = Math.abs(dx);
+        const moving = moved > 0.6;
+        movingRef.current = moving;
+        if (moving) {
+          moveDirRef.current = dx > 0 ? 1 : -1;
+          walkPhase.current += 0.4 * dt;
+          if (moved > 1.5 && Math.random() < 0.4) {
+            puff(playerX.current + PLAYER_W / 2, GROUND_Y, ['rgba(120,120,120,0.7)'], 1, 1);
+          }
         }
         prevX.current = playerX.current;
 
