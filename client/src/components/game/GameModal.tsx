@@ -5,14 +5,18 @@ import * as gameApi from '../../api/game.api';
 const GAME = 'dodge';
 const W = 380;
 const H = 480;
-const PLAYER_W = 42;
-const PLAYER_H = 30;
-const PLAYER_Y = H - PLAYER_H - 16;
+const GROUND_Y = H - 30;
+const PLAYER_W = 34;
+const PLAYER_H = 48;
+const PLAYER_Y = GROUND_Y - PLAYER_H;
 
-type Obstacle = { x: number; y: number; s: number; passed: boolean; hue: number; rot: number; rotSpeed: number };
-type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; hue: number };
-type Star = { x: number; y: number; size: number; speed: number };
+type ObType = 'brick' | 'crate' | 'pot' | 'tire';
+type Obstacle = { x: number; y: number; s: number; passed: boolean; type: ObType; rot: number; rotSpeed: number };
+type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string };
+type Building = { x: number; w: number; h: number; shade: number };
 type Status = 'idle' | 'playing' | 'over';
+
+const OB_TYPES: ObType[] = ['brick', 'crate', 'pot', 'tire'];
 
 interface GameModalProps {
   onClose: () => void;
@@ -22,14 +26,15 @@ export default function GameModal({ onClose }: GameModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
   const playerX = useRef(W / 2 - PLAYER_W / 2);
+  const prevX = useRef(playerX.current);
+  const walkPhase = useRef(0);
   const obstacles = useRef<Obstacle[]>([]);
   const particles = useRef<Particle[]>([]);
-  const stars = useRef<Star[]>([]);
+  const buildings = useRef<Building[]>([]);
   const scoreRef = useRef(0);
   const spawnTimer = useRef(0);
   const lastTime = useRef(0);
   const statusRef = useRef<Status>('idle');
-  const flame = useRef(0);
 
   const [status, setStatus] = useState<Status>('idle');
   const [score, setScore] = useState(0);
@@ -44,140 +49,208 @@ export default function GameModal({ onClose }: GameModalProps) {
     loadBoard();
   }, [loadBoard]);
 
-  // Init starfield once
-  if (stars.current.length === 0) {
-    stars.current = Array.from({ length: 70 }, () => {
-      const layer = Math.random();
-      return {
-        x: Math.random() * W,
-        y: Math.random() * H,
-        size: layer < 0.6 ? 1 : layer < 0.9 ? 1.6 : 2.4,
-        speed: layer < 0.6 ? 0.35 : layer < 0.9 ? 0.7 : 1.2,
-      };
-    });
+  // Build the skyline once
+  if (buildings.current.length === 0) {
+    let x = -10;
+    while (x < W + 10) {
+      const w = 28 + Math.random() * 40;
+      buildings.current.push({ x, w, h: 70 + Math.random() * 180, shade: 18 + Math.random() * 14 });
+      x += w + 4;
+    }
   }
 
-  const explode = (cx: number, cy: number) => {
-    for (let i = 0; i < 44; i++) {
+  const puff = (cx: number, cy: number, colors: string[], count: number, power = 4) => {
+    for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
-      const sp = 1 + Math.random() * 5;
+      const sp = 0.5 + Math.random() * power;
       particles.current.push({
         x: cx,
         y: cy,
         vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp,
+        vy: Math.sin(a) * sp - 1,
         life: 0,
-        max: 30 + Math.random() * 30,
-        size: 1.5 + Math.random() * 3,
-        hue: 20 + Math.random() * 40,
+        max: 24 + Math.random() * 26,
+        size: 2 + Math.random() * 3,
+        color: colors[(Math.random() * colors.length) | 0],
       });
     }
   };
+
+  const drawObstacle = (ctx: CanvasRenderingContext2D, o: Obstacle) => {
+    const r = o.s / 2;
+    ctx.save();
+    ctx.translate(o.x + r, o.y + r);
+    ctx.rotate(o.rot);
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    if (o.type === 'brick') {
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(-r, -r * 0.55, o.s, o.s * 0.55);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-r, -r * 0.55, o.s, o.s * 0.55);
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.55);
+      ctx.lineTo(0, r * 0.55);
+      ctx.stroke();
+    } else if (o.type === 'crate') {
+      ctx.fillStyle = '#a16207';
+      ctx.fillRect(-r, -r, o.s, o.s);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-r, -r, o.s, o.s);
+      ctx.beginPath();
+      ctx.moveTo(-r, -r);
+      ctx.lineTo(r, r);
+      ctx.moveTo(r, -r);
+      ctx.lineTo(-r, r);
+      ctx.stroke();
+    } else if (o.type === 'pot') {
+      ctx.fillStyle = '#c2571b';
+      ctx.beginPath();
+      ctx.moveTo(-r, -r * 0.4);
+      ctx.lineTo(r, -r * 0.4);
+      ctx.lineTo(r * 0.7, r);
+      ctx.lineTo(-r * 0.7, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#7c2d12';
+      ctx.fillRect(-r, -r * 0.55, o.s, r * 0.2);
+      // little plant
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath();
+      ctx.arc(-r * 0.25, -r * 0.7, r * 0.28, 0, Math.PI * 2);
+      ctx.arc(r * 0.25, -r * 0.7, r * 0.28, 0, Math.PI * 2);
+      ctx.arc(0, -r * 0.95, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // tire
+      ctx.fillStyle = '#1f2937';
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#111827';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  };
+
+  const drawPlayer = useCallback((ctx: CanvasRenderingContext2D) => {
+    const cx = playerX.current + PLAYER_W / 2;
+    const swing = statusRef.current === 'playing' ? Math.sin(walkPhase.current) * 4 : 0;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx, GROUND_Y + 2, 15, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legs
+    ctx.strokeStyle = '#1e3a8a';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, PLAYER_Y + 32);
+    ctx.lineTo(cx - 4 + swing, GROUND_Y);
+    ctx.moveTo(cx + 3, PLAYER_Y + 32);
+    ctx.lineTo(cx + 4 - swing, GROUND_Y);
+    ctx.stroke();
+
+    // Body
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.roundRect(cx - 8, PLAYER_Y + 16, 16, 18, 4);
+    ctx.fill();
+    // Arms
+    ctx.strokeStyle = '#f3c19b';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, PLAYER_Y + 20);
+    ctx.lineTo(cx - 12, PLAYER_Y + 30 - swing);
+    ctx.moveTo(cx + 8, PLAYER_Y + 20);
+    ctx.lineTo(cx + 12, PLAYER_Y + 30 + swing);
+    ctx.stroke();
+
+    // Head
+    ctx.fillStyle = '#f3c19b';
+    ctx.beginPath();
+    ctx.arc(cx, PLAYER_Y + 9, 7, 0, Math.PI * 2);
+    ctx.fill();
+    // Hard hat
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(cx, PLAYER_Y + 7, 7.5, Math.PI, 0);
+    ctx.fill();
+    ctx.fillRect(cx - 9, PLAYER_Y + 6, 18, 2.5);
+  }, []);
 
   const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
 
-    // Background gradient
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#0b1026');
-    bg.addColorStop(0.6, '#0f172a');
-    bg.addColorStop(1, '#131c3a');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
+    // Sky (dusk gradient)
+    const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    sky.addColorStop(0, '#0b1226');
+    sky.addColorStop(0.55, '#3b2d5e');
+    sky.addColorStop(1, '#c2410c');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, GROUND_Y);
 
-    // Stars (parallax)
-    for (const st of stars.current) {
-      ctx.globalAlpha = 0.3 + st.speed * 0.4;
-      ctx.fillStyle = '#dbeafe';
-      ctx.fillRect(st.x, st.y, st.size, st.size);
+    // Buildings with lit windows
+    for (const b of buildings.current) {
+      const top = GROUND_Y - b.h;
+      ctx.fillStyle = `hsl(230, 22%, ${b.shade}%)`;
+      ctx.fillRect(b.x, top, b.w, b.h);
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.65)';
+      for (let wy = top + 8; wy < GROUND_Y - 6; wy += 12) {
+        for (let wx = b.x + 5; wx < b.x + b.w - 5; wx += 10) {
+          if ((wx * 13 + wy * 7) % 5 < 2) ctx.fillRect(wx, wy, 4, 6);
+        }
+      }
     }
-    ctx.globalAlpha = 1;
 
-    // Particles (trail + explosion)
+    // Sidewalk / street
+    ctx.fillStyle = '#374151';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = '#4b5563';
+    ctx.fillRect(0, GROUND_Y, W, 3);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 34) {
+      ctx.beginPath();
+      ctx.moveTo(x, GROUND_Y + 4);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+
+    // Obstacles
+    for (const o of obstacles.current) drawObstacle(ctx, o);
+
+    // Player
+    if (statusRef.current !== 'over') drawPlayer(ctx);
+
+    // Particles (dust / stars)
     for (const p of particles.current) {
       const t = 1 - p.life / p.max;
       ctx.globalAlpha = Math.max(0, t);
-      ctx.fillStyle = `hsl(${p.hue}, 100%, ${55 + t * 20}%)`;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = `hsl(${p.hue}, 100%, 60%)`;
+      ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (0.4 + t), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size * (0.5 + t * 0.6), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-
-    // Obstacles (glowing meteors)
-    for (const o of obstacles.current) {
-      const cx = o.x + o.s / 2;
-      const cy = o.y + o.s / 2;
-      const r = o.s / 2;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(o.rot);
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = `hsl(${o.hue}, 90%, 55%)`;
-      const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.2, 0, 0, r);
-      grad.addColorStop(0, `hsl(${o.hue}, 100%, 70%)`);
-      grad.addColorStop(0.7, `hsl(${o.hue}, 85%, 48%)`);
-      grad.addColorStop(1, `hsl(${o.hue + 10}, 80%, 32%)`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fill();
-      // craters
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
-      ctx.beginPath();
-      ctx.arc(r * 0.3, -r * 0.2, r * 0.28, 0, Math.PI * 2);
-      ctx.arc(-r * 0.35, r * 0.3, r * 0.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.shadowBlur = 0;
-
-    // Player ship (glowing) — hidden briefly after crash
-    if (statusRef.current !== 'over') {
-      const px = playerX.current;
-      const cx = px + PLAYER_W / 2;
-      // Engine flame
-      flame.current = (flame.current + 1) % 6;
-      const flameLen = statusRef.current === 'playing' ? 14 + flame.current : 6;
-      const fg = ctx.createLinearGradient(0, PLAYER_Y + PLAYER_H, 0, PLAYER_Y + PLAYER_H + flameLen);
-      fg.addColorStop(0, 'rgba(255,180,60,0.95)');
-      fg.addColorStop(1, 'rgba(255,80,0,0)');
-      ctx.fillStyle = fg;
-      ctx.beginPath();
-      ctx.moveTo(cx - 7, PLAYER_Y + PLAYER_H - 2);
-      ctx.lineTo(cx + 7, PLAYER_Y + PLAYER_H - 2);
-      ctx.lineTo(cx, PLAYER_Y + PLAYER_H + flameLen);
-      ctx.closePath();
-      ctx.fill();
-
-      // Body
-      ctx.shadowBlur = 16;
-      ctx.shadowColor = '#38bdf8';
-      const sg = ctx.createLinearGradient(0, PLAYER_Y, 0, PLAYER_Y + PLAYER_H);
-      sg.addColorStop(0, '#e0f2fe');
-      sg.addColorStop(0.5, '#38bdf8');
-      sg.addColorStop(1, '#0284c7');
-      ctx.fillStyle = sg;
-      ctx.beginPath();
-      ctx.moveTo(cx, PLAYER_Y);
-      ctx.lineTo(px + PLAYER_W, PLAYER_Y + PLAYER_H);
-      ctx.lineTo(cx, PLAYER_Y + PLAYER_H - 8);
-      ctx.lineTo(px, PLAYER_Y + PLAYER_H);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      // cockpit
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.beginPath();
-      ctx.arc(cx, PLAYER_Y + PLAYER_H * 0.5, 3.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }, []);
+  }, [drawPlayer]);
 
   const stopLoop = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -187,7 +260,9 @@ export default function GameModal({ onClose }: GameModalProps) {
   const endGame = useCallback(async () => {
     statusRef.current = 'over';
     setStatus('over');
-    explode(playerX.current + PLAYER_W / 2, PLAYER_Y + PLAYER_H / 2);
+    const cx = playerX.current + PLAYER_W / 2;
+    puff(cx, PLAYER_Y + 20, ['#a8a29e', '#78716c', '#d6d3d1'], 26, 5); // dust
+    puff(cx, PLAYER_Y + 4, ['#facc15', '#fde047', '#fef08a'], 10, 4); // stars
     const finalScore = scoreRef.current;
     try {
       const best = await gameApi.submitScore(GAME, finalScore);
@@ -198,59 +273,47 @@ export default function GameModal({ onClose }: GameModalProps) {
     loadBoard();
   }, [loadBoard]);
 
-  // Single always-running loop: background/particles animate always; game logic only while playing
   const frame = useCallback(
     (now: number) => {
       const dt = Math.min(50, now - (lastTime.current || now)) / 16.67;
       lastTime.current = now;
       const playing = statusRef.current === 'playing';
       const s = scoreRef.current;
-      const speed = playing ? 3 + s * 0.14 : 1;
-
-      // Stars
-      for (const st of stars.current) {
-        st.y += st.speed * (playing ? speed * 0.6 : 1) * dt;
-        if (st.y > H) {
-          st.y = -st.size;
-          st.x = Math.random() * W;
-        }
-      }
+      const speed = playing ? 3 + s * 0.15 : 0;
 
       if (playing) {
+        // Walk animation + foot dust when moving
+        walkPhase.current += 0.35 * dt;
+        const moved = Math.abs(playerX.current - prevX.current);
+        if (moved > 1.5 && Math.random() < 0.4) {
+          puff(playerX.current + PLAYER_W / 2, GROUND_Y, ['rgba(120,120,120,0.7)'], 1, 1);
+        }
+        prevX.current = playerX.current;
+
         // Spawn
         spawnTimer.current -= dt;
         if (spawnTimer.current <= 0) {
-          const size = 26 + Math.random() * 34;
+          const size = 22 + Math.random() * 28;
           obstacles.current.push({
             x: Math.random() * (W - size),
             y: -size,
             s: size,
             passed: false,
-            hue: 15 + Math.random() * 45,
+            type: OB_TYPES[(Math.random() * OB_TYPES.length) | 0],
             rot: Math.random() * Math.PI,
-            rotSpeed: (Math.random() - 0.5) * 0.12,
+            rotSpeed: (Math.random() - 0.5) * 0.14,
           });
           spawnTimer.current = Math.max(15, 42 - s * 0.5);
         }
-        // Engine trail
-        particles.current.push({
-          x: playerX.current + PLAYER_W / 2 + (Math.random() - 0.5) * 6,
-          y: PLAYER_Y + PLAYER_H,
-          vx: (Math.random() - 0.5) * 0.6,
-          vy: 1 + Math.random() * 1.5,
-          life: 0,
-          max: 16 + Math.random() * 12,
-          size: 1.5 + Math.random() * 1.5,
-          hue: 25 + Math.random() * 20,
-        });
 
         for (const o of obstacles.current) {
           o.y += speed * dt;
           o.rot += o.rotSpeed * dt;
-          if (!o.passed && o.y > PLAYER_Y + PLAYER_H) {
+          if (!o.passed && o.y + o.s >= GROUND_Y) {
             o.passed = true;
             scoreRef.current += 1;
             setScore(scoreRef.current);
+            puff(o.x + o.s / 2, GROUND_Y, ['#9ca3af', '#6b7280'], 6, 2); // landing dust
           }
           if (
             playerX.current < o.x + o.s &&
@@ -262,14 +325,13 @@ export default function GameModal({ onClose }: GameModalProps) {
             break;
           }
         }
-        obstacles.current = obstacles.current.filter((o) => o.y < H + 40);
+        obstacles.current = obstacles.current.filter((o) => o.y < H + 20);
       }
 
-      // Update particles
       for (const p of particles.current) {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.vy += 0.04 * dt;
+        p.vy += 0.05 * dt;
         p.life += dt;
       }
       particles.current = particles.current.filter((p) => p.life < p.max);
@@ -287,12 +349,12 @@ export default function GameModal({ onClose }: GameModalProps) {
     setScore(0);
     spawnTimer.current = 0;
     playerX.current = W / 2 - PLAYER_W / 2;
+    prevX.current = playerX.current;
     setLastResult(null);
     statusRef.current = 'playing';
     setStatus('playing');
   }, []);
 
-  // Start the persistent animation loop on mount
   useEffect(() => {
     lastTime.current = 0;
     rafRef.current = requestAnimationFrame(frame);
@@ -340,7 +402,7 @@ export default function GameModal({ onClose }: GameModalProps) {
 
         <div className="grid gap-5 p-5 md:grid-cols-[auto_1fr]">
           <div className="flex flex-col items-center">
-            <div className="relative overflow-hidden rounded-xl ring-1 ring-white/10 shadow-lg shadow-[#38bdf8]/10" style={{ width: W, maxWidth: '100%' }}>
+            <div className="relative overflow-hidden rounded-xl ring-1 ring-black/10 shadow-lg" style={{ width: W, maxWidth: '100%' }}>
               <canvas
                 ref={canvasRef}
                 width={W}
@@ -355,13 +417,13 @@ export default function GameModal({ onClose }: GameModalProps) {
                   {status === 'over' && lastResult && (
                     <div>
                       <p className="text-sm uppercase tracking-widest text-red-300">Koniec gry</p>
-                      <p className="text-5xl font-black drop-shadow-[0_0_12px_rgba(56,189,248,0.6)]">{lastResult.score}</p>
+                      <p className="text-5xl font-black drop-shadow-[0_0_12px_rgba(250,204,21,0.6)]">{lastResult.score}</p>
                       <p className="text-xs opacity-80">Twój rekord: {lastResult.best}</p>
                     </div>
                   )}
                   {status === 'idle' && (
-                    <p className="max-w-[240px] text-sm opacity-90">
-                      Unikaj lecących meteorów. Steruj myszką lub strzałkami. Im dłużej, tym szybciej!
+                    <p className="max-w-[250px] text-sm opacity-90">
+                      Unikaj spadających przedmiotów! Steruj myszką lub strzałkami. Im dłużej, tym szybciej!
                     </p>
                   )}
                   <button
@@ -374,7 +436,6 @@ export default function GameModal({ onClose }: GameModalProps) {
                   </button>
                 </div>
               )}
-              {/* Live score badge */}
               {status === 'playing' && (
                 <div className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 font-mono text-sm font-bold text-white backdrop-blur">
                   {score}
