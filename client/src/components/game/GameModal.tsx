@@ -10,13 +10,13 @@ const PLAYER_W = 34;
 const PLAYER_H = 48;
 const PLAYER_Y = GROUND_Y - PLAYER_H;
 
-type ObType = 'brick' | 'crate' | 'pot' | 'tire';
+type ObType = 'brick' | 'crate' | 'pot' | 'sign';
 type Obstacle = { x: number; y: number; s: number; passed: boolean; type: ObType; rot: number; rotSpeed: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string };
 type Building = { x: number; w: number; h: number; shade: number };
 type Status = 'idle' | 'playing' | 'over';
 
-const OB_TYPES: ObType[] = ['brick', 'crate', 'pot', 'tire'];
+const OB_TYPES: ObType[] = ['brick', 'crate', 'pot', 'sign'];
 
 interface GameModalProps {
   onClose: () => void;
@@ -129,19 +129,28 @@ export default function GameModal({ onClose }: GameModalProps) {
       ctx.arc(0, -r * 0.95, r * 0.3, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // tire
-      ctx.fillStyle = '#1f2937';
+      // warning road sign (bright — stands out on the dusk background)
+      const R = r * 1.05;
       ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.moveTo(0, -R);
+      ctx.lineTo(R * 0.9, R * 0.66);
+      ctx.lineTo(-R * 0.9, R * 0.66);
+      ctx.closePath();
+      ctx.fillStyle = '#dc2626'; // red border
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.fillStyle = '#111827';
       ctx.beginPath();
-      ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+      ctx.moveTo(0, -R * 0.66);
+      ctx.lineTo(R * 0.62, R * 0.46);
+      ctx.lineTo(-R * 0.62, R * 0.46);
+      ctx.closePath();
+      ctx.fillStyle = '#fde68a'; // yellow face
       ctx.fill();
-      ctx.fillStyle = '#9ca3af';
+      // exclamation mark
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(-1.6, -R * 0.36, 3.2, R * 0.5);
       ctx.beginPath();
-      ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
+      ctx.arc(0, R * 0.3, 2, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -320,7 +329,8 @@ export default function GameModal({ onClose }: GameModalProps) {
       lastTime.current = now;
       const playing = statusRef.current === 'playing';
       const s = scoreRef.current;
-      const speed = playing ? 3 + s * 0.15 : 0;
+      // Gentler ramp that plateaus, so it doesn't jump from easy to impossible
+      const speed = playing ? 2.6 + Math.min(s * 0.06, 4.6) : 0;
 
       if (playing) {
         // Walk animation only while actually moving; stand still otherwise
@@ -350,7 +360,7 @@ export default function GameModal({ onClose }: GameModalProps) {
             rot: Math.random() * Math.PI,
             rotSpeed: (Math.random() - 0.5) * 0.14,
           });
-          spawnTimer.current = Math.max(15, 42 - s * 0.5);
+          spawnTimer.current = Math.max(20, 48 - s * 0.28);
         }
 
         for (const o of obstacles.current) {
