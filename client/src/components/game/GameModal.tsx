@@ -329,8 +329,8 @@ export default function GameModal({ onClose }: GameModalProps) {
       lastTime.current = now;
       const playing = statusRef.current === 'playing';
       const s = scoreRef.current;
-      // Gentler ramp that plateaus, so it doesn't jump from easy to impossible
-      const speed = playing ? 2.6 + Math.min(s * 0.06, 4.6) : 0;
+      // Keeps rising forever, but the increase slows down over time (sqrt curve)
+      const speed = playing ? 2.8 + 0.75 * Math.sqrt(s) : 0;
 
       if (playing) {
         // Walk animation only while actually moving; stand still otherwise
@@ -360,7 +360,7 @@ export default function GameModal({ onClose }: GameModalProps) {
             rot: Math.random() * Math.PI,
             rotSpeed: (Math.random() - 0.5) * 0.14,
           });
-          spawnTimer.current = Math.max(20, 48 - s * 0.28);
+          spawnTimer.current = Math.max(16, 46 - 2.3 * Math.sqrt(s));
         }
 
         for (const o of obstacles.current) {
