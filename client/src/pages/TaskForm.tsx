@@ -10,9 +10,6 @@ import {
   FolderOpen,
   Loader2,
   Circle,
-  CheckCircle2,
-  AlertCircle,
-  PlayCircle,
   Paperclip,
   Upload,
   FileText,
@@ -20,14 +17,13 @@ import {
   File,
   X,
   Download,
-  Eye,
   Search,
   CheckSquare,
 } from 'lucide-react';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
 import { Task, TaskAttachment, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority } from '../types/task.types';
-import { Project, ProjectMember, ProjectAttachment } from '../types/project.types';
+import { Project, ProjectMember, ProjectAttachment, ProjectStage } from '../types/project.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
 
@@ -47,13 +43,16 @@ const TaskForm = () => {
   const [task, setTask] = useState<Task | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [projectStages, setProjectStages] = useState<ProjectStage[]>([]);
   const [isLoadingProjectMembers, setIsLoadingProjectMembers] = useState(false);
+  const [isLoadingProjectStages, setIsLoadingProjectStages] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState('');
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [formData, setFormData] = useState<CreateTaskRequest & UpdateTaskRequest>({
     title: '',
     description: '',
     project_id: '',
+    stage_id: undefined,
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
     assigned_to: undefined,
@@ -115,9 +114,11 @@ const TaskForm = () => {
   useEffect(() => {
     if (formData.project_id) {
       loadProjectMembers(formData.project_id);
+      loadProjectStages(formData.project_id);
     } else {
       setProjectMembers([]);
-      setFormData(prev => ({ ...prev, assigned_to: undefined, assignee_ids: [] }));
+      setProjectStages([]);
+      setFormData(prev => ({ ...prev, assigned_to: undefined, assignee_ids: [], stage_id: undefined }));
     }
   }, [formData.project_id]);
 
@@ -167,6 +168,46 @@ const TaskForm = () => {
     }
   };
 
+  const loadProjectStages = async (projectId: string) => {
+    try {
+      setIsLoadingProjectStages(true);
+      const result = await projectApi.getProjectStages(projectId);
+      const sortedStages = [...(result || [])].sort((firstStage, secondStage) =>
+        firstStage.position - secondStage.position
+      );
+      setProjectStages(sortedStages);
+
+      setFormData(prev => {
+        if (prev.project_id !== projectId) return prev;
+
+        const currentStageExists = Boolean(
+          prev.stage_id && sortedStages.some(stage => stage.id === prev.stage_id)
+        );
+        if (currentStageExists) return prev;
+
+        const defaultStage = sortedStages[0];
+        if (!defaultStage) {
+          return { ...prev, stage_id: undefined };
+        }
+
+        return {
+          ...prev,
+          stage_id: defaultStage.id,
+          status: defaultStage.is_completed_stage
+            ? TaskStatus.DONE
+            : prev.status === TaskStatus.DONE
+              ? TaskStatus.TODO
+              : prev.status,
+        };
+      });
+    } catch (error) {
+      console.error('Failed to load project stages:', error);
+      setProjectStages([]);
+    } finally {
+      setIsLoadingProjectStages(false);
+    }
+  };
+
   const loadTask = async () => {
     try {
       setIsLoading(true);
@@ -176,6 +217,7 @@ const TaskForm = () => {
         title: taskData.title,
         description: taskData.description || '',
         project_id: taskData.project_id,
+        stage_id: taskData.stage_id || undefined,
         status: taskData.status,
         priority: taskData.priority,
         assigned_to: taskData.assigned_to || undefined,
@@ -226,6 +268,9 @@ const TaskForm = () => {
       delete payload.actual_hours;
       if (isEdit && id) {
         await taskApi.updateTask(id, payload);
+        if ((formData.stage_id || null) !== (task?.stage_id || null)) {
+          await projectApi.moveTaskToStage(id, formData.stage_id || null);
+        }
       } else {
         await taskApi.createTask(payload as CreateTaskRequest);
       }
@@ -261,13 +306,31 @@ const TaskForm = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      ...(name === 'project_id' ? { assigned_to: undefined, assignee_ids: [] } : {}),
-      [name]: name === 'estimated_hours'
-        ? (value ? parseFloat(value) : undefined)
-        : value || undefined,
-    }));
+    setFormData(prev => {
+      if (name === 'stage_id') {
+        const selectedStage = projectStages.find(stage => stage.id === value);
+
+        return {
+          ...prev,
+          stage_id: value || undefined,
+          status: selectedStage?.is_completed_stage
+            ? TaskStatus.DONE
+            : prev.status === TaskStatus.DONE
+              ? TaskStatus.TODO
+              : prev.status,
+        };
+      }
+
+      return {
+        ...prev,
+        ...(name === 'project_id'
+          ? { assigned_to: undefined, assignee_ids: [], stage_id: undefined, status: TaskStatus.TODO }
+          : {}),
+        [name]: name === 'estimated_hours'
+          ? (value ? parseFloat(value) : undefined)
+          : value || undefined,
+      };
+    });
   };
 
   const toggleAssignee = (userId: string) => {
@@ -579,25 +642,6 @@ const TaskForm = () => {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-  };
-
-  const allStatuses: TaskStatus[] = [
-    TaskStatus.TODO,
-    TaskStatus.IN_PROGRESS,
-    TaskStatus.REVIEW,
-    TaskStatus.DONE,
-    TaskStatus.BLOCKED,
-  ];
-
-  const getStatusConfig = (status: TaskStatus) => {
-    const configs: Record<TaskStatus, { label: string; color: string; bgColor: string; icon: typeof Circle }> = {
-      todo: { label: 'Do zrobienia', color: 'text-gray-700', bgColor: 'bg-gray-100', icon: Circle },
-      in_progress: { label: 'W trakcie', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: PlayCircle },
-      review: { label: 'Do sprawdzenia', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: Eye },
-      done: { label: 'Zakończone', color: 'text-green-700', bgColor: 'bg-green-100', icon: CheckCircle2 },
-      blocked: { label: 'Zablokowane', color: 'text-red-700', bgColor: 'bg-red-100', icon: AlertCircle },
-    };
-    return configs[status];
   };
 
   if (isLoading) {
@@ -1044,10 +1088,29 @@ const TaskForm = () => {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
                   <div>
-                    <label htmlFor="status" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</label>
-                    <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                      {allStatuses.map(status => <option key={status} value={status}>{getStatusConfig(status).label}</option>)}
+                    <label htmlFor="stage_id" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Kolumna kanbana</label>
+                    <select
+                      id="stage_id"
+                      name="stage_id"
+                      value={formData.stage_id || ''}
+                      onChange={handleChange}
+                      disabled={!formData.project_id || isLoadingProjectStages || projectStages.length === 0}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
+                    >
+                      {!formData.project_id && <option value="">Najpierw wybierz projekt</option>}
+                      {formData.project_id && isLoadingProjectStages && <option value="">Ładowanie kolumn...</option>}
+                      {formData.project_id && !isLoadingProjectStages && projectStages.length === 0 && <option value="">Brak kolumn w projekcie</option>}
+                      {projectStages.map(stage => (
+                        <option key={stage.id} value={stage.id}>
+                          {stage.name}
+                        </option>
+                      ))}
                     </select>
+                    {formData.project_id && projectStages.length > 0 && (
+                      <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                        To są kolumny z kanbana tego projektu.
+                      </p>
+                    )}
                   </div>
 
                   <div>

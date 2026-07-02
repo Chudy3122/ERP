@@ -21,7 +21,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as taskApi from '../api/task.api';
 import * as projectApi from '../api/project.api';
 import { Task, TaskStatus, TaskPriority } from '../types/task.types';
-import { Project } from '../types/project.types';
+import { Project, ProjectStage } from '../types/project.types';
 import { useAuth } from '../contexts/AuthContext';
 
 type FilterTab = 'my' | 'created' | 'all' | 'today' | 'tomorrow' | 'week' | 'twoweeks' | 'overdue';
@@ -82,6 +82,7 @@ const Tasks = () => {
 
   // Project filter state
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectStagesById, setProjectStagesById] = useState<Record<string, ProjectStage>>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     searchParams.get('project') || null
   );
@@ -131,6 +132,32 @@ const Tasks = () => {
     }
   };
 
+  const loadTaskProjectStages = async (taskList: Task[]) => {
+    const projectIds = Array.from(
+      new Set(taskList.map(task => task.project_id).filter(Boolean))
+    );
+
+    if (projectIds.length === 0) {
+      setProjectStagesById({});
+      return;
+    }
+
+    const stageGroups = await Promise.all(
+      projectIds.map(projectId =>
+        projectApi.getProjectStages(projectId).catch(error => {
+          console.error(`Failed to load project stages for project ${projectId}:`, error);
+          return [];
+        })
+      )
+    );
+    const nextStagesById = stageGroups.flat().reduce<Record<string, ProjectStage>>((acc, stage) => {
+      acc[stage.id] = stage;
+      return acc;
+    }, {});
+
+    setProjectStagesById(nextStagesById);
+  };
+
   const loadTasks = async () => {
     try {
       setIsLoading(true);
@@ -173,6 +200,7 @@ const Tasks = () => {
         }
       }
 
+      await loadTaskProjectStages(data);
       setTasks(data);
     } catch (error) {
       console.error('Failed to load tasks:', error);
@@ -337,6 +365,12 @@ const Tasks = () => {
       },
     };
     return configs[status];
+  };
+
+  const getTaskStage = (task: Task) => {
+    if (task.stage) return task.stage;
+    if (task.stage_id) return projectStagesById[task.stage_id];
+    return undefined;
   };
 
   const getPriorityConfig = (priority: TaskPriority) => {
@@ -647,7 +681,7 @@ const Tasks = () => {
             <div>Osoby</div>
             <div>{t('priority')}</div>
             <div>{t('dueDate')}</div>
-            <div>{t('status')}</div>
+            <div>Etap</div>
             <div></div>
           </div>
 
@@ -656,6 +690,8 @@ const Tasks = () => {
             {paginatedTasks.map((task) => {
               const priorityConfig = getPriorityConfig(task.priority);
               const statusConfig = getStatusConfig(task.status);
+              const taskStage = getTaskStage(task);
+              const stageColor = taskStage?.color || '#6B7280';
               const dueInfo = task.due_date ? formatDueDate(task.due_date) : null;
               const taskAssignees = getTaskAssignees(task);
 
@@ -747,8 +783,19 @@ const Tasks = () => {
                   </div>
 
                   {/* Status badge */}
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>
-                    {statusConfig.label}
+                  <span
+                    className={
+                      taskStage
+                        ? 'inline-flex rounded-full border px-2.5 py-1 text-xs font-medium'
+                        : `inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`
+                    }
+                    style={taskStage ? {
+                      borderColor: `${stageColor}55`,
+                      backgroundColor: `${stageColor}18`,
+                      color: stageColor,
+                    } : undefined}
+                  >
+                    {taskStage?.name || statusConfig.label}
                   </span>
 
                   {/* Actions */}
