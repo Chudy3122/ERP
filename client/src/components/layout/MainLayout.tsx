@@ -539,16 +539,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
-            {/* Game (admin only for now) */}
-            {user?.role === UserRole.ADMIN && (
-              <button
-                onClick={() => setGameOpen(true)}
-                title="Gra"
-                className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:text-gray-400 dark:hover:bg-gray-700"
-              >
-                <Gamepad2 className="w-5 h-5" />
-              </button>
-            )}
+            {/* Game — available to everyone */}
+            <button
+              onClick={() => setGameOpen(true)}
+              title="Gra"
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:text-gray-400 dark:hover:bg-gray-700"
+            >
+              <Gamepad2 className="w-5 h-5" />
+            </button>
 
             {/* Notifications Bell */}
             <div className="relative">
