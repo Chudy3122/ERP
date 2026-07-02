@@ -608,7 +608,8 @@ const ProjectDetail = () => {
           position: index,
           is_completed_stage: stage.is_completed_stage,
         })),
-        tasks: [...projectTasks]
+        tasks: projectTasks
+          .filter(task => !task.parent_task_id)
           .sort((firstTask, secondTask) => {
             const stageDiff =
               (stagePositionById.get(firstTask.stage_id || '') ?? 0) -
@@ -839,7 +840,9 @@ const ProjectDetail = () => {
     try {
       setIsBulkAssigning(true);
       const allTasks = await taskApi.getProjectTasks(id!);
-      const tasksToUpdate = allTasks.filter(task => !getTaskMutationAssigneeIds(task).includes(bulkAssigneeId));
+      const tasksToUpdate = allTasks.filter(task =>
+        !task.parent_task_id && !getTaskMutationAssigneeIds(task).includes(bulkAssigneeId)
+      );
 
       if (tasksToUpdate.length === 0) return;
 
@@ -864,7 +867,9 @@ const ProjectDetail = () => {
     try {
       setIsBulkUnassigning(true);
       const allTasks = await taskApi.getProjectTasks(id!);
-      const tasksToUpdate = allTasks.filter(task => getTaskMutationAssigneeIds(task).includes(bulkUnassignId));
+      const tasksToUpdate = allTasks.filter(task =>
+        !task.parent_task_id && getTaskMutationAssigneeIds(task).includes(bulkUnassignId)
+      );
 
       if (tasksToUpdate.length === 0) return;
 
@@ -1570,9 +1575,17 @@ const ProjectDetail = () => {
 
   const isOngoingProject = !project.target_end_date;
   const projectPriorityConfig = getProjectPriorityConfig(project.priority, isOngoingProject);
-  const totalTaskCount = tasksByStages.reduce((sum, group) => sum + group.tasks.length, 0);
+  const allKanbanTasks = tasksByStages.flatMap(group => group.tasks);
+  const topLevelKanbanTasks = allKanbanTasks.filter(task => !task.parent_task_id);
+  const subtasksByParentId = allKanbanTasks.reduce<Record<string, Task[]>>((acc, task) => {
+    if (task.parent_task_id) {
+      (acc[task.parent_task_id] ||= []).push(task);
+    }
+    return acc;
+  }, {});
+  const totalTaskCount = topLevelKanbanTasks.length;
   const visibleTaskCount = tasksByStages.reduce(
-    (sum, group) => sum + filterTasks(group.tasks).length,
+    (sum, group) => sum + filterTasks(group.tasks.filter(task => !task.parent_task_id)).length,
     0
   );
   const bulkAssigneeName =
@@ -1580,8 +1593,7 @@ const ProjectDetail = () => {
       ? getUserDisplayName(assignableProjectMembers.find(member => member.user_id === bulkAssigneeId)?.user)
       : '';
   const bulkAssignableTaskCount = bulkAssigneeId
-    ? tasksByStages
-        .flatMap(group => group.tasks)
+    ? topLevelKanbanTasks
         .filter(task => !getTaskMutationAssigneeIds(task).includes(bulkAssigneeId)).length
     : 0;
   const bulkUnassignName =
@@ -1589,8 +1601,7 @@ const ProjectDetail = () => {
       ? getUserDisplayName(assignableProjectMembers.find(member => member.user_id === bulkUnassignId)?.user)
       : '';
   const bulkUnassignableTaskCount = bulkUnassignId
-    ? tasksByStages
-        .flatMap(group => group.tasks)
+    ? topLevelKanbanTasks
         .filter(task => getTaskMutationAssigneeIds(task).includes(bulkUnassignId)).length
     : 0;
 
@@ -2070,7 +2081,8 @@ const ProjectDetail = () => {
           <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-2 px-2 kanban-scrollbar">
             {tasksByStages.map(({ stage, tasks }) => {
               const stageId = stage?.id || null;
-              const sortedTasks = getSortedTasks(tasks, stageId);
+              const topLevelTasks = tasks.filter(task => !task.parent_task_id);
+              const sortedTasks = getSortedTasks(topLevelTasks, stageId);
               const filteredTasks = filterTasks(sortedTasks);
               const curSort = columnSort[stageId ?? 'null'] || 'manual';
               const sortMeta = getColumnSortMeta(curSort);
@@ -2147,7 +2159,7 @@ const ProjectDetail = () => {
                             {stage?.name || t('projects.noStage') || 'Bez etapu'}
                           </span>
                           <span className="mt-0.5 shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/80 dark:text-gray-300">
-                            {searchQuery ? `${filteredTasks.length}/${tasks.length}` : tasks.length}
+                            {searchQuery ? `${filteredTasks.length}/${topLevelTasks.length}` : topLevelTasks.length}
                           </span>
                         </div>
                       </div>
@@ -2240,6 +2252,11 @@ const ProjectDetail = () => {
                         member => !assignedPersonIds.includes(member.user_id)
                       );
                       const canAddAssignee = availableAssignees.length > 0;
+                      const taskSubtasks = subtasksByParentId[task.id] || [];
+                      const completedSubtasks = taskSubtasks.filter(subtask => subtask.status === TaskStatus.DONE).length;
+                      const subtaskProgressPercent = taskSubtasks.length > 0
+                        ? Math.round((completedSubtasks / taskSubtasks.length) * 100)
+                        : 0;
 
                       return (
                         <div
@@ -2302,6 +2319,24 @@ const ProjectDetail = () => {
                             <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                               {task.description}
                             </p>
+                          )}
+
+                          {taskSubtasks.length > 0 && (
+                            <div className="mb-3 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 dark:border-gray-700 dark:bg-gray-700/40">
+                              <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-semibold text-gray-500 dark:text-gray-300">
+                                <span className="inline-flex items-center gap-1">
+                                  <CheckSquare className="h-3 w-3 text-[#F7941D]" />
+                                  Checklisty
+                                </span>
+                                <span>{completedSubtasks}/{taskSubtasks.length}</span>
+                              </div>
+                              <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
+                                <div
+                                  className="h-full rounded-full bg-[#F7941D] transition-all"
+                                  style={{ width: `${subtaskProgressPercent}%` }}
+                                />
+                              </div>
+                            </div>
                           )}
 
                           <div className="mt-3 flex flex-wrap gap-1.5">

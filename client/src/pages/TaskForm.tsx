@@ -1,19 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
   ArrowLeft,
   Save,
   Trash2,
+  Plus,
   Calendar,
-  Clock,
   FolderOpen,
   Loader2,
   Circle,
   CheckCircle2,
   AlertCircle,
   PlayCircle,
-  ChevronDown,
   Paperclip,
   Upload,
   FileText,
@@ -68,11 +67,13 @@ const TaskForm = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // Status dropdown
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [isChangingStatus, setIsChangingStatus] = useState(false);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
+  const [updatingSubtaskId, setUpdatingSubtaskId] = useState<string | null>(null);
+  const [deletingSubtaskId, setDeletingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
+  const [isCompletingSubtasks, setIsCompletingSubtasks] = useState(false);
 
   // Attachments
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
@@ -119,24 +120,6 @@ const TaskForm = () => {
       setFormData(prev => ({ ...prev, assigned_to: undefined, assignee_ids: [] }));
     }
   }, [formData.project_id]);
-
-  useEffect(() => {
-    if (isSelectedProjectOngoing && formData.due_date) {
-      setFormData(prev => ({ ...prev, due_date: '' }));
-    }
-  }, [isSelectedProjectOngoing, formData.due_date]);
-
-  // Close status dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
-        setShowStatusDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const loadProjects = async () => {
     try {
@@ -217,8 +200,7 @@ const TaskForm = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveTask = async () => {
     setError('');
 
     if (!formData.title.trim()) {
@@ -239,7 +221,7 @@ const TaskForm = () => {
         ...formData,
         assignee_ids: assigneeIds,
         assigned_to: assigneeIds[0],
-        due_date: isSelectedProjectOngoing || !dueDate ? null : dueDate,
+        due_date: dueDate || null,
       };
       delete payload.actual_hours;
       if (isEdit && id) {
@@ -254,6 +236,11 @@ const TaskForm = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveTask();
   };
 
   const handleDelete = async () => {
@@ -332,21 +319,138 @@ const TaskForm = () => {
   const areAllVisibleAssigneesSelected =
     filteredProjectMembers.length > 0 &&
     filteredProjectMembers.every(member => selectedAssigneeIds.includes(member.user_id));
+  const subtasks = [...(task?.subtasks || [])].sort((firstSubtask, secondSubtask) =>
+    new Date(firstSubtask.created_at).getTime() - new Date(secondSubtask.created_at).getTime()
+  );
+  const completedSubtasksCount = subtasks.filter(subtask => subtask.status === TaskStatus.DONE).length;
+  const hasIncompleteSubtasks = subtasks.some(subtask => subtask.status !== TaskStatus.DONE);
+  const canManageSubtasks = Boolean(isEdit && task && !task.parent_task_id);
 
-  const handleQuickStatusChange = async (newStatus: TaskStatus) => {
-    if (!id || !task) return;
+  const handleCreateSubtask = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!task || !newSubtaskTitle.trim()) return;
 
     try {
-      setIsChangingStatus(true);
-      await taskApi.updateTaskStatus(id, newStatus);
-      setTask({ ...task, status: newStatus });
-      setFormData(prev => ({ ...prev, status: newStatus }));
-      setShowStatusDropdown(false);
+      setIsCreatingSubtask(true);
+      const createdSubtask = await taskApi.createTask({
+        project_id: task.project_id,
+        stage_id: task.stage_id,
+        title: newSubtaskTitle.trim(),
+        description: '',
+        status: TaskStatus.TODO,
+        priority: task.priority || TaskPriority.MEDIUM,
+        parent_task_id: task.id,
+        due_date: null,
+      });
+      setTask(prev => prev ? {
+        ...prev,
+        subtasks: [...(prev.subtasks || []), createdSubtask],
+      } : prev);
+      setNewSubtaskTitle('');
     } catch (error: any) {
-      console.error('Failed to change status:', error);
-      setError('Nie udało się zmienić statusu');
+      console.error('Failed to create subtask:', error);
+      setError(error.response?.data?.message || 'Nie udało się dodać podzadania');
     } finally {
-      setIsChangingStatus(false);
+      setIsCreatingSubtask(false);
+    }
+  };
+
+  const handleToggleSubtask = async (subtask: Task) => {
+    const nextStatus = subtask.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE;
+
+    try {
+      setUpdatingSubtaskId(subtask.id);
+      await taskApi.updateTaskStatus(subtask.id, nextStatus);
+      setTask(prev => prev ? {
+        ...prev,
+        subtasks: (prev.subtasks || []).map(item =>
+          item.id === subtask.id ? { ...item, status: nextStatus } : item
+        ),
+      } : prev);
+    } catch (error: any) {
+      console.error('Failed to update subtask:', error);
+      setError(error.response?.data?.message || 'Nie udało się zmienić statusu podzadania');
+    } finally {
+      setUpdatingSubtaskId(null);
+    }
+  };
+
+  const handleCompleteAllSubtasks = async () => {
+    const incompleteSubtasks = subtasks.filter(subtask => subtask.status !== TaskStatus.DONE);
+    if (incompleteSubtasks.length === 0) return;
+
+    try {
+      setIsCompletingSubtasks(true);
+      await Promise.all(
+        incompleteSubtasks.map(subtask => taskApi.updateTaskStatus(subtask.id, TaskStatus.DONE))
+      );
+
+      setTask(prev => prev ? {
+        ...prev,
+        subtasks: (prev.subtasks || []).map(item =>
+          incompleteSubtasks.some(subtask => subtask.id === item.id)
+            ? { ...item, status: TaskStatus.DONE }
+            : item
+        ),
+      } : prev);
+    } catch (error: any) {
+      console.error('Failed to complete subtasks:', error);
+      setError(error.response?.data?.message || 'Nie udało się oznaczyć całej checklisty jako wykonanej');
+    } finally {
+      setIsCompletingSubtasks(false);
+    }
+  };
+
+  const startEditingSubtask = (subtask: Task) => {
+    setEditingSubtaskId(subtask.id);
+    setEditingSubtaskTitle(subtask.title);
+  };
+
+  const cancelEditingSubtask = () => {
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle('');
+  };
+
+  const handleUpdateSubtaskTitle = async (event: React.FormEvent, subtask: Task) => {
+    event.preventDefault();
+    const nextTitle = editingSubtaskTitle.trim();
+
+    if (!nextTitle || nextTitle === subtask.title) {
+      cancelEditingSubtask();
+      return;
+    }
+
+    try {
+      setUpdatingSubtaskId(subtask.id);
+      const updatedSubtask = await taskApi.updateTask(subtask.id, { title: nextTitle });
+      setTask(prev => prev ? {
+        ...prev,
+        subtasks: (prev.subtasks || []).map(item =>
+          item.id === subtask.id ? { ...item, ...updatedSubtask, title: nextTitle } : item
+        ),
+      } : prev);
+      cancelEditingSubtask();
+    } catch (error: any) {
+      console.error('Failed to update subtask title:', error);
+      setError(error.response?.data?.message || 'Nie udało się zmienić treści podzadania');
+    } finally {
+      setUpdatingSubtaskId(null);
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    try {
+      setDeletingSubtaskId(subtaskId);
+      await taskApi.deleteTask(subtaskId);
+      setTask(prev => prev ? {
+        ...prev,
+        subtasks: (prev.subtasks || []).filter(item => item.id !== subtaskId),
+      } : prev);
+    } catch (error: any) {
+      console.error('Failed to delete subtask:', error);
+      setError(error.response?.data?.message || 'Nie udało się usunąć podzadania');
+    } finally {
+      setDeletingSubtaskId(null);
     }
   };
 
@@ -423,7 +527,7 @@ const TaskForm = () => {
     }
   };
 
-  // ── Link existing project files to this task ──────────────────────────────
+  // Link existing project files to this task
   const openProjectFilesModal = async () => {
     if (!formData.project_id) return;
     setShowProjectFiles(true);
@@ -496,20 +600,6 @@ const TaskForm = () => {
     return configs[status];
   };
 
-  const getPriorityConfig = (priority: TaskPriority) => {
-    const configs = {
-      low: { label: 'Niski', color: 'text-gray-600', bgColor: 'bg-gray-100', dotColor: 'bg-gray-400' },
-      medium: { label: 'Średni', color: 'text-blue-600', bgColor: 'bg-blue-50', dotColor: 'bg-blue-500' },
-      high: { label: 'Wysoki', color: 'text-orange-600', bgColor: 'bg-orange-50', dotColor: 'bg-orange-500' },
-      urgent: { label: 'Pilne', color: 'text-red-600', bgColor: 'bg-red-50', dotColor: 'bg-red-500' },
-    };
-    return configs[priority];
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  };
-
   if (isLoading) {
     return (
       <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
@@ -528,10 +618,10 @@ const TaskForm = () => {
   return (
     <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
       <div className="mx-auto max-w-[1200px]">
-        {/* Header */}
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-wrap items-start gap-4">
             <button
+              type="button"
               onClick={navigateBack}
               className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:border-gray-700 dark:text-gray-300 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10"
               aria-label="Wróć do listy zadań"
@@ -558,8 +648,8 @@ const TaskForm = () => {
                 </div>
                 <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
                   {isEdit
-                    ? 'Zaktualizuj zakres, przypisane osoby, termin i parametry zadania.'
-                    : 'Utwórz zadanie w wybranym projekcie i przypisz je do osób z zespołu.'}
+                    ? 'Zaktualizuj zakres zadania, checklistę, załączniki i szczegóły w panelu po prawej.'
+                    : 'Utwórz zadanie w projekcie i przypisz je do osób z zespołu.'}
                 </p>
               </div>
             </div>
@@ -572,146 +662,333 @@ const TaskForm = () => {
           )}
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
             <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Main Form */}
-        <div className={`${isEdit ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}>
-          {/* Basic Info Card */}
-          <form onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Informacje podstawowe</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Najważniejsze dane zadania, projekt, osoby odpowiedzialne i termin.
-              </p>
-            </div>
-
-            <div className="space-y-5 p-5">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Zakres zadania</h3>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Zacznij od nazwy i opisu, żeby zadanie było czytelne na liście oraz w projekcie.
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Zakres zadania</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  W głównej części zostaje nazwa i opis, czyli właściwa treść zadania.
                 </p>
               </div>
 
-              {/* Task Title */}
-              <div>
-                <label htmlFor="title" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Tytuł zadania *
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  required
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                  placeholder="np. Implementacja modułu logowania"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label htmlFor="description" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Opis zadania
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                  placeholder="Opisz szczegóły zadania..."
-                />
-              </div>
-
-              <div className="border-t border-gray-100 pt-5 dark:border-gray-700">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Projekt i zespół</h3>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Po wyborze projektu możesz przypisać zadanie do osób z jego zespołu.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {/* Project */}
-                <div className="md:col-span-3">
-                  <label htmlFor="project_id" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Projekt *
+              <div className="space-y-5 p-5">
+                <div>
+                  <label htmlFor="title" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Tytuł zadania *
                   </label>
-                  <select
-                    id="project_id"
-                    name="project_id"
-                    value={formData.project_id}
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
                     onChange={handleChange}
                     required
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                    placeholder="np. Implementacja modułu logowania"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Opis zadania
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={6}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                    placeholder="Opisz szczegóły zadania..."
+                  />
+                </div>
+              </div>
+            </form>
+
+            {canManageSubtasks && (
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
+                      <CheckSquare className="h-4 w-4 text-[#F7941D]" />
+                      Checklisty / podzadania
+                      {subtasks.length > 0 && (
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                          {completedSubtasksCount}/{subtasks.length}
+                        </span>
+                      )}
+                    </h2>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Rozbij zadanie na mniejsze kroki i odhaczaj je w trakcie realizacji.
+                    </p>
+                  </div>
+                  {subtasks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCompleteAllSubtasks}
+                      disabled={!hasIncompleteSubtasks || isCompletingSubtasks}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                    >
+                      {isCompletingSubtasks ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckSquare className="h-3.5 w-3.5" />
+                      )}
+                      Oznacz wszystkie
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-3 p-5">
+                  <form onSubmit={handleCreateSubtask} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSubtaskTitle}
+                      onChange={event => setNewSubtaskTitle(event.target.value)}
+                      placeholder="Dodaj podzadanie..."
+                      className="h-10 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                      disabled={isCreatingSubtask}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isCreatingSubtask || !newSubtaskTitle.trim()}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-3 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isCreatingSubtask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Dodaj
+                    </button>
+                  </form>
+
+                  {subtasks.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Brak podzadań. Dodaj pierwszy krok, jeśli zadanie wymaga rozbicia na mniejsze części.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {subtasks.map(subtask => {
+                        const isDone = subtask.status === TaskStatus.DONE;
+                        const isUpdating = updatingSubtaskId === subtask.id;
+                        const isDeleting = deletingSubtaskId === subtask.id;
+
+                        return (
+                          <div
+                            key={subtask.id}
+                            className="group flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 transition-colors hover:border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700/40 dark:hover:bg-gray-700"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSubtask(subtask)}
+                              disabled={isUpdating || isDeleting}
+                              className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                                isDone
+                                  ? 'border-emerald-500 bg-emerald-500 text-white'
+                                  : 'border-gray-300 bg-white text-gray-400 hover:border-[#F7941D] hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-800'
+                              }`}
+                              aria-label={isDone ? 'Oznacz jako nieukończone' : 'Oznacz jako ukończone'}
+                            >
+                              {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isDone ? <CheckSquare className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                            </button>
+
+                            {editingSubtaskId === subtask.id ? (
+                              <form
+                                onSubmit={event => handleUpdateSubtaskTitle(event, subtask)}
+                                className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                              >
+                                <input
+                                  type="text"
+                                  value={editingSubtaskTitle}
+                                  onChange={event => setEditingSubtaskTitle(event.target.value)}
+                                  className="h-8 min-w-[180px] flex-1 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                  autoFocus
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={isUpdating || !editingSubtaskTitle.trim()}
+                                  className="inline-flex h-8 items-center justify-center rounded-lg bg-gray-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-600 dark:hover:bg-gray-500"
+                                >
+                                  Zapisz
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEditingSubtask}
+                                  disabled={isUpdating}
+                                  className="inline-flex h-8 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                  Anuluj
+                                </button>
+                              </form>
+                            ) : (
+                              <>
+                                <span className={`min-w-0 flex-1 text-sm ${isDone ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-800 dark:text-gray-100'}`}>
+                                  {subtask.title}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => startEditingSubtask(subtask)}
+                                  disabled={isUpdating || isDeleting}
+                                  className="inline-flex h-7 shrink-0 items-center justify-center rounded-md px-2 text-xs font-semibold text-gray-400 opacity-0 transition-colors hover:bg-gray-200 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 group-hover:opacity-100 dark:text-gray-500 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                                >
+                                  Edytuj
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSubtask(subtask.id)}
+                                  disabled={isUpdating || isDeleting}
+                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-300 opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 group-hover:opacity-100 dark:text-gray-500 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                                  aria-label={`Usuń podzadanie: ${subtask.title}`}
+                                  title="Usuń podzadanie"
+                                >
+                                  {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isEdit && (
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
+                    <Paperclip className="h-4 w-4 text-[#F7941D]" />
+                    Załączniki
+                    {attachments.length > 0 && (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        {attachments.length}
+                      </span>
+                    )}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    {formData.project_id && (
+                      <button type="button" onClick={openProjectFilesModal} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        Z projektu
+                      </button>
+                    )}
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                      <Upload className="w-3.5 h-3.5" />
+                      Dodaj
+                    </button>
+                  </div>
+                  <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
+                </div>
+
+                <div className="p-5">
+                  <div
+                    className={`rounded-xl border border-dashed p-4 text-center transition-colors ${dragActive ? 'border-[#F7941D] bg-[#F7941D]/10' : 'border-gray-300 hover:border-[#F7941D]/60 dark:border-gray-600'}`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
                   >
+                    {isUploadingFiles ? (
+                      <div className="space-y-2">
+                        <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#F7941D]" />
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Przesyłanie...</p>
+                        <div className="mx-auto h-1.5 max-w-[120px] rounded-full bg-gray-200 dark:bg-gray-600">
+                          <div className="h-1.5 rounded-full bg-[#F7941D] transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Upload className="w-4 h-4" />
+                        <span>Przeciągnij pliki lub kliknij &quot;Dodaj&quot;</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {attachments.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {attachments.map((attachment) => {
+                        const FileIcon = getFileIcon(attachment.file_type);
+                        const isImage = attachment.file_type.startsWith('image/');
+
+                        return (
+                          <div key={attachment.id} className="group flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 transition-colors hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700">
+                            {isImage ? (
+                              <img src={getFileUrl(attachment.file_url) || ''} alt={attachment.original_name} className="h-7 w-7 rounded object-cover" />
+                            ) : (
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-gray-200 dark:bg-gray-600">
+                                <FileIcon className="h-3.5 w-3.5 text-gray-500" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium text-gray-900 dark:text-white">{attachment.original_name}</p>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400">{formatFileSize(Number(attachment.file_size))}</p>
+                            </div>
+                            <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                              <a href={getFileUrl(attachment.file_url) || ''} download={attachment.original_name} className="rounded p-1 transition-colors hover:bg-gray-200 dark:hover:bg-gray-600" title="Pobierz">
+                                <Download className="h-3.5 w-3.5 text-gray-500" />
+                              </a>
+                              <button type="button" onClick={() => handleDeleteAttachment(attachment.id)} className="rounded p-1 transition-colors hover:bg-red-100 dark:hover:bg-red-900/30" title="Usuń">
+                                <X className="h-3.5 w-3.5 text-red-500" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Szczegóły zadania</h2>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Projekt, osoby, termin i parametry zadania.</p>
+              </div>
+
+              <div className="space-y-4 p-5">
+                <div>
+                  <label htmlFor="project_id" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Projekt *</label>
+                  <select id="project_id" name="project_id" value={formData.project_id} onChange={handleChange} required className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     <option value="">Wybierz projekt</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name} ({project.code})
-                      </option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>{project.name} ({project.code})</option>
                     ))}
                   </select>
                   {selectedProject && (
                     <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-200">
-                          <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
-                          {selectedProject.code}
-                        </span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-200"><FolderOpen className="h-3.5 w-3.5 text-gray-400" />{selectedProject.code}</span>
                         {isSelectedProjectOngoing ? (
-                          <span className="rounded-full bg-blue-50 px-2 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                            Projekt ciągły
-                          </span>
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Projekt ciągły</span>
                         ) : selectedProject.target_end_date ? (
-                          <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                            <Calendar className="h-3.5 w-3.5" />
-                            Termin projektu:{' '}
-                            {new Date(selectedProject.target_end_date).toLocaleDateString('pl-PL', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </span>
+                          <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400"><Calendar className="h-3.5 w-3.5" />Termin: {new Date(selectedProject.target_end_date).toLocaleDateString('pl-PL')}</span>
                         ) : null}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Assignees (multi-select) */}
-                <div className="md:col-span-3">
+                <div>
                   <label className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     <span>Przypisane osoby</span>
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] normal-case tracking-normal text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                      Wybrano: {selectedAssigneeIds.length}
-                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] normal-case tracking-normal text-gray-600 dark:bg-gray-700 dark:text-gray-300">{selectedAssigneeIds.length}</span>
                   </label>
-                  <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
-                    Możesz wybrać dowolne osoby z zespołu projektu.
-                  </p>
                   {selectedProjectMembers.length > 0 && (
                     <div className="mb-3 flex flex-wrap gap-1.5">
                       {selectedProjectMembers.map(member => (
-                        <span
-                          key={member.user_id}
-                          className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-                        >
+                        <span key={member.user_id} className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                           <span className="truncate">{getProjectMemberDisplayName(member)}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleAssignee(member.user_id)}
-                            className="rounded-full p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-red-600 dark:hover:bg-gray-600 dark:hover:text-red-300"
-                            aria-label={`Usuń przypisanie: ${getProjectMemberDisplayName(member)}`}
-                          >
+                          <button type="button" onClick={() => toggleAssignee(member.user_id)} className="rounded-full p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-red-600 dark:hover:bg-gray-600 dark:hover:text-red-300" aria-label={`Usuń przypisanie: ${getProjectMemberDisplayName(member)}`}>
                             <X className="h-3 w-3" />
                           </button>
                         </span>
@@ -730,65 +1007,25 @@ const TaskForm = () => {
                         <div className="border-b border-gray-100 bg-gray-50/70 p-3 dark:border-gray-700 dark:bg-gray-800/60">
                           <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                            <input
-                              type="text"
-                              value={assigneeSearch}
-                              onChange={event => setAssigneeSearch(event.target.value)}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                              placeholder="Szukaj osoby w zespole projektu..."
-                            />
+                            <input type="text" value={assigneeSearch} onChange={event => setAssigneeSearch(event.target.value)} className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-9 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400" placeholder="Szukaj osoby..." />
                             {assigneeSearch && (
-                              <button
-                                type="button"
-                                onClick={() => setAssigneeSearch('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200"
-                                aria-label="Wyczyść wyszukiwanie osób"
-                              >
+                              <button type="button" onClick={() => setAssigneeSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200" aria-label="Wyczyść wyszukiwanie osób">
                                 <X className="h-4 w-4" />
                               </button>
                             )}
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                              Widoczne: {filteredProjectMembers.length} z {projectMembers.length}
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={selectVisibleAssignees}
-                                disabled={
-                                  filteredProjectMembers.length === 0 || areAllVisibleAssigneesSelected
-                                }
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                              >
-                                Zaznacz widocznych
-                              </button>
-                              <button
-                                type="button"
-                                onClick={clearAssignees}
-                                disabled={selectedAssigneeIds.length === 0}
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                              >
-                                Wyczyść
-                              </button>
-                            </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button type="button" onClick={selectVisibleAssignees} disabled={filteredProjectMembers.length === 0 || areAllVisibleAssigneesSelected} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">Zaznacz</button>
+                            <button type="button" onClick={clearAssignees} disabled={selectedAssigneeIds.length === 0} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Wyczyść</button>
                           </div>
                         </div>
                         <div className="max-h-52 overflow-y-auto">
                           {filteredProjectMembers.length > 0 ? (
-                            filteredProjectMembers.map((member) => {
+                            filteredProjectMembers.map(member => {
                               const selected = selectedAssigneeIds.includes(member.user_id);
                               return (
-                                <label
-                                  key={member.user_id}
-                                  className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selected}
-                                    onChange={() => toggleAssignee(member.user_id)}
-                                    className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
-                                  />
+                                <label key={member.user_id} className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}>
+                                  <input type="checkbox" checked={selected} onChange={() => toggleAssignee(member.user_id)} className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]" />
                                   <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-200">
                                     {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
                                   </div>
@@ -797,477 +1034,108 @@ const TaskForm = () => {
                               );
                             })
                           ) : (
-                            <div className="px-2.5 py-3 text-xs text-gray-400 dark:text-gray-500">
-                              Brak osób pasujących do wyszukiwania
-                            </div>
+                            <div className="px-2.5 py-3 text-xs text-gray-400 dark:text-gray-500">Brak osób pasujących do wyszukiwania</div>
                           )}
                         </div>
                       </div>
                     )}
                   </div>
-                  {formData.project_id && projectMembers.length === 0 && !isLoadingProjectMembers && (
-                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                      Dodaj osoby w zakładce zespół projektu, aby można było przypisać zadanie.
-                    </p>
-                  )}
                 </div>
 
-                <div className="border-t border-gray-100 pt-4 dark:border-gray-700 md:col-span-3">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Parametry zadania</h3>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Ustaw priorytet, termin oraz szacowany czas pracy.
-                  </p>
-                </div>
-
-                {/* Priority */}
-                <div>
-                  <label htmlFor="priority" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Priorytet
-                  </label>
-                  <select
-                    id="priority"
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleChange}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="low">Niski</option>
-                    <option value="medium">Średni</option>
-                    <option value="high">Wysoki</option>
-                    <option value="urgent">Pilne</option>
-                  </select>
-                </div>
-
-                {/* Status (only visible when not editing - in edit mode it's in sidebar) */}
-                {!isEdit && (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
                   <div>
-                    <label htmlFor="status" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Status
-                    </label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    >
-                      {allStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {getStatusConfig(status).label}
-                        </option>
-                      ))}
+                    <label htmlFor="status" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</label>
+                    <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      {allStatuses.map(status => <option key={status} value={status}>{getStatusConfig(status).label}</option>)}
                     </select>
                   </div>
-                )}
 
-                {/* Due Date */}
-                <div>
-                  <label htmlFor="due_date" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Termin
-                  </label>
-                  <input
-                    type="date"
-                    id="due_date"
-                    name="due_date"
-                    value={formData.due_date || ''}
-                    onChange={handleChange}
-                    disabled={isSelectedProjectOngoing}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
-                  />
-                  {isSelectedProjectOngoing && (
-                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                      Projekt ciągły - zadanie bez terminu zakończenia.
-                    </p>
-                  )}
-                </div>
-
-                {/* Estimated Hours */}
-                <div>
-                  <label htmlFor="estimated_hours" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Szacowany (h)
-                  </label>
-                  <input
-                    type="number"
-                    id="estimated_hours"
-                    name="estimated_hours"
-                    value={formData.estimated_hours || ''}
-                    onChange={handleChange}
-                    step="0.5"
-                    min="0"
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                    placeholder="8"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Form Actions */}
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
-              <button
-                type="button"
-                onClick={navigateBack}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              >
-                Anuluj
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Zapisywanie...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    {isEdit ? 'Zapisz zmiany' : 'Utwórz zadanie'}
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Attachments Section - only in edit mode */}
-          {isEdit && (
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
-                <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
-                  <Paperclip className="h-4 w-4 text-[#F7941D]" />
-                  Załączniki
-                  {attachments.length > 0 && (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                      {attachments.length}
-                    </span>
-                  )}
-                </h2>
-                <div className="flex items-center gap-2">
-                  {formData.project_id && (
-                    <button
-                      type="button"
-                      onClick={openProjectFilesModal}
-                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5" />
-                      Z projektu
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    Dodaj
-                  </button>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </div>
-
-              <div className="p-5">
-                {/* Upload area - compact */}
-                <div
-                  className={`rounded-xl border border-dashed p-4 text-center transition-colors ${
-                    dragActive
-                      ? 'border-[#F7941D] bg-[#F7941D]/10'
-                      : 'border-gray-300 hover:border-[#F7941D]/60 dark:border-gray-600'
-                  }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                >
-                  {isUploadingFiles ? (
-                    <div className="space-y-2">
-                      <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#F7941D]" />
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Przesyłanie...</p>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 max-w-[120px] mx-auto">
-                        <div
-                          className="h-1.5 rounded-full bg-[#F7941D] transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Upload className="w-4 h-4" />
-                      <span>Przeciągnij pliki lub kliknij &quot;Dodaj&quot;</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Attachments list - compact */}
-                {attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {attachments.map((attachment) => {
-                      const FileIcon = getFileIcon(attachment.file_type);
-                      const isImage = attachment.file_type.startsWith('image/');
-
-                      return (
-                        <div
-                          key={attachment.id}
-                          className="group flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 transition-colors hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700"
-                        >
-                          {isImage ? (
-                            <img
-                              src={getFileUrl(attachment.file_url) || ''}
-                              alt={attachment.original_name}
-                              className="w-7 h-7 object-cover rounded"
-                            />
-                          ) : (
-                            <div className="w-7 h-7 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center shrink-0">
-                              <FileIcon className="w-3.5 h-3.5 text-gray-500" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                              {attachment.original_name}
-                            </p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                              {formatFileSize(Number(attachment.file_size))}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <a
-                              href={getFileUrl(attachment.file_url) || ''}
-                              download={attachment.original_name}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                              title="Pobierz"
-                            >
-                              <Download className="w-3.5 h-3.5 text-gray-500" />
-                            </a>
-                            <button
-                              onClick={() => handleDeleteAttachment(attachment.id)}
-                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
-                              title="Usuń"
-                            >
-                              <X className="w-3.5 h-3.5 text-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div>
+                    <label htmlFor="priority" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Priorytet</label>
+                    <select id="priority" name="priority" value={formData.priority} onChange={handleChange} className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      <option value="low">Niski</option>
+                      <option value="medium">Średni</option>
+                      <option value="high">Wysoki</option>
+                      <option value="urgent">Pilne</option>
+                    </select>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
 
-        </div>
-
-        {/* Sidebar */}
-        {isEdit && task && (
-          <div className="space-y-4">
-            {/* Status Card with dropdown */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</h3>
-              <div className="relative" ref={statusDropdownRef}>
-                <button
-                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                  disabled={isChangingStatus}
-                  className="w-full"
-                >
-                  {(() => {
-                    const statusConfig = getStatusConfig(task.status);
-                    const StatusIcon = statusConfig.icon;
-                    return (
-                      <div className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 ${statusConfig.bgColor} ${statusConfig.color} cursor-pointer text-sm transition-opacity hover:opacity-90`}>
-                        <div className="flex items-center gap-1.5">
-                          {isChangingStatus ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <StatusIcon className="w-3.5 h-3.5" />
-                          )}
-                          <span className="font-semibold">{statusConfig.label}</span>
-                        </div>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
-                      </div>
-                    );
-                  })()}
-                </button>
-
-                {/* Status Dropdown */}
-                {showStatusDropdown && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                    <div className="px-2.5 py-1.5 border-b border-gray-100 dark:border-gray-700">
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Zmień na:</p>
-                    </div>
-                    {allStatuses.map((status) => {
-                      const config = getStatusConfig(status);
-                      const Icon = config.icon;
-                      const isCurrentStatus = task.status === status;
-
-                      return (
-                        <button
-                          key={status}
-                          onClick={() => !isCurrentStatus && handleQuickStatusChange(status)}
-                          disabled={isCurrentStatus}
-                          className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-left transition-colors ${
-                            isCurrentStatus
-                              ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 cursor-default'
-                              : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          <span className={`p-0.5 rounded ${config.bgColor} ${config.color}`}>
-                            <Icon className="w-3 h-3" />
-                          </span>
-                          {config.label}
-                          {isCurrentStatus && (
-                            <span className="ml-auto text-[10px] text-gray-400">✓</span>
-                          )}
+                  <div>
+                    <label htmlFor="due_date" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Termin</label>
+                    <div className="flex gap-2">
+                      <input type="date" id="due_date" name="due_date" value={formData.due_date || ''} onChange={handleChange} className="h-10 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                      {formData.due_date && (
+                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, due_date: '' }))} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:border-red-800 dark:hover:bg-red-900/20 dark:hover:text-red-300" aria-label="Wyczyść termin zadania" title="Wyczyść termin">
+                          <X className="h-4 w-4" />
                         </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Priority Card */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Priorytet</h3>
-              {(() => {
-                const priorityConfig = getPriorityConfig(task.priority);
-                return (
-                  <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 ${priorityConfig.bgColor} text-sm`}>
-                    <div className={`w-2 h-2 rounded-full ${priorityConfig.dotColor}`} />
-                    <span className={`font-medium ${priorityConfig.color}`}>{priorityConfig.label}</span>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Details Card */}
-            <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Szczegóły</h3>
-
-              {/* Project */}
-              {task.project && (
-                <div className="flex items-center gap-2">
-                  <FolderOpen className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Projekt</p>
-                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{task.project.name}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Assignees */}
-              {((task.assignees && task.assignees.length > 0) || task.assignee) && (
-                <div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1">Przypisane osoby</p>
-                  <div className="space-y-1">
-                    {(task.assignees && task.assignees.length > 0 ? task.assignees : task.assignee ? [task.assignee] : []).map(person => (
-                      <div key={person.id} className="flex items-center gap-2">
-                        {person.avatar_url ? (
-                          <img src={getFileUrl(person.avatar_url) || ''} alt="" className="w-5 h-5 rounded-full shrink-0" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[9px] font-medium text-gray-600 shrink-0">
-                            {getInitials(person.first_name, person.last_name)}
-                          </div>
-                        )}
-                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                          {person.first_name} {person.last_name}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Creator */}
-              {task.creator && (
-                <div className="flex items-center gap-2">
-                  {task.creator.avatar_url ? (
-                    <img
-                      src={getFileUrl(task.creator.avatar_url) || ''}
-                      alt=""
-                      className="w-5 h-5 rounded-full shrink-0"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-[9px] font-medium text-gray-600 shrink-0">
-                      {getInitials(task.creator.first_name, task.creator.last_name)}
+                      )}
                     </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Utworzył</p>
-                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                      {task.creator.first_name} {task.creator.last_name}
-                    </p>
+                    {isSelectedProjectOngoing && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Projekt ciągły może mieć zadania z opcjonalnym terminem realizacji.</p>}
                   </div>
-                </div>
-              )}
 
-              {/* Due date */}
-              {task.due_date && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Termin</p>
-                    <p className="text-xs font-medium text-gray-900 dark:text-white">
-                      {new Date(task.due_date).toLocaleDateString('pl-PL', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </p>
+                  <div>
+                    <label htmlFor="estimated_hours" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Szacowany czas (h)</label>
+                    <input type="number" id="estimated_hours" name="estimated_hours" value={formData.estimated_hours || ''} onChange={handleChange} step="0.5" min="0" className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400" placeholder="8" />
                   </div>
-                </div>
-              )}
-
-              {/* Created at */}
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Utworzono</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {new Date(task.created_at).toLocaleDateString('pl-PL', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </p>
                 </div>
               </div>
+
             </div>
 
-            {/* Delete Card */}
-            {isAdmin && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm dark:border-red-900/50 dark:bg-red-900/10">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Strefa niebezpieczeństwa</h3>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={isDeleting}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-900/20"
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Usuwanie...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Usuń zadanie
-                    </>
-                  )}
-                </button>
+            {isEdit && task?.creator && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Utworzył</div>
+                <p className="truncate font-semibold text-gray-900 dark:text-white">{task.creator.first_name} {task.creator.last_name}</p>
               </div>
             )}
-          </div>
-        )}
-      </div>
-      </div>
 
-      {/* Delete Confirmation Modal */}
+          </aside>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            Akcje zadania
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {isEdit && isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-900/20"
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Usuń
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={navigateBack}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            >
+              Anuluj
+            </button>
+            <button
+              type="button"
+              onClick={saveTask}
+              disabled={isSaving}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Zapisywanie...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  {isEdit ? 'Zapisz zmiany' : 'Utwórz zadanie'}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
@@ -1361,8 +1229,11 @@ const TaskForm = () => {
         </div>
       )}
 
+      </div>
     </MainLayout>
   );
 };
 
 export default TaskForm;
+
+
