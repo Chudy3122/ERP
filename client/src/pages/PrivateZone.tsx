@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { CheckCircle2, ChevronDown, Clock3, GripVertical, ListTodo, Loader2, Lock, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Clock3, GripVertical, ListTodo, Loader2, Lock, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import * as api from '../api/personalTask.api';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +49,7 @@ export default function PrivateZone() {
   const [openPriorityTaskId, setOpenPriorityTaskId] = useState<string | null>(null);
   const [dragged, setDragged] = useState<PersonalTask | null>(null);
   const [dragOverCol, setDragOverCol] = useState<PersonalTaskStatus | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -128,16 +129,135 @@ export default function PrivateZone() {
     }
   };
 
+  const getDefaultOrderedTasks = (taskList: PersonalTask[]) =>
+    [...taskList].sort((a, b) => (a.order_index - b.order_index) || a.created_at.localeCompare(b.created_at));
+
+  const getPersistenceOrder = (taskList: PersonalTask[]) => {
+    const statusOrder = new Map(PERSONAL_COLUMNS.map((column, index) => [column.status, index]));
+
+    return [...taskList]
+      .sort((a, b) => {
+        const statusDiff = (statusOrder.get(a.status) ?? 0) - (statusOrder.get(b.status) ?? 0);
+        if (statusDiff !== 0) return statusDiff;
+        return (a.order_index - b.order_index) || a.created_at.localeCompare(b.created_at);
+      })
+      .map(task => task.id);
+  };
+
+  const reorderTasksWithinColumn = (
+    taskList: PersonalTask[],
+    status: PersonalTaskStatus,
+    draggedTaskId: string,
+    targetTaskId: string,
+  ) => {
+    const columnTasks = getDefaultOrderedTasks(taskList.filter(task => task.status === status));
+    const fromIndex = columnTasks.findIndex(task => task.id === draggedTaskId);
+    const toIndex = columnTasks.findIndex(task => task.id === targetTaskId);
+
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+      return taskList;
+    }
+
+    const reorderedColumnTasks = [...columnTasks];
+    const [movedTask] = reorderedColumnTasks.splice(fromIndex, 1);
+    reorderedColumnTasks.splice(toIndex, 0, movedTask);
+
+    const nextOrderById = new Map(
+      reorderedColumnTasks.map((task, index) => [task.id, index * 10])
+    );
+
+    return taskList.map(task =>
+      task.status === status && nextOrderById.has(task.id)
+        ? { ...task, order_index: nextOrderById.get(task.id)! }
+        : task
+    );
+  };
+
+  const moveTaskToColumnEnd = (
+    taskList: PersonalTask[],
+    taskToMove: PersonalTask,
+    status: PersonalTaskStatus,
+  ) => {
+    const targetColumnTasks = getDefaultOrderedTasks(
+      taskList.filter(task => task.status === status && task.id !== taskToMove.id)
+    );
+    const nextOrderIndex = targetColumnTasks.length > 0
+      ? targetColumnTasks[targetColumnTasks.length - 1].order_index + 10
+      : 0;
+
+    return taskList.map(task =>
+      task.id === taskToMove.id
+        ? { ...task, status, order_index: nextOrderIndex }
+        : task
+    );
+  };
+
   const handleDrop = async (status: PersonalTaskStatus) => {
     setDragOverCol(null);
+    setDragOverTaskId(null);
     if (!dragged || dragged.status === status) { setDragged(null); return; }
     const task = dragged;
     setDragged(null);
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status } : t)); // optimistic
+    const nextTasks = moveTaskToColumnEnd(tasks, task, status);
+    setTasks(nextTasks); // optimistic
     try {
       await api.updatePersonalTask(task.id, { status });
+      await api.reorderPersonalTasks(getPersistenceOrder(nextTasks));
     } catch {
       toast.error('Nie udało się przenieść');
+      load();
+    }
+  };
+
+  const handleTaskDrop = async (targetTask: PersonalTask) => {
+    if (!dragged || dragged.status !== targetTask.status) return;
+    setDragOverCol(null);
+    setDragOverTaskId(null);
+    const task = dragged;
+    setDragged(null);
+    if (task.id === targetTask.id) return;
+
+    const nextTasks = reorderTasksWithinColumn(tasks, targetTask.status, task.id, targetTask.id);
+    setTasks(nextTasks); // optimistic
+
+    try {
+      await api.reorderPersonalTasks(getPersistenceOrder(nextTasks));
+    } catch {
+      toast.error('Nie udało się zmienić kolejności');
+      load();
+    }
+  };
+
+  const moveTaskByStep = async (task: PersonalTask, direction: 'up' | 'down') => {
+    const columnTasks = getDefaultOrderedTasks(tasks.filter(item => item.status === task.status));
+    const currentIndex = columnTasks.findIndex(item => item.id === task.id);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= columnTasks.length) {
+      return;
+    }
+
+    if (sortMode !== 'default') setSortMode('default');
+
+    const reorderedColumnTasks = [...columnTasks];
+    const [movedTask] = reorderedColumnTasks.splice(currentIndex, 1);
+    reorderedColumnTasks.splice(targetIndex, 0, movedTask);
+
+    const nextOrderById = new Map(
+      reorderedColumnTasks.map((item, index) => [item.id, index * 10])
+    );
+    const nextTasks = tasks.map(item =>
+      item.status === task.status && nextOrderById.has(item.id)
+        ? { ...item, order_index: nextOrderById.get(item.id)! }
+        : item
+    );
+
+    setTasks(nextTasks); // optimistic
+
+    try {
+      await api.reorderPersonalTasks(getPersistenceOrder(nextTasks));
+    } catch {
+      toast.error('Nie udało się zmienić kolejności');
       load();
     }
   };
@@ -355,17 +475,72 @@ export default function PrivateZone() {
                       (() => {
                         const priority = getTaskPriority(task);
                         const priorityConfig = PRIORITY_CONFIG[priority];
+                        const defaultColumnTasks = getDefaultOrderedTasks(tasks.filter(item => item.status === task.status));
+                        const taskColumnIndex = defaultColumnTasks.findIndex(item => item.id === task.id);
+                        const canMoveUp = taskColumnIndex > 0;
+                        const canMoveDown = taskColumnIndex >= 0 && taskColumnIndex < defaultColumnTasks.length - 1;
                         return (
                       <div
                         key={task.id}
                         draggable
-                        onDragStart={() => setDragged(task)}
-                        onDragEnd={() => setDragged(null)}
+                        onDragStart={event => {
+                          event.dataTransfer.effectAllowed = 'move';
+                          if (sortMode !== 'default') setSortMode('default');
+                          setDragged(task);
+                        }}
+                        onDragOver={event => {
+                          if (dragged && dragged.status === task.status && dragged.id !== task.id) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setDragOverCol(status);
+                            setDragOverTaskId(task.id);
+                          }
+                        }}
+                        onDrop={event => {
+                          if (dragged && dragged.status === task.status) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleTaskDrop(task);
+                          }
+                        }}
+                        onDragEnd={() => {
+                          setDragged(null);
+                          setDragOverCol(null);
+                          setDragOverTaskId(null);
+                        }}
                         onClick={() => { setOpenPriorityTaskId(null); setEditing(task); setEditTitle(task.title); setEditDesc(task.description || ''); setEditPriority(priority); }}
-                        className={`group cursor-grab rounded-xl border border-l-4 border-gray-200/80 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F7941D]/30 hover:shadow-md active:cursor-grabbing dark:border-gray-700/80 dark:bg-gray-800 ${priorityConfig.border} ${dragged?.id === task.id ? 'opacity-50' : ''}`}
+                        className={`group cursor-grab rounded-xl border border-l-4 border-gray-200/80 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F7941D]/30 hover:shadow-md active:cursor-grabbing dark:border-gray-700/80 dark:bg-gray-800 ${priorityConfig.border} ${dragged?.id === task.id ? 'opacity-50' : ''} ${dragOverTaskId === task.id ? 'border-[#F7941D] ring-2 ring-[#F7941D]/30' : ''}`}
                       >
-                        <div className="flex items-start gap-2">
-                          <GripVertical className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-300 dark:text-gray-600" />
+                        <div className="flex items-start gap-2.5">
+                          <div className="flex flex-shrink-0 flex-col items-center gap-0.5">
+                            <GripVertical className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600" />
+                            <button
+                              type="button"
+                              onClick={event => {
+                                event.stopPropagation();
+                                moveTaskByStep(task, 'up');
+                              }}
+                              disabled={!canMoveUp}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded border border-gray-200 bg-white text-gray-400 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10 dark:hover:text-orange-300 dark:disabled:border-gray-800 dark:disabled:bg-gray-900"
+                              aria-label="Przesuń zadanie wyżej"
+                              title="Przesuń wyżej"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={event => {
+                                event.stopPropagation();
+                                moveTaskByStep(task, 'down');
+                              }}
+                              disabled={!canMoveDown}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded border border-gray-200 bg-white text-gray-400 transition-colors hover:border-[#F7941D]/40 hover:bg-[#F7941D]/10 hover:text-[#F7941D] disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500 dark:hover:border-[#F7941D]/40 dark:hover:bg-[#F7941D]/10 dark:hover:text-orange-300 dark:disabled:border-gray-800 dark:disabled:bg-gray-900"
+                              aria-label="Przesuń zadanie niżej"
+                              title="Przesuń niżej"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div
                               className="relative mb-2 inline-block"
@@ -423,6 +598,16 @@ export default function PrivateZone() {
                         );
                       })()
                     ))}
+                    {adding !== status && items.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setAdding(status); setNewTitle(''); }}
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white/80 text-sm font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/50 hover:bg-[#F7941D]/5 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 dark:hover:border-[#F7941D]/50 dark:hover:bg-[#F7941D]/10 dark:hover:text-orange-300"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Dodaj zadanie
+                      </button>
+                    )}
                   </div>
                 </div>
               );
