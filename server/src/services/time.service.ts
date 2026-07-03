@@ -297,14 +297,18 @@ export class TimeService {
     const userIds = Array.from(new Set(entries.map((e) => e.user_id)));
     const users = await this.userRepository.find({
       where: { id: In(userIds) },
-      select: ['id', 'auto_close_after_minutes'],
+      select: ['id', 'auto_close_after_minutes', 'force_desktop_device'],
     });
-    const limitByUser = new Map(
-      users.map((u) => [u.id, u.auto_close_after_minutes ?? DEFAULT_AUTO_CLOSE_MINUTES]),
+    const infoByUser = new Map(
+      users.map((u) => [
+        u.id,
+        { limit: u.auto_close_after_minutes ?? DEFAULT_AUTO_CLOSE_MINUTES, forceDesktop: !!u.force_desktop_device },
+      ]),
     );
 
     for (const entry of entries) {
-      const limitMin = limitByUser.get(entry.user_id) ?? DEFAULT_AUTO_CLOSE_MINUTES;
+      const info = infoByUser.get(entry.user_id);
+      const limitMin = info?.limit ?? DEFAULT_AUTO_CLOSE_MINUTES;
       if (!limitMin || limitMin <= 0) continue;
 
       const limitMs = limitMin * 60 * 1000;
@@ -312,8 +316,11 @@ export class TimeService {
       if (Date.now() - clockInMs < limitMs) continue;
 
       const hoursLabel = Number.isInteger(limitMin / 60) ? `${limitMin / 60}h` : `${limitMin} min`;
-      entry.clockOut(`Automatyczne zakończenie pracy po ${hoursLabel}`, new Date(clockInMs + limitMs));
+      // For force-desktop accounts the auto-close looks like a normal manual end
+      const note = info?.forceDesktop ? 'Zakończenie pracy' : `Automatyczne zakończenie pracy po ${hoursLabel}`;
+      entry.clockOut(note, new Date(clockInMs + limitMs));
       entry.is_break = false;
+      if (info?.forceDesktop) entry.clock_out_device = 'desktop';
       await this.timeEntryRepository.save(entry);
     }
   }
