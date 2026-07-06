@@ -245,9 +245,13 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
                       <p className={`text-xs truncate flex-1 ${unreadCount > 0 ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                         {channel.last_message_preview ? (
                           <>
-                            {channel.last_message_sender_id === user?.id && (
+                            {channel.last_message_sender_id === user?.id ? (
                               <span className="text-gray-400 dark:text-gray-500">Ty: </span>
-                            )}
+                            ) : channel.type !== 'direct' && channel.last_message_sender_id ? (
+                              <span className="text-gray-400 dark:text-gray-500">
+                                {(channel.members?.find((m: any) => (m.user?.id || m.user_id) === channel.last_message_sender_id)?.user?.first_name) || 'Ktoś'}:{' '}
+                              </span>
+                            ) : null}
                             {channel.last_message_preview}
                           </>
                         ) : channel.type !== 'direct' && channel.members ? (

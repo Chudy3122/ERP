@@ -28,18 +28,25 @@ export class ChatService {
 
     if (channels.length === 0) return channels;
 
-    // Compute last_message_at for each channel from the messages table
+    // Latest message per channel (content + sender) — so the preview/sender show
+    // for EVERY chat (group or direct), not just ones with the cached fields set.
     const channelIds = channels.map(c => c.id);
     const latestMessages = await this.messageRepository
       .createQueryBuilder('msg')
+      .distinctOn(['msg.channel_id'])
       .select('msg.channel_id', 'channelId')
-      .addSelect('MAX(msg.created_at)', 'lastAt')
+      .addSelect('msg.content', 'content')
+      .addSelect('msg.sender_id', 'senderId')
+      .addSelect('msg.message_type', 'messageType')
+      .addSelect('msg.is_deleted', 'isDeleted')
+      .addSelect('msg.created_at', 'createdAt')
       .where('msg.channel_id IN (:...channelIds)', { channelIds })
-      .groupBy('msg.channel_id')
+      .orderBy('msg.channel_id')
+      .addOrderBy('msg.created_at', 'DESC')
       .getRawMany();
 
-    const lastMessageMap = new Map<string, string>(
-      latestMessages.map(r => [r.channelId, r.lastAt])
+    const lastMessageMap = new Map<string, any>(
+      latestMessages.map(r => [r.channelId, r])
     );
 
     // Unread count per channel: messages newer than this user's last_read_at,
@@ -59,15 +66,27 @@ export class ChatService {
       unreadRaw.map(r => [r.channelId, parseInt(r.cnt, 10)])
     );
 
-    // Attach last_message_at + unreadCount and sort by activity (most recent first)
+    // Attach last message preview/sender + unreadCount, sort by activity (most recent first)
     return channels
-      .map(c => Object.assign(c, {
-        last_message_at: lastMessageMap.get(c.id) ?? null,
-        unreadCount: unreadMap.get(c.id) ?? 0,
-      }))
+      .map(c => {
+        const lm = lastMessageMap.get(c.id);
+        let preview: string | null = null;
+        if (lm) {
+          const text = (lm.content || '').trim();
+          preview = lm.isDeleted
+            ? 'Wiadomość usunięta'
+            : text || (lm.messageType === 'file' ? '📎 Załącznik' : '');
+        }
+        return Object.assign(c, {
+          last_message_at: lm?.createdAt ?? null,
+          last_message_preview: preview || null,
+          last_message_sender_id: lm?.senderId ?? null,
+          unreadCount: unreadMap.get(c.id) ?? 0,
+        });
+      })
       .sort((a, b) => {
-        const aTime = new Date((a.last_message_at as string) || a.created_at).getTime();
-        const bTime = new Date((b.last_message_at as string) || b.created_at).getTime();
+        const aTime = new Date((a.last_message_at as any) || a.created_at).getTime();
+        const bTime = new Date((b.last_message_at as any) || b.created_at).getTime();
         return bTime - aTime;
       });
   }
