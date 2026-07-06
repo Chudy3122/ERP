@@ -63,6 +63,7 @@ const Admin = () => {
   const [deptFilter, setDeptFilter] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [mobileAllowed, setMobileAllowed] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<{ id: string; email: string } | null>(null);
   const [resetPwdUser, setResetPwdUser] = useState<{ id: string; email: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -126,7 +127,7 @@ const Admin = () => {
     e.preventDefault();
     try {
       if (editingUser) {
-        await adminApi.updateUser(editingUser.id, { firstName: userForm.firstName, lastName: userForm.lastName, email: userForm.email, role: userForm.role, department: userForm.department, position: userForm.position, phone: userForm.phone });
+        await adminApi.updateUser(editingUser.id, { firstName: userForm.firstName, lastName: userForm.lastName, email: userForm.email, role: userForm.role, department: userForm.department, position: userForm.position, phone: userForm.phone, mobile_allowed: mobileAllowed });
         toast.success('Użytkownik zaktualizowany');
         setEditingUser(null);
       } else {
@@ -168,6 +169,7 @@ const Admin = () => {
 
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
+    setMobileAllowed(!!user.mobile_allowed);
     setUserForm({ email: user.email, password: '', firstName: user.first_name, lastName: user.last_name, role: user.role, department: user.department || '', position: user.position || '', phone: user.phone || '' });
   };
 
@@ -562,6 +564,15 @@ const Admin = () => {
               </div>
               <div><label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Stanowisko</label><input type="text" className={inp} value={userForm.position} onChange={e => setUserForm({ ...userForm, position: e.target.value })} placeholder="np. Pracownik" /></div>
               <div><label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Telefon</label><input type="tel" className={inp} value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} /></div>
+              {editingUser && (
+                <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900/30">
+                  <span>
+                    <span className="block text-sm font-medium text-gray-700 dark:text-gray-200">Dostęp z telefonu</span>
+                    <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Domyślnie zablokowany. Zaznacz, aby ten pracownik mógł logować się z telefonu/tabletu.</span>
+                  </span>
+                  <input type="checkbox" checked={mobileAllowed} onChange={e => setMobileAllowed(e.target.checked)} className="h-5 w-5 shrink-0 rounded border-gray-300 accent-[#F7941D]" />
+                </label>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="flex-1 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
                   {editingUser ? 'Zapisz zmiany' : 'Utwórz użytkownika'}
