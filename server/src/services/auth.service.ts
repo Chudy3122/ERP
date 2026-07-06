@@ -107,7 +107,7 @@ export class AuthService {
     }
 
     // Desktop-only accounts can't sign in from a phone/tablet
-    if (user.desktop_only && (device === 'mobile' || device === 'tablet')) {
+    if (!user.mobile_allowed && (device === 'mobile' || device === 'tablet')) {
       throw new Error('To konto może logować się tylko z komputera.');
     }
 
@@ -163,7 +163,7 @@ export class AuthService {
     }
 
     // Desktop-only accounts can't keep a session alive from a phone/tablet
-    if (user.desktop_only && (device === 'mobile' || device === 'tablet')) {
+    if (!user.mobile_allowed && (device === 'mobile' || device === 'tablet')) {
       throw new Error('To konto może logować się tylko z komputera.');
     }
 

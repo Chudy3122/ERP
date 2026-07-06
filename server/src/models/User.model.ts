@@ -73,9 +73,13 @@ export class User {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
-  // When true, this account cannot log in from a mobile/tablet — desktop only.
+  // When true, this account cannot log in from a mobile/tablet — desktop only. (legacy)
   @Column({ type: 'boolean', default: false })
   desktop_only: boolean;
+
+  // Phone/tablet login is blocked for everyone EXCEPT accounts with this flag.
+  @Column({ type: 'boolean', default: false })
+  mobile_allowed: boolean;
 
   // When true, time-tracking always records this account's device as "desktop".
   @Column({ type: 'boolean', default: false })

@@ -5,7 +5,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: UserRole;
-  desktop_only?: boolean;
+  mobile_allowed?: boolean;
 }
 
 export interface TokenPair {
@@ -26,7 +26,7 @@ export const generateAccessToken = (user: User): string => {
     userId: user.id,
     email: user.email,
     role: user.role,
-    desktop_only: user.desktop_only,
+    mobile_allowed: user.mobile_allowed,
   };
 
   return jwt.sign(payload, JWT_SECRET, {
@@ -44,7 +44,7 @@ export const generateRefreshToken = (user: User): string => {
     userId: user.id,
     email: user.email,
     role: user.role,
-    desktop_only: user.desktop_only,
+    mobile_allowed: user.mobile_allowed,
   };
 
   return jwt.sign(payload, JWT_REFRESH_SECRET, {
