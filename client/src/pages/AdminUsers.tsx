@@ -30,6 +30,7 @@ const AdminUsers: React.FC = () => {
     position: '',
     phone: '',
   });
+  const [mobileAllowed, setMobileAllowed] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -84,6 +85,7 @@ const AdminUsers: React.FC = () => {
         department: formData.department,
         position: formData.position,
         phone: formData.phone,
+        mobile_allowed: mobileAllowed,
       });
       toast.success('Użytkownik zaktualizowany pomyślnie');
       setEditingUser(null);
@@ -160,6 +162,7 @@ const AdminUsers: React.FC = () => {
       position: user.position || '',
       phone: user.phone || '',
     });
+    setMobileAllowed(!!user.mobile_allowed);
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -463,6 +466,23 @@ const AdminUsers: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
+
+              {editingUser && (
+                <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <span>
+                    <span className="block text-sm font-semibold text-gray-700">Dostęp z telefonu</span>
+                    <span className="mt-0.5 block text-xs text-gray-500">
+                      Domyślnie zablokowany. Zaznacz, aby ten pracownik mógł logować się z telefonu/tabletu.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={mobileAllowed}
+                    onChange={(e) => setMobileAllowed(e.target.checked)}
+                    className="h-5 w-5 shrink-0 rounded border-gray-300 accent-violet-600"
+                  />
+                </label>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

@@ -16,6 +16,7 @@ export interface AdminUser {
   annual_leave_days: number;
   avatar_url: string | null;
   is_active: boolean;
+  mobile_allowed?: boolean;
   last_login: string | null;
   created_at: string;
   updated_at: string;
@@ -95,4 +96,5 @@ export interface UpdateUserData {
   working_hours_per_day?: number;
   annual_leave_days?: number;
   isActive?: boolean;
+  mobile_allowed?: boolean;
 }

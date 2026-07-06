@@ -108,7 +108,7 @@ export class AuthService {
 
     // Desktop-only accounts can't sign in from a phone/tablet
     if (!user.mobile_allowed && (device === 'mobile' || device === 'tablet')) {
-      throw new Error('To konto może logować się tylko z komputera.');
+      throw new Error('Dostęp z telefonu jest aktualnie zablokowany. Skontaktuj się z działem IT lub kadr.');
     }
 
     // Targeted update of last_login (avoids rewriting the whole row / entity hooks).
@@ -164,7 +164,7 @@ export class AuthService {
 
     // Desktop-only accounts can't keep a session alive from a phone/tablet
     if (!user.mobile_allowed && (device === 'mobile' || device === 'tablet')) {
-      throw new Error('To konto może logować się tylko z komputera.');
+      throw new Error('Dostęp z telefonu jest aktualnie zablokowany. Skontaktuj się z działem IT lub kadr.');
     }
 
     // Generate new token pair

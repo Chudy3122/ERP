@@ -124,6 +124,7 @@ class AdminController {
         working_hours_per_day,
         annual_leave_days,
         isActive,
+        mobile_allowed,
       } = req.body;
 
       const user = await adminService.updateUser(id, {
@@ -142,6 +143,7 @@ class AdminController {
         working_hours_per_day,
         annual_leave_days,
         isActive,
+        mobile_allowed,
       });
 
       if (!user) {

@@ -4,7 +4,7 @@ import { detectDevice } from '../utils/device';
 import { AppDataSource } from '../config/database';
 import { User } from '../models/User.model';
 
-const DESKTOP_ONLY_MSG = 'To konto może logować się tylko z komputera.';
+const DESKTOP_ONLY_MSG = 'Dostęp z telefonu jest aktualnie zablokowany. Skontaktuj się z działem IT lub kadr.';
 
 /** Block phone/tablet access for everyone except allow-listed accounts. */
 async function blockedMobile(req: Request, payload: { userId: string; mobile_allowed?: boolean }): Promise<boolean> {

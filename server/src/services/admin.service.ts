@@ -36,6 +36,7 @@ interface UpdateUserData {
   working_hours_per_day?: number;
   annual_leave_days?: number;
   isActive?: boolean;
+  mobile_allowed?: boolean;
 }
 
 class AdminService {
@@ -71,6 +72,7 @@ class AdminService {
         'user.position',
         'user.phone',
         'user.is_active',
+        'user.mobile_allowed',
         'user.last_login',
         'user.created_at',
         'user.avatar_url',
@@ -125,6 +127,7 @@ class AdminService {
         'annual_leave_days',
         'avatar_url',
         'is_active',
+        'mobile_allowed',
         'last_login',
         'created_at',
         'updated_at',
@@ -232,6 +235,7 @@ class AdminService {
     if (data.working_hours_per_day !== undefined) user.working_hours_per_day = data.working_hours_per_day;
     if (data.annual_leave_days !== undefined) user.annual_leave_days = data.annual_leave_days;
     if (data.isActive !== undefined) user.is_active = data.isActive;
+    if (data.mobile_allowed !== undefined) user.mobile_allowed = data.mobile_allowed;
 
     await this.userRepository.save(user);
 
