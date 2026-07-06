@@ -74,6 +74,20 @@ const columnSortModes: ColumnSortMode[] = [
   'name_desc',
 ];
 
+const completedStageNameKeywords = [
+  'zakończ',
+  'zakoncz',
+  'ukończ',
+  'ukoncz',
+  'gotow',
+  'zrobion',
+  'wykonan',
+  'done',
+  'completed',
+  'finished',
+  'closed',
+];
+
 const getStoredColumnSort = (storageKey: string): Record<string, ColumnSortMode> => {
   try {
     const storedValue = localStorage.getItem(storageKey);
@@ -127,6 +141,109 @@ const KanbanTaskTitle = ({ title }: { title: string }) => {
   );
 };
 
+type MotivationCelebrationVariant = 'task' | 'project';
+
+const confettiColors = ['#F7941D', '#2563EB', '#22C55E', '#EF4444', '#A855F7', '#FACC15'];
+
+const MotivationCelebrationOverlay = ({ variant }: { variant: MotivationCelebrationVariant }) => {
+  const isProjectCelebration = variant === 'project';
+  const piecesCount = isProjectCelebration ? 70 : 34;
+  const pieces = Array.from({ length: piecesCount }, (_, index) => index);
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[90] flex items-center justify-center overflow-hidden">
+      <style>{`
+        @keyframes motivation-confetti-fall {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, -16vh, 0) rotate(0deg) scale(0.8);
+          }
+          12% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(var(--confetti-x), 112vh, 0) rotate(var(--confetti-rotate)) scale(1);
+          }
+        }
+
+        @keyframes motivation-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.92);
+          }
+          16% {
+            opacity: 1;
+            transform: translateY(0) scale(1.04);
+          }
+          28% {
+            transform: translateY(0) scale(1);
+          }
+          82% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.98);
+          }
+        }
+      `}</style>
+
+      <div className={`absolute inset-0 ${isProjectCelebration ? 'bg-gray-950/10 dark:bg-gray-950/30' : ''}`} />
+
+      {pieces.map(index => {
+        const color = confettiColors[index % confettiColors.length];
+        const left = (index * 37) % 100;
+        const delay = (index % 14) * 75;
+        const duration = isProjectCelebration ? 2300 + (index % 9) * 130 : 1800 + (index % 7) * 110;
+        const size = isProjectCelebration ? 7 + (index % 4) * 2 : 5 + (index % 3) * 2;
+        const drift = ((index % 11) - 5) * (isProjectCelebration ? 18 : 12);
+        const rotate = 220 + (index % 8) * 90;
+
+        return (
+          <span
+            key={index}
+            className="absolute top-0 rounded-[2px]"
+            style={{
+              left: `${left}%`,
+              width: `${size}px`,
+              height: `${Math.max(5, size * 1.8)}px`,
+              backgroundColor: color,
+              animation: `motivation-confetti-fall ${duration}ms cubic-bezier(.18,.72,.22,1) ${delay}ms forwards`,
+              ['--confetti-x' as string]: `${drift}vw`,
+              ['--confetti-rotate' as string]: `${rotate}deg`,
+            }}
+          />
+        );
+      })}
+
+      <div
+        className={`relative mx-4 max-w-md rounded-2xl border border-white/70 bg-white/95 px-7 py-5 text-center shadow-2xl dark:border-gray-700 dark:bg-gray-900/95 ${
+          isProjectCelebration ? 'scale-105' : ''
+        }`}
+        style={{ animation: 'motivation-pop 2600ms ease-in-out forwards' }}
+      >
+        <div className={`mx-auto mb-3 rounded-full ${isProjectCelebration ? 'h-16 w-16' : 'h-12 w-12'} bg-[#F7941D]/10 p-2`}>
+          <div className="flex h-full w-full items-center justify-center rounded-full bg-[#F7941D] text-white shadow-lg shadow-[#F7941D]/30">
+            <CheckSquare className={isProjectCelebration ? 'h-8 w-8' : 'h-6 w-6'} />
+          </div>
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#F7941D]">
+          {isProjectCelebration ? 'Projekt ukończony' : 'Zadanie zakończone'}
+        </p>
+        <h2 className={`${isProjectCelebration ? 'text-3xl' : 'text-2xl'} mt-1 font-bold text-gray-950 dark:text-white`}>
+          {isProjectCelebration ? 'Świetna robota!' : 'Brawo!'}
+        </h2>
+        <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+          {isProjectCelebration
+            ? 'Wszystkie zadania w projekcie są zakończone.'
+            : 'Dobra robota, kolejne zadanie zamknięte.'}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -169,6 +286,11 @@ const ProjectDetail = () => {
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [isReorderingStages, setIsReorderingStages] = useState(false);
   const [isUpdatingTask, setIsUpdatingTask] = useState<string | null>(null);
+  const [motivationCelebration, setMotivationCelebration] = useState<{
+    id: number;
+    variant: MotivationCelebrationVariant;
+  } | null>(null);
+  const motivationCelebrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
   const [deleteKanbanTask, setDeleteKanbanTask] = useState<{ id: string; title: string } | null>(null);
   const [isDeletingKanbanTask, setIsDeletingKanbanTask] = useState(false);
@@ -264,6 +386,14 @@ const ProjectDetail = () => {
       quickTaskInputRef.current.focus();
     }
   }, [quickTaskStageId]);
+
+  useEffect(() => {
+    return () => {
+      if (motivationCelebrationTimeoutRef.current) {
+        clearTimeout(motivationCelebrationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const loadProject = async () => {
     try {
@@ -365,6 +495,69 @@ const ProjectDetail = () => {
     } catch (error) {
       console.error('Failed to load time stats:', error);
     }
+  };
+
+  const triggerMotivationCelebration = (variant: MotivationCelebrationVariant) => {
+    if (motivationCelebrationTimeoutRef.current) {
+      clearTimeout(motivationCelebrationTimeoutRef.current);
+    }
+
+    setMotivationCelebration({ id: Date.now(), variant });
+    motivationCelebrationTimeoutRef.current = setTimeout(() => {
+      setMotivationCelebration(null);
+      motivationCelebrationTimeoutRef.current = null;
+    }, variant === 'project' ? 3200 : 2600);
+  };
+
+  const getFinalKanbanStageId = () => {
+    const orderedStageIds = getOrderedStageIds();
+    return orderedStageIds.length > 0 ? orderedStageIds[orderedStageIds.length - 1] : null;
+  };
+
+  const isFinalKanbanStageId = (stageId: string | null | undefined) =>
+    Boolean(stageId && stageId === getFinalKanbanStageId());
+
+  const isCompletionStageName = (stageId: string | null | undefined) => {
+    if (!stageId) return false;
+
+    const stageName = (
+      tasksByStages.find(group => group.stage?.id === stageId)?.stage?.name ||
+      stages.find(stage => stage.id === stageId)?.name ||
+      ''
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!stageName) return false;
+
+    return completedStageNameKeywords.some(keyword => stageName.includes(keyword));
+  };
+
+  const isFinalCompletionStageId = (stageId: string | null | undefined) =>
+    isFinalKanbanStageId(stageId) && isCompletionStageName(stageId);
+
+  const willProjectBeCompleteAfterMove = (taskId: string, targetStageId: string | null) => {
+    const projectTasks = tasksByStages
+      .flatMap(group => group.tasks)
+      .filter(task => !task.parent_task_id);
+
+    if (projectTasks.length === 0) return false;
+
+    return projectTasks.every(task => {
+      const nextStageId = task.id === taskId ? targetStageId : task.stage_id ?? null;
+      return isFinalCompletionStageId(nextStageId);
+    });
+  };
+
+  const getMotivationVariantForMove = (task: Task, targetStageId: string | null): MotivationCelebrationVariant | null => {
+    const movedToFinalCompletionStage = isFinalCompletionStageId(targetStageId);
+    const wasAlreadyInFinalCompletionStage = isFinalCompletionStageId(task.stage_id ?? null);
+
+    if (!movedToFinalCompletionStage || wasAlreadyInFinalCompletionStage) {
+      return null;
+    }
+
+    return willProjectBeCompleteAfterMove(task.id, targetStageId) ? 'project' : 'task';
   };
 
   const getProjectMemberRoleLabel = (role: ProjectMemberRole) => {
@@ -1076,11 +1269,18 @@ const ProjectDetail = () => {
     }
 
     const taskToUpdate = draggedTask;
+    const motivationVariant = getMotivationVariantForMove(taskToUpdate, stageId);
     setDraggedTask(null);
 
     try {
       setIsUpdatingTask(taskToUpdate.id);
       await projectApi.moveTaskToStage(taskToUpdate.id, stageId);
+      if (motivationVariant) {
+        triggerMotivationCelebration(motivationVariant);
+        if (motivationVariant === 'project') {
+          loadStatistics();
+        }
+      }
       loadTasksByStages();
     } catch (error) {
       console.error('Failed to move task:', error);
@@ -1192,10 +1392,18 @@ const ProjectDetail = () => {
     } else {
       // Different stage → move to target's stage
       const taskToUpdate = draggedTask;
+      const targetStageId = targetTask.stage_id ?? null;
+      const motivationVariant = getMotivationVariantForMove(taskToUpdate, targetStageId);
       setDraggedTask(null);
       try {
         setIsUpdatingTask(taskToUpdate.id);
-        await projectApi.moveTaskToStage(taskToUpdate.id, targetTask.stage_id ?? null);
+        await projectApi.moveTaskToStage(taskToUpdate.id, targetStageId);
+        if (motivationVariant) {
+          triggerMotivationCelebration(motivationVariant);
+          if (motivationVariant === 'project') {
+            loadStatistics();
+          }
+        }
         loadTasksByStages();
       } catch (err) {
         console.error('Failed to move task:', err);
@@ -1607,6 +1815,13 @@ const ProjectDetail = () => {
 
   return (
     <MainLayout title={project.name}>
+      {motivationCelebration && (
+        <MotivationCelebrationOverlay
+          key={motivationCelebration.id}
+          variant={motivationCelebration.variant}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-8">
         {/* Breadcrumb */}
