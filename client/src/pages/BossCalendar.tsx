@@ -132,7 +132,7 @@ function formatDuration(minutes: number): string {
   return `${hours}h ${String(restMinutes).padStart(2, '0')}min`;
 }
 
-const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik'];
+const CAN_EDIT_ROLES = ['szef', 'sekretariat', 'admin', 'kierownik', 'kadry'];
 // Person pre-selected by default on new meetings (the boss)
 const DEFAULT_PARTICIPANT_EMAIL = 'marcin.rokoszewski@itcomplete.pl';
 // Marking a meeting as finished is limited to the boss, secretariat and admins

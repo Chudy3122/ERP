@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 
-const canEdit = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN, UserRole.KIEROWNIK]);
+const canEdit = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KADRY]);
 // Marking a meeting as finished is limited to the boss, secretariat and admins
 const canComplete = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN]);
 
