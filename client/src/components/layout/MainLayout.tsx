@@ -532,9 +532,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             )}
           </div>
 
-          <div className="pointer-events-none absolute left-1/2 hidden w-full max-w-xl -translate-x-1/2 px-4 md:block">
-            <div className="pointer-events-auto">
-            <GlobalSearch />
+          <div className="hidden min-w-0 flex-1 justify-center md:flex">
+            <div className="w-full max-w-sm lg:max-w-xl">
+              <GlobalSearch />
             </div>
           </div>
 
