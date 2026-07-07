@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import {
@@ -51,6 +51,7 @@ const ProjectForm = () => {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [isMemberSelectOpen, setIsMemberSelectOpen] = useState(false);
+  const memberSelectRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isOngoingProject, setIsOngoingProject] = useState(false);
@@ -68,6 +69,22 @@ const ProjectForm = () => {
       userApi.getDirectory().then(setUsers).catch(console.error);
     }
   }, [id, isEdit]);
+
+  useEffect(() => {
+    if (!isMemberSelectOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        memberSelectRef.current &&
+        !memberSelectRef.current.contains(event.target as Node)
+      ) {
+        setIsMemberSelectOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMemberSelectOpen]);
 
   const loadProject = async () => {
     try {
@@ -625,7 +642,7 @@ const ProjectForm = () => {
                     </span>
                   </div>
 
-                  <div className="relative mt-4">
+                  <div ref={memberSelectRef} className="relative mt-4">
                     <button
                       type="button"
                       onClick={() => setIsMemberSelectOpen(open => !open)}
@@ -648,19 +665,6 @@ const ProjectForm = () => {
                         }`}
                       />
                     </button>
-
-                    {selectedMembers.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {selectedMembers.map(member => (
-                          <span
-                            key={member.id}
-                            className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-700 dark:text-slate-100"
-                          >
-                            {getMemberName(member)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
 
                     {isMemberSelectOpen && (
                       <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
@@ -699,27 +703,25 @@ const ProjectForm = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="max-h-64 overflow-y-auto p-2">
+                        <div className="max-h-64 space-y-2 overflow-y-auto p-2">
                           {filteredMembers.length > 0 ? (
                             filteredMembers.map(member => {
                               const isSelected = selectedMemberIds.includes(member.id);
                               const memberName = getMemberName(member);
 
                               return (
-                                <label
+                                <button
                                   key={member.id}
-                                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                                  type="button"
+                                  role="checkbox"
+                                  aria-checked={isSelected}
+                                  onClick={() => toggleMemberSelection(member.id)}
+                                  className={`flex w-full cursor-pointer items-start gap-3 rounded-lg border p-3 text-left text-sm transition-colors ${
                                     isSelected
                                       ? 'border-slate-700 bg-slate-100 dark:border-slate-400 dark:bg-slate-700/50'
                                       : 'border-gray-200 bg-white hover:border-[#F7941D]/40 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-800'
                                   }`}
                                 >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => toggleMemberSelection(member.id)}
-                                    className="sr-only"
-                                  />
                                   <span
                                     className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
                                       isSelected
@@ -738,7 +740,7 @@ const ProjectForm = () => {
                                       {member.position || member.department || member.email}
                                     </span>
                                   </span>
-                                </label>
+                                </button>
                               );
                             })
                           ) : (
@@ -747,6 +749,19 @@ const ProjectForm = () => {
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {selectedMembers.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedMembers.map(member => (
+                          <span
+                            key={member.id}
+                            className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-700 dark:text-slate-100"
+                          >
+                            {getMemberName(member)}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
