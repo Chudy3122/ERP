@@ -5,6 +5,12 @@ import FileUpload from './FileUpload';
 import * as fileApi from '../../api/file.api';
 import { useChatContext } from '../../contexts/ChatContext';
 
+export interface MentionUser {
+  id: string;
+  name: string;
+  email?: string;
+}
+
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
   onTyping?: () => void;
@@ -12,6 +18,7 @@ interface MessageInputProps {
   disabled?: boolean;
   onFileUploaded?: () => void;
   compact?: boolean;
+  mentionUsers?: MentionUser[];
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -21,6 +28,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   disabled = false,
   onFileUploaded,
   compact = false,
+  mentionUsers = [],
 }) => {
   const { t } = useTranslation();
   const { activeChannel, loadMessages } = useChatContext();
@@ -28,6 +36,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [mentionContext, setMentionContext] = useState<{ start: number; end: number; query: string } | null>(null);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -45,6 +55,77 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [showEmojiPicker]);
 
+  const getInitials = (name: string) =>
+    name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase() || '@';
+
+  const findMentionContext = (value: string, caretPosition: number) => {
+    const beforeCaret = value.slice(0, caretPosition);
+    const atIndex = beforeCaret.lastIndexOf('@');
+
+    if (atIndex === -1) return null;
+    if (atIndex > 0 && !/[\s([{]/.test(value[atIndex - 1])) return null;
+
+    const query = beforeCaret.slice(atIndex + 1);
+    if (/[\s@]/.test(query) || query.length > 40) return null;
+
+    return { start: atIndex, end: caretPosition, query };
+  };
+
+  const updateMentionContext = (value = content) => {
+    const textarea = textareaRef.current;
+    if (!textarea || mentionUsers.length === 0) {
+      setMentionContext(null);
+      return;
+    }
+
+    const nextContext = findMentionContext(value, textarea.selectionStart);
+    setMentionContext(nextContext);
+    setActiveMentionIndex(0);
+  };
+
+  const mentionSuggestions = mentionContext
+    ? mentionUsers
+        .filter((mentionUser) => {
+          const query = mentionContext.query.toLowerCase();
+          return (
+            mentionUser.name.toLowerCase().includes(query) ||
+            mentionUser.email?.toLowerCase().includes(query)
+          );
+        })
+        .slice(0, 6)
+    : [];
+
+  const isMentionMenuOpen = mentionContext !== null && mentionSuggestions.length > 0;
+
+  const insertMention = (mentionUser: MentionUser) => {
+    if (!mentionContext) return;
+
+    const mentionText = `@${mentionUser.name} `;
+    const newContent =
+      content.slice(0, mentionContext.start) +
+      mentionText +
+      content.slice(mentionContext.end);
+    const nextCaretPosition = mentionContext.start + mentionText.length;
+
+    setContent(newContent);
+    setMentionContext(null);
+
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = nextCaretPosition;
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
+  };
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -55,6 +136,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const end = textarea.selectionEnd;
     const newContent = content.slice(0, start) + emojiData.emoji + content.slice(end);
     setContent(newContent);
+    setMentionContext(null);
     // Restore cursor after emoji
     requestAnimationFrame(() => {
       textarea.selectionStart = textarea.selectionEnd = start + emojiData.emoji.length;
@@ -77,6 +159,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target;
     setContent(textarea.value);
+    updateMentionContext(textarea.value);
 
     // Auto-resize
     textarea.style.height = 'auto';
@@ -96,6 +179,32 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // Handle Enter key: Send on Enter, new line on Shift+Enter
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isMentionMenuOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveMentionIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
+        return;
+      }
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertMention(mentionSuggestions[activeMentionIndex]);
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setMentionContext(null);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -169,6 +278,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         setIsUploading(true);
         await fileApi.uploadFiles(activeChannel.id, selectedFiles, trimmedContent);
         setContent('');
+        setMentionContext(null);
         setSelectedFiles([]);
 
         // Reset textarea height
@@ -195,6 +305,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       onSendMessage(trimmedContent);
       setContent('');
+      setMentionContext(null);
 
       // Reset textarea height
       if (textareaRef.current) {
@@ -312,11 +423,47 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
         {/* Textarea */}
         <div className="flex-1 relative min-w-0">
+          {isMentionMenuOpen && (
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                Wspomnij osobę
+              </div>
+              <div className="max-h-64 overflow-y-auto py-1">
+                {mentionSuggestions.map((mentionUser, index) => (
+                  <button
+                    key={mentionUser.id}
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      insertMention(mentionUser);
+                    }}
+                    className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
+                      index === activeMentionIndex
+                        ? 'bg-[#F7941D]/10 text-gray-950 dark:bg-[#F7941D]/20 dark:text-white'
+                        : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#F7941D]/15 text-xs font-bold text-[#C56F0E] dark:bg-[#F7941D]/25 dark:text-orange-200">
+                      {getInitials(mentionUser.name)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{mentionUser.name}</span>
+                      {mentionUser.email && (
+                        <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{mentionUser.email}</span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             value={content}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
+            onClick={() => updateMentionContext()}
+            onKeyUp={() => updateMentionContext()}
             onPaste={handlePaste}
             placeholder={placeholder}
             disabled={disabled || isUploading}

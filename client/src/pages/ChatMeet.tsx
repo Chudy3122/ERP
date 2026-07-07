@@ -1034,6 +1034,15 @@ const ChatMeet: React.FC = () => {
           {activeChannel && !selectedMeeting && !selectedVideoCall && (() => {
             const isGroup = activeChannel.type !== 'direct';
             const members = activeChannel.members ?? [];
+            const mentionUsers = members
+              .map((member) => member.user)
+              .filter((memberUser): memberUser is NonNullable<typeof memberUser> => Boolean(memberUser && memberUser.id !== user?.id))
+              .map((memberUser) => ({
+                id: memberUser.id,
+                name: `${memberUser.first_name} ${memberUser.last_name}`.trim() || memberUser.email,
+                email: memberUser.email,
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
             const onlineMembers = members.filter((m) => {
               const s = getUserStatus(m.user_id);
               return s && s.status !== 'offline';
@@ -1172,6 +1181,7 @@ const ChatMeet: React.FC = () => {
                         onSendMessage={sendMessage}
                         onTyping={sendTypingIndicator}
                         placeholder={`Napisz do ${getChannelName(activeChannel)}...`}
+                        mentionUsers={mentionUsers}
                       />
                     </div>
                   </div>

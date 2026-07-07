@@ -39,19 +39,60 @@ const analyzeEmoji = (content: string) => {
 };
 
 // Wrap each emoji grapheme in a span so it renders larger than the text around it.
-const withInlineEmoji = (text: string): React.ReactNode[] => {
+const withEmojiOnly = (text: string, keyPrefix = 'e'): React.ReactNode[] => {
   const nodes: React.ReactNode[] = [];
   let buffer = '';
   const flush = () => { if (buffer) { nodes.push(buffer); buffer = ''; } };
   toGraphemes(text).forEach((g, i) => {
     if (EMOJI_RE.test(g)) {
       flush();
-      nodes.push(<span key={`e${i}`} className="text-[1.3em] leading-none align-middle">{g}</span>);
+      nodes.push(<span key={`${keyPrefix}-${i}`} className="text-[1.3em] leading-none align-middle">{g}</span>);
     } else {
       buffer += g;
     }
   });
   flush();
+  return nodes;
+};
+
+const MENTION_RE = /(^|[\s([{])(@[\p{L}\p{N}._-]+(?:\s+[\p{L}\p{N}._-]+)?)/gu;
+
+const withInlineEmoji = (text: string, isOwnMessage: boolean): React.ReactNode[] => {
+  const nodes: React.ReactNode[] = [];
+  const re = new RegExp(MENTION_RE);
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = re.exec(text)) !== null) {
+    const prefix = match[1] || '';
+    const mention = match[2];
+    const mentionStart = match.index + prefix.length;
+
+    if (mentionStart > lastIndex) {
+      nodes.push(...withEmojiOnly(text.slice(lastIndex, mentionStart), `em-${key}`));
+    }
+
+    nodes.push(
+      <span
+        key={`m-${key++}`}
+        className={`inline-flex max-w-full rounded-md px-1.5 py-0.5 font-semibold ${
+          isOwnMessage
+            ? 'bg-white/20 text-white'
+            : 'bg-[#F7941D]/10 text-[#B76200] dark:bg-[#F7941D]/20 dark:text-orange-200'
+        }`}
+      >
+        {mention}
+      </span>
+    );
+
+    lastIndex = mentionStart + mention.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(...withEmojiOnly(text.slice(lastIndex), `em-tail-${key}`));
+  }
+
   return nodes;
 };
 
@@ -66,7 +107,7 @@ const withLinks = (text: string, isOwnMessage: boolean): React.ReactNode[] => {
   while ((match = re.exec(text)) !== null) {
     const raw = match[0];
     const start = match.index;
-    if (start > lastIndex) nodes.push(...withInlineEmoji(text.slice(lastIndex, start)));
+    if (start > lastIndex) nodes.push(...withInlineEmoji(text.slice(lastIndex, start), isOwnMessage));
     // Trailing punctuation usually isn't part of the URL
     let url = raw;
     let trailing = '';
@@ -88,7 +129,7 @@ const withLinks = (text: string, isOwnMessage: boolean): React.ReactNode[] => {
     if (trailing) nodes.push(trailing);
     lastIndex = start + raw.length;
   }
-  if (lastIndex < text.length) nodes.push(...withInlineEmoji(text.slice(lastIndex)));
+  if (lastIndex < text.length) nodes.push(...withInlineEmoji(text.slice(lastIndex), isOwnMessage));
   return nodes;
 };
 
