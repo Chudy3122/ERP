@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import {
   AlertCircle,
   CheckCircle2,
@@ -25,6 +26,7 @@ import { UserRole } from '../types/auth.types';
 import { confirmDelete } from '../utils/confirm';
 
 type ViewFilter = 'all' | 'draft' | 'sent' | 'paid' | 'overdue';
+type PaymentFilter = 'all' | 'paid' | 'unpaid' | 'overdue';
 
 const PAGE_SIZE_OPTIONS = [10, 30, 50];
 
@@ -36,11 +38,14 @@ const Invoices = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
   const [kindFilter, setKindFilter] = useState<'all' | InvoiceKind>('all');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null);
+  const [resetPaymentInvoice, setResetPaymentInvoice] = useState<Invoice | null>(null);
   const navigate = useNavigate();
 
   const canEdit = user?.role === UserRole.ADMIN || user?.role === UserRole.KSIEGOWOSC || user?.role === UserRole.SEKRETARIAT;
@@ -92,6 +97,50 @@ const Invoices = () => {
       toast.error(error.response?.data?.message || t('deleteError'));
     }
     setMenuOpenId(null);
+  };
+
+  const updateInvoiceInList = (updatedInvoice: Invoice) => {
+    setInvoices(prev => prev.map(invoice => invoice.id === updatedInvoice.id ? updatedInvoice : invoice));
+  };
+
+  const refreshInvoiceTotals = () => {
+    loadStatistics();
+  };
+
+  const handleMarkInvoicePaid = async (invoice: Invoice) => {
+    try {
+      setUpdatingPaymentId(invoice.id);
+      const updated = await invoiceApi.markInvoiceAsPaid(invoice.id);
+      updateInvoiceInList(updated);
+      refreshInvoiceTotals();
+      toast.success('Faktura oznaczona jako opłacona.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Nie udało się zmienić statusu płatności.');
+    } finally {
+      setUpdatingPaymentId(null);
+      setMenuOpenId(null);
+    }
+  };
+
+  const handleResetPayment = async (invoice: Invoice) => {
+    try {
+      setUpdatingPaymentId(invoice.id);
+      const resetStatus = isOverdue(invoice.due_date, InvoiceStatus.SENT)
+        ? InvoiceStatus.OVERDUE
+        : InvoiceStatus.SENT;
+
+      await invoiceApi.updateInvoiceStatus(invoice.id, resetStatus);
+      const updated = await invoiceApi.markInvoiceAsPaid(invoice.id, 0);
+      updateInvoiceInList(updated);
+      refreshInvoiceTotals();
+      toast.success('Płatność faktury została cofnięta.');
+      setResetPaymentInvoice(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Nie udało się cofnąć płatności.');
+    } finally {
+      setUpdatingPaymentId(null);
+      setMenuOpenId(null);
+    }
   };
 
   const getStatusConfig = (status: InvoiceStatus) => {
@@ -151,16 +200,69 @@ const Invoices = () => {
     return new Date(dueDate) < new Date();
   };
 
+  const isInvoiceFullyPaid = (invoice: Invoice) => {
+    const grossTotal = Number(invoice.gross_total || 0);
+    const paidAmount = Number(invoice.paid_amount || 0);
+    return invoice.status === InvoiceStatus.PAID || (grossTotal > 0 && paidAmount >= grossTotal);
+  };
+
+  const isInvoicePaymentOverdue = (invoice: Invoice) =>
+    invoice.status !== InvoiceStatus.CANCELLED && !isInvoiceFullyPaid(invoice) && isOverdue(invoice.due_date, invoice.status);
+
+  const getPaymentConfig = (invoice: Invoice) => {
+    const grossTotal = Number(invoice.gross_total || 0);
+
+    if (invoice.status === InvoiceStatus.CANCELLED) {
+      return {
+        label: 'Anulowana',
+        description: 'Bez płatności',
+        icon: AlertCircle,
+        className: 'border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400',
+        iconClassName: 'text-gray-400',
+      };
+    }
+
+    if (isInvoiceFullyPaid(invoice)) {
+      return {
+        label: 'Opłacona',
+        description: 'Zapłacono całość',
+        icon: CheckCircle2,
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300',
+        iconClassName: 'text-emerald-500',
+      };
+    }
+
+    const overdue = isInvoicePaymentOverdue(invoice);
+
+    return {
+      label: 'Nieopłacona',
+      description: overdue ? 'Po terminie płatności' : `Do zapłaty: ${formatCurrency(grossTotal, invoice.currency)}`,
+      icon: overdue ? AlertCircle : Clock,
+      className: overdue
+        ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300'
+        : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300',
+      iconClassName: overdue ? 'text-red-500' : 'text-blue-500',
+    };
+  };
+
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
-      if (viewFilter === 'all') return true;
-      if (viewFilter === 'draft') return invoice.status === InvoiceStatus.DRAFT;
-      if (viewFilter === 'sent') return invoice.status === InvoiceStatus.SENT;
-      if (viewFilter === 'paid') return invoice.status === InvoiceStatus.PAID;
-      if (viewFilter === 'overdue') return invoice.status === InvoiceStatus.OVERDUE;
+      const matchesStatus =
+        viewFilter === 'all' ||
+        (viewFilter === 'draft' && invoice.status === InvoiceStatus.DRAFT) ||
+        (viewFilter === 'sent' && invoice.status === InvoiceStatus.SENT) ||
+        (viewFilter === 'paid' && invoice.status === InvoiceStatus.PAID) ||
+        (viewFilter === 'overdue' && invoice.status === InvoiceStatus.OVERDUE);
+
+      if (!matchesStatus) return false;
+
+      if (paymentFilter === 'paid') return isInvoiceFullyPaid(invoice);
+      if (paymentFilter === 'unpaid') return invoice.status !== InvoiceStatus.CANCELLED && !isInvoiceFullyPaid(invoice);
+      if (paymentFilter === 'overdue') return isInvoicePaymentOverdue(invoice);
+
       return true;
     });
-  }, [invoices, viewFilter]);
+  }, [invoices, viewFilter, paymentFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -174,6 +276,17 @@ const Invoices = () => {
     { key: 'sent', label: t('statusSent'), count: statistics?.sent_count || 0 },
     { key: 'paid', label: t('statusPaid'), count: statistics?.paid_count || 0 },
     { key: 'overdue', label: t('statusOverdue'), count: statistics?.overdue_count || 0 },
+  ];
+
+  const paymentTabs: { key: PaymentFilter; label: string; count: number }[] = [
+    { key: 'all', label: 'Wszystkie płatności', count: invoices.length },
+    { key: 'paid', label: 'Opłacone', count: invoices.filter(isInvoiceFullyPaid).length },
+    {
+      key: 'unpaid',
+      label: 'Nieopłacone',
+      count: invoices.filter(invoice => invoice.status !== InvoiceStatus.CANCELLED && !isInvoiceFullyPaid(invoice)).length,
+    },
+    { key: 'overdue', label: 'Po terminie', count: invoices.filter(isInvoicePaymentOverdue).length },
   ];
 
   const statCards = [
@@ -305,33 +418,67 @@ const Invoices = () => {
           </div>
 
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {viewTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => {
-                    setViewFilter(tab.key as ViewFilter);
-                    setCurrentPage(1);
-                  }}
-                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                    viewFilter === tab.key
-                      ? 'bg-[#F7941D] text-white shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {tab.label}
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {viewTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setViewFilter(tab.key as ViewFilter);
+                      setCurrentPage(1);
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
                       viewFilter === tab.key
-                        ? 'bg-white/20 text-white'
-                        : 'bg-white text-gray-500 dark:bg-gray-800 dark:text-gray-300'
+                        ? 'bg-[#F7941D] text-white shadow-sm'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
                   >
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
+                    {tab.label}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        viewFilter === tab.key
+                          ? 'bg-white/20 text-white'
+                          : 'bg-white text-gray-500 dark:bg-gray-800 dark:text-gray-300'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                  Płatność
+                </span>
+                {paymentTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setPaymentFilter(tab.key);
+                      setCurrentPage(1);
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      paymentFilter === tab.key
+                        ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-900/40 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {tab.label}
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[11px] ${
+                        paymentFilter === tab.key
+                          ? 'bg-white/20 text-white dark:bg-gray-900/15 dark:text-gray-900'
+                          : 'bg-white text-gray-400 dark:bg-gray-800 dark:text-gray-400'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">
@@ -401,6 +548,9 @@ const Invoices = () => {
                         {t('status')}
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Płatność
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         {t('amount')}
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -414,6 +564,8 @@ const Invoices = () => {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {paginatedInvoices.map((invoice) => {
                       const statusConfig = getStatusConfig(invoice.status);
+                      const paymentConfig = getPaymentConfig(invoice);
+                      const PaymentIcon = paymentConfig.icon;
                       const overdue = isOverdue(invoice.due_date, invoice.status);
 
                       return (
@@ -458,15 +610,55 @@ const Invoices = () => {
                               {statusConfig.label}
                             </span>
                           </td>
+                          <td className="min-w-[230px] px-4 py-4">
+                            <div className={`inline-flex max-w-full flex-col rounded-xl border px-3 py-2 text-left ${paymentConfig.className}`}>
+                              <div className="flex min-w-0 items-start gap-2">
+                                {updatingPaymentId === invoice.id ? (
+                                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                                ) : (
+                                  <PaymentIcon className={`mt-0.5 h-4 w-4 shrink-0 ${paymentConfig.iconClassName}`} />
+                                )}
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-xs font-semibold">{paymentConfig.label}</span>
+                                  <span className="block truncate text-[11px] leading-snug opacity-80">{paymentConfig.description}</span>
+                                </span>
+                              </div>
+
+                              {canEdit && invoice.status !== InvoiceStatus.CANCELLED && (
+                                <div className="mt-2 flex flex-wrap gap-1.5 border-t border-current/10 pt-2">
+                                  {!isInvoiceFullyPaid(invoice) ? (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleMarkInvoicePaid(invoice);
+                                      }}
+                                      disabled={updatingPaymentId === invoice.id}
+                                      className="inline-flex h-7 items-center rounded-md bg-white/70 px-2.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-950/30 dark:text-emerald-300 dark:hover:bg-gray-950/50"
+                                    >
+                                      Opłacona
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setResetPaymentInvoice(invoice);
+                                      }}
+                                      disabled={updatingPaymentId === invoice.id}
+                                      className="inline-flex h-7 items-center rounded-md bg-white/70 px-2.5 text-[11px] font-semibold text-amber-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-950/30 dark:text-amber-300 dark:hover:bg-gray-950/50"
+                                    >
+                                      Cofnij
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td className="min-w-[190px] px-4 py-4">
                             <p className="text-sm font-semibold text-gray-950 dark:text-white">
                               {formatCurrency(Number(invoice.gross_total), invoice.currency)}
                             </p>
-                            {Number(invoice.paid_amount) > 0 && Number(invoice.paid_amount) < Number(invoice.gross_total) && (
-                              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                {t('paidAmount')}: {formatCurrency(Number(invoice.paid_amount), invoice.currency)}
-                              </p>
-                            )}
                           </td>
                           <td className="min-w-[160px] px-4 py-4">
                             <span
@@ -512,6 +704,31 @@ const Invoices = () => {
                                           <Eye className="h-4 w-4" />
                                           {t('view')}
                                         </button>
+                                        {!isInvoiceFullyPaid(invoice) && invoice.status !== InvoiceStatus.CANCELLED && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMarkInvoicePaid(invoice)}
+                                            disabled={updatingPaymentId === invoice.id}
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                                          >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            Oznacz jako opłaconą
+                                          </button>
+                                        )}
+                                        {isInvoiceFullyPaid(invoice) && invoice.status !== InvoiceStatus.CANCELLED && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setResetPaymentInvoice(invoice);
+                                              setMenuOpenId(null);
+                                            }}
+                                            disabled={updatingPaymentId === invoice.id}
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-700 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                                          >
+                                            <AlertCircle className="h-4 w-4" />
+                                            Cofnij płatność
+                                          </button>
+                                        )}
                                         {invoice.status !== InvoiceStatus.PAID && invoice.status !== InvoiceStatus.CANCELLED && (
                                           <button
                                             type="button"
@@ -609,6 +826,21 @@ const Invoices = () => {
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!resetPaymentInvoice}
+        onClose={() => setResetPaymentInvoice(null)}
+        onConfirm={() => {
+          if (resetPaymentInvoice) handleResetPayment(resetPaymentInvoice);
+        }}
+        title="Cofnąć płatność?"
+        message="Kwota zapłacona zostanie ustawiona na 0, a faktura wróci do statusu nieopłaconej lub po terminie."
+        confirmText="Cofnij płatność"
+        cancelText="Anuluj"
+        variant="warning"
+        icon="warning"
+        loading={!!updatingPaymentId}
+      />
     </MainLayout>
   );
 };

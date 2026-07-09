@@ -5,7 +5,6 @@ import {
   Banknote,
   Wallet,
   HelpCircle,
-  Plus,
   Trash2,
   Loader2,
 } from 'lucide-react';
@@ -13,7 +12,6 @@ import { Payment, PaymentMethod } from '../../types/payment.types';
 import * as paymentApi from '../../api/payment.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/auth.types';
-import PaymentForm from './PaymentForm';
 
 interface PaymentHistoryProps {
   invoiceId: string;
@@ -34,7 +32,6 @@ const PaymentHistory = ({
   const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const canEdit = user?.role === UserRole.ADMIN || user?.role === UserRole.KSIEGOWOSC;
@@ -54,12 +51,6 @@ const PaymentHistory = ({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handlePaymentCreated = () => {
-    setShowForm(false);
-    loadPayments();
-    onPaymentChange?.();
   };
 
   const handleDelete = async (paymentId: string) => {
@@ -119,13 +110,9 @@ const PaymentHistory = ({
             {t('paymentHistory')}
           </h3>
           {canEdit && remainingAmount > 0 && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              {t('addPayment')}
-            </button>
+            <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+              Płatność oznaczaj jako całość z poziomu faktury
+            </span>
           )}
         </div>
 
@@ -209,16 +196,6 @@ const PaymentHistory = ({
         )}
       </div>
 
-      {/* Payment Form Modal */}
-      {showForm && (
-        <PaymentForm
-          invoiceId={invoiceId}
-          maxAmount={remainingAmount}
-          currency={currency}
-          onClose={() => setShowForm(false)}
-          onSuccess={handlePaymentCreated}
-        />
-      )}
     </div>
   );
 };
