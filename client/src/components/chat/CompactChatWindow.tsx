@@ -6,6 +6,9 @@ import Message from './Message';
 import MessageInput from './MessageInput';
 import { ArrowLeft, Users } from 'lucide-react';
 import { getFileUrl } from '../../api/axios-config';
+import type { User } from '../../types/auth.types';
+
+const isUser = (value: User | undefined): value is User => Boolean(value);
 
 interface CompactChatWindowProps {
   onBack?: () => void;
@@ -172,6 +175,7 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
                 message={message}
                 onEdit={editMessage}
                 onDelete={deleteMessage}
+                reactionUsers={(activeChannel.members ?? []).map((member) => member.user).filter(isUser)}
                 compact
               />
             ))}

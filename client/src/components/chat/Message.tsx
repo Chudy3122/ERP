@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Message as MessageType, MessageReaction } from '../../types/chat.types';
+import type { User } from '../../types/auth.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { getFileUrl } from '../../api/axios-config';
 import { reactToMessage } from '../../api/chat.api';
@@ -14,6 +15,7 @@ interface MessageProps {
   onEdit?: (messageId: string, content: string) => void;
   onDelete?: (messageId: string) => void;
   compact?: boolean;
+  reactionUsers?: User[];
 }
 
 // ── Emoji-aware rendering ─────────────────────────────────────────────────────
@@ -133,7 +135,7 @@ const withLinks = (text: string, isOwnMessage: boolean): React.ReactNode[] => {
   return nodes;
 };
 
-const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = false }) => {
+const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = false, reactionUsers = [] }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isOwnMessage = message.sender_id === user?.id;
@@ -180,11 +182,12 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   const getReactionUserName = (reaction: MessageReaction): string => {
     if (reaction.user_id === user?.id) return 'Ty';
 
-    const firstName = reaction.user?.first_name?.trim() || '';
-    const lastName = reaction.user?.last_name?.trim() || '';
+    const reactionUser = reaction.user || reactionUsers.find((memberUser) => memberUser.id === reaction.user_id);
+    const firstName = reactionUser?.first_name?.trim() || '';
+    const lastName = reactionUser?.last_name?.trim() || '';
     const fullName = `${firstName} ${lastName}`.trim();
 
-    return fullName || reaction.user?.email || 'Użytkownik';
+    return fullName || reactionUser?.email || 'Użytkownik';
   };
 
   const getReactionTooltip = (users: string[]): string => {

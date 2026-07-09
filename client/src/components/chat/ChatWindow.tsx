@@ -4,6 +4,9 @@ import { useChatContext } from '../../contexts/ChatContext';
 import Message from './Message';
 import MessageInput from './MessageInput';
 import { getFileUrl } from '../../api/axios-config';
+import type { User } from '../../types/auth.types';
+
+const isUser = (value: User | undefined): value is User => Boolean(value);
 
 const ChatWindow: React.FC = () => {
   const { t } = useTranslation();
@@ -126,6 +129,7 @@ const ChatWindow: React.FC = () => {
                 message={message}
                 onEdit={editMessage}
                 onDelete={deleteMessage}
+                reactionUsers={(activeChannel.members ?? []).map((member) => member.user).filter(isUser)}
               />
             ))}
 

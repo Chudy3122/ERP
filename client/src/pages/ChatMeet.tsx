@@ -11,6 +11,7 @@ import { getFileUrl } from '../api/axios-config';
 import * as meetingApi from '../api/meeting.api';
 import * as userApi from '../api/user.api';
 import type { Channel } from '../types/chat.types';
+import type { User } from '../types/auth.types';
 import type { AdminUser } from '../types/admin.types';
 import {
   MessageSquare,
@@ -60,6 +61,8 @@ type VideoCall = meetingApi.Meeting;
 type MeetingListItem =
   | { _kind: 'scheduled'; data: ScheduledMeeting }
   | { _kind: 'videocall'; data: VideoCall };
+
+const isUser = (value: User | undefined): value is User => Boolean(value);
 
 const platformConfig: Record<
   MeetingPlatform,
@@ -1159,7 +1162,13 @@ const ChatMeet: React.FC = () => {
                       ) : (
                         <>
                           {messages.map((message) => (
-                            <Message key={message.id} message={message} onEdit={editMessage} onDelete={deleteMessage} />
+                            <Message
+                              key={message.id}
+                              message={message}
+                              onEdit={editMessage}
+                              onDelete={deleteMessage}
+                              reactionUsers={members.map((member) => member.user).filter(isUser)}
+                            />
                           ))}
                           {typingUsers.length > 0 && (
                             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-2 mt-2">
