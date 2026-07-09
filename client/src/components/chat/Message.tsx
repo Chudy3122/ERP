@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Message as MessageType, MessageReaction } from '../../types/chat.types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -143,25 +143,80 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   const [senderAvatarError, setSenderAvatarError] = useState(false);
   const [ownAvatarError, setOwnAvatarError] = useState(false);
   const [showReactionBar, setShowReactionBar] = useState(false);
+  const reactionHideTimeoutRef = useRef<number | null>(null);
   // Local copy so the reaction shows instantly (socket broadcast reconciles it)
   const [localReactions, setLocalReactions] = useState<MessageReaction[]>(message.reactions || []);
   useEffect(() => {
     setLocalReactions(message.reactions || []);
   }, [message.reactions]);
 
+  useEffect(() => {
+    return () => {
+      if (reactionHideTimeoutRef.current) {
+        window.clearTimeout(reactionHideTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const openReactionBar = () => {
+    if (reactionHideTimeoutRef.current) {
+      window.clearTimeout(reactionHideTimeoutRef.current);
+      reactionHideTimeoutRef.current = null;
+    }
+    setShowReactionBar(true);
+  };
+
+  const closeReactionBarWithDelay = () => {
+    if (reactionHideTimeoutRef.current) {
+      window.clearTimeout(reactionHideTimeoutRef.current);
+    }
+
+    reactionHideTimeoutRef.current = window.setTimeout(() => {
+      setShowReactionBar(false);
+      reactionHideTimeoutRef.current = null;
+    }, 300);
+  };
+
+  const getReactionUserName = (reaction: MessageReaction): string => {
+    if (reaction.user_id === user?.id) return 'Ty';
+
+    const firstName = reaction.user?.first_name?.trim() || '';
+    const lastName = reaction.user?.last_name?.trim() || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    return fullName || reaction.user?.email || 'Użytkownik';
+  };
+
+  const getReactionTooltip = (users: string[]): string => {
+    const visibleUsers = users.slice(0, 4);
+    const rest = users.length - visibleUsers.length;
+
+    return rest > 0
+      ? `${visibleUsers.join(', ')} i ${rest} więcej`
+      : visibleUsers.join(', ');
+  };
+
   // Aggregate reactions by emoji (count + whether the current user reacted)
   const reactionGroups = (() => {
-    const map = new Map<string, { emoji: string; count: number; mine: boolean }>();
+    const map = new Map<string, { emoji: string; count: number; mine: boolean; users: string[] }>();
     for (const r of localReactions) {
-      const g = map.get(r.emoji) || { emoji: r.emoji, count: 0, mine: false };
+      const g = map.get(r.emoji) || { emoji: r.emoji, count: 0, mine: false, users: [] };
       g.count += 1;
       if (r.user_id === user?.id) g.mine = true;
+      const reactionUserName = getReactionUserName(r);
+      if (!g.users.includes(reactionUserName)) {
+        g.users.push(reactionUserName);
+      }
       map.set(r.emoji, g);
     }
     return Array.from(map.values());
   })();
 
   const handleReact = async (emoji: string) => {
+    if (reactionHideTimeoutRef.current) {
+      window.clearTimeout(reactionHideTimeoutRef.current);
+      reactionHideTimeoutRef.current = null;
+    }
     setShowReactionBar(false);
     if (!user) return;
     const prev = localReactions;
@@ -437,14 +492,19 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
               <button
                 key={g.emoji}
                 onClick={() => handleReact(g.emoji)}
+                title={getReactionTooltip(g.users)}
+                aria-label={`Reakcja ${g.emoji}: ${getReactionTooltip(g.users)}`}
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
                   g.mine
                     ? 'border-[#F7941D]/40 bg-[#F7941D]/10 text-[#b76612] dark:text-orange-200'
                     : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-300'
-                }`}
+                } group/reaction relative`}
               >
                 <span className="text-sm leading-none">{g.emoji}</span>
                 <span className="font-medium">{g.count}</span>
+                <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 hidden max-w-[240px] -translate-x-1/2 whitespace-normal rounded-md bg-gray-900 px-2.5 py-1.5 text-[11px] font-medium leading-snug text-white shadow-lg group-hover/reaction:block">
+                  {getReactionTooltip(g.users)}
+                </span>
               </button>
             ))}
           </div>
@@ -456,9 +516,16 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
 
           {/* Hover actions: react (everyone) + edit/delete (own) */}
           {!message.is_deleted && (
-            <div className="relative flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div
+              className="relative flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              onMouseEnter={openReactionBar}
+              onMouseLeave={closeReactionBarWithDelay}
+              onFocus={openReactionBar}
+              onBlur={closeReactionBarWithDelay}
+            >
               <button
-                onClick={() => setShowReactionBar((v) => !v)}
+                type="button"
+                onClick={openReactionBar}
                 className="text-sm leading-none text-gray-400 hover:scale-110 transition-transform"
                 title="Dodaj reakcję"
               >
@@ -491,6 +558,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                   {QUICK_REACTIONS.map((e) => (
                     <button
                       key={e}
+                      type="button"
                       onClick={() => handleReact(e)}
                       className="text-lg leading-none transition-transform hover:scale-125"
                     >

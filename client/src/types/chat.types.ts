@@ -61,6 +61,7 @@ export interface MessageReaction {
   id: string;
   emoji: string;
   user_id: string;
+  user?: User;
 }
 
 export interface Attachment {
