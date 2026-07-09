@@ -34,6 +34,8 @@ const COMPANIES = [
   'Polskie Towarzystwo Mieszkaniowe',
   'ITComplete',
   'Fundacja Zarządzania i Innowacji',
+  'Włodawska spółdzielnia energetyczna',
+  'ITC Nowa Energia - spółdzielnia energetyczna',
 ];
 const UNITS = ['szt.', 'godz.', 'usł.', 'kg', 'mb', 'kpl.'];
 
