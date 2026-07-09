@@ -526,17 +526,51 @@ function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: (
   const [lCat, setLCat] = useState('repair');
   const [lCost, setLCost] = useState('');
   const [lMileage, setLMileage] = useState('');
+  const [lNotes, setLNotes] = useState('');
+  const [editingLog, setEditingLog] = useState<VehicleLogEntry | null>(null);
   const [lSaving, setLSaving] = useState(false);
-  const addLog = async () => {
+
+  const resetLogForm = () => {
+    setLDate('');
+    setLTitle('');
+    setLCat('repair');
+    setLCost('');
+    setLMileage('');
+    setLNotes('');
+    setEditingLog(null);
+  };
+
+  const startEditLog = (entry: VehicleLogEntry) => {
+    setEditingLog(entry);
+    setLDate(entry.entry_date?.split('T')[0] || '');
+    setLTitle(entry.title || '');
+    setLCat(entry.category || 'repair');
+    setLCost(entry.cost != null && entry.cost !== '' ? String(entry.cost) : '');
+    setLMileage(entry.mileage != null ? String(entry.mileage) : '');
+    setLNotes(entry.notes || '');
+  };
+
+  const saveLog = async () => {
     if (!lTitle.trim() || !lDate) { toast.error('Podaj opis i datę'); return; }
     setLSaving(true);
     try {
-      await fleetApi.addLogEntry(vehicle.id, {
+      const payload = {
         entry_date: lDate, title: lTitle.trim(), category: lCat,
         cost: lCost ? Number(lCost) : null, mileage: lMileage ? Number(lMileage) : null,
-      });
-      setLTitle(''); setLCost(''); setLMileage(''); load();
-    } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się dodać wpisu'); }
+        notes: lNotes.trim() || undefined,
+      };
+
+      if (editingLog) {
+        const updated = await fleetApi.updateLogEntry(editingLog.id, payload);
+        setLog((prev) => prev.map((entry) => entry.id === updated.id ? updated : entry));
+        toast.success('Wpis został zaktualizowany');
+      } else {
+        const created = await fleetApi.addLogEntry(vehicle.id, payload);
+        setLog((prev) => [created, ...prev]);
+        toast.success('Wpis został dodany');
+      }
+      resetLogForm();
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się zapisać wpisu'); }
     finally { setLSaving(false); }
   };
   const delLog = async (id: string) => {
@@ -620,9 +654,11 @@ function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: (
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Add log */}
+              {/* Add / edit log */}
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/40">
-                <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">Nowy wpis (naprawa / wydatek)</p>
+                <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  {editingLog ? 'Edycja wpisu' : 'Nowy wpis (naprawa / wydatek)'}
+                </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <input type="date" className={inputCls} value={lDate} onChange={(e) => setLDate(e.target.value)} />
                   <input className={`${inputCls} col-span-2 sm:col-span-1`} value={lTitle} onChange={(e) => setLTitle(e.target.value)} placeholder="Opis (np. Sprzęgło)" />
@@ -632,9 +668,23 @@ function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: (
                   <input type="number" step="0.01" className={inputCls} value={lCost} onChange={(e) => setLCost(e.target.value)} placeholder="Koszt zł" />
                   <input type="number" className={inputCls} value={lMileage} onChange={(e) => setLMileage(e.target.value)} placeholder="Przebieg km" />
                 </div>
-                <button onClick={addLog} disabled={lSaving} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-50">
-                  {lSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj wpis
-                </button>
+                <textarea
+                  className={`${inputCls} mt-2 min-h-[70px] resize-y`}
+                  value={lNotes}
+                  onChange={(e) => setLNotes(e.target.value)}
+                  placeholder="Notatki opcjonalne"
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button onClick={saveLog} disabled={lSaving} className="inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-50">
+                    {lSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingLog ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    {editingLog ? 'Zapisz zmiany' : 'Dodaj wpis'}
+                  </button>
+                  {editingLog && (
+                    <button onClick={resetLogForm} disabled={lSaving} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                      Anuluj edycję
+                    </button>
+                  )}
+                </div>
               </div>
               {/* Summary */}
               <div className="flex items-center justify-between text-sm">
@@ -660,6 +710,7 @@ function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: (
                       </div>
                       <div className="flex flex-shrink-0 items-center gap-2">
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">{fmtCost(e.cost)}</span>
+                        <button onClick={() => startEditLog(e)} className="rounded p-1 text-gray-400 hover:bg-[#F7941D]/10 hover:text-[#F7941D] dark:hover:bg-[#F7941D]/15"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => delLog(e.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </li>

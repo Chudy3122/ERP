@@ -89,6 +89,11 @@ export const addLogEntry = async (vehicleId: string, input: VehicleLogInput): Pr
   return res.data;
 };
 
+export const updateLogEntry = async (id: string, input: VehicleLogInput): Promise<VehicleLogEntry> => {
+  const res = await client.put(`/fleet/log/${id}`, input);
+  return res.data;
+};
+
 export const deleteLogEntry = async (id: string): Promise<void> => {
   await client.delete(`/fleet/log/${id}`);
 };

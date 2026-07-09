@@ -219,6 +219,13 @@ export class FleetController {
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   };
 
+  updateLogEntry = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!(await this.requireManager(req, res))) return;
+      res.json(await fleetService.updateLogEntry(req.params.id, req.body));
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  };
+
   deleteLogEntry = async (req: Request, res: Response): Promise<void> => {
     try {
       if (!(await this.requireManager(req, res))) return;
