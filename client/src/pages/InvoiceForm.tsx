@@ -36,6 +36,7 @@ const COMPANIES = [
   'Fundacja Zarządzania i Innowacji',
   'Włodawska spółdzielnia energetyczna',
   'ITC Nowa Energia - spółdzielnia energetyczna',
+  'EduCamp',
 ];
 const UNITS = ['szt.', 'godz.', 'usł.', 'kg', 'mb', 'kpl.'];
 
