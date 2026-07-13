@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps } from 'recharts';
-import { Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import WidgetCard from '../widgets/WidgetCard';
@@ -31,13 +31,13 @@ const getLocalDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getCurrentWeekRange = () => {
+const getCurrentWeekRange = (weekOffset = 0) => {
   const today = new Date();
   const start = new Date(today);
   const day = start.getDay();
   const daysFromMonday = day === 0 ? 6 : day - 1;
 
-  start.setDate(start.getDate() - daysFromMonday);
+  start.setDate(start.getDate() - daysFromMonday + weekOffset * 7);
   start.setHours(0, 0, 0, 0);
 
   const end = new Date(start);
@@ -45,6 +45,21 @@ const getCurrentWeekRange = () => {
   end.setHours(23, 59, 59, 999);
 
   return { start, end };
+};
+
+const formatWeekRange = (start: Date, end: Date) => {
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+  const startLabel = start.toLocaleDateString('pl-PL', {
+    day: '2-digit',
+    month: sameMonth ? undefined : '2-digit',
+  });
+  const endLabel = end.toLocaleDateString('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  return `${startLabel} - ${endLabel}`;
 };
 
 const isWeekend = (date: Date) => {
@@ -144,21 +159,22 @@ const TimeChartWidget = () => {
   const [timeData, setTimeData] = useState<TimeData[]>([]);
   const [currentEntry, setCurrentEntry] = useState<TimeEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [weekOffset, setWeekOffset] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchTimeData();
-  }, [user?.working_hours_per_day]);
+  }, [user?.working_hours_per_day, weekOffset]);
 
   useEffect(() => {
-    if (currentEntry?.status !== TimeEntryStatus.IN_PROGRESS) return undefined;
+    if (weekOffset !== 0 || currentEntry?.status !== TimeEntryStatus.IN_PROGRESS) return undefined;
 
     const intervalId = window.setInterval(() => {
       fetchTimeData(false);
     }, 60000);
 
     return () => window.clearInterval(intervalId);
-  }, [currentEntry?.id, currentEntry?.status, user?.working_hours_per_day]);
+  }, [currentEntry?.id, currentEntry?.status, user?.working_hours_per_day, weekOffset]);
 
   const fetchTimeData = async (showLoading = true) => {
     try {
@@ -166,7 +182,7 @@ const TimeChartWidget = () => {
         setIsLoading(true);
       }
 
-      const { start, end } = getCurrentWeekRange();
+      const { start, end } = getCurrentWeekRange(weekOffset);
 
       const [entries, workLogs, leaveRequests, activeEntry] = await Promise.all([
         getUserTimeEntries(start.toISOString(), end.toISOString()),
@@ -290,6 +306,13 @@ const TimeChartWidget = () => {
   const hasReportedTime = timeData.some(day => day.totalMinutes > 0);
   const workdayData = timeData.filter(day => !isWeekend(new Date(`${day.date}T00:00:00`)));
   const weekendData = timeData.filter(day => isWeekend(new Date(`${day.date}T00:00:00`)));
+  const { start: selectedWeekStart, end: selectedWeekEnd } = getCurrentWeekRange(weekOffset);
+  const selectedWeekLabel = weekOffset === 0
+    ? 'Bieżący tydzień'
+    : formatWeekRange(selectedWeekStart, selectedWeekEnd);
+  const handlePreviousWeek = () => setWeekOffset((current) => current - 1);
+  const handleNextWeek = () => setWeekOffset((current) => Math.min(0, current + 1));
+  const handleCurrentWeek = () => setWeekOffset(0);
   const renderTimeBars = () => (
     <>
       <Bar
@@ -336,12 +359,43 @@ const TimeChartWidget = () => {
       title="Mój zaraportowany czas"
       icon={<Clock className="w-5 h-5 text-gray-600" />}
       actions={
-        <div className="flex items-center gap-4 text-xs">
-          <div>
+        <div className="flex flex-wrap items-center justify-end gap-3 text-xs">
+          <div className="inline-flex items-center overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <button
+              type="button"
+              onClick={handlePreviousWeek}
+              className="flex h-7 w-7 items-center justify-center text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              title="Poprzedni tydzień"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCurrentWeek}
+              className={`h-7 border-x border-gray-200 px-2.5 text-[11px] font-semibold transition-colors dark:border-gray-700 ${
+                weekOffset === 0
+                  ? 'bg-[#F7941D]/10 text-[#B76200] dark:text-orange-200'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+              title={formatWeekRange(selectedWeekStart, selectedWeekEnd)}
+            >
+              Ten tydzień
+            </button>
+            <button
+              type="button"
+              onClick={handleNextWeek}
+              disabled={weekOffset === 0}
+              className="flex h-7 w-7 items-center justify-center text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-35 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              title="Następny tydzień"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-[52px] shrink-0 text-left">
             <span className="text-gray-500 dark:text-gray-400">Dni: </span>
             <span className="font-semibold text-gray-900 dark:text-white">{daysWorked}/5</span>
           </div>
-          <div>
+          <div className="w-[112px] shrink-0 text-left">
             <span className="text-gray-500 dark:text-gray-400">Średnia: </span>
             <span className="font-semibold text-gray-900 dark:text-white">{avgHours}</span>
           </div>
@@ -403,7 +457,7 @@ const TimeChartWidget = () => {
       )}
       <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-3">
-          <span>Bieżący tydzień</span>
+          <span>{selectedWeekLabel}</span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-gray-400" />
             Nieobecność
