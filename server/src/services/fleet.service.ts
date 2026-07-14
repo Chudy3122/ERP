@@ -250,6 +250,26 @@ export class FleetService {
     return this.logRepo.save(entry);
   }
 
+  async updateLogEntry(id: string, dto: LogDto): Promise<VehicleLogEntry> {
+    const entry = await this.logRepo.findOne({ where: { id }, relations: ['creator'] });
+    if (!entry) throw new Error('Wpis nie znaleziony');
+    if (!dto.title?.trim()) throw new Error('Opis jest wymagany');
+    if (!dto.entry_date) throw new Error('Data jest wymagana');
+
+    entry.entry_date = dto.entry_date;
+    entry.title = dto.title.trim();
+    entry.category = dto.category || 'repair';
+    entry.cost = dto.cost != null && !isNaN(Number(dto.cost)) ? Number(dto.cost) : null;
+    entry.mileage = dto.mileage != null && !isNaN(Number(dto.mileage)) ? Number(dto.mileage) : null;
+    entry.notes = dto.notes?.trim() || null;
+
+    await this.logRepo.save(entry);
+
+    const updated = await this.logRepo.findOne({ where: { id }, relations: ['creator'] });
+    if (!updated) throw new Error('Wpis nie znaleziony');
+    return updated;
+  }
+
   async deleteLogEntry(id: string): Promise<void> {
     const e = await this.logRepo.findOne({ where: { id } });
     if (!e) throw new Error('Wpis nie znaleziony');

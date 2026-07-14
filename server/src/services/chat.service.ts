@@ -237,7 +237,7 @@ export class ChatService {
 
     const [messages, total] = await this.messageRepository.findAndCount({
       where: { channel_id: channelId },
-      relations: ['sender', 'attachments', 'reactions'],
+      relations: ['sender', 'attachments', 'reactions', 'reactions.user'],
       order: { created_at: 'DESC' },
       take: limit,
       skip: offset,
@@ -284,9 +284,12 @@ export class ChatService {
     return { channelId: message.channel_id };
   }
 
-  /** All reactions for a message (id, emoji, user_id) — used for broadcasting. */
+  /** All reactions for a message (id, emoji, user_id, user) — used for broadcasting. */
   async getMessageReactions(messageId: string): Promise<MessageReaction[]> {
-    return this.messageReactionRepository.find({ where: { message_id: messageId } });
+    return this.messageReactionRepository.find({
+      where: { message_id: messageId },
+      relations: ['user'],
+    });
   }
 
   /**
@@ -448,7 +451,7 @@ export class ChatService {
   async getMessageById(messageId: string): Promise<Message | null> {
     return await this.messageRepository.findOne({
       where: { id: messageId },
-      relations: ['sender', 'attachments', 'attachments.uploader'],
+      relations: ['sender', 'attachments', 'attachments.uploader', 'reactions', 'reactions.user'],
     });
   }
 }

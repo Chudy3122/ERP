@@ -18,11 +18,27 @@ export async function broadcastReactionUpdate(io: SocketIOServer, messageId: str
   const message = await messageRepository.findOne({ where: { id: messageId } });
   if (!message) return;
 
-  const reactions = await reactionRepository.find({ where: { message_id: messageId } });
+  const reactions = await reactionRepository.find({
+    where: { message_id: messageId },
+    relations: ['user'],
+  });
   const payload = {
     messageId,
     channelId: message.channel_id,
-    reactions: reactions.map((r) => ({ id: r.id, emoji: r.emoji, user_id: r.user_id })),
+    reactions: reactions.map((r) => ({
+      id: r.id,
+      emoji: r.emoji,
+      user_id: r.user_id,
+      user: r.user
+        ? {
+            id: r.user.id,
+            email: r.user.email,
+            first_name: r.user.first_name,
+            last_name: r.user.last_name,
+            avatar_url: r.user.avatar_url,
+          }
+        : undefined,
+    })),
   };
 
   const members = await channelMemberRepository.find({ where: { channel_id: message.channel_id } });

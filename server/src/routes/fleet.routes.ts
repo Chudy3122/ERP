@@ -39,6 +39,7 @@ router.post('/vehicles/:id/reminders', fleetController.addReminder);
 router.delete('/reminders/:id', fleetController.deleteReminder);
 router.get('/vehicles/:id/log', fleetController.listLog);
 router.post('/vehicles/:id/log', fleetController.addLogEntry);
+router.put('/log/:id', fleetController.updateLogEntry);
 router.delete('/log/:id', fleetController.deleteLogEntry);
 
 export default router;
