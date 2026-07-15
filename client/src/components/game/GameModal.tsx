@@ -1,8 +1,9 @@
 import { useEffect, useState, type ComponentType } from 'react';
-import { X, Gamepad2, ChevronLeft, Zap, LayoutGrid, Trophy } from 'lucide-react';
+import { X, Gamepad2, ChevronLeft, Zap, LayoutGrid, Target, Trophy } from 'lucide-react';
 import * as gameApi from '../../api/game.api';
 import DodgeGame from './games/DodgeGame';
 import TetrisGame from './games/TetrisGame';
+import BreakerGame from './games/BreakerGame';
 
 type GameDef = {
   id: string;
@@ -30,6 +31,14 @@ const GAMES: GameDef[] = [
     icon: LayoutGrid,
     gradient: 'from-[#6366F1] to-[#22D3EE]',
     Component: TetrisGame,
+  },
+  {
+    id: 'breaker',
+    name: 'Brick Breaker',
+    tagline: 'Zbijaj cegły i łap power-upy: szersza płytka, multi-piłka, laser.',
+    icon: Target,
+    gradient: 'from-[#10B981] to-[#84CC16]',
+    Component: BreakerGame,
   },
 ];
 
