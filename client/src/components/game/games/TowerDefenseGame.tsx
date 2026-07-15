@@ -3,7 +3,7 @@ import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, Arrow
 import * as gameApi from '../../../api/game.api';
 import GameLeaderboard, { useLeaderboard } from '../GameLeaderboard';
 import ConfettiBurst from '../ConfettiBurst';
-import { loadSheet, drawSprite, type SpriteKey } from './td/atlas';
+import { loadSheet, drawSprite, SPRITES, TILE_SRC, type SpriteKey } from './td/atlas';
 import {
   CELL, COLS, ROWS, W, H, START_GOLD, START_HP,
   TOWERS, TOWER_ORDER, SELL_RATE, ENEMIES, LEVELS, waveFor, enemyScale,
@@ -514,159 +514,149 @@ export default function TowerDefenseGame() {
   );
 
   // ---------- drawing ----------
+  /** Which pack sprite (and how big) stands in for each enemy. */
+  const ENEMY_SPRITE: Partial<Record<EnemyKind, { key: SpriteKey; size: number }>> = {
+    peasant: { key: 'unitPeasant', size: 30 },
+    soldier: { key: 'unitKnight', size: 32 },
+    cavalry: { key: 'unitSpear', size: 32 },
+    shaman: { key: 'unitRobe', size: 32 },
+    brute: { key: 'unitShield', size: 44 },
+    boss: { key: 'unitKnightRed', size: 54 },
+  };
+
   const drawEnemy = (ctx: CanvasRenderingContext2D, e: Enemy) => {
     const d = ENEMIES[e.kind];
     const bob = Math.sin(e.wobble) * (e.flying ? 2.4 : 1.2);
     const x = e.x;
     const y = e.y + bob;
     const r = e.radius;
+    const sheet = sheetRef.current;
 
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.beginPath();
     ctx.ellipse(e.x, e.y + r * 0.75, r * 0.75, r * 0.32, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    const art = ENEMY_SPRITE[e.kind];
+    if (sheet && art) {
+      const s = SPRITES[art.key];
+      const half = art.size / 2;
+      // a slight walk sway keeps the static sprite from looking dead
+      const sway = Math.sin(e.wobble) * 0.06;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(sway);
+      if (e.kind === 'boss') {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = 'rgba(220,38,38,0.8)';
+      }
+      ctx.drawImage(sheet, s.sx, s.sy, TILE_SRC, TILE_SRC, -half, -half, art.size, art.size);
+      ctx.shadowBlur = 0;
+      // white flash on hit, painted only over the sprite's own pixels
+      if (e.hitFlash > 0) {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.8, e.hitFlash)})`;
+        ctx.fillRect(-half, -half, art.size, art.size);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.restore();
+      drawEnemyOverlay(ctx, e, x, y, r);
+      return;
+    }
+
+    // The raven has no counterpart in the pack (no birds), so it stays hand-drawn.
     const body = e.hitFlash > 0 ? '#ffffff' : d.color;
     ctx.save();
     ctx.translate(x, y);
-
-    if (e.kind === 'raven') {
-      const flap = Math.sin(e.wobble * 2) * 0.5;
-      ctx.fillStyle = d.dark;
+    const flap = Math.sin(e.wobble * 2) * 0.5;
+    ctx.fillStyle = d.dark;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.5, r * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = body;
+    for (const s of [-1, 1]) {
       ctx.beginPath();
-      ctx.ellipse(0, 0, r * 0.5, r * 0.7, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = body;
-      for (const s of [-1, 1]) {
-        ctx.beginPath();
-        ctx.moveTo(0, -2);
-        ctx.quadraticCurveTo(s * r * 1.5, -6 + flap * 8, s * r * 1.7, 4 + flap * 5);
-        ctx.quadraticCurveTo(s * r * 0.8, 2, 0, 4);
-        ctx.closePath();
-        ctx.fill();
-      }
-    } else if (e.kind === 'cavalry') {
-      ctx.fillStyle = d.dark;
-      ctx.beginPath();
-      ctx.roundRect(-r, -r * 0.2, r * 2, r * 0.85, 4);
-      ctx.fill();
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.35, -r * 1.15, r * 0.7, r * 1.05, 3);
-      ctx.fill();
-      ctx.fillStyle = '#FDE68A';
-      ctx.beginPath();
-      ctx.arc(0, -r * 1.25, r * 0.28, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (e.kind === 'shaman') {
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.moveTo(0, -r * 1.3);
-      ctx.lineTo(r * 0.8, r * 0.8);
-      ctx.lineTo(-r * 0.8, r * 0.8);
+      ctx.moveTo(0, -2);
+      ctx.quadraticCurveTo(s * r * 1.5, -6 + flap * 8, s * r * 1.7, 4 + flap * 5);
+      ctx.quadraticCurveTo(s * r * 0.8, 2, 0, 4);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = '#DDD6FE';
-      ctx.beginPath();
-      ctx.arc(0, -r * 0.35, r * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      // healing aura
-      ctx.strokeStyle = 'rgba(126,34,206,0.35)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, 70, 0, Math.PI * 2);
-      ctx.stroke();
-    } else if (e.kind === 'boss') {
-      ctx.fillStyle = d.dark;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.85, -r * 0.7, r * 1.7, r * 1.5, 5);
-      ctx.fill();
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.6, -r * 1.4, r * 1.2, r * 0.85, 4);
-      ctx.fill();
-      ctx.fillStyle = '#DC2626';
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.16, -r * 1.95, r * 0.32, r * 0.6, 3);
-      ctx.fill();
-      ctx.fillStyle = '#94A3B8';
-      ctx.beginPath();
-      ctx.roundRect(r * 0.6, -r * 1.1, r * 0.22, r * 1.9, 2);
-      ctx.fill();
-    } else if (e.kind === 'brute') {
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.85, -r * 0.9, r * 1.7, r * 1.7, 6);
-      ctx.fill();
-      ctx.fillStyle = d.dark;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.5, -r * 1.35, r, r * 0.55, 3);
-      ctx.fill();
-      ctx.fillStyle = '#FDE68A';
-      ctx.beginPath();
-      ctx.arc(-r * 0.25, -r * 0.35, 2, 0, Math.PI * 2);
-      ctx.arc(r * 0.25, -r * 0.35, 2, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.roundRect(-r * 0.55, -r * 0.6, r * 1.1, r * 1.25, 4);
-      ctx.fill();
-      ctx.fillStyle = d.dark;
-      ctx.beginPath();
-      ctx.arc(0, -r * 0.85, r * 0.42, 0, Math.PI * 2);
-      ctx.fill();
-      if (e.kind === 'soldier') {
-        ctx.fillStyle = '#CBD5E1';
-        ctx.beginPath();
-        ctx.roundRect(r * 0.4, -r * 0.6, r * 0.3, r * 1.1, 2);
-        ctx.fill();
-      }
     }
     ctx.restore();
+    drawEnemyOverlay(ctx, e, x, y, r);
+  };
 
-    if (e.frozenMs > 0 || e.slowMs > 0) {
-      ctx.fillStyle = e.frozenMs > 0 ? 'rgba(125,211,252,0.5)' : 'rgba(125,211,252,0.25)';
+  /** Status bits painted on top of any enemy, sprite-based or not. */
+  const drawEnemyOverlay = (ctx: CanvasRenderingContext2D, e: Enemy, x: number, y: number, r: number) => {
+    if (e.heals) {
+      ctx.strokeStyle = 'rgba(126,34,206,0.4)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(x, y, r * 1.15, 0, Math.PI * 2);
+      ctx.arc(x, y, 70, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (e.frozenMs > 0 || e.slowMs > 0) {
+      ctx.fillStyle = e.frozenMs > 0 ? 'rgba(125,211,252,0.45)' : 'rgba(125,211,252,0.22)';
+      ctx.beginPath();
+      ctx.arc(x, y, r * 1.2, 0, Math.PI * 2);
       ctx.fill();
     }
-
     const pct = Math.max(0, e.hp / e.maxHp);
     if (pct < 1) {
       const bw = r * 2.2;
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(x - bw / 2, y - r - 9, bw, 4);
+      ctx.fillRect(x - bw / 2, y - r - 11, bw, 4);
       ctx.fillStyle = pct > 0.5 ? '#4ADE80' : pct > 0.25 ? '#FACC15' : '#EF4444';
-      ctx.fillRect(x - bw / 2, y - r - 9, bw * pct, 4);
+      ctx.fillRect(x - bw / 2, y - r - 11, bw * pct, 4);
     }
+  };
+
+  /** Each tower is built from a real building sprite; the weapon on top is drawn. */
+  const TOWER_SPRITE: Record<TowerKind, SpriteKey> = {
+    archer: 'bldTower',
+    catapult: 'bldWorkshop',
+    mage: 'bldChapel',
+    ballista: 'bldKeep',
+    oil: 'bldForge',
+    tesla: 'bldWall',
   };
 
   const drawTower = (ctx: CanvasRenderingContext2D, t: Tower) => {
     const def = TOWERS[t.kind];
     const lvl = t.level;
     const base = CELL * 0.42;
+    const sheet = sheetRef.current;
     ctx.save();
     ctx.translate(t.x, t.y);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(0, base * 0.5, base, base * 0.42, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#9CA3AF';
-    ctx.beginPath();
-    ctx.roundRect(-base, -base * 0.5, base * 2, base * 1.3, 5);
-    ctx.fill();
-    ctx.fillStyle = '#6B7280';
-    ctx.beginPath();
-    ctx.roundRect(-base, -base * 0.5, base * 2, base * 0.3, 3);
+    ctx.ellipse(0, base * 0.55, base, base * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    if (sheet) {
+      // building grows a little with each upgrade
+      const size = CELL * (0.92 + lvl * 0.06);
+      const s = SPRITES[TOWER_SPRITE[t.kind]];
+      ctx.drawImage(sheet, s.sx, s.sy, TILE_SRC, TILE_SRC, -size / 2, -size / 2, size, size);
+    } else {
+      ctx.fillStyle = '#9CA3AF';
+      ctx.beginPath();
+      ctx.roundRect(-base, -base * 0.5, base * 2, base * 1.3, 5);
+      ctx.fill();
+    }
+
+    // level pips
     for (let i = 0; i < lvl; i++) {
       ctx.fillStyle = '#FACC15';
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(-base + 5 + i * 6, base * 0.62, 2.2, 0, Math.PI * 2);
+      ctx.arc(-base + 5 + i * 6, base * 0.72, 2.4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
     }
 
     ctx.rotate(t.angle);

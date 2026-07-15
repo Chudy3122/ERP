@@ -7,8 +7,8 @@ export const ROWS = 12;
 export const W = COLS * CELL; // 640
 export const H = ROWS * CELL; // 480
 
-export const START_GOLD = 210;
-export const START_HP = 15;
+export const START_GOLD = 320;
+export const START_HP = 20;
 
 // ---------------- Towers ----------------
 export type TowerKind = 'archer' | 'catapult' | 'mage' | 'ballista' | 'oil' | 'tesla';
@@ -46,9 +46,9 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
     accent: '#F7941D',
     hitsAir: true,
     levels: [
-      { damage: 9, range: 105, cooldown: 520, cost: 100 },
-      { damage: 16, range: 120, cooldown: 440, cost: 140 },
-      { damage: 26, range: 135, cooldown: 360, cost: 240 },
+      { damage: 13, range: 110, cooldown: 500, cost: 90 },
+      { damage: 22, range: 125, cooldown: 420, cost: 130 },
+      { damage: 36, range: 140, cooldown: 340, cost: 220 },
     ],
   },
   catapult: {
@@ -150,14 +150,19 @@ export type EnemyDef = {
   leak: number;      // castle HP lost if it gets through
 };
 
+/**
+ * Armour is the anti-spam lever (it bites per hit, so weak fast towers suffer),
+ * but it has to stay low early or level 1 becomes unwinnable. The real armour
+ * ramp lives in endless waves — see enemyScale.
+ */
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
-  peasant: { kind: 'peasant', name: 'Chłop', hp: 40, speed: 52, armor: 0, gold: 5, points: 10, radius: 9, color: '#D6A06A', dark: '#8B5E34', leak: 1 },
-  soldier: { kind: 'soldier', name: 'Zbrojny', hp: 105, speed: 40, armor: 6, gold: 9, points: 20, radius: 10, color: '#94A3B8', dark: '#475569', leak: 1 },
-  cavalry: { kind: 'cavalry', name: 'Kawaleria', hp: 85, speed: 98, armor: 3, gold: 10, points: 25, radius: 11, color: '#B45309', dark: '#7C2D12', leak: 2 },
-  raven: { kind: 'raven', name: 'Kruk', hp: 62, speed: 82, armor: 1, gold: 10, points: 25, radius: 9, color: '#475569', dark: '#1E293B', flying: true, leak: 1 },
-  brute: { kind: 'brute', name: 'Ogr', hp: 380, speed: 28, armor: 11, gold: 26, points: 60, radius: 14, color: '#65A30D', dark: '#3F6212', leak: 3 },
-  shaman: { kind: 'shaman', name: 'Szaman', hp: 150, speed: 46, armor: 4, gold: 22, points: 55, radius: 10, color: '#7E22CE', dark: '#4C1D95', heals: 14, leak: 2 },
-  boss: { kind: 'boss', name: 'Czarny Rycerz', hp: 1500, speed: 32, armor: 18, gold: 90, points: 250, radius: 18, color: '#1F2937', dark: '#0F172A', leak: 5 },
+  peasant: { kind: 'peasant', name: 'Chłop', hp: 32, speed: 52, armor: 0, gold: 7, points: 10, radius: 9, color: '#D6A06A', dark: '#8B5E34', leak: 1 },
+  soldier: { kind: 'soldier', name: 'Zbrojny', hp: 78, speed: 40, armor: 2, gold: 11, points: 20, radius: 10, color: '#94A3B8', dark: '#475569', leak: 1 },
+  cavalry: { kind: 'cavalry', name: 'Kawaleria', hp: 80, speed: 98, armor: 1, gold: 12, points: 25, radius: 11, color: '#B45309', dark: '#7C2D12', leak: 2 },
+  raven: { kind: 'raven', name: 'Kruk', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#475569', dark: '#1E293B', flying: true, leak: 1 },
+  brute: { kind: 'brute', name: 'Ogr', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#65A30D', dark: '#3F6212', leak: 3 },
+  shaman: { kind: 'shaman', name: 'Szaman', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#7E22CE', dark: '#4C1D95', heals: 12, leak: 2 },
+  boss: { kind: 'boss', name: 'Czarny Rycerz', hp: 1300, speed: 32, armor: 10, gold: 110, points: 250, radius: 18, color: '#1F2937', dark: '#0F172A', leak: 5 },
 };
 
 // ---------------- Levels ----------------
@@ -204,8 +209,8 @@ export const LEVELS: LevelDef[] = [
     decor: ['rockS', 'rockM', 'rockL', 'pineS'],
     decorDensity: 0.2,
     waves: 10,
-    hpMul: 1.35,
-    armorAdd: 1,
+    hpMul: 1.25,
+    armorAdd: 0,
     pool: ['peasant', 'soldier', 'cavalry'],
     unlocks: 'ballista',
   },
@@ -218,8 +223,8 @@ export const LEVELS: LevelDef[] = [
     decor: ['rockM', 'rockS', 'bush'],
     decorDensity: 0.24,
     waves: 12,
-    hpMul: 1.9,
-    armorAdd: 2,
+    hpMul: 1.6,
+    armorAdd: 1,
     pool: ['peasant', 'soldier', 'cavalry', 'raven'],
     unlocks: 'oil',
   },
@@ -232,8 +237,8 @@ export const LEVELS: LevelDef[] = [
     decor: ['pineS', 'pineL', 'treeA', 'rockS'],
     decorDensity: 0.26,
     waves: 14,
-    hpMul: 2.6,
-    armorAdd: 4,
+    hpMul: 2.1,
+    armorAdd: 2,
     pool: ['soldier', 'cavalry', 'raven', 'brute', 'shaman'],
     unlocks: 'tesla',
   },
@@ -246,8 +251,8 @@ export const LEVELS: LevelDef[] = [
     decor: ['rockL', 'rockM', 'pineL'],
     decorDensity: 0.28,
     waves: 15,
-    hpMul: 3.4,
-    armorAdd: 6,
+    hpMul: 2.7,
+    armorAdd: 3,
     pool: ['soldier', 'cavalry', 'raven', 'brute', 'shaman', 'boss'],
   },
 ];
@@ -284,7 +289,9 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
   const groups: WaveGroup[] = [];
 
   const has = (k: EnemyKind) => L.pool.includes(k);
-  const scale = (base: number) => Math.round(base * (1 + t * 1.6) + over * 2.5);
+  // Opening waves start at 55% size and grow to ~2.2x by the end of a chapter,
+  // so wave 1 is a warm-up rather than a full-strength assault.
+  const scale = (base: number) => Math.round(base * (0.55 + t * 1.65) + over * 2.5);
 
   const bossWave = (has('boss') && n % 5 === 0) || (endless && n % 3 === 0);
   if (bossWave) {

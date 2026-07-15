@@ -31,7 +31,24 @@ export const SPRITES = {
 
   castleWall: at(16, 0),
   castle: at(16, 1),
-  tower: at(15, 1),
+
+  // Tower buildings — the base each tower is built from. The weapon on top is
+  // drawn in code, since the pack has no catapults or ballistae.
+  bldTower: at(15, 1),   // stone tower, red roof — archers
+  bldWorkshop: at(9, 6), // timber workshop — catapult
+  bldChapel: at(14, 1),  // chapel with a cross — mages
+  bldKeep: at(8, 6),     // stone house with a turret — ballista
+  bldForge: at(14, 0),   // blacksmith's forge — oil cauldron
+  bldWall: at(16, 0),    // battlement — storm tower
+
+  // Units: 6 silhouettes (cols 11-16) x 4 faction colours (rows 3-6).
+  // row 3 = blue, row 4 = red, row 5 = green, row 6 = grey/white
+  unitPeasant: at(12, 3),   // plain villager, blue
+  unitSpear: at(13, 4),     // spearman, red
+  unitShield: at(14, 5),    // shield bearer, green
+  unitKnight: at(15, 6),    // helmet + shield, grey
+  unitKnightRed: at(15, 4), // helmet + shield, red — the boss
+  unitRobe: at(16, 5),      // robed figure, green — the shaman
 } as const;
 
 export type SpriteKey = keyof typeof SPRITES;
