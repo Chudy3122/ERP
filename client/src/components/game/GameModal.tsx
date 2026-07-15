@@ -1,10 +1,11 @@
 import { useEffect, useState, type ComponentType } from 'react';
-import { X, Gamepad2, ChevronLeft, Zap, LayoutGrid, Target, Apple, Trophy } from 'lucide-react';
+import { X, Gamepad2, ChevronLeft, Zap, LayoutGrid, Target, Apple, Trophy, Castle, Sparkles } from 'lucide-react';
 import * as gameApi from '../../api/game.api';
 import DodgeGame from './games/DodgeGame';
 import TetrisGame from './games/TetrisGame';
 import BreakerGame from './games/BreakerGame';
 import SnakeGame from './games/SnakeGame';
+import TowerDefenseGame from './games/TowerDefenseGame';
 
 type GameDef = {
   id: string;
@@ -13,6 +14,8 @@ type GameDef = {
   icon: ComponentType<{ className?: string }>;
   gradient: string;
   Component: ComponentType;
+  /** Needs a roomier modal than the arcade games. */
+  wide?: boolean;
 };
 
 /** Every game keeps its own leaderboard — keyed by `id` on the backend. */
@@ -51,6 +54,19 @@ const GAMES: GameDef[] = [
   },
 ];
 
+/** Not listed on the hub — you have to know where to click. */
+const SECRET_GAMES: GameDef[] = [
+  {
+    id: 'td',
+    name: 'Obrona Zamku',
+    tagline: 'Tower defense: stawiaj wieże, ulepszaj je i odeprzyj 20 fal najeźdźców.',
+    icon: Castle,
+    gradient: 'from-[#7C3AED] to-[#F7941D]',
+    Component: TowerDefenseGame,
+    wide: true,
+  },
+];
+
 interface GameModalProps {
   onClose: () => void;
 }
@@ -58,25 +74,29 @@ interface GameModalProps {
 export default function GameModal({ onClose }: GameModalProps) {
   const [selected, setSelected] = useState<GameDef | null>(null);
   const [bests, setBests] = useState<Record<string, number | null>>({});
+  const [secretOpen, setSecretOpen] = useState(false);
+
+  const visible = secretOpen ? [...GAMES, ...SECRET_GAMES] : GAMES;
 
   // Personal bests for the hub cards
   useEffect(() => {
     if (selected) return;
     let alive = true;
     Promise.all(
-      GAMES.map((g) =>
+      visible.map((g) =>
         gameApi
           .getLeaderboard(g.id)
           .then((b) => [g.id, b.me?.score ?? null] as const)
           .catch(() => [g.id, null] as const)
       )
     ).then((pairs) => {
-      if (alive) setBests(Object.fromEntries(pairs));
+      if (alive) setBests((prev) => ({ ...prev, ...Object.fromEntries(pairs) }));
     });
     return () => {
       alive = false;
     };
-  }, [selected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, secretOpen]);
 
   const Selected = selected?.Component;
 
@@ -85,7 +105,11 @@ export default function GameModal({ onClose }: GameModalProps) {
   // Closing is the X button only.
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
+      <div
+        className={`w-full overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10 ${
+          selected?.wide ? 'max-w-5xl' : 'max-w-3xl'
+        }`}
+      >
         {/* Header */}
         <div
           className={`flex items-center justify-between bg-gradient-to-r px-5 py-3.5 ${
@@ -129,19 +153,46 @@ export default function GameModal({ onClose }: GameModalProps) {
         ) : (
           <div className="p-5">
             <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Wybierz grę — każda ma własną tabelę wyników.
+              Wybierz{' '}
+              {/* The easter egg: this one word unlocks the hidden game. It looks like
+                  plain text — no pointer cursor, no underline — so you have to know. */}
+              <span
+                role="button"
+                tabIndex={-1}
+                aria-label="Sekret"
+                onClick={() => setSecretOpen((s) => !s)}
+                className="select-none outline-none"
+              >
+                grę
+              </span>{' '}
+              — każda ma własną tabelę wyników.
             </p>
+            {secretOpen && (
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400">
+                <Sparkles className="h-3.5 w-3.5" /> Odkryłeś ukrytą grę!
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
-              {GAMES.map((g) => {
+              {visible.map((g) => {
                 const Icon = g.icon;
                 const best = bests[g.id];
+                const isSecret = SECRET_GAMES.some((s) => s.id === g.id);
                 return (
                   <button
                     key={g.id}
                     type="button"
                     onClick={() => setSelected(g)}
-                    className="group flex flex-col items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-transparent hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F7941D] dark:border-gray-700 dark:bg-gray-900/40"
+                    className={`group relative flex flex-col items-start gap-3 rounded-2xl border bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-transparent hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F7941D] dark:bg-gray-900/40 ${
+                      isSecret
+                        ? 'border-purple-300 bg-purple-50/50 dark:border-purple-500/40 dark:bg-purple-500/5'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
                   >
+                    {isSecret && (
+                      <span className="absolute right-3 top-3 rounded-full bg-purple-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                        Sekret
+                      </span>
+                    )}
                     <div
                       className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${g.gradient} text-white shadow-md transition-transform group-hover:scale-110`}
                     >
