@@ -80,12 +80,12 @@ export default function GameModal({ onClose }: GameModalProps) {
 
   const Selected = selected?.Component;
 
+  // The backdrop deliberately has no click-to-close: the mouse leaves the canvas
+  // constantly while playing, and a stray click would quit the game mid-run.
+  // Closing is the X button only.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
         {/* Header */}
         <div
           className={`flex items-center justify-between bg-gradient-to-r px-5 py-3.5 ${
