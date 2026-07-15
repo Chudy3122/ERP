@@ -1,51 +1,45 @@
 /** Tower Defense — pure logic, deliberately free of React and canvas so it can be tested. */
-import { CELL, COLS, ROWS, PATH } from './config';
+import { CELL, COLS, ROWS } from './config';
 
 export type Vec = { x: number; y: number };
+type Seg = { a: Vec; b: Vec; len: number; acc: number };
 
 /** Cell centre → pixel centre. */
 export const cellToPx = (c: Vec): Vec => ({ x: (c.x + 0.5) * CELL, y: (c.y + 0.5) * CELL });
 
-/** The route in pixels. */
-export const PATH_PX: Vec[] = PATH.map(cellToPx);
+/** A level's road, precomputed for fast lookups. Each level builds its own. */
+export type Route = {
+  px: Vec[];
+  segments: Seg[];
+  length: number;
+  castle: Vec; // pixel position of the castle at the end of the road
+};
 
-/** Cumulative length of the route, so enemies can be placed by distance travelled. */
-export const SEGMENTS = (() => {
-  const segs: { a: Vec; b: Vec; len: number; acc: number }[] = [];
+export function makeRoute(path: Vec[]): Route {
+  const px = path.map(cellToPx);
+  const segments: Seg[] = [];
   let acc = 0;
-  for (let i = 0; i < PATH_PX.length - 1; i++) {
-    const a = PATH_PX[i];
-    const b = PATH_PX[i + 1];
+  for (let i = 0; i < px.length - 1; i++) {
+    const a = px[i];
+    const b = px[i + 1];
     const len = Math.hypot(b.x - a.x, b.y - a.y);
-    segs.push({ a, b, len, acc });
+    segments.push({ a, b, len, acc });
     acc += len;
   }
-  return segs;
-})();
+  return { px, segments, length: acc, castle: px[px.length - 1] };
+}
 
-export const PATH_LENGTH = SEGMENTS.reduce((s, seg) => s + seg.len, 0);
-
-/** Position along the route at a given distance. Clamps at both ends. */
-export function pointAt(dist: number): Vec {
-  if (dist <= 0) return PATH_PX[0];
-  if (dist >= PATH_LENGTH) return PATH_PX[PATH_PX.length - 1];
-  for (const s of SEGMENTS) {
+/** Position along the road at a given distance. Clamps at both ends. */
+export function pointAt(route: Route, dist: number): Vec {
+  if (dist <= 0) return route.px[0];
+  if (dist >= route.length) return route.px[route.px.length - 1];
+  for (const s of route.segments) {
     if (dist <= s.acc + s.len) {
       const t = (dist - s.acc) / s.len;
       return { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t };
     }
   }
-  return PATH_PX[PATH_PX.length - 1];
-}
-
-/** Heading (radians) along the route at a given distance. */
-export function angleAt(dist: number): number {
-  const d = Math.max(0, Math.min(PATH_LENGTH - 0.01, dist));
-  for (const s of SEGMENTS) {
-    if (d <= s.acc + s.len) return Math.atan2(s.b.y - s.a.y, s.b.x - s.a.x);
-  }
-  const last = SEGMENTS[SEGMENTS.length - 1];
-  return Math.atan2(last.b.y - last.a.y, last.b.x - last.a.x);
+  return route.px[route.px.length - 1];
 }
 
 /** Shortest distance from a point to a segment. */
@@ -59,16 +53,13 @@ function distToSeg(p: Vec, a: Vec, b: Vec): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-/**
- * Cells the road runs through (plus a margin) — you can't build on these.
- * Returns a Set of "col,row" keys.
- */
-export function blockedCells(): Set<string> {
+/** Cells the road runs through (plus a margin) — you can't build on these. */
+export function blockedCells(route: Route): Set<string> {
   const blocked = new Set<string>();
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const centre = { x: (c + 0.5) * CELL, y: (r + 0.5) * CELL };
-      for (const s of SEGMENTS) {
+      for (const s of route.segments) {
         if (distToSeg(centre, s.a, s.b) < CELL * 0.72) {
           blocked.add(`${c},${r}`);
           break;
@@ -96,7 +87,7 @@ export function applyArmor(damage: number, armor: number, pierce = false): numbe
 }
 
 /**
- * Target selection: the enemy furthest along the route that is in range and
+ * Target selection: the enemy furthest along the road that is in range and
  * targetable by this tower. Classic "first" targeting — it protects the castle.
  */
 export function pickTarget<T extends { x: number; y: number; dist: number; flying?: boolean; dead?: boolean }>(
@@ -114,4 +105,33 @@ export function pickTarget<T extends { x: number; y: number; dist: number; flyin
     if (!best || e.dist > best.dist) best = e;
   }
   return best;
+}
+
+/** Nearest other enemies for a chain-lightning jump. */
+export function chainTargets<T extends { id: number; x: number; y: number; dead?: boolean }>(
+  from: T,
+  enemies: T[],
+  jumps: number,
+  radius: number
+): T[] {
+  const out: T[] = [];
+  const used = new Set<number>([from.id]);
+  let cur = from;
+  for (let i = 0; i < jumps; i++) {
+    let best: T | null = null;
+    let bestD = Infinity;
+    for (const e of enemies) {
+      if (e.dead || used.has(e.id)) continue;
+      const d = Math.hypot(e.x - cur.x, e.y - cur.y);
+      if (d <= radius && d < bestD) {
+        best = e;
+        bestD = d;
+      }
+    }
+    if (!best) break;
+    out.push(best);
+    used.add(best.id);
+    cur = best;
+  }
+  return out;
 }

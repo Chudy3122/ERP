@@ -16,6 +16,8 @@ type GameDef = {
   Component: ComponentType;
   /** Needs a roomier modal than the arcade games. */
   wide?: boolean;
+  /** Swaps the modal chrome for a medieval-RPG look. */
+  medieval?: boolean;
 };
 
 /** Every game keeps its own leaderboard — keyed by `id` on the backend. */
@@ -59,11 +61,12 @@ const SECRET_GAMES: GameDef[] = [
   {
     id: 'td',
     name: 'Obrona Zamku',
-    tagline: 'Tower defense: stawiaj wieże, ulepszaj je i odeprzyj 20 fal najeźdźców.',
+    tagline: 'Tower defense: 5 rozdziałów, każdy z inną drogą. Odblokuj 6 wież i broń zamku.',
     icon: Castle,
     gradient: 'from-[#7C3AED] to-[#F7941D]',
     Component: TowerDefenseGame,
     wide: true,
+    medieval: true,
   },
 ];
 
@@ -99,6 +102,7 @@ export default function GameModal({ onClose }: GameModalProps) {
   }, [selected, secretOpen]);
 
   const Selected = selected?.Component;
+  const medieval = !!selected?.medieval;
 
   // The backdrop deliberately has no click-to-close: the mouse leaves the canvas
   // constantly while playing, and a stray click would quit the game mid-run.
@@ -106,14 +110,20 @@ export default function GameModal({ onClose }: GameModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
       <div
-        className={`w-full overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10 ${
+        className={`w-full overflow-hidden shadow-2xl ${
           selected?.wide ? 'max-w-5xl' : 'max-w-3xl'
+        } ${
+          medieval
+            ? 'rounded-lg border-4 border-[#5A4028] bg-[#EFDDB8] ring-2 ring-[#C9A227]/50'
+            : 'rounded-2xl bg-white ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10'
         }`}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between bg-gradient-to-r px-5 py-3.5 ${
-            selected ? selected.gradient : 'from-[#F7941D] to-[#FBB040]'
+          className={`flex items-center justify-between px-5 py-3.5 ${
+            medieval
+              ? 'border-b-4 border-[#C9A227]/60 bg-gradient-to-b from-[#6B4E32] to-[#4A3728]'
+              : `bg-gradient-to-r ${selected ? selected.gradient : 'from-[#F7941D] to-[#FBB040]'}`
           }`}
         >
           <div className="flex min-w-0 items-center gap-2">
@@ -121,24 +131,36 @@ export default function GameModal({ onClose }: GameModalProps) {
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="-ml-1.5 rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+                className={`-ml-1.5 rounded-lg p-1.5 transition-colors ${
+                  medieval ? 'text-[#D8C49A] hover:bg-[#C9A227]/25 hover:text-[#F3E3C3]' : 'text-white/80 hover:bg-white/20 hover:text-white'
+                }`}
                 aria-label="Wróć do listy gier"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
             )}
-            <h2 className="flex min-w-0 items-center gap-2 text-lg font-bold text-white drop-shadow-sm">
-              <Gamepad2 className="h-5 w-5 shrink-0" />
+            <h2
+              className={`flex min-w-0 items-center gap-2 text-lg font-bold drop-shadow-sm ${
+                medieval ? 'font-serif text-[#F3E3C3]' : 'text-white'
+              }`}
+            >
+              {medieval ? <Castle className="h-5 w-5 shrink-0 text-[#C9A227]" /> : <Gamepad2 className="h-5 w-5 shrink-0" />}
               <span className="truncate">{selected ? selected.name : 'Gry'}</span>
-              <span className="ml-1 shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-semibold tracking-wide">
-                ARCADE
+              <span
+                className={`ml-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide ${
+                  medieval ? 'border border-[#C9A227]/60 bg-[#C9A227]/20 text-[#E8C766]' : 'bg-white/25'
+                }`}
+              >
+                {medieval ? 'KRONIKA' : 'ARCADE'}
               </span>
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+            className={`rounded-lg p-1.5 transition-colors ${
+              medieval ? 'text-[#D8C49A] hover:bg-[#C9A227]/25 hover:text-[#F3E3C3]' : 'text-white/80 hover:bg-white/20 hover:text-white'
+            }`}
             aria-label="Zamknij"
           >
             <X className="h-5 w-5" />
@@ -147,7 +169,7 @@ export default function GameModal({ onClose }: GameModalProps) {
 
         {/* Body */}
         {Selected ? (
-          <div className="p-5">
+          <div className={`p-5 ${medieval ? 'bg-gradient-to-b from-[#EFDDB8] to-[#E2CB9F]' : ''}`}>
             <Selected />
           </div>
         ) : (
