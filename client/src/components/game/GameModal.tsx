@@ -1,9 +1,10 @@
 import { useEffect, useState, type ComponentType } from 'react';
-import { X, Gamepad2, ChevronLeft, Zap, LayoutGrid, Target, Trophy } from 'lucide-react';
+import { X, Gamepad2, ChevronLeft, Zap, LayoutGrid, Target, Apple, Trophy } from 'lucide-react';
 import * as gameApi from '../../api/game.api';
 import DodgeGame from './games/DodgeGame';
 import TetrisGame from './games/TetrisGame';
 import BreakerGame from './games/BreakerGame';
+import SnakeGame from './games/SnakeGame';
 
 type GameDef = {
   id: string;
@@ -39,6 +40,14 @@ const GAMES: GameDef[] = [
     icon: Target,
     gradient: 'from-[#10B981] to-[#84CC16]',
     Component: BreakerGame,
+  },
+  {
+    id: 'snake',
+    name: 'Snake',
+    tagline: 'Zbieraj jabłka, rośnij i nie wjedź w siebie. Złote dają +50.',
+    icon: Apple,
+    gradient: 'from-[#F43F5E] to-[#FB923C]',
+    Component: SnakeGame,
   },
 ];
 
