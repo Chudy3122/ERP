@@ -1076,6 +1076,20 @@ export default function TowerDefenseGame() {
     restMsRef.current = 5000;
   };
 
+  /** Restart the current chapter from scratch (fresh towers, gold and castle HP). */
+  const restartChapter = () => {
+    const lvl = levelRef.current;
+    prepareLevel(lvl, startGoldFor(lvl) + perksRef.current.startGold);
+    hpRef.current = START_HP + perksRef.current.castleHp;
+    setHp(hpRef.current);
+    hpLostRef.current = 0;
+    setEarned(null);
+    shakeRef.current = 0;
+    flashRef.current = { a: 0, color: '255,255,255' };
+    statusRef.current = 'brief';
+    setStatus('brief');
+  };
+
   const startCampaign = (from: number) => {
     perksRef.current = perksFrom(meta.perks); // lock in whatever the tree grants now
     scoreRef.current = 0;
@@ -1456,6 +1470,18 @@ export default function TowerDefenseGame() {
               Wyślij falę {wave + 1} teraz
             </button>
           )}
+
+          <div className="mt-auto pt-1">
+            <button
+              type="button"
+              disabled={status !== 'playing'}
+              onClick={restartChapter}
+              className={`${woodBtn} flex w-full items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold`}
+              title="Zacznij ten rozdział od nowa"
+            >
+              <RotateCcw className="h-3 w-3" /> Restart rozdziału
+            </button>
+          </div>
         </aside>
 
         <Bestiary level={bestiaryLevel} />

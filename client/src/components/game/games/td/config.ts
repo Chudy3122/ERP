@@ -178,7 +178,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   shaman: { kind: 'shaman', name: 'Żuk-znachor', desc: 'Leczy wszystko wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#0891B2', dark: '#155E75', heals: 12, leak: 2 },
   golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 14, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', leak: 3 },
   wraith: { kind: 'wraith', name: 'Szarańcza', desc: 'Po śmierci rozpada się na dwa motyle. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#16A34A', dark: '#14532D', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
-  boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją.', hp: 1300, speed: 32, armor: 10, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', leak: 5 },
+  boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją. Pojawia się dopiero od 10. fali.', hp: 1050, speed: 32, armor: 8, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', leak: 4 },
 };
 
 // ---------------- Levels ----------------
@@ -384,7 +384,9 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
   // so wave 1 is a warm-up rather than a full-strength assault.
   const scale = (base: number) => Math.round(base * (0.55 + t * 1.65) + over * 2.5);
 
-  const bossWave = (has('boss') && n % 5 === 0) || (endless && n % 3 === 0);
+  // First boss only from wave 10, then every 5th — early waves must stay winnable.
+  // Also gated on has('boss') so an endless chapter without a boss never spawns one.
+  const bossWave = has('boss') && ((n >= 10 && n % 5 === 0) || (endless && n % 3 === 0));
   if (bossWave) {
     groups.push({ kind: 'boss', count: 1 + Math.floor(over / 4), gap: 2400 });
   }

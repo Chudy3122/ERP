@@ -54,7 +54,7 @@ type EnemyArt = { img: string; frame: number; frames: number; scale: number; she
 export const ENEMY_ART: Record<EnemyKind, EnemyArt> = {
   peasant: { img: 'e_leafbug', frame: 64, frames: 8, scale: 0.82, sheetW: 512, sheetH: 576 },
   soldier: { img: 'e_scorpion', frame: 64, frames: 8, scale: 0.86, sheetW: 512, sheetH: 576 },
-  cavalry: { img: 'e_firebug', frame: 64, frames: 16, scale: 0.9, sheetW: 1408, sheetH: 576 },
+  cavalry: { img: 'e_firebug', frame: 64, frames: 8, scale: 0.95, sheetW: 704, sheetH: 576 },
   raven: { img: 'e_butterfly', frame: 64, frames: 4, scale: 0.82, sheetW: 832, sheetH: 576 },
   brute: { img: 'e_crab', frame: 64, frames: 8, scale: 1.1, sheetW: 640, sheetH: 576 },
   shaman: { img: 'e_beetle', frame: 64, frames: 8, scale: 0.9, sheetW: 832, sheetH: 576 },
