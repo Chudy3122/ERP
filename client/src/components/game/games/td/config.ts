@@ -142,7 +142,7 @@ export const TOWER_ORDER: TowerKind[] = ['archer', 'catapult', 'mage', 'ballista
 export const SELL_RATE = 0.55;
 
 // ---------------- Enemies ----------------
-export type EnemyKind = 'peasant' | 'soldier' | 'cavalry' | 'raven' | 'brute' | 'shaman' | 'golem' | 'wraith' | 'boss';
+export type EnemyKind = 'peasant' | 'soldier' | 'cavalry' | 'raven' | 'brute' | 'shaman' | 'golem' | 'wraith' | 'spider' | 'necro' | 'slime' | 'boss';
 
 export type EnemyDef = {
   kind: EnemyKind;
@@ -155,7 +155,9 @@ export type EnemyDef = {
   gold: number;
   points: number;
   flying?: boolean;
-  heals?: number;    // HP per second restored to nearby allies
+  heals?: number;      // HP per second restored to nearby allies
+  armorAura?: number;  // flat armour granted to nearby allies
+  regen?: number;      // HP per second it restores to itself
   /** Dies into this many smaller copies — Bloons-style. */
   splitsInto?: { kind: EnemyKind; count: number };
   radius: number;
@@ -177,7 +179,10 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   brute: { kind: 'brute', name: 'Ogr', desc: 'Powolny worek na strzały. Smoła pali go mimo pancerza.', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#65A30D', dark: '#3F6212', leak: 3 },
   shaman: { kind: 'shaman', name: 'Szaman', desc: 'Leczy wszystkich wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#7E22CE', dark: '#4C1D95', heals: 12, leak: 2 },
   golem: { kind: 'golem', name: 'Golem', desc: 'Kamienna skorupa. Bez balisty albo smoły nawet go nie zadrapiesz.', hp: 520, speed: 22, armor: 14, gold: 45, points: 90, radius: 15, color: '#78716C', dark: '#44403C', leak: 3 },
-  wraith: { kind: 'wraith', name: 'Cień', desc: 'Po śmierci rozpada się na dwa kruki. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#6D28D9', dark: '#3B0764', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
+  wraith: { kind: 'wraith', name: 'Cień', desc: 'Po śmierci rozpada się na dwie zjawy. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#6D28D9', dark: '#3B0764', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
+  spider: { kind: 'spider', name: 'Pająk', desc: 'Pojedynczo słaby, ale mknie w wielkiej zgrai. Trzeba szybkostrzelnych wież.', hp: 46, speed: 128, armor: 0, gold: 6, points: 15, radius: 8, color: '#3F3F46', dark: '#18181B', leak: 1 },
+  necro: { kind: 'necro', name: 'Nekromanta', desc: 'Otacza sojuszników klątwą — dodaje im pancerza. Zabij go najpierw.', hp: 170, speed: 42, armor: 4, gold: 30, points: 70, radius: 11, color: '#7C3AED', dark: '#4C1D95', armorAura: 5, leak: 2 },
+  slime: { kind: 'slime', name: 'Szlam', desc: 'Regeneruje się w oczach. Musisz go zabić szybkim, skupionym ogniem.', hp: 240, speed: 40, armor: 2, gold: 24, points: 55, radius: 12, color: '#22C55E', dark: '#166534', regen: 18, leak: 2 },
   boss: { kind: 'boss', name: 'Czarny Rycerz', desc: 'Ciężka zbroja i potężny cios. Skup na nim balisty i zamroź go.', hp: 1300, speed: 32, armor: 10, gold: 110, points: 250, radius: 18, color: '#1F2937', dark: '#0F172A', leak: 5 },
 };
 
@@ -288,7 +293,7 @@ export const LEVELS: LevelDef[] = [
     waves: 12,
     hpMul: 3.1,
     armorAdd: 3,
-    pool: ['soldier', 'cavalry', 'raven', 'brute', 'boss'],
+    pool: ['soldier', 'cavalry', 'raven', 'brute', 'spider', 'boss'],
     frostResist: 0.6,
   },
   {
@@ -315,7 +320,7 @@ export const LEVELS: LevelDef[] = [
     waves: 14,
     hpMul: 3.8,
     armorAdd: 5,
-    pool: ['cavalry', 'raven', 'brute', 'golem', 'shaman', 'boss'],
+    pool: ['cavalry', 'raven', 'brute', 'golem', 'shaman', 'necro', 'boss'],
     fireResist: 0.55,
   },
   {
@@ -327,7 +332,7 @@ export const LEVELS: LevelDef[] = [
     decor: ['pineL', 'pineS', 'treeB', 'rockM', 'bush'],
     decorDensity: 0.4,
     waves: 14,
-    hpMul: 4.6,
+    hpMul: 5.1,
     armorAdd: 6,
     pool: ['cavalry', 'raven', 'wraith', 'brute', 'shaman', 'boss'],
     fog: 0.85,
@@ -343,7 +348,7 @@ export const LEVELS: LevelDef[] = [
     waves: 15,
     hpMul: 4.8,
     armorAdd: 7,
-    pool: ['cavalry', 'raven', 'wraith', 'brute', 'golem', 'shaman', 'boss'],
+    pool: ['cavalry', 'raven', 'wraith', 'brute', 'golem', 'shaman', 'necro', 'slime', 'spider', 'boss'],
     fog: 0.92,
   },
 ];
@@ -384,13 +389,23 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
   // so wave 1 is a warm-up rather than a full-strength assault.
   const scale = (base: number) => Math.round(base * (0.55 + t * 1.65) + over * 2.5);
 
-  const bossWave = (has('boss') && n % 5 === 0) || (endless && n % 3 === 0);
+  const bossWave = has('boss') && (n % 5 === 0 || (endless && n % 3 === 0));
   if (bossWave) {
     groups.push({ kind: 'boss', count: 1 + Math.floor(over / 4), gap: 2400 });
   }
 
+  if (has('necro') && (t > 0.35 || endless)) {
+    groups.push({ kind: 'necro', count: Math.max(1, Math.round(1 + t * 2 + over)), gap: 1600 });
+  }
+  if (has('slime') && (t > 0.3 || endless)) {
+    groups.push({ kind: 'slime', count: Math.max(1, Math.round(2 + t * 3 + over)), gap: 1200 });
+  }
   if (has('golem') && (t > 0.3 || endless)) {
     groups.push({ kind: 'golem', count: Math.max(1, Math.round(1 + t * 3 + over)), gap: 1500 });
+  }
+  if (has('spider') && (t > 0.1 || endless)) {
+    // a fast swarm — many, close together
+    groups.push({ kind: 'spider', count: Math.max(4, scale(8)), gap: 240 });
   }
   if (has('wraith') && (t > 0.2 || endless)) {
     groups.push({ kind: 'wraith', count: Math.max(2, scale(3)), gap: 700 });

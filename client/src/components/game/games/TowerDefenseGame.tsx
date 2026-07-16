@@ -25,7 +25,7 @@ const PROGRESS_KEY = 'td_progress_v1';
 type Status = 'idle' | 'brief' | 'playing' | 'levelDone' | 'over';
 
 type Tower = { id: number; c: number; r: number; x: number; y: number; kind: TowerKind; level: number; cd: number; angle: number; invested: number; recoil: number };
-type Enemy = { id: number; kind: EnemyKind; hp: number; maxHp: number; dist: number; x: number; y: number; speed: number; armor: number; flying?: boolean; heals?: number; radius: number; slowMs: number; slowFactor: number; frozenMs: number; burnMs: number; burnDps: number; dead: boolean; hitFlash: number; wobble: number };
+type Enemy = { id: number; kind: EnemyKind; hp: number; maxHp: number; dist: number; x: number; y: number; speed: number; armor: number; bonusArmor: number; flying?: boolean; heals?: number; armorAura?: number; regen?: number; radius: number; slowMs: number; slowFactor: number; frozenMs: number; burnMs: number; burnDps: number; dead: boolean; hitFlash: number; wobble: number };
 type Shot = { x: number; y: number; tx: number; ty: number; t: number; dur: number; kind: TowerKind; damage: number; targetId: number };
 type Bolt = { pts: { x: number; y: number }[]; life: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string };
@@ -238,8 +238,11 @@ export default function TowerDefenseGame() {
       dist: 0, x: p.x, y: p.y,
       speed: d.speed,
       armor: d.armor + s.armorAdd,
+      bonusArmor: 0,
       flying: d.flying,
       heals: d.heals,
+      armorAura: d.armorAura,
+      regen: d.regen,
       radius: d.radius,
       slowMs: 0, slowFactor: 1, frozenMs: 0,
       burnMs: 0, burnDps: 0,
@@ -294,8 +297,11 @@ export default function TowerDefenseGame() {
         dist, x: p.x, y: p.y,
         speed: child.speed,
         armor: child.armor + s.armorAdd,
+        bonusArmor: 0,
         flying: child.flying,
         heals: child.heals,
+        armorAura: child.armorAura,
+        regen: child.regen,
         radius: child.radius,
         slowMs: 0, slowFactor: 1, frozenMs: 0,
         burnMs: 0, burnDps: 0,
@@ -308,7 +314,7 @@ export default function TowerDefenseGame() {
 
   const damageEnemy = (e: Enemy, dmg: number, pierce: boolean) => {
     if (e.dead) return;
-    e.hp -= applyArmor(dmg, e.armor, pierce);
+    e.hp -= applyArmor(dmg, e.armor + e.bonusArmor, pierce);
     e.hitFlash = 1;
     if (e.hp <= 0) {
       e.dead = true;
@@ -461,6 +467,8 @@ export default function TowerDefenseGame() {
             }
           }
           if (e.hitFlash > 0) e.hitFlash -= rawMs / 200;
+          e.bonusArmor = 0; // recomputed each tick from nearby necromancers
+          if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.regen * dt);
           const mult = e.frozenMs > 0 ? 0 : e.slowFactor;
           e.dist += e.speed * mult * dt;
           e.wobble += dt * 9;
@@ -484,14 +492,14 @@ export default function TowerDefenseGame() {
           }
         }
 
-        // shamans heal nearby allies — punishes leaving them alive
+        // support enemies buff those around them — punishes ignoring them
         for (const s of enemies.current) {
-          if (s.dead || !s.heals) continue;
+          if (s.dead || (!s.heals && !s.armorAura)) continue;
           for (const e of enemies.current) {
             if (e.dead || e.id === s.id) continue;
-            if (Math.hypot(e.x - s.x, e.y - s.y) < 70 && e.hp < e.maxHp) {
-              e.hp = Math.min(e.maxHp, e.hp + s.heals * dt);
-            }
+            if (Math.hypot(e.x - s.x, e.y - s.y) >= 72) continue;
+            if (s.heals && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + s.heals * dt);
+            if (s.armorAura) e.bonusArmor = Math.max(e.bonusArmor, s.armorAura);
           }
         }
 
@@ -587,15 +595,19 @@ export default function TowerDefenseGame() {
 
   // ---------- drawing ----------
   /** Which pack sprite (and how big) stands in for each enemy. */
-  const ENEMY_SPRITE: Partial<Record<EnemyKind, { key: SpriteKey; size: number }>> = {
+  const ENEMY_SPRITE: Record<EnemyKind, { key: SpriteKey; size: number }> = {
     peasant: { key: 'unitPeasant', size: 30 },
     soldier: { key: 'unitKnight', size: 32 },
     cavalry: { key: 'unitSpear', size: 32 },
+    raven: { key: 'unitGhost', size: 30 },
     shaman: { key: 'unitRobe', size: 32 },
     brute: { key: 'unitShield', size: 44 },
-    golem: { key: 'unitShield', size: 48 },
-    wraith: { key: 'unitRobe', size: 34 },
-    boss: { key: 'unitKnightRed', size: 54 },
+    golem: { key: 'unitGolem', size: 48 },
+    wraith: { key: 'unitDemon', size: 34 },
+    spider: { key: 'unitSpider', size: 28 },
+    necro: { key: 'unitWizard', size: 34 },
+    slime: { key: 'unitSlime', size: 36 },
+    boss: { key: 'unitKnightRed', size: 56 },
   };
 
   const drawEnemy = (ctx: CanvasRenderingContext2D, e: Enemy) => {
@@ -638,25 +650,15 @@ export default function TowerDefenseGame() {
       return;
     }
 
-    // The raven has no counterpart in the pack (no birds), so it stays hand-drawn.
-    const body = e.hitFlash > 0 ? '#ffffff' : d.color;
-    ctx.save();
-    ctx.translate(x, y);
-    const flap = Math.sin(e.wobble * 2) * 0.5;
+    // Fallback if the sheet failed to load: a simple coloured blob.
+    ctx.fillStyle = e.hitFlash > 0 ? '#ffffff' : d.color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = d.dark;
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.5, r * 0.7, 0, 0, Math.PI * 2);
+    ctx.arc(x, y - r * 0.3, r * 0.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = body;
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(0, -2);
-      ctx.quadraticCurveTo(s * r * 1.5, -6 + flap * 8, s * r * 1.7, 4 + flap * 5);
-      ctx.quadraticCurveTo(s * r * 0.8, 2, 0, 4);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
     drawEnemyOverlay(ctx, e, x, y, r);
   };
 
@@ -823,6 +825,7 @@ export default function TowerDefenseGame() {
     const L = LEVELS[levelRef.current];
     const route = routeRef.current;
 
+    ctx.imageSmoothingEnabled = false; // crisp pixel art
     ctx.save();
     if (shakeRef.current > 0.4) {
       const m = shakeRef.current;

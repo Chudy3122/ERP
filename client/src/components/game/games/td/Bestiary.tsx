@@ -1,4 +1,4 @@
-import { Feather, HeartPulse, Split, Shield, Wind, Snowflake, Flame, Eye } from 'lucide-react';
+import { Feather, HeartPulse, Split, Shield, Wind, Snowflake, Flame, Eye, ShieldPlus, RefreshCw } from 'lucide-react';
 import { ENEMIES, type EnemyKind, type LevelDef } from './config';
 import { SPRITES, spriteStyle, type SpriteKey } from './atlas';
 
@@ -7,10 +7,14 @@ const ICON: Partial<Record<EnemyKind, SpriteKey>> = {
   peasant: 'unitPeasant',
   soldier: 'unitKnight',
   cavalry: 'unitSpear',
+  raven: 'unitGhost',
   shaman: 'unitRobe',
   brute: 'unitShield',
-  golem: 'unitShield',
-  wraith: 'unitRobe',
+  golem: 'unitGolem',
+  wraith: 'unitDemon',
+  spider: 'unitSpider',
+  necro: 'unitWizard',
+  slime: 'unitSlime',
   boss: 'unitKnightRed',
 };
 
@@ -55,9 +59,11 @@ export default function Bestiary({ level }: { level: LevelDef }) {
           const tags: React.ReactNode[] = [];
           if (e.flying) tags.push(tag(<Feather className="h-2 w-2" />, 'lata', 'bg-sky-200 text-sky-900'));
           if (e.heals) tags.push(tag(<HeartPulse className="h-2 w-2" />, 'leczy', 'bg-purple-200 text-purple-900'));
+          if (e.armorAura) tags.push(tag(<ShieldPlus className="h-2 w-2" />, 'aura pancerza', 'bg-indigo-200 text-indigo-900'));
+          if (e.regen) tags.push(tag(<RefreshCw className="h-2 w-2" />, 'regeneruje', 'bg-emerald-200 text-emerald-900'));
           if (e.splitsInto) tags.push(tag(<Split className="h-2 w-2" />, 'dzieli się', 'bg-violet-200 text-violet-900'));
           if (e.armor >= 6) tags.push(tag(<Shield className="h-2 w-2" />, `pancerz ${e.armor}`, 'bg-slate-300 text-slate-900'));
-          if (e.speed >= 80) tags.push(tag(<Wind className="h-2 w-2" />, 'szybki', 'bg-amber-200 text-amber-900'));
+          if (e.speed >= 90) tags.push(tag(<Wind className="h-2 w-2" />, 'szybki', 'bg-amber-200 text-amber-900'));
 
           return (
             <div key={k} className="rounded border border-[#B49B6E] bg-[#F3E3C3] p-1.5">
