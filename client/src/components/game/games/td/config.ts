@@ -3,9 +3,9 @@ import type { SpriteKey } from './atlas';
 
 export const CELL = 40;
 export const COLS = 16;
-export const ROWS = 12;
+export const ROWS = 14;
 export const W = COLS * CELL; // 640
-export const H = ROWS * CELL; // 480
+export const H = ROWS * CELL; // 560
 
 export const START_GOLD = 320;
 export const START_HP = 20;

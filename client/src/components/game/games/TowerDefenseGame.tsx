@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, ArrowUp, Swords, Snowflake, Lock, ChevronRight, Scroll, Star } from 'lucide-react';
+import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, ArrowUp, Swords, Snowflake, Lock, ChevronRight, Scroll, Star, Crosshair, Bomb, Sparkles, Target, Flame, Zap, type LucideIcon } from 'lucide-react';
 import * as gameApi from '../../../api/game.api';
 import GameLeaderboard, { useLeaderboard } from '../GameLeaderboard';
 import ConfettiBurst from '../ConfettiBurst';
@@ -20,6 +20,16 @@ import SkillTree from './td/SkillTree';
 import Bestiary from './td/Bestiary';
 
 const GAME = 'td';
+
+/** Workshop icon per tower kind. */
+const TOWER_ICON: Record<TowerKind, LucideIcon> = {
+  archer: Crosshair,
+  catapult: Bomb,
+  mage: Sparkles,
+  ballista: Target,
+  oil: Flame,
+  tesla: Zap,
+};
 const PROGRESS_KEY = 'td_progress_v1';
 
 type Status = 'idle' | 'brief' | 'playing' | 'levelDone' | 'over';
@@ -142,9 +152,11 @@ export default function TowerDefenseGame() {
       for (let c = 0; c < COLS; c++) {
         if (blocked.current.has(cellKey(c, r))) continue;
         if (Math.abs(c - castleCell.x) < 2 && Math.abs(r - castleCell.y) < 2) continue;
-        if (Math.random() < L.decorDensity) {
+        // lighter scatter than the raw density — the map was too cluttered,
+        // and obstacles can now be cleared for gold so fewer is better.
+        if (Math.random() < L.decorDensity * 0.5) {
           const roll = Math.random();
-          out.push({ c, r, art: roll < 0.5 ? 'dec_tree' : roll < 0.75 ? 'dec_rock' : 'dec_rock2' });
+          out.push({ c, r, art: roll < 0.55 ? 'dec_tree' : roll < 0.8 ? 'dec_rock' : 'dec_rock2' });
         }
       }
     }
@@ -321,6 +333,25 @@ export default function TowerDefenseGame() {
   };
 
   // ---------- actions ----------
+  /** Clear a tree/rock for gold so the cell becomes buildable. Returns true if the cell had one. */
+  const CLEAR_COST = 45;
+  const tryClearObstacle = (c: number, r: number): boolean => {
+    const i = decor.current.findIndex((d) => d.c === c && d.r === r);
+    if (i < 0) return false;
+    const px = cellToPx({ x: c, y: r });
+    if (goldRef.current < CLEAR_COST) {
+      popup(px.x, px.y, `Karczowanie: ${CLEAR_COST} zł`, '#EF4444', 11);
+      return true;
+    }
+    goldRef.current -= CLEAR_COST;
+    setGold(goldRef.current);
+    decor.current.splice(i, 1);
+    occupied.current.delete(cellKey(c, r));
+    puff(px.x, px.y, '#A16207', 12, 3);
+    popup(px.x, px.y, `-${CLEAR_COST}`, '#CA8A04', 12);
+    return true;
+  };
+
   const tryBuild = (c: number, r: number) => {
     const kind = buildRef.current;
     if (!kind) return;
@@ -664,7 +695,7 @@ export default function TowerDefenseGame() {
 
     // stone platform sprite (carries its own shadow and I/II/III level mark)
     if (images) {
-      drawTowerBase(ctx, images, t.kind, lvl, t.x, t.y, CELL * 1.15);
+      drawTowerBase(ctx, images, t.kind, lvl, t.x, t.y, CELL * 0.92);
     } else {
       ctx.fillStyle = '#9CA3AF';
       ctx.beginPath();
@@ -828,6 +859,23 @@ export default function TowerDefenseGame() {
         ctx.stroke();
         ctx.setLineDash([]);
       }
+    } else if (hov && !aimingRef.current && decor.current.some((d) => d.c === hov.c && d.r === hov.r)) {
+      // hovering an obstacle — hint that a click clears it for gold
+      ctx.fillStyle = 'rgba(202,138,4,0.3)';
+      ctx.fillRect(hov.c * CELL, hov.r * CELL, CELL, CELL);
+      ctx.strokeStyle = 'rgba(202,138,4,0.9)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(hov.c * CELL + 1, hov.r * CELL + 1, CELL - 2, CELL - 2);
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.lineWidth = 3;
+      ctx.font = 'bold 11px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const label = `${CLEAR_COST} zł`;
+      const ly = hov.r * CELL - 4;
+      ctx.strokeText(label, (hov.c + 0.5) * CELL, ly);
+      ctx.fillText(label, (hov.c + 0.5) * CELL, ly);
     }
 
     const sel = towers.current.find((t) => t.id === selectedRef.current);
@@ -972,6 +1020,8 @@ export default function TowerDefenseGame() {
       castArrows((cell.c + 0.5) * CELL, (cell.r + 0.5) * CELL);
       return;
     }
+    // A tree/rock on the cell? Clicking clears it for gold (whether or not you're building).
+    if (tryClearObstacle(cell.c, cell.r)) return;
     if (buildRef.current) {
       tryBuild(cell.c, cell.r);
       return;
@@ -1283,8 +1333,8 @@ export default function TowerDefenseGame() {
                   } ${isUnlocked && !afford ? 'opacity-60' : ''}`}
                   title={isUnlocked ? d.desc : `Odblokujesz po zdobyciu: ${lockedBy?.name ?? '—'}`}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded" style={{ backgroundColor: isUnlocked ? d.color : '#9A8A6B' }}>
-                    {isUnlocked ? <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.accent }} /> : <Lock className="h-3 w-3 text-[#E8DCC0]" />}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md shadow-inner" style={{ backgroundColor: isUnlocked ? d.color : '#9A8A6B' }}>
+                    {isUnlocked ? (() => { const Ic = TOWER_ICON[k]; return <Ic className="h-4 w-4" style={{ color: d.accent }} />; })() : <Lock className="h-3.5 w-3.5 text-[#E8DCC0]" />}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] font-bold text-[#3A2C1C]">{d.name}</span>

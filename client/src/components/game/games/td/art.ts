@@ -52,30 +52,31 @@ export function loadImages(): Promise<Images> {
 /** Per-creature sheet + walk-cycle metadata (row 3 is the move animation). */
 type EnemyArt = { img: string; frame: number; frames: number; scale: number; sheetW: number; sheetH: number };
 export const ENEMY_ART: Record<EnemyKind, EnemyArt> = {
-  peasant: { img: 'e_leafbug', frame: 64, frames: 8, scale: 0.62, sheetW: 512, sheetH: 576 },
-  soldier: { img: 'e_scorpion', frame: 64, frames: 8, scale: 0.68, sheetW: 512, sheetH: 576 },
-  cavalry: { img: 'e_firebug', frame: 64, frames: 16, scale: 0.66, sheetW: 1408, sheetH: 576 },
-  raven: { img: 'e_butterfly', frame: 64, frames: 4, scale: 0.6, sheetW: 832, sheetH: 576 },
-  brute: { img: 'e_crab', frame: 64, frames: 8, scale: 0.9, sheetW: 640, sheetH: 576 },
-  shaman: { img: 'e_beetle', frame: 64, frames: 8, scale: 0.7, sheetW: 832, sheetH: 576 },
-  golem: { img: 'e_wasp', frame: 96, frames: 8, scale: 0.7, sheetW: 1152, sheetH: 864 },
-  wraith: { img: 'e_locust', frame: 64, frames: 8, scale: 0.72, sheetW: 896, sheetH: 576 },
-  boss: { img: 'e_crab', frame: 64, frames: 8, scale: 1.5, sheetW: 640, sheetH: 576 },
+  peasant: { img: 'e_leafbug', frame: 64, frames: 8, scale: 0.82, sheetW: 512, sheetH: 576 },
+  soldier: { img: 'e_scorpion', frame: 64, frames: 8, scale: 0.86, sheetW: 512, sheetH: 576 },
+  cavalry: { img: 'e_firebug', frame: 64, frames: 16, scale: 0.9, sheetW: 1408, sheetH: 576 },
+  raven: { img: 'e_butterfly', frame: 64, frames: 4, scale: 0.82, sheetW: 832, sheetH: 576 },
+  brute: { img: 'e_crab', frame: 64, frames: 8, scale: 1.1, sheetW: 640, sheetH: 576 },
+  shaman: { img: 'e_beetle', frame: 64, frames: 8, scale: 0.9, sheetW: 832, sheetH: 576 },
+  golem: { img: 'e_wasp', frame: 96, frames: 8, scale: 0.95, sheetW: 1152, sheetH: 864 },
+  wraith: { img: 'e_locust', frame: 64, frames: 8, scale: 0.92, sheetW: 896, sheetH: 576 },
+  boss: { img: 'e_crab', frame: 64, frames: 8, scale: 1.9, sheetW: 640, sheetH: 576 },
 };
 
 const MOVE_ROW = 3;
 const ENEMY_FPS = 12;
 
-/** CSS that shows a single static walk frame of a creature — used by the bestiary. */
+/** CSS that shows a single clear walk frame of a creature — used by the bestiary. */
 export function enemyIconStyle(kind: EnemyKind, size: number) {
   const a = ENEMY_ART[kind];
   const scale = size / a.frame;
+  const col = Math.min(2, a.frames - 1); // frame 0 is often a mid-stride blank
   return {
     width: `${size}px`,
     height: `${size}px`,
     backgroundImage: `url(${BASE}${IMAGE_FILES[a.img]})`,
     backgroundSize: `${a.sheetW * scale}px ${a.sheetH * scale}px`,
-    backgroundPosition: `0px -${MOVE_ROW * a.frame * scale}px`,
+    backgroundPosition: `-${col * a.frame * scale}px -${MOVE_ROW * a.frame * scale}px`,
     imageRendering: 'pixelated' as const,
   };
 }
@@ -97,7 +98,7 @@ export function drawEnemyFrame(
   const img = images[art.img];
   if (!img) return false;
   const f = Math.floor(timeMs / (1000 / ENEMY_FPS)) % art.frames;
-  const draw = sizeHint * 2.6 * art.scale;
+  const draw = sizeHint * 2.9 * art.scale;
   ctx.drawImage(
     img,
     f * art.frame,
