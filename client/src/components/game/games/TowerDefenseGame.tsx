@@ -8,7 +8,7 @@ import {
   CELL, COLS, ROWS, W, H, START_GOLD, START_HP,
   TOWERS, TOWER_ORDER, SELL_RATE, ENEMIES, LEVELS, waveFor, enemyScale,
   waveClearGold, WAVE_CLEAR_POINTS, LEVEL_CLEAR_POINTS, CARRY_GOLD_RATE, LEVEL_START_BONUS,
-  ABILITIES, unlockedAfter, isEndless,
+  ABILITIES, unlockedAfter, isEndless, startGoldFor,
   type TowerKind, type EnemyKind,
 } from './td/config';
 import {
@@ -955,7 +955,9 @@ export default function TowerDefenseGame() {
   };
 
   /** Set up a level's board without starting the fighting. */
-  const prepareLevel = useCallback((lvl: number, carryGold: number) => {
+  const prepareLevel = useCallback((lvl: number, carriedGold: number) => {
+    // Never open a chapter below the buying power it was balanced for.
+    const carryGold = Math.max(carriedGold, startGoldFor(lvl));
     levelRef.current = lvl;
     setLevel(lvl);
     routeRef.current = makeRoute(LEVELS[lvl].path);
@@ -1005,7 +1007,7 @@ export default function TowerDefenseGame() {
     setLastResult(null);
     setShowConfetti(false);
     setJustUnlocked(null);
-    prepareLevel(from, START_GOLD);
+    prepareLevel(from, startGoldFor(from));
     statusRef.current = 'brief';
     setStatus('brief');
   };

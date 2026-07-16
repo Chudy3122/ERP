@@ -10,6 +10,16 @@ export const H = ROWS * CELL; // 480
 export const START_GOLD = 320;
 export const START_HP = 20;
 
+/**
+ * Starting gold scales with how tough the chapter's enemies are, so jumping
+ * straight into chapter 5 gives you the buying power that chapter demands —
+ * otherwise you arrive with chapter-1 pocket money against 2.7x HP enemies.
+ * Used as a floor for campaign carry-over too, so difficulty doesn't depend on
+ * how you entered the chapter.
+ */
+export const startGoldFor = (levelIdx: number) =>
+  Math.round(START_GOLD * (LEVELS[levelIdx]?.hpMul ?? 1));
+
 // ---------------- Towers ----------------
 export type TowerKind = 'archer' | 'catapult' | 'mage' | 'ballista' | 'oil' | 'tesla';
 
