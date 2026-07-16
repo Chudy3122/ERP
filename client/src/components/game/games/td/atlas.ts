@@ -1,65 +1,74 @@
 /**
- * Sprite atlas for Tower Defense.
+ * Sprite atlas for the Kenney "Medieval RTS" tilesheet (CC0 / public domain).
+ * Source: https://kenney.nl/assets/medieval-rts — see medieval_tilesheet_LICENSE.txt
  *
- * A single combined sheet built from two CC0 (public-domain) Kenney packs:
- *   - Tiny Town   (terrain, trees, buildings, castle) at x 0..191
- *   - Tiny Dungeon (monsters) at x 192..383
- * See tiny_LICENSE.txt. Both are 16x16 pixel art, packed with no spacing.
+ * The sheet is a regular grid: 64x64 tiles, 32px margin around the sheet and
+ * 32px spacing between tiles, so a tile at (col,row) sits at
+ *   x = 32 + col * 96,  y = 32 + row * 96
  */
-export const SHEET_URL = '/games/td_tiny.png';
-export const TILE_SRC = 16;
-export const SHEET_W = 384;
-export const SHEET_H = 176;
+export const SHEET_URL = '/games/medieval_tilesheet.png';
+export const TILE_SRC = 64;
+export const SHEET_W = 1760;
+export const SHEET_H = 704;
 
-const tt = (col: number, row: number) => ({ sx: col * 16, sy: row * 16 });
-const td = (col: number, row: number) => ({ sx: 192 + col * 16, sy: row * 16 });
+/** CSS background rules that show a single tile as an HTML icon. */
+export function spriteStyle(sx: number, sy: number, size: number) {
+  const scale = size / TILE_SRC;
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    backgroundImage: `url(${SHEET_URL})`,
+    backgroundSize: `${SHEET_W * scale}px ${SHEET_H * scale}px`,
+    backgroundPosition: `-${sx * scale}px -${sy * scale}px`,
+    imageRendering: 'auto' as const,
+  };
+}
+
+const at = (col: number, row: number) => ({ sx: 32 + col * 96, sy: 32 + row * 96 });
 
 export const SPRITES = {
-  // --- terrain (Tiny Town) ---
-  grass: tt(0, 0),
-  grassAlt: tt(1, 0),
-  flower: tt(2, 0),
-  sand: tt(0, 1),
-  dirt: tt(1, 1),
-  stone: tt(7, 3),
-  water: tt(4, 3),
+  grass: at(0, 0),
+  grassAlt: at(1, 0),
+  sand: at(2, 0),
+  dirt: at(0, 1),
+  stone: at(2, 1),
+  water: at(0, 2),
 
-  // --- decor ---
-  treeA: tt(4, 0),
-  treeB: tt(3, 0),
-  pineS: tt(6, 0),
-  pineL: tt(6, 0),
-  bush: tt(5, 0),
-  rockS: td(0, 1),
-  rockM: td(0, 2),
-  rockL: td(0, 2),
+  treeA: at(4, 3),
+  treeB: at(5, 3),
+  pineS: at(6, 3),
+  pineL: at(7, 3),
 
-  // --- tower buildings (the weapon on top is drawn in code) ---
-  bldTower: tt(0, 6),    // brown wall — archers
-  bldWorkshop: tt(2, 6), // brown arch — catapult
-  bldChapel: tt(0, 4),   // blue roof — mages
-  bldKeep: tt(4, 7),     // grey door — ballista
-  bldForge: tt(4, 4),    // red roof — oil cauldron
-  bldWall: tt(0, 5),     // blue brick — storm tower
-  castle: tt(4, 10),     // stone gate — the player's keep
+  rockS: at(5, 4),
+  rockM: at(6, 4),
+  rockL: at(7, 4),
+  bush: at(10, 4),
 
-  // --- enemies (Tiny Dungeon) ---
-  unitPeasant: td(1, 7),   // villager
-  unitKnight: td(0, 8),    // armoured knight
-  unitSpear: td(4, 9),     // green ranger (cavalry)
-  unitRobe: td(3, 9),      // dark druid (shaman)
-  unitShield: td(1, 9),    // orc (ogre)
-  unitGolem: td(4, 8),     // heavy plate (golem)
-  unitKnightRed: td(3, 7), // plumed knight (boss)
-  unitGhost: td(1, 10),    // ghost (flyer)
-  unitSpider: td(0, 10),   // spider (swarm)
-  unitWizard: td(0, 7),    // wizard (necromancer)
-  unitDemon: td(2, 9),     // red demon (wraith)
-  unitSlime: td(0, 9),     // slime (regenerator)
+  castleWall: at(16, 0),
+  castle: at(16, 1),
+
+  // Tower buildings — the base each tower is built from. The weapon on top is
+  // drawn in code, since the pack has no catapults or ballistae.
+  bldTower: at(15, 1),   // stone tower, red roof — archers
+  bldWorkshop: at(9, 6), // timber workshop — catapult
+  bldChapel: at(14, 1),  // chapel with a cross — mages
+  bldKeep: at(8, 6),     // stone house with a turret — ballista
+  bldForge: at(14, 0),   // blacksmith's forge — oil cauldron
+  bldWall: at(16, 0),    // battlement — storm tower
+
+  // Units: 6 silhouettes (cols 11-16) x 4 faction colours (rows 3-6).
+  // row 3 = blue, row 4 = red, row 5 = green, row 6 = grey/white
+  unitPeasant: at(12, 3),   // plain villager, blue
+  unitSpear: at(13, 4),     // spearman, red
+  unitShield: at(14, 5),    // shield bearer, green
+  unitKnight: at(15, 6),    // helmet + shield, grey
+  unitKnightRed: at(15, 4), // helmet + shield, red — the boss
+  unitRobe: at(16, 5),      // robed figure, green — the shaman
 } as const;
 
 export type SpriteKey = keyof typeof SPRITES;
 
+/** Loads the tilesheet once and hands back a ready <img>. */
 export function loadSheet(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -69,7 +78,7 @@ export function loadSheet(): Promise<HTMLImageElement> {
   });
 }
 
-/** Draw a 16px source tile scaled into a destination box (pixel-art, no smoothing). */
+/** Draw a sprite scaled into a destination box. */
 export function drawSprite(
   ctx: CanvasRenderingContext2D,
   sheet: HTMLImageElement,
@@ -80,17 +89,4 @@ export function drawSprite(
 ) {
   const s = SPRITES[key];
   ctx.drawImage(sheet, s.sx, s.sy, TILE_SRC, TILE_SRC, dx, dy, size, size);
-}
-
-/** CSS rules that show one tile as a crisp HTML icon (for the bestiary). */
-export function spriteStyle(sx: number, sy: number, size: number) {
-  const scale = size / TILE_SRC;
-  return {
-    width: `${size}px`,
-    height: `${size}px`,
-    backgroundImage: `url(${SHEET_URL})`,
-    backgroundSize: `${SHEET_W * scale}px ${SHEET_H * scale}px`,
-    backgroundPosition: `-${sx * scale}px -${sy * scale}px`,
-    imageRendering: 'pixelated' as const,
-  };
 }
