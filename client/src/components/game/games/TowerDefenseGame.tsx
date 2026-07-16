@@ -1109,6 +1109,8 @@ export default function TowerDefenseGame() {
   const nextCost = selLive && selLive.level < 3 ? TOWERS[selLive.kind].levels[selLive.level].cost : null;
   const L = LEVELS[level];
   const endlessNow = isEndless(level, wave);
+  // On the menu the bestiary follows the chapter picker; in play it follows the live level.
+  const bestiaryLevel = status === 'idle' || status === 'over' ? LEVELS[startAt] : L;
 
   // ---- medieval styling helper ----
   const woodBtn = 'rounded-md border-2 border-[#4A3728] bg-gradient-to-b from-[#7B5A38] to-[#5A4028] text-[#F3E3C3] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] hover:from-[#8C6941] active:translate-y-px disabled:opacity-40';
@@ -1213,7 +1215,7 @@ export default function TowerDefenseGame() {
                 <>
                   <h3 className="text-2xl font-bold text-[#F3E3C3]">Obrona Zamku</h3>
                   <p className="max-w-md text-sm text-[#D8C49A]">
-                    Pięć rozdziałów, każdy z inną drogą i groźniejszym wrogiem. Za każdy zdobyty rozdział odblokujesz nową wieżę.
+                    Dziesięć rozdziałów, każdy z inną drogą i groźniejszym wrogiem. Za każdy zdobyty rozdział odblokujesz nową wieżę, a za czyste zwycięstwa zdobędziesz gwiazdki do Kroniki.
                   </p>
                   {loadErr && <p className="text-[11px] text-rose-300">Nie udało się wczytać grafiki mapy — teren będzie uproszczony.</p>}
                 </>
@@ -1433,7 +1435,7 @@ export default function TowerDefenseGame() {
           )}
         </aside>
 
-        <Bestiary level={L} />
+        <Bestiary level={bestiaryLevel} />
       </div>
 
       <GameLeaderboard board={board} />
