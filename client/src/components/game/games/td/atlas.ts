@@ -8,6 +8,21 @@
  */
 export const SHEET_URL = '/games/medieval_tilesheet.png';
 export const TILE_SRC = 64;
+export const SHEET_W = 1760;
+export const SHEET_H = 704;
+
+/** CSS background rules that show a single tile as an HTML icon. */
+export function spriteStyle(sx: number, sy: number, size: number) {
+  const scale = size / TILE_SRC;
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    backgroundImage: `url(${SHEET_URL})`,
+    backgroundSize: `${SHEET_W * scale}px ${SHEET_H * scale}px`,
+    backgroundPosition: `-${sx * scale}px -${sy * scale}px`,
+    imageRendering: 'auto' as const,
+  };
+}
 
 const at = (col: number, row: number) => ({ sx: 32 + col * 96, sy: 32 + row * 96 });
 

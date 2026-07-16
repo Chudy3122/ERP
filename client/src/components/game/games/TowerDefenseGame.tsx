@@ -17,6 +17,7 @@ import {
 } from './td/engine';
 import { loadMeta, saveMeta, perksFrom, starsFor, availableStars, type Meta, type Perks } from './td/perks';
 import SkillTree from './td/SkillTree';
+import Bestiary from './td/Bestiary';
 
 const GAME = 'td';
 const PROGRESS_KEY = 'td_progress_v1';
@@ -1431,6 +1432,8 @@ export default function TowerDefenseGame() {
             </button>
           )}
         </aside>
+
+        <Bestiary level={L} />
       </div>
 
       <GameLeaderboard board={board} />

@@ -111,7 +111,7 @@ export default function GameModal({ onClose }: GameModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
       <div
         className={`w-full overflow-hidden shadow-2xl ${
-          selected?.wide ? 'max-w-5xl' : 'max-w-3xl'
+          selected?.wide ? 'max-w-6xl' : 'max-w-3xl'
         } ${
           medieval
             ? 'rounded-lg border-4 border-[#5A4028] bg-[#EFDDB8] ring-2 ring-[#C9A227]/50'
