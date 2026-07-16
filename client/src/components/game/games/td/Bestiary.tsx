@@ -1,18 +1,6 @@
 import { Feather, HeartPulse, Split, Shield, Wind, Snowflake, Flame, Eye } from 'lucide-react';
-import { ENEMIES, type EnemyKind, type LevelDef } from './config';
-import { SPRITES, spriteStyle, type SpriteKey } from './atlas';
-
-/** Same sprite mapping the canvas uses, so the bestiary shows the real thing. */
-const ICON: Partial<Record<EnemyKind, SpriteKey>> = {
-  peasant: 'unitPeasant',
-  soldier: 'unitKnight',
-  cavalry: 'unitSpear',
-  shaman: 'unitRobe',
-  brute: 'unitShield',
-  golem: 'unitShield',
-  wraith: 'unitRobe',
-  boss: 'unitKnightRed',
-};
+import { ENEMIES, type LevelDef } from './config';
+import { enemyIconStyle } from './art';
 
 const tag = (icon: React.ReactNode, text: string, cls: string) => (
   <span key={text} className={`flex items-center gap-0.5 rounded px-1 py-px text-[8px] font-bold ${cls}`}>
@@ -50,8 +38,6 @@ export default function Bestiary({ level }: { level: LevelDef }) {
       <div className="flex flex-col gap-1 overflow-y-auto">
         {level.pool.map((k) => {
           const e = ENEMIES[k];
-          const icon = ICON[k];
-          const s = icon ? SPRITES[icon] : null;
           const tags: React.ReactNode[] = [];
           if (e.flying) tags.push(tag(<Feather className="h-2 w-2" />, 'lata', 'bg-sky-200 text-sky-900'));
           if (e.heals) tags.push(tag(<HeartPulse className="h-2 w-2" />, 'leczy', 'bg-purple-200 text-purple-900'));
@@ -62,11 +48,7 @@ export default function Bestiary({ level }: { level: LevelDef }) {
           return (
             <div key={k} className="rounded border border-[#B49B6E] bg-[#F3E3C3] p-1.5">
               <div className="flex items-center gap-1.5">
-                {s ? (
-                  <span className="shrink-0" style={spriteStyle(s.sx, s.sy, 26)} />
-                ) : (
-                  <span className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: e.color }} />
-                )}
+                <span className="shrink-0" style={enemyIconStyle(k, 28)} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[11px] font-bold text-[#3A2C1C]">{e.name}</span>
                   <span className="block text-[8px] tabular-nums text-[#7A6A4B]">

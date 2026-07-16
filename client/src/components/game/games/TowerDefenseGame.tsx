@@ -3,7 +3,7 @@ import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, Arrow
 import * as gameApi from '../../../api/game.api';
 import GameLeaderboard, { useLeaderboard } from '../GameLeaderboard';
 import ConfettiBurst from '../ConfettiBurst';
-import { loadSheet, drawSprite, SPRITES, TILE_SRC, type SpriteKey } from './td/atlas';
+import { loadImages, drawEnemyFrame, drawTowerBase, type Images } from './td/art';
 import {
   CELL, COLS, ROWS, W, H, START_GOLD, START_HP,
   TOWERS, TOWER_ORDER, SELL_RATE, ENEMIES, LEVELS, waveFor, enemyScale,
@@ -30,7 +30,7 @@ type Shot = { x: number; y: number; tx: number; ty: number; t: number; dur: numb
 type Bolt = { pts: { x: number; y: number }[]; life: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string };
 type Popup = { x: number; y: number; vy: number; life: number; max: number; text: string; color: string; size: number };
-type Decor = { c: number; r: number; key: SpriteKey };
+type Decor = { c: number; r: number; art: 'dec_tree' | 'dec_rock' | 'dec_rock2' };
 
 const loadProgress = (): number => {
   try {
@@ -47,7 +47,7 @@ const saveProgress = (v: number) => {
 export default function TowerDefenseGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
-  const sheetRef = useRef<HTMLImageElement | null>(null);
+  const imagesRef = useRef<Images | null>(null);
 
   const towers = useRef<Tower[]>([]);
   const enemies = useRef<Enemy[]>([]);
@@ -115,8 +115,8 @@ export default function TowerDefenseGame() {
 
   useEffect(() => {
     let alive = true;
-    loadSheet()
-      .then((img) => { if (alive) { sheetRef.current = img; setReady(true); } })
+    loadImages()
+      .then((imgs) => { if (alive) { imagesRef.current = imgs; setReady(true); } })
       .catch(() => { if (alive) setLoadErr(true); });
     return () => { alive = false; };
   }, []);
@@ -142,7 +142,10 @@ export default function TowerDefenseGame() {
       for (let c = 0; c < COLS; c++) {
         if (blocked.current.has(cellKey(c, r))) continue;
         if (Math.abs(c - castleCell.x) < 2 && Math.abs(r - castleCell.y) < 2) continue;
-        if (Math.random() < L.decorDensity) out.push({ c, r, key: L.decor[(Math.random() * L.decor.length) | 0] });
+        if (Math.random() < L.decorDensity) {
+          const roll = Math.random();
+          out.push({ c, r, art: roll < 0.5 ? 'dec_tree' : roll < 0.75 ? 'dec_rock' : 'dec_rock2' });
+        }
       }
     }
     decor.current = out;
@@ -586,77 +589,44 @@ export default function TowerDefenseGame() {
   );
 
   // ---------- drawing ----------
-  /** Which pack sprite (and how big) stands in for each enemy. */
-  const ENEMY_SPRITE: Partial<Record<EnemyKind, { key: SpriteKey; size: number }>> = {
-    peasant: { key: 'unitPeasant', size: 30 },
-    soldier: { key: 'unitKnight', size: 32 },
-    cavalry: { key: 'unitSpear', size: 32 },
-    shaman: { key: 'unitRobe', size: 32 },
-    brute: { key: 'unitShield', size: 44 },
-    golem: { key: 'unitShield', size: 48 },
-    wraith: { key: 'unitRobe', size: 34 },
-    boss: { key: 'unitKnightRed', size: 54 },
-  };
-
   const drawEnemy = (ctx: CanvasRenderingContext2D, e: Enemy) => {
-    const d = ENEMIES[e.kind];
     const bob = Math.sin(e.wobble) * (e.flying ? 2.4 : 1.2);
     const x = e.x;
     const y = e.y + bob;
     const r = e.radius;
-    const sheet = sheetRef.current;
+    const images = imagesRef.current;
 
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.beginPath();
-    ctx.ellipse(e.x, e.y + r * 0.75, r * 0.75, r * 0.32, 0, 0, Math.PI * 2);
+    ctx.ellipse(e.x, e.y + r * 0.75, r * 0.85, r * 0.34, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const art = ENEMY_SPRITE[e.kind];
-    if (sheet && art) {
-      const s = SPRITES[art.key];
-      const half = art.size / 2;
-      // a slight walk sway keeps the static sprite from looking dead
-      const sway = Math.sin(e.wobble) * 0.06;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(sway);
+    let drawn = false;
+    if (images) {
       if (e.kind === 'boss') {
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = 'rgba(220,38,38,0.8)';
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = 'rgba(220,38,38,0.85)';
       }
-      ctx.drawImage(sheet, s.sx, s.sy, TILE_SRC, TILE_SRC, -half, -half, art.size, art.size);
+      drawn = drawEnemyFrame(ctx, images, e.kind, x, y, r, performance.now());
       ctx.shadowBlur = 0;
-      // white flash on hit, painted only over the sprite's own pixels
-      if (e.hitFlash > 0) {
-        ctx.globalCompositeOperation = 'source-atop';
-        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.8, e.hitFlash)})`;
-        ctx.fillRect(-half, -half, art.size, art.size);
-        ctx.globalCompositeOperation = 'source-over';
+      // hit flash: a soft white blob over the sprite
+      if (drawn && e.hitFlash > 0) {
+        ctx.globalAlpha = Math.min(0.55, e.hitFlash);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
       }
-      ctx.restore();
-      drawEnemyOverlay(ctx, e, x, y, r);
-      return;
     }
-
-    // The raven has no counterpart in the pack (no birds), so it stays hand-drawn.
-    const body = e.hitFlash > 0 ? '#ffffff' : d.color;
-    ctx.save();
-    ctx.translate(x, y);
-    const flap = Math.sin(e.wobble * 2) * 0.5;
-    ctx.fillStyle = d.dark;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.5, r * 0.7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = body;
-    for (const s of [-1, 1]) {
+    if (!drawn) {
+      // fallback blob if art hasn't loaded
+      const d = ENEMIES[e.kind];
+      ctx.fillStyle = e.hitFlash > 0 ? '#ffffff' : d.color;
       ctx.beginPath();
-      ctx.moveTo(0, -2);
-      ctx.quadraticCurveTo(s * r * 1.5, -6 + flap * 8, s * r * 1.7, 4 + flap * 5);
-      ctx.quadraticCurveTo(s * r * 0.8, 2, 0, 4);
-      ctx.closePath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.restore();
     drawEnemyOverlay(ctx, e, x, y, r);
   };
 
@@ -687,52 +657,23 @@ export default function TowerDefenseGame() {
     }
   };
 
-  /** Each tower is built from a real building sprite; the weapon on top is drawn. */
-  const TOWER_SPRITE: Record<TowerKind, SpriteKey> = {
-    archer: 'bldTower',
-    catapult: 'bldWorkshop',
-    mage: 'bldChapel',
-    ballista: 'bldKeep',
-    oil: 'bldForge',
-    tesla: 'bldWall',
-  };
-
   const drawTower = (ctx: CanvasRenderingContext2D, t: Tower) => {
     const def = TOWERS[t.kind];
     const lvl = t.level;
-    const base = CELL * 0.42;
-    const sheet = sheetRef.current;
-    ctx.save();
-    ctx.translate(t.x, t.y);
+    const images = imagesRef.current;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    ctx.beginPath();
-    ctx.ellipse(0, base * 0.55, base, base * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (sheet) {
-      // building grows a little with each upgrade
-      const size = CELL * (0.92 + lvl * 0.06);
-      const s = SPRITES[TOWER_SPRITE[t.kind]];
-      ctx.drawImage(sheet, s.sx, s.sy, TILE_SRC, TILE_SRC, -size / 2, -size / 2, size, size);
+    // stone platform sprite (carries its own shadow and I/II/III level mark)
+    if (images) {
+      drawTowerBase(ctx, images, t.kind, lvl, t.x, t.y, CELL * 1.15);
     } else {
       ctx.fillStyle = '#9CA3AF';
       ctx.beginPath();
-      ctx.roundRect(-base, -base * 0.5, base * 2, base * 1.3, 5);
+      ctx.roundRect(t.x - CELL * 0.4, t.y - CELL * 0.2, CELL * 0.8, CELL * 0.55, 5);
       ctx.fill();
     }
 
-    // level pips
-    for (let i = 0; i < lvl; i++) {
-      ctx.fillStyle = '#FACC15';
-      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(-base + 5 + i * 6, base * 0.72, 2.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-
+    ctx.save();
+    ctx.translate(t.x, t.y - CELL * 0.2); // the weapon perches on top of the platform
     ctx.rotate(t.angle);
     const kick = t.recoil > 0 ? t.recoil * 3 : 0;
     ctx.translate(-kick, 0);
@@ -818,51 +759,63 @@ export default function TowerDefenseGame() {
 
   const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext('2d');
-    const sheet = sheetRef.current;
+    const images = imagesRef.current;
     if (!ctx) return;
-    const L = LEVELS[levelRef.current];
     const route = routeRef.current;
 
+    ctx.imageSmoothingEnabled = false; // crisp pixel art
     ctx.save();
     if (shakeRef.current > 0.4) {
       const m = shakeRef.current;
       ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
     }
 
-    if (sheet) {
+    // grass ground
+    if (images) {
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          drawSprite(ctx, sheet, (c + r) % 3 === 0 ? L.alt : L.base, c * CELL, r * CELL, CELL);
+          const g = (c * 3 + r * 7) % 4 === 0 ? images.grass2 : images.grass;
+          ctx.drawImage(g, c * CELL, r * CELL, CELL, CELL);
         }
       }
     } else {
-      ctx.fillStyle = '#3E9B4F';
+      ctx.fillStyle = '#5A9B4F';
       ctx.fillRect(0, 0, W, H);
     }
 
-    // road
+    // road — a warm dirt track drawn over the grass
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#8A5A32';
-    ctx.lineWidth = CELL * 0.84;
+    ctx.strokeStyle = '#7A5230';
+    ctx.lineWidth = CELL * 0.9;
     ctx.beginPath();
     ctx.moveTo(route.px[0].x, route.px[0].y);
     for (let i = 1; i < route.px.length; i++) ctx.lineTo(route.px[i].x, route.px[i].y);
     ctx.stroke();
-    ctx.strokeStyle = '#C9905A';
-    ctx.lineWidth = CELL * 0.68;
+    ctx.strokeStyle = '#C99A5B';
+    ctx.lineWidth = CELL * 0.72;
     ctx.stroke();
 
-    if (sheet) {
-      for (const d of decor.current) drawSprite(ctx, sheet, d.key, d.c * CELL, d.r * CELL, CELL);
-      drawSprite(ctx, sheet, 'castle', route.castle.x - CELL * 0.8, route.castle.y - CELL * 0.8, CELL * 1.6);
+    // decorations + castle
+    if (images) {
+      for (const d of decor.current) {
+        const img = images[d.art];
+        if (img) ctx.drawImage(img, d.c * CELL - CELL * 0.1, d.r * CELL - CELL * 0.25, CELL * 1.2, CELL * 1.2);
+      }
+      const keep = images.base_ballista;
+      if (keep) {
+        const fw = keep.width / 3;
+        const kw = CELL * 1.7;
+        const kh = (keep.height / fw) * kw;
+        ctx.drawImage(keep, 2 * fw, 0, fw, keep.height, route.castle.x - kw / 2, route.castle.y - kh * 0.6, kw, kh);
+      }
     }
 
     const hov = hoverRef.current;
     if (buildRef.current && hov) {
       const key = cellKey(hov.c, hov.r);
       const okCell = !blocked.current.has(key) && !occupied.current.has(key);
-      const cost = TOWERS[buildRef.current].levels[0].cost;
+      const cost = buildCost(buildRef.current, 1);
       const good = okCell && goldRef.current >= cost;
       ctx.fillStyle = good ? 'rgba(74,222,128,0.35)' : 'rgba(239,68,68,0.35)';
       ctx.fillRect(hov.c * CELL, hov.r * CELL, CELL, CELL);
@@ -1106,7 +1059,8 @@ export default function TowerDefenseGame() {
 
   const selLive = selected ? towers.current.find((t) => t.id === selected.id) : null;
   const selDef = selLive ? TOWERS[selLive.kind] : null;
-  const nextCost = selLive && selLive.level < 3 ? TOWERS[selLive.kind].levels[selLive.level].cost : null;
+  const nextCost = selLive && selLive.level < 3 ? buildCost(selLive.kind, selLive.level + 1) : null;
+  const nextListCost = selLive && selLive.level < 3 ? TOWERS[selLive.kind].levels[selLive.level].cost : null;
   const L = LEVELS[level];
   const endlessNow = isEndless(level, wave);
   // On the menu the bestiary follows the chapter picker; in play it follows the live level.
@@ -1300,7 +1254,9 @@ export default function TowerDefenseGame() {
             {TOWER_ORDER.map((k) => {
               const d = TOWERS[k];
               const isUnlocked = unlocked.includes(k);
-              const cost = d.levels[0].cost;
+              const listCost = d.levels[0].cost;
+              const cost = buildCost(k, 1); // after the "Tania budowa" perk
+              const discounted = cost < listCost;
               const afford = gold >= cost;
               const on = build === k;
               const lockedBy = LEVELS.find((lv) => lv.unlocks === k);
@@ -1333,7 +1289,16 @@ export default function TowerDefenseGame() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] font-bold text-[#3A2C1C]">{d.name}</span>
                     <span className={`block text-[10px] font-bold tabular-nums ${!isUnlocked ? 'text-[#7A6A4B]' : afford ? 'text-[#7A4E12]' : 'text-[#9B1C1C]'}`}>
-                      {isUnlocked ? `${cost} zł` : `Rozdział ${lockedBy?.id ?? '?'}`}
+                      {!isUnlocked ? (
+                        `Rozdział ${lockedBy?.id ?? '?'}`
+                      ) : discounted ? (
+                        <>
+                          <span className="text-[#9A8A6B] line-through">{listCost}</span>{' '}
+                          <span className="text-[#15803D]">{cost} zł</span>
+                        </>
+                      ) : (
+                        `${cost} zł`
+                      )}
                     </span>
                   </span>
                 </button>
@@ -1354,7 +1319,15 @@ export default function TowerDefenseGame() {
                   className="flex flex-1 items-center justify-center gap-1 rounded border-2 border-[#3F6212] bg-gradient-to-b from-[#65A30D] to-[#4D7C0F] px-1.5 py-1 text-[10px] font-bold text-white disabled:opacity-40"
                 >
                   <ArrowUp className="h-3 w-3" />
-                  {selLive.level >= 3 ? 'Max' : `${nextCost} zł`}
+                  {selLive.level >= 3 ? (
+                    'Max'
+                  ) : nextListCost !== null && nextCost !== null && nextCost < nextListCost ? (
+                    <>
+                      <span className="text-white/60 line-through">{nextListCost}</span> {nextCost} zł
+                    </>
+                  ) : (
+                    `${nextCost} zł`
+                  )}
                 </button>
                 <button
                   type="button"

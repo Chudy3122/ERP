@@ -170,15 +170,15 @@ export type EnemyDef = {
  * ramp lives in endless waves — see enemyScale.
  */
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
-  peasant: { kind: 'peasant', name: 'Chłop', desc: 'Liczny, ale bezbronny. Padnie od byle strzały.', hp: 32, speed: 52, armor: 0, gold: 7, points: 10, radius: 9, color: '#D6A06A', dark: '#8B5E34', leak: 1 },
-  soldier: { kind: 'soldier', name: 'Zbrojny', desc: 'Pancerz tępi każdy słaby strzał. Balista przebija go na wylot.', hp: 78, speed: 40, armor: 2, gold: 11, points: 20, radius: 10, color: '#94A3B8', dark: '#475569', leak: 1 },
-  cavalry: { kind: 'cavalry', name: 'Kawaleria', desc: 'Przemyka szybciej, niż zdążysz wycelować. Spowolnij ją magiem.', hp: 80, speed: 98, armor: 1, gold: 12, points: 25, radius: 11, color: '#B45309', dark: '#7C2D12', leak: 2 },
-  raven: { kind: 'raven', name: 'Kruk', desc: 'Lata nad wszystkim. Katapulta i smoła go nie dosięgną.', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#475569', dark: '#1E293B', flying: true, leak: 1 },
-  brute: { kind: 'brute', name: 'Ogr', desc: 'Powolny worek na strzały. Smoła pali go mimo pancerza.', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#65A30D', dark: '#3F6212', leak: 3 },
-  shaman: { kind: 'shaman', name: 'Szaman', desc: 'Leczy wszystkich wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#7E22CE', dark: '#4C1D95', heals: 12, leak: 2 },
-  golem: { kind: 'golem', name: 'Golem', desc: 'Kamienna skorupa. Bez balisty albo smoły nawet go nie zadrapiesz.', hp: 520, speed: 22, armor: 14, gold: 45, points: 90, radius: 15, color: '#78716C', dark: '#44403C', leak: 3 },
-  wraith: { kind: 'wraith', name: 'Cień', desc: 'Po śmierci rozpada się na dwa kruki. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#6D28D9', dark: '#3B0764', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
-  boss: { kind: 'boss', name: 'Czarny Rycerz', desc: 'Ciężka zbroja i potężny cios. Skup na nim balisty i zamroź go.', hp: 1300, speed: 32, armor: 10, gold: 110, points: 250, radius: 18, color: '#1F2937', dark: '#0F172A', leak: 5 },
+  peasant: { kind: 'peasant', name: 'Listokrył', desc: 'Liczny, ale bezbronny robal. Padnie od byle strzały.', hp: 32, speed: 52, armor: 0, gold: 7, points: 10, radius: 9, color: '#65A30D', dark: '#3F6212', leak: 1 },
+  soldier: { kind: 'soldier', name: 'Skorpion', desc: 'Twardy pancerz tępi słabe strzały. Balista przebija go na wylot.', hp: 78, speed: 40, armor: 2, gold: 11, points: 20, radius: 10, color: '#3B82F6', dark: '#1E3A8A', leak: 1 },
+  cavalry: { kind: 'cavalry', name: 'Ognik', desc: 'Mknie szybciej, niż zdążysz wycelować. Spowolnij go magiem.', hp: 80, speed: 98, armor: 1, gold: 12, points: 25, radius: 11, color: '#B45309', dark: '#7C2D12', leak: 2 },
+  raven: { kind: 'raven', name: 'Pustkomotyl', desc: 'Lata nad wszystkim. Katapulta i smoła go nie dosięgną.', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#7C3AED', dark: '#4C1D95', flying: true, leak: 1 },
+  brute: { kind: 'brute', name: 'Krab Magmowy', desc: 'Powolny kolos na strzały. Smoła pali go mimo pancerza.', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#EA580C', dark: '#9A3412', leak: 3 },
+  shaman: { kind: 'shaman', name: 'Żuk-znachor', desc: 'Leczy wszystko wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#0891B2', dark: '#155E75', heals: 12, leak: 2 },
+  golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 14, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', leak: 3 },
+  wraith: { kind: 'wraith', name: 'Szarańcza', desc: 'Po śmierci rozpada się na dwa motyle. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#16A34A', dark: '#14532D', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
+  boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją.', hp: 1300, speed: 32, armor: 10, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', leak: 5 },
 };
 
 // ---------------- Levels ----------------
