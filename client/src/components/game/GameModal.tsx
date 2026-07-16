@@ -110,7 +110,7 @@ export default function GameModal({ onClose }: GameModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
       <div
-        className={`w-full overflow-hidden shadow-2xl ${
+        className={`flex max-h-[94vh] w-full flex-col overflow-hidden shadow-2xl ${
           selected?.wide ? 'max-w-6xl' : 'max-w-3xl'
         } ${
           medieval
@@ -120,7 +120,7 @@ export default function GameModal({ onClose }: GameModalProps) {
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-3.5 ${
+          className={`flex shrink-0 items-center justify-between px-5 py-3.5 ${
             medieval
               ? 'border-b-4 border-[#C9A227]/60 bg-gradient-to-b from-[#6B4E32] to-[#4A3728]'
               : `bg-gradient-to-r ${selected ? selected.gradient : 'from-[#F7941D] to-[#FBB040]'}`
@@ -167,13 +167,14 @@ export default function GameModal({ onClose }: GameModalProps) {
           </button>
         </div>
 
-        {/* Body */}
+        {/* Body — scrolls inside the modal so the header stays visible even when a
+            game is taller than the viewport */}
         {Selected ? (
-          <div className={`p-5 ${medieval ? 'bg-gradient-to-b from-[#EFDDB8] to-[#E2CB9F]' : ''}`}>
+          <div className={`overflow-y-auto p-5 ${medieval ? 'bg-gradient-to-b from-[#EFDDB8] to-[#E2CB9F]' : ''}`}>
             <Selected />
           </div>
         ) : (
-          <div className="p-5">
+          <div className="overflow-y-auto p-5">
             <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
               Wybierz{' '}
               {/* The easter egg: this one word unlocks the hidden game. It looks like

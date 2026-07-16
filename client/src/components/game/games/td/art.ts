@@ -66,17 +66,20 @@ export const ENEMY_ART: Record<EnemyKind, EnemyArt> = {
 const MOVE_ROW = 3;
 const ENEMY_FPS = 12;
 
-/** CSS that shows a single clear walk frame of a creature — used by the bestiary. */
+/**
+ * CSS that shows the first idle frame of a creature — used by the bestiary.
+ * Idle frame 0 is the cleanest, fully-posed pose (e.g. the butterfly's wings
+ * are open there, whereas the walk row catches it mid-flap).
+ */
 export function enemyIconStyle(kind: EnemyKind, size: number) {
   const a = ENEMY_ART[kind];
   const scale = size / a.frame;
-  const col = Math.min(2, a.frames - 1); // frame 0 is often a mid-stride blank
   return {
     width: `${size}px`,
     height: `${size}px`,
     backgroundImage: `url(${BASE}${IMAGE_FILES[a.img]})`,
     backgroundSize: `${a.sheetW * scale}px ${a.sheetH * scale}px`,
-    backgroundPosition: `-${col * a.frame * scale}px -${MOVE_ROW * a.frame * scale}px`,
+    backgroundPosition: `0px 0px`,
     imageRendering: 'pixelated' as const,
   };
 }
