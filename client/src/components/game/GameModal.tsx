@@ -109,6 +109,16 @@ export default function GameModal({ onClose }: GameModalProps) {
   // Closing is the X button only.
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <style>{`
+        .game-scroll-medieval { scrollbar-width: thin; scrollbar-color: #8B6B3E #E2CB9F; }
+        .game-scroll-medieval::-webkit-scrollbar { width: 12px; }
+        .game-scroll-medieval::-webkit-scrollbar-track { background: #E2CB9F; border-radius: 8px; }
+        .game-scroll-medieval::-webkit-scrollbar-thumb {
+          background: linear-gradient(#8B6B3E, #6B4E32);
+          border: 2px solid #E2CB9F; border-radius: 8px;
+        }
+        .game-scroll-medieval::-webkit-scrollbar-thumb:hover { background: linear-gradient(#9C7B4A, #7A5A34); }
+      `}</style>
       <div
         className={`flex max-h-[94vh] w-full flex-col overflow-hidden shadow-2xl ${
           selected?.wide ? 'max-w-6xl' : 'max-w-3xl'
@@ -170,11 +180,11 @@ export default function GameModal({ onClose }: GameModalProps) {
         {/* Body — scrolls inside the modal so the header stays visible even when a
             game is taller than the viewport */}
         {Selected ? (
-          <div className={`overflow-y-auto p-5 ${medieval ? 'bg-gradient-to-b from-[#EFDDB8] to-[#E2CB9F]' : ''}`}>
+          <div className={`overflow-y-auto p-5 ${medieval ? 'game-scroll-medieval bg-gradient-to-b from-[#EFDDB8] to-[#E2CB9F]' : ''}`}>
             <Selected />
           </div>
         ) : (
-          <div className="overflow-y-auto p-5">
+          <div className={`overflow-y-auto p-5 ${medieval ? 'game-scroll-medieval' : ''}`}>
             <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
               Wybierz{' '}
               {/* The easter egg: this one word unlocks the hidden game. It looks like

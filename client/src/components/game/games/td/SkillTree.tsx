@@ -108,7 +108,7 @@ export default function SkillTree({ meta, onChange, onClose }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="game-scroll-medieval flex-1 overflow-y-auto p-3">
         <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-[#A08B62]">Wieże</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{towers.map(renderBranch)}</div>
         <p className="mb-2 mt-3 text-[10px] uppercase tracking-[0.15em] text-[#A08B62]">Wsparcie</p>

@@ -35,7 +35,7 @@ export default function Bestiary({ level }: { level: LevelDef }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-1 overflow-y-auto">
+      <div className="game-scroll-medieval flex flex-col gap-1 overflow-y-auto">
         {level.pool.map((k) => {
           const e = ENEMIES[k];
           const tags: React.ReactNode[] = [];
