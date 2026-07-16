@@ -25,7 +25,7 @@ export const IMAGE_FILES: Record<string, string> = {
   e_leafbug: 'e_leafbug.png',
   e_scorpion: 'e_scorpion.png',
   e_crab: 'e_crab.png',
-  e_firebug: 'e_firebug.png',
+  e_firebug: 'e_firebug_v2.png', // repacked to 64px square frames; renamed to bust the CDN cache
   e_beetle: 'e_beetle.png',
   e_wasp: 'e_wasp.png',
   e_locust: 'e_locust.png',
