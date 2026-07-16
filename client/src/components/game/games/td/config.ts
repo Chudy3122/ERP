@@ -142,7 +142,7 @@ export const TOWER_ORDER: TowerKind[] = ['archer', 'catapult', 'mage', 'ballista
 export const SELL_RATE = 0.55;
 
 // ---------------- Enemies ----------------
-export type EnemyKind = 'peasant' | 'soldier' | 'cavalry' | 'raven' | 'brute' | 'shaman' | 'boss';
+export type EnemyKind = 'peasant' | 'soldier' | 'cavalry' | 'raven' | 'brute' | 'shaman' | 'golem' | 'wraith' | 'boss';
 
 export type EnemyDef = {
   kind: EnemyKind;
@@ -154,6 +154,8 @@ export type EnemyDef = {
   points: number;
   flying?: boolean;
   heals?: number;    // HP per second restored to nearby allies
+  /** Dies into this many smaller copies — Bloons-style. */
+  splitsInto?: { kind: EnemyKind; count: number };
   radius: number;
   color: string;
   dark: string;
@@ -172,6 +174,8 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   raven: { kind: 'raven', name: 'Kruk', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#475569', dark: '#1E293B', flying: true, leak: 1 },
   brute: { kind: 'brute', name: 'Ogr', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#65A30D', dark: '#3F6212', leak: 3 },
   shaman: { kind: 'shaman', name: 'Szaman', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#7E22CE', dark: '#4C1D95', heals: 12, leak: 2 },
+  golem: { kind: 'golem', name: 'Golem', hp: 520, speed: 22, armor: 14, gold: 45, points: 90, radius: 15, color: '#78716C', dark: '#44403C', leak: 3 },
+  wraith: { kind: 'wraith', name: 'Cień', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#6D28D9', dark: '#3B0764', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
   boss: { kind: 'boss', name: 'Czarny Rycerz', hp: 1300, speed: 32, armor: 10, gold: 110, points: 250, radius: 18, color: '#1F2937', dark: '#0F172A', leak: 5 },
 };
 
@@ -193,6 +197,12 @@ export type LevelDef = {
   pool: EnemyKind[];
   /** Tower unlocked by clearing this level. */
   unlocks?: TowerKind;
+  /** Enemies here shrug off frost — the mage's slow is weaker. */
+  frostResist?: number;
+  /** Enemies here shrug off fire — the oil cauldron's burn is weaker. */
+  fireResist?: number;
+  /** Fog: every tower's range is cut. */
+  fog?: number;
 };
 
 export const LEVELS: LevelDef[] = [
@@ -265,6 +275,75 @@ export const LEVELS: LevelDef[] = [
     armorAdd: 3,
     pool: ['soldier', 'cavalry', 'raven', 'brute', 'shaman', 'boss'],
   },
+  {
+    id: 6,
+    name: 'Zamarznięte Przełęcze',
+    blurb: 'Mróz nie robi tu wrażenia — wrogowie wychowali się w śniegu. Magowie ledwo ich spowolnią.',
+    path: [{ x: -1, y: 6 }, { x: 4, y: 6 }, { x: 4, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 10 }, { x: 12, y: 10 }, { x: 12, y: 3 }, { x: 14.4, y: 3 }],
+    base: 'stone', alt: 'water',
+    decor: ['pineS', 'pineL', 'rockL'],
+    decorDensity: 0.24,
+    waves: 12,
+    hpMul: 3.1,
+    armorAdd: 3,
+    pool: ['soldier', 'cavalry', 'raven', 'brute', 'boss'],
+    frostResist: 0.6,
+  },
+  {
+    id: 7,
+    name: 'Kopalnie Krasnoludów',
+    blurb: 'Z głębi nadciągają golemy w kamiennej skorupie. Zwykłe strzały się od nich odbijają.',
+    path: [{ x: -1, y: 10 }, { x: 2, y: 10 }, { x: 2, y: 2 }, { x: 6, y: 2 }, { x: 6, y: 8 }, { x: 10, y: 8 }, { x: 10, y: 1 }, { x: 13, y: 1 }, { x: 13, y: 6 }, { x: 14.4, y: 6 }],
+    base: 'stone', alt: 'dirt',
+    decor: ['rockL', 'rockM', 'rockS'],
+    decorDensity: 0.3,
+    waves: 13,
+    hpMul: 3.4,
+    armorAdd: 5,
+    pool: ['soldier', 'brute', 'golem', 'shaman', 'boss'],
+  },
+  {
+    id: 8,
+    name: 'Spalone Pola',
+    blurb: 'Wypalona ziemia. Ogień już nikogo tu nie straszy, a droga wije się bez końca.',
+    path: [{ x: -1, y: 1 }, { x: 14, y: 1 }, { x: 14, y: 4 }, { x: 1, y: 4 }, { x: 1, y: 7 }, { x: 14, y: 7 }, { x: 14, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 11 }, { x: 14.4, y: 11 }],
+    base: 'dirt', alt: 'sand',
+    decor: ['rockS', 'bush', 'treeA'],
+    decorDensity: 0.22,
+    waves: 14,
+    hpMul: 3.8,
+    armorAdd: 5,
+    pool: ['cavalry', 'raven', 'brute', 'golem', 'shaman', 'boss'],
+    fireResist: 0.55,
+  },
+  {
+    id: 9,
+    name: 'Przeprawa',
+    blurb: 'Wąski bród wśród mokradeł. Miejsca na wieże jak na lekarstwo, a niebo czarne od kruków.',
+    path: [{ x: -1, y: 3 }, { x: 5, y: 3 }, { x: 5, y: 9 }, { x: 9, y: 9 }, { x: 9, y: 5 }, { x: 13, y: 5 }, { x: 13, y: 11 }, { x: 14.4, y: 11 }],
+    base: 'water', alt: 'grass',
+    decor: ['pineL', 'pineS', 'treeB', 'rockM', 'bush'],
+    decorDensity: 0.4,
+    waves: 14,
+    hpMul: 4.6,
+    armorAdd: 6,
+    pool: ['cavalry', 'raven', 'wraith', 'brute', 'shaman', 'boss'],
+    fog: 0.85,
+  },
+  {
+    id: 10,
+    name: 'Wrota Cienia',
+    blurb: 'Ostatnia brama. Cienie rozpadają się na kolejne cienie, a Czarni Rycerze nie przychodzą pojedynczo.',
+    path: [{ x: -1, y: 0 }, { x: 7, y: 0 }, { x: 7, y: 4 }, { x: 2, y: 4 }, { x: 2, y: 8 }, { x: 12, y: 8 }, { x: 12, y: 2 }, { x: 14, y: 2 }, { x: 14, y: 11 }, { x: 5, y: 11 }, { x: 5, y: 10 }],
+    base: 'stone', alt: 'stone',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.26,
+    waves: 15,
+    hpMul: 4.8,
+    armorAdd: 7,
+    pool: ['cavalry', 'raven', 'wraith', 'brute', 'golem', 'shaman', 'boss'],
+    fog: 0.92,
+  },
 ];
 
 /** Towers you start with; the rest are earned by clearing levels. */
@@ -308,6 +387,12 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
     groups.push({ kind: 'boss', count: 1 + Math.floor(over / 4), gap: 2400 });
   }
 
+  if (has('golem') && (t > 0.3 || endless)) {
+    groups.push({ kind: 'golem', count: Math.max(1, Math.round(1 + t * 3 + over)), gap: 1500 });
+  }
+  if (has('wraith') && (t > 0.2 || endless)) {
+    groups.push({ kind: 'wraith', count: Math.max(2, scale(3)), gap: 700 });
+  }
   if (has('brute') && (t > 0.25 || endless)) {
     groups.push({ kind: 'brute', count: Math.max(1, scale(2)), gap: 1100 });
   }
@@ -327,7 +412,13 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
     groups.push({ kind: 'peasant', count: Math.max(3, scale(6)), gap: 620 });
   }
 
-  return groups.length ? groups : [{ kind: 'soldier', count: scale(6), gap: 500 }];
+  // Chapters whose pool has no peasant/soldier would otherwise produce an empty
+  // opening wave, because every other type is gated behind a progress threshold.
+  // Fall back to the chapter's own first enemy — never an off-pool one.
+  if (!groups.length) {
+    groups.push({ kind: L.pool[0], count: Math.max(2, scale(4)), gap: 520 });
+  }
+  return groups;
 }
 
 /**

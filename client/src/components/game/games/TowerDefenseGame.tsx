@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, ArrowUp, Swords, Snowflake, Lock, ChevronRight, Scroll } from 'lucide-react';
+import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, ArrowUp, Swords, Snowflake, Lock, ChevronRight, Scroll, Star } from 'lucide-react';
 import * as gameApi from '../../../api/game.api';
 import GameLeaderboard, { useLeaderboard } from '../GameLeaderboard';
 import ConfettiBurst from '../ConfettiBurst';
@@ -15,6 +15,8 @@ import {
   makeRoute, pointAt, blockedCells, cellKey, pxToCell,
   applyArmor, pickTarget, chainTargets, cellToPx, type Route,
 } from './td/engine';
+import { loadMeta, saveMeta, perksFrom, starsFor, availableStars, type Meta, type Perks } from './td/perks';
+import SkillTree from './td/SkillTree';
 
 const GAME = 'td';
 const PROGRESS_KEY = 'td_progress_v1';
@@ -99,6 +101,11 @@ export default function TowerDefenseGame() {
   const [waveActive, setWaveActive] = useState(false);
   const [cleared, setCleared] = useState(loadProgress);
   const [startAt, setStartAt] = useState(0);
+  const [meta, setMeta] = useState<Meta>(loadMeta);
+  const [treeOpen, setTreeOpen] = useState(false);
+  const [earned, setEarned] = useState<number | null>(null);
+  const perksRef = useRef<Perks>(perksFrom(loadMeta().perks));
+  const hpLostRef = useRef(0);
   const [unlocked, setUnlocked] = useState<TowerKind[]>(() => unlockedAfter(loadProgress()));
   const [justUnlocked, setJustUnlocked] = useState<TowerKind | null>(null);
   const [lastResult, setLastResult] = useState<{ score: number; best: number; record: boolean; level: number; wave: number } | null>(null);
@@ -170,6 +177,18 @@ export default function TowerDefenseGame() {
     setScore(scoreRef.current);
     statusRef.current = 'levelDone';
     setStatus('levelDone');
+
+    // Stars: keep the best result ever achieved on this chapter.
+    const gained = starsFor(hpLostRef.current);
+    setEarned(gained);
+    setMeta((m) => {
+      const id = LEVELS[lv].id;
+      if ((m.stars[id] ?? 0) >= gained) return m;
+      const next: Meta = { ...m, stars: { ...m.stars, [id]: gained } };
+      saveMeta(next);
+      return next;
+    });
+
     const nextCleared = Math.max(cleared, lv + 1);
     setCleared(nextCleared);
     saveProgress(nextCleared);
@@ -228,9 +247,23 @@ export default function TowerDefenseGame() {
     });
   };
 
+  /** Effective stats for a tower, after permanent perks and chapter fog. */
+  const towerStats = (kind: TowerKind, level: number) => {
+    const base = TOWERS[kind].levels[level - 1];
+    const p = perksRef.current;
+    const fog = LEVELS[levelRef.current]?.fog ?? 1;
+    return {
+      damage: base.damage * p.towerDmg[kind],
+      range: base.range * p.towerRange[kind] * fog,
+      cooldown: base.cooldown,
+    };
+  };
+  const buildCost = (kind: TowerKind, level: number) =>
+    Math.round(TOWERS[kind].levels[level - 1].cost * perksRef.current.towerCost[kind]);
+
   const killReward = (e: Enemy) => {
     const d = ENEMIES[e.kind];
-    goldRef.current += d.gold;
+    goldRef.current += Math.round(d.gold * perksRef.current.killGold);
     setGold(goldRef.current);
     scoreRef.current += d.points;
     setScore(scoreRef.current);
@@ -242,6 +275,36 @@ export default function TowerDefenseGame() {
     }
   };
 
+  /** Spawn a dying enemy's offspring where it fell, already partway down the road. */
+  const splitEnemy = (e: Enemy) => {
+    const d = ENEMIES[e.kind];
+    if (!d.splitsInto) return;
+    const child = ENEMIES[d.splitsInto.kind];
+    const s = enemyScale(levelRef.current, Math.max(0, waveRef.current - 1));
+    for (let i = 0; i < d.splitsInto.count; i++) {
+      const hp = child.hp * s.hpMul * 0.6;
+      // nudge them apart so they don't overlap perfectly
+      const dist = Math.max(0, e.dist - i * 12);
+      const p = pointAt(routeRef.current, dist);
+      enemies.current.push({
+        id: idRef.current++,
+        kind: child.kind,
+        hp, maxHp: hp,
+        dist, x: p.x, y: p.y,
+        speed: child.speed,
+        armor: child.armor + s.armorAdd,
+        flying: child.flying,
+        heals: child.heals,
+        radius: child.radius,
+        slowMs: 0, slowFactor: 1, frozenMs: 0,
+        burnMs: 0, burnDps: 0,
+        dead: false, hitFlash: 0,
+        wobble: Math.random() * 6,
+      });
+    }
+    popup(e.x, e.y - 12, 'Rozpada się!', '#A78BFA', 12);
+  };
+
   const damageEnemy = (e: Enemy, dmg: number, pierce: boolean) => {
     if (e.dead) return;
     e.hp -= applyArmor(dmg, e.armor, pierce);
@@ -249,6 +312,7 @@ export default function TowerDefenseGame() {
     if (e.hp <= 0) {
       e.dead = true;
       killReward(e);
+      splitEnemy(e);
     }
   };
 
@@ -258,7 +322,7 @@ export default function TowerDefenseGame() {
     if (!kind) return;
     const key = cellKey(c, r);
     if (blocked.current.has(key) || occupied.current.has(key)) return;
-    const cost = TOWERS[kind].levels[0].cost;
+    const cost = buildCost(kind, 1);
     if (goldRef.current < cost) {
       popup((c + 0.5) * CELL, (r + 0.5) * CELL, 'Za mało złota', '#EF4444', 12);
       return;
@@ -276,7 +340,7 @@ export default function TowerDefenseGame() {
   const upgradeSelected = () => {
     const t = towers.current.find((x) => x.id === selectedRef.current);
     if (!t || t.level >= 3) return;
-    const cost = TOWERS[t.kind].levels[t.level].cost;
+    const cost = buildCost(t.kind, t.level + 1);
     if (goldRef.current < cost) {
       popup(t.x, t.y - 20, 'Za mało złota', '#EF4444', 12);
       return;
@@ -307,15 +371,17 @@ export default function TowerDefenseGame() {
 
   const castFreeze = () => {
     if (statusRef.current !== 'playing' || cdFreezeRef.current > 0) return;
-    cdFreezeRef.current = ABILITIES.freeze.cooldown;
-    for (const e of enemies.current) if (!e.dead) e.frozenMs = ABILITIES.freeze.ms;
+    cdFreezeRef.current = ABILITIES.freeze.cooldown * perksRef.current.abilityCd;
+    const froze = ABILITIES.freeze.ms + perksRef.current.freezeBonusMs;
+    for (const e of enemies.current) if (!e.dead) e.frozenMs = froze;
     flashRef.current = { a: 0.35, color: '125,211,252' };
     popup(W / 2, H / 2, 'Zamrożenie!', '#0EA5E9', 18);
   };
 
   const castArrows = (x: number, y: number) => {
-    cdArrowsRef.current = ABILITIES.arrows.cooldown;
-    const { damage, radius } = ABILITIES.arrows;
+    cdArrowsRef.current = ABILITIES.arrows.cooldown * perksRef.current.abilityCd;
+    const { radius } = ABILITIES.arrows;
+    const damage = ABILITIES.arrows.damage * perksRef.current.arrowsDmg;
     for (const e of enemies.current) {
       if (!e.dead && Math.hypot(e.x - x, e.y - y) <= radius) damageEnemy(e, damage, false);
     }
@@ -357,7 +423,7 @@ export default function TowerDefenseGame() {
           if (queueRef.current.length === 0 && enemies.current.length === 0) {
             waveActiveRef.current = false;
             setWaveActive(false);
-            const g = waveClearGold(waveRef.current - 1);
+            const g = Math.round(waveClearGold(waveRef.current - 1) * perksRef.current.waveGold);
             goldRef.current += g;
             setGold(goldRef.current);
             scoreRef.current += WAVE_CLEAR_POINTS;
@@ -403,11 +469,13 @@ export default function TowerDefenseGame() {
           if (e.dist >= route.length) {
             e.dead = true;
             const d = ENEMIES[e.kind];
-            hpRef.current -= d.leak;
+            const dmg = Math.max(1, d.leak - perksRef.current.leakReduce);
+            hpRef.current -= dmg;
+            hpLostRef.current += dmg;
             setHp(Math.max(0, hpRef.current));
             shakeRef.current = 9;
             flashRef.current = { a: 0.4, color: '239,68,68' };
-            popup(e.x, e.y, `-${d.leak}`, '#EF4444', 15);
+            popup(e.x, e.y, `-${dmg}`, '#EF4444', 15);
             if (hpRef.current <= 0) {
               endGame();
               break;
@@ -431,7 +499,7 @@ export default function TowerDefenseGame() {
         // towers
         for (const t of towers.current) {
           const def = TOWERS[t.kind];
-          const lvl = def.levels[t.level - 1];
+          const lvl = towerStats(t.kind, t.level);
           if (t.recoil > 0) t.recoil -= rawMs / 120;
           t.cd -= ms;
           const target = pickTarget(t.x, t.y, lvl.range, def.hitsAir, enemies.current);
@@ -467,8 +535,9 @@ export default function TowerDefenseGame() {
                 if (Math.hypot(e.x - s.tx, e.y - s.ty) <= def.splash) {
                   damageEnemy(e, s.damage, !!def.armorPierce);
                   if (def.burn) {
+                    const resist = LEVELS[levelRef.current]?.fireResist ?? 1;
                     e.burnMs = def.burnMs ?? 2000;
-                    e.burnDps = def.burn;
+                    e.burnDps = def.burn * resist;
                   }
                 }
               }
@@ -479,8 +548,10 @@ export default function TowerDefenseGame() {
               if (e) {
                 damageEnemy(e, s.damage, !!def.armorPierce);
                 if (def.slow) {
-                  e.slowFactor = def.slow;
-                  e.slowMs = def.slowMs ?? 1000;
+                  // frost-resistant chapters blunt the slow rather than remove it
+                  const resist = LEVELS[levelRef.current]?.frostResist ?? 1;
+                  e.slowFactor = 1 - (1 - def.slow) * resist;
+                  e.slowMs = (def.slowMs ?? 1000) * resist;
                 }
                 puff(e.x, e.y, def.accent, 4, 2);
               }
@@ -521,6 +592,8 @@ export default function TowerDefenseGame() {
     cavalry: { key: 'unitSpear', size: 32 },
     shaman: { key: 'unitRobe', size: 32 },
     brute: { key: 'unitShield', size: 44 },
+    golem: { key: 'unitShield', size: 48 },
+    wraith: { key: 'unitRobe', size: 34 },
     boss: { key: 'unitKnightRed', size: 54 },
   };
 
@@ -992,22 +1065,27 @@ export default function TowerDefenseGame() {
   }, []);
 
   const beginLevel = () => {
+    hpLostRef.current = 0; // stars are judged per chapter
+    setEarned(null);
     statusRef.current = 'playing';
     setStatus('playing');
     restMsRef.current = 5000;
   };
 
   const startCampaign = (from: number) => {
+    perksRef.current = perksFrom(meta.perks); // lock in whatever the tree grants now
     scoreRef.current = 0;
     setScore(0);
-    hpRef.current = START_HP;
-    setHp(START_HP);
+    hpLostRef.current = 0;
+    const hp0 = START_HP + perksRef.current.castleHp;
+    hpRef.current = hp0;
+    setHp(hp0);
     shakeRef.current = 0;
     flashRef.current = { a: 0, color: '255,255,255' };
     setLastResult(null);
     setShowConfetti(false);
     setJustUnlocked(null);
-    prepareLevel(from, startGoldFor(from));
+    prepareLevel(from, startGoldFor(from) + perksRef.current.startGold);
     statusRef.current = 'brief';
     setStatus('brief');
   };
@@ -1088,6 +1166,19 @@ export default function TowerDefenseGame() {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1C1408]/90 px-8 text-center backdrop-blur-[2px]">
               <Crown className="h-9 w-9 text-[#C9A227]" />
               <h3 className="text-2xl font-bold text-[#F3E3C3]">{L.name} obroniona!</h3>
+              {earned !== null && (
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3].map((i) => (
+                    <Star
+                      key={i}
+                      className={`h-6 w-6 ${i <= earned ? 'fill-[#C9A227] text-[#C9A227]' : 'text-[#5A4028]'}`}
+                    />
+                  ))}
+                  <span className="ml-1 text-xs text-[#A08B62]">
+                    {earned === 3 ? 'bez straty!' : `stracono ${hpLostRef.current} HP`}
+                  </span>
+                </div>
+              )}
               <p className="text-sm text-[#D8C49A]">+{LEVEL_CLEAR_POINTS} pkt · zabierasz {Math.floor(gold * CARRY_GOLD_RATE) + LEVEL_START_BONUS} zł na następny rozdział</p>
               {justUnlocked && (
                 <p className="flex items-center gap-1.5 rounded-md border border-[#C9A227]/50 bg-[#C9A227]/10 px-3 py-1.5 text-sm font-bold text-[#E8C766]">
@@ -1146,20 +1237,53 @@ export default function TowerDefenseGame() {
                     >
                       {locked ? <Lock className="h-3 w-3" /> : null}
                       {lv.id}. {lv.name}
+                      {!locked && (meta.stars[lv.id] ?? 0) > 0 && (
+                        <span className="ml-0.5 flex items-center gap-0.5">
+                          {[...Array(meta.stars[lv.id])].map((_, si) => (
+                            <Star key={si} className="h-2.5 w-2.5 fill-[#C9A227] text-[#C9A227]" />
+                          ))}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-              <button
-                type="button"
-                onClick={() => startCampaign(startAt)}
-                disabled={!ready && !loadErr}
-                className={`${woodBtn} mt-1 flex items-center gap-2 px-6 py-2.5 text-sm font-bold`}
-              >
-                {status === 'over' ? <RotateCcw className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                {ready || loadErr ? (status === 'over' ? 'Jeszcze raz' : 'Broń zamku') : 'Wczytywanie…'}
-              </button>
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => startCampaign(startAt)}
+                  disabled={!ready && !loadErr}
+                  className={`${woodBtn} flex items-center gap-2 px-6 py-2.5 text-sm font-bold`}
+                >
+                  {status === 'over' ? <RotateCcw className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  {ready || loadErr ? (status === 'over' ? 'Jeszcze raz' : 'Broń zamku') : 'Wczytywanie…'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTreeOpen(true)}
+                  className={`${woodBtn} relative flex items-center gap-2 px-4 py-2.5 text-sm font-bold`}
+                >
+                  <Star className="h-4 w-4 fill-[#C9A227] text-[#C9A227]" />
+                  Kronika
+                  {availableStars(meta) > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#C9A227] text-[10px] font-black text-[#3A2C1C]">
+                      {availableStars(meta)}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
+          )}
+
+          {treeOpen && (
+            <SkillTree
+              meta={meta}
+              onChange={(m) => {
+                setMeta(m);
+                perksRef.current = perksFrom(m.perks);
+              }}
+              onClose={() => setTreeOpen(false)}
+            />
           )}
 
           {showConfetti && <ConfettiBurst />}
