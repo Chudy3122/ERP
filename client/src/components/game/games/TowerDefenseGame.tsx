@@ -892,8 +892,9 @@ export default function TowerDefenseGame() {
       ctx.strokeRect(sel.c * CELL + 1, sel.r * CELL + 1, CELL - 2, CELL - 2);
     }
 
-    for (const t of towers.current) drawTower(ctx, t);
-    for (const e of enemies.current) drawEnemy(ctx, e);
+    // draw towers top-to-bottom so a lower tower overlaps the one above it
+    for (const t of [...towers.current].sort((a, b) => a.y - b.y)) drawTower(ctx, t);
+    for (const e of [...enemies.current].sort((a, b) => a.y - b.y)) drawEnemy(ctx, e);
 
     // lightning bolts
     for (const b of bolts.current) {
