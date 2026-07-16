@@ -30,6 +30,7 @@ export const IMAGE_FILES: Record<string, string> = {
   e_wasp: 'e_wasp.png',
   e_locust: 'e_locust.png',
   e_butterfly: 'e_butterfly.png',
+  e_queen: 'e_queen.png', // the crab recoloured royal purple — a distinct boss
 };
 
 export type Images = Record<string, HTMLImageElement>;
@@ -60,7 +61,7 @@ export const ENEMY_ART: Record<EnemyKind, EnemyArt> = {
   shaman: { img: 'e_beetle', frame: 64, frames: 8, scale: 0.9, sheetW: 832, sheetH: 576 },
   golem: { img: 'e_wasp', frame: 96, frames: 8, scale: 0.95, sheetW: 1152, sheetH: 864 },
   wraith: { img: 'e_locust', frame: 64, frames: 8, scale: 0.92, sheetW: 896, sheetH: 576 },
-  boss: { img: 'e_crab', frame: 64, frames: 8, scale: 1.9, sheetW: 640, sheetH: 576 },
+  boss: { img: 'e_queen', frame: 64, frames: 8, scale: 1.9, sheetW: 640, sheetH: 576 },
 };
 
 const MOVE_ROW = 3;
