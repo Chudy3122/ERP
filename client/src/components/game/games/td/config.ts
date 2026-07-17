@@ -64,7 +64,7 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
   catapult: {
     kind: 'catapult',
     name: 'Katapulta',
-    desc: 'Obszarowa, wolna. Nie trafia w latające.',
+    desc: 'Natychmiastowy cios obszarowy — świetna na zbite roje. Nie trafia w latające.',
     color: '#6B4423',
     accent: '#D97706',
     hitsAir: false,
@@ -107,17 +107,17 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
   oil: {
     kind: 'oil',
     name: 'Kocioł smoły',
-    desc: 'Podpala — obrażenia z czasem ignorują pancerz.',
+    desc: 'Obszarowe podpalenie — obrażenia z czasem całkowicie ignorują pancerz. Świetny na opancerzone grupy.',
     color: '#78350F',
     accent: '#F97316',
     hitsAir: false,
-    splash: 40,
-    burn: 16,
-    burnMs: 3000,
+    splash: 48,
+    burn: 18,
+    burnMs: 3200,
     levels: [
-      { damage: 10, range: 95, cooldown: 1600, cost: 230 },
-      { damage: 18, range: 108, cooldown: 1450, cost: 280 },
-      { damage: 30, range: 120, cooldown: 1250, cost: 400 },
+      { damage: 12, range: 100, cooldown: 1500, cost: 210 },
+      { damage: 20, range: 114, cooldown: 1350, cost: 260 },
+      { damage: 34, range: 128, cooldown: 1150, cost: 370 },
     ],
   },
   tesla: {
@@ -176,7 +176,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   raven: { kind: 'raven', name: 'Pustkomotyl', desc: 'Lata nad wszystkim. Katapulta i smoła go nie dosięgną.', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#7C3AED', dark: '#4C1D95', flying: true, leak: 1 },
   brute: { kind: 'brute', name: 'Krab Magmowy', desc: 'Powolny kolos na strzały. Smoła pali go mimo pancerza.', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#EA580C', dark: '#9A3412', leak: 3 },
   shaman: { kind: 'shaman', name: 'Żuk-znachor', desc: 'Leczy wszystko wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#0891B2', dark: '#155E75', heals: 12, leak: 2 },
-  golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 14, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', leak: 3 },
+  golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 10, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', leak: 3 },
   wraith: { kind: 'wraith', name: 'Szarańcza', desc: 'Po śmierci rozpada się na dwa motyle. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#16A34A', dark: '#14532D', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
   boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją. Pojawia się dopiero od 10. fali.', hp: 1050, speed: 32, armor: 8, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', leak: 4 },
 };

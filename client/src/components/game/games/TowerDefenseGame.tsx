@@ -21,6 +21,38 @@ import Bestiary from './td/Bestiary';
 
 const GAME = 'td';
 
+/** Parchment tooltip with a tower's stats + description, shown on hover in the workshop. */
+function TowerTooltip({ kind }: { kind: TowerKind }) {
+  const d = TOWERS[kind];
+  const l1 = d.levels[0];
+  const l3 = d.levels[2];
+  const rate = (cd: number) => (1000 / cd).toFixed(1);
+  const specials: string[] = [];
+  specials.push(d.hitsAir ? 'Trafia w powietrze i ziemię' : 'Tylko cele naziemne');
+  if (d.splash) specials.push(`Atak obszarowy (promień ${d.splash})`);
+  if (d.slow) specials.push('Spowalnia trafionych wrogów');
+  if (d.burn) specials.push('Podpala — ogień ignoruje pancerz');
+  if (d.armorPierce) specials.push('Przebija pancerz na wylot');
+  if (d.chain) specials.push(`Piorun przeskakuje na ${d.chain} wrogów`);
+  return (
+    <div className="pointer-events-none absolute right-full top-1/2 z-40 mr-2 hidden w-56 -translate-y-1/2 group-hover:block">
+      <div className="rounded-md border-2 border-[#8B6B3E] bg-gradient-to-b from-[#F3E3C3] to-[#E7D3A6] p-2.5 text-left shadow-xl">
+        <p className="text-sm font-bold" style={{ color: d.color }}>{d.name}</p>
+        <p className="mt-0.5 text-[10px] leading-snug text-[#5A4632]">{d.desc}</p>
+        <div className="mt-2 grid grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 text-[10px] text-[#3A2C1C]">
+          <span>Obrażenia</span><span className="text-right font-bold tabular-nums">{l1.damage} → {l3.damage}</span>
+          <span>Zasięg</span><span className="text-right font-bold tabular-nums">{l1.range} → {l3.range}</span>
+          <span>Szybkostrzelność</span><span className="text-right font-bold tabular-nums">{rate(l1.cooldown)} → {rate(l3.cooldown)}/s</span>
+          <span>Koszt budowy</span><span className="text-right font-bold tabular-nums text-[#7A4E12]">{l1.cost} zł</span>
+        </div>
+        <ul className="mt-2 space-y-0.5 border-t border-[#B49B6E] pt-1.5 text-[10px] font-semibold text-[#4A3728]">
+          {specials.map((s) => <li key={s}>• {s}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 /** Workshop icon per tower kind. */
 const TOWER_ICON: Record<TowerKind, LucideIcon> = {
   archer: Crosshair,
@@ -561,6 +593,13 @@ export default function TowerDefenseGame() {
 
         // shots landing
         for (const s of shots.current) {
+          // home the shot onto its target's current position, so splashes (and the
+          // visible projectile) land where the enemy actually is, not where it was fired
+          const homing = enemies.current.find((x) => x.id === s.targetId && !x.dead);
+          if (homing) {
+            s.tx = homing.x;
+            s.ty = homing.y;
+          }
           s.t += ms;
           if (s.t >= s.dur) {
             const def = TOWERS[s.kind];
@@ -1340,15 +1379,16 @@ export default function TowerDefenseGame() {
                     selectedRef.current = null;
                     setSelected(null);
                   }}
-                  className={`flex items-center gap-2 rounded-md border-2 p-1.5 text-left transition-all ${
+                  className={`group relative flex items-center gap-2 rounded-md border-2 p-1.5 text-left transition-all ${
                     !isUnlocked
                       ? 'border-[#B49B6E] bg-[#D6C39B]/60 opacity-70'
                       : on
                       ? 'border-[#C9A227] bg-[#C9A227]/25'
                       : 'border-[#B49B6E] bg-[#F3E3C3] hover:border-[#8B6B3E]'
                   } ${isUnlocked && !afford ? 'opacity-60' : ''}`}
-                  title={isUnlocked ? d.desc : `Odblokujesz po zdobyciu: ${lockedBy?.name ?? '—'}`}
+                  title={!isUnlocked ? `Odblokujesz po zdobyciu: ${lockedBy?.name ?? '—'}` : undefined}
                 >
+                  {isUnlocked && <TowerTooltip kind={k} />}
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md shadow-inner" style={{ backgroundColor: isUnlocked ? d.color : '#9A8A6B' }}>
                     {isUnlocked ? (() => { const Ic = TOWER_ICON[k]; return <Ic className="h-4 w-4" style={{ color: d.accent }} />; })() : <Lock className="h-3.5 w-3.5 text-[#E8DCC0]" />}
                   </span>
