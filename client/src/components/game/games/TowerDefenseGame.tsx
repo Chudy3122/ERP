@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, ArrowUp, Swords, Snowflake, Lock, ChevronRight, Scroll, Star, Crosshair, Bomb, Sparkles, Target, Flame, Zap, type LucideIcon } from 'lucide-react';
+import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, ArrowUp, Swords, Snowflake, Lock, ChevronRight, Scroll, Star, Crosshair, Bomb, Sparkles, Target, Flame, Zap, Shield, type LucideIcon } from 'lucide-react';
 import * as gameApi from '../../../api/game.api';
 import GameLeaderboard, { useLeaderboard } from '../GameLeaderboard';
 import ConfettiBurst from '../ConfettiBurst';
@@ -8,7 +8,7 @@ import {
   CELL, COLS, ROWS, W, H, START_GOLD, START_HP,
   TOWERS, TOWER_ORDER, SELL_RATE, ENEMIES, LEVELS, waveFor, enemyScale,
   waveClearGold, WAVE_CLEAR_POINTS, LEVEL_CLEAR_POINTS, CARRY_GOLD_RATE, LEVEL_START_BONUS,
-  ABILITIES, unlockedAfter, isEndless, startGoldFor,
+  ABILITIES, unlockedAfter, isEndless, startGoldFor, GARRISON,
   type TowerKind, type EnemyKind,
 } from './td/config';
 import {
@@ -67,8 +67,10 @@ const PROGRESS_KEY = 'td_progress_v1';
 type Status = 'idle' | 'brief' | 'playing' | 'levelDone' | 'over';
 
 type Tower = { id: number; c: number; r: number; x: number; y: number; kind: TowerKind; level: number; cd: number; angle: number; invested: number; recoil: number };
-type Enemy = { id: number; kind: EnemyKind; hp: number; maxHp: number; dist: number; x: number; y: number; speed: number; armor: number; flying?: boolean; heals?: number; radius: number; slowMs: number; slowFactor: number; frozenMs: number; burnMs: number; burnDps: number; dead: boolean; hitFlash: number; wobble: number };
+type Enemy = { id: number; kind: EnemyKind; hp: number; maxHp: number; dist: number; x: number; y: number; speed: number; armor: number; flying?: boolean; heals?: number; radius: number; slowMs: number; slowFactor: number; frozenMs: number; burnMs: number; burnDps: number; blockedBy: number | null; dead: boolean; hitFlash: number; wobble: number };
 type Shot = { x: number; y: number; tx: number; ty: number; t: number; dur: number; kind: TowerKind; damage: number; targetId: number };
+/** A castle soldier: sits at a rally point, blocks & fights one ground enemy, respawns when killed. */
+type Soldier = { id: number; rally: number; x: number; y: number; hp: number; maxHp: number; dmg: number; targetId: number | null; dead: boolean; respawnLeft: number; hitFlash: number; wobble: number };
 type Bolt = { pts: { x: number; y: number }[]; life: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string };
 type Popup = { x: number; y: number; vy: number; life: number; max: number; text: string; color: string; size: number };
@@ -93,6 +95,8 @@ export default function TowerDefenseGame() {
 
   const towers = useRef<Tower[]>([]);
   const enemies = useRef<Enemy[]>([]);
+  const soldiers = useRef<Soldier[]>([]);
+  const garrisonRef = useRef(0); // 0 = no barracks, else 1-3
   const shots = useRef<Shot[]>([]);
   const bolts = useRef<Bolt[]>([]);
   const particles = useRef<Particle[]>([]);
@@ -134,6 +138,7 @@ export default function TowerDefenseGame() {
   const [level, setLevel] = useState(0);
   const [score, setScore] = useState(0);
   const [build, setBuild] = useState<TowerKind | null>(null);
+  const [garrison, setGarrison] = useState(0);
   const [selected, setSelected] = useState<Tower | null>(null);
   const [speed, setSpeed] = useState(1);
   const [paused, setPaused] = useState(false);
@@ -289,7 +294,7 @@ export default function TowerDefenseGame() {
       heals: d.heals,
       radius: d.radius,
       slowMs: 0, slowFactor: 1, frozenMs: 0,
-      burnMs: 0, burnDps: 0,
+      burnMs: 0, burnDps: 0, blockedBy: null,
       dead: false, hitFlash: 0,
       wobble: Math.random() * 6,
     });
@@ -345,7 +350,7 @@ export default function TowerDefenseGame() {
         heals: child.heals,
         radius: child.radius,
         slowMs: 0, slowFactor: 1, frozenMs: 0,
-        burnMs: 0, burnDps: 0,
+        burnMs: 0, burnDps: 0, blockedBy: null,
         dead: false, hitFlash: 0,
         wobble: Math.random() * 6,
       });
@@ -357,6 +362,18 @@ export default function TowerDefenseGame() {
     if (e.dead) return;
     e.hp -= applyArmor(dmg, e.armor, pierce);
     e.hitFlash = 1;
+    if (e.hp <= 0) {
+      e.dead = true;
+      killReward(e);
+      splitEnemy(e);
+    }
+  };
+
+  /** Continuous damage (already armour-adjusted by the caller) — for soldiers in melee. */
+  const hurtEnemy = (e: Enemy, dmg: number) => {
+    if (e.dead) return;
+    e.hp -= dmg;
+    e.hitFlash = Math.max(e.hitFlash, 0.5);
     if (e.hp <= 0) {
       e.dead = true;
       killReward(e);
@@ -382,6 +399,45 @@ export default function TowerDefenseGame() {
     puff(px.x, px.y, '#A16207', 12, 3);
     popup(px.x, px.y, `-${CLEAR_COST}`, '#CA8A04', 12);
     return true;
+  };
+
+  // ---------- garrison (castle soldiers) ----------
+  const RALLY_BACK = 74; // how far up the road from the castle the soldiers hold
+  const RALLY_GAP = 40;
+
+  /** Place soldiers to match the current garrison level (fresh, full HP). */
+  const deployGarrison = () => {
+    const g = garrisonRef.current;
+    const route = routeRef.current;
+    for (const e of enemies.current) e.blockedBy = null; // old blockers may be replaced
+    const list: Soldier[] = [];
+    if (g > 0) {
+      const def = GARRISON[g - 1];
+      for (let i = 0; i < def.count; i++) {
+        const rally = Math.max(48, route.length - RALLY_BACK - i * RALLY_GAP);
+        const p = pointAt(route, rally);
+        list.push({ id: idRef.current++, rally, x: p.x, y: p.y, hp: def.hp, maxHp: def.hp, dmg: def.dmg, targetId: null, dead: false, respawnLeft: 0, hitFlash: 0, wobble: Math.random() * 6 });
+      }
+    }
+    soldiers.current = list;
+  };
+
+  const buyGarrison = () => {
+    if (statusRef.current !== 'playing' || garrisonRef.current >= 3) return;
+    const next = garrisonRef.current + 1;
+    const cost = GARRISON[next - 1].cost;
+    const castle = routeRef.current.castle;
+    if (goldRef.current < cost) {
+      popup(castle.x, castle.y - 34, 'Za mało złota', '#EF4444', 12);
+      return;
+    }
+    goldRef.current -= cost;
+    setGold(goldRef.current);
+    garrisonRef.current = next;
+    setGarrison(next);
+    deployGarrison();
+    puff(castle.x, castle.y - 10, '#93C5FD', 16, 3);
+    popup(castle.x, castle.y - 34, next === 1 ? 'Koszary!' : `Załoga ${next}`, '#2563EB', 14);
   };
 
   const tryBuild = (c: number, r: number) => {
@@ -508,6 +564,66 @@ export default function TowerDefenseGame() {
           if (restMsRef.current <= 0) startWave();
         }
 
+        // garrison soldiers — respawn, hold the line and fight one ground enemy each
+        if (garrisonRef.current > 0) {
+          const gdef = GARRISON[garrisonRef.current - 1];
+          for (const sol of soldiers.current) {
+            if (sol.dead) {
+              sol.respawnLeft -= ms;
+              if (sol.respawnLeft <= 0) {
+                sol.dead = false;
+                sol.hp = sol.maxHp;
+                sol.targetId = null;
+                const p = pointAt(route, sol.rally);
+                sol.x = p.x;
+                sol.y = p.y;
+                puff(sol.x, sol.y, '#93C5FD', 8, 2);
+              }
+              continue;
+            }
+            if (sol.hitFlash > 0) sol.hitFlash -= rawMs / 200;
+            sol.wobble += dt * 6;
+            // keep or drop the current target
+            let tgt = sol.targetId != null ? enemies.current.find((x) => x.id === sol.targetId && !x.dead) : undefined;
+            if (tgt && tgt.blockedBy !== sol.id) tgt = undefined;
+            if (!tgt) sol.targetId = null;
+            // acquire: the enemy furthest along that has reached this soldier's line and isn't already blocked
+            if (!tgt) {
+              let best: Enemy | undefined;
+              for (const e of enemies.current) {
+                if (e.dead || e.flying || e.blockedBy != null) continue;
+                if (e.dist >= sol.rally - 6 && (!best || e.dist > best.dist)) best = e;
+              }
+              if (best) {
+                best.blockedBy = sol.id;
+                best.dist = sol.rally;
+                sol.targetId = best.id;
+                tgt = best;
+              }
+            }
+            // fight
+            if (tgt) {
+              hurtEnemy(tgt, Math.max(1, sol.dmg - tgt.armor) * dt);
+              if (!tgt.dead) {
+                sol.hp -= ENEMIES[tgt.kind].melee * dt;
+                if (Math.random() < 0.18) puff((sol.x + tgt.x) / 2, (sol.y + tgt.y) / 2, '#E2E8F0', 1, 1.5);
+                if (sol.hp <= 0) {
+                  sol.dead = true;
+                  sol.hp = 0;
+                  sol.respawnLeft = gdef.respawnMs;
+                  sol.targetId = null;
+                  tgt.blockedBy = null;
+                  puff(sol.x, sol.y, '#94A3B8', 12, 3);
+                } else {
+                  sol.hitFlash = Math.max(sol.hitFlash, 0.4);
+                }
+              } else {
+                sol.targetId = null;
+              }
+            }
+          }
+        }
+
         // enemies
         for (const e of enemies.current) {
           if (e.dead) continue;
@@ -528,7 +644,7 @@ export default function TowerDefenseGame() {
           }
           if (e.hitFlash > 0) e.hitFlash -= rawMs / 200;
           const mult = e.frozenMs > 0 ? 0 : e.slowFactor;
-          e.dist += e.speed * mult * dt;
+          if (e.blockedBy == null) e.dist += e.speed * mult * dt; // a soldier holds it in place
           e.wobble += dt * 9;
           const p = pointAt(route, e.dist);
           e.x = p.x;
@@ -724,6 +840,40 @@ export default function TowerDefenseGame() {
       ctx.fillRect(x - bw / 2, y - r - 11, bw, 4);
       ctx.fillStyle = pct > 0.5 ? '#4ADE80' : pct > 0.25 ? '#FACC15' : '#EF4444';
       ctx.fillRect(x - bw / 2, y - r - 11, bw * pct, 4);
+    }
+  };
+
+  /** A little steel-armoured castle guard, drawn on the road where it holds the line. */
+  const drawSoldier = (ctx: CanvasRenderingContext2D, s: Soldier) => {
+    const bob = Math.sin(s.wobble) * 1.2;
+    const x = s.x;
+    const y = s.y + bob;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y + 7, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // body (royal blue tabard over steel)
+    ctx.fillStyle = s.hitFlash > 0 ? '#ffffff' : '#2563EB';
+    ctx.beginPath();
+    ctx.roundRect(x - 6, y - 6, 12, 14, 4);
+    ctx.fill();
+    // steel helmet
+    ctx.fillStyle = s.hitFlash > 0 ? '#ffffff' : '#94A3B8';
+    ctx.beginPath();
+    ctx.arc(x, y - 8, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // shield
+    ctx.fillStyle = '#CBD5E1';
+    ctx.beginPath();
+    ctx.roundRect(x - 10, y - 4, 5, 9, 2);
+    ctx.fill();
+    // health bar when hurt
+    const pct = Math.max(0, s.hp / s.maxHp);
+    if (pct < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x - 9, y - 17, 18, 3);
+      ctx.fillStyle = pct > 0.5 ? '#38BDF8' : pct > 0.25 ? '#FACC15' : '#EF4444';
+      ctx.fillRect(x - 9, y - 17, 18 * pct, 3);
     }
   };
 
@@ -934,6 +1084,7 @@ export default function TowerDefenseGame() {
 
     // draw towers top-to-bottom so a lower tower overlaps the one above it
     for (const t of [...towers.current].sort((a, b) => a.y - b.y)) drawTower(ctx, t);
+    for (const s of soldiers.current) if (!s.dead) drawSoldier(ctx, s);
     for (const e of [...enemies.current].sort((a, b) => a.y - b.y)) drawEnemy(ctx, e);
 
     // lightning bolts
@@ -1081,6 +1232,9 @@ export default function TowerDefenseGame() {
     routeRef.current = makeRoute(LEVELS[lvl].path);
     blocked.current = blockedCells(routeRef.current);
     towers.current = [];
+    soldiers.current = [];
+    garrisonRef.current = 0;
+    setGarrison(0);
     enemies.current = [];
     shots.current = [];
     bolts.current = [];
@@ -1447,6 +1601,25 @@ export default function TowerDefenseGame() {
               </div>
             </div>
           )}
+
+          {/* Barracks: soldiers that march out of the castle and hold the road */}
+          <button
+            type="button"
+            disabled={status !== 'playing' || garrison >= 3 || gold < GARRISON[Math.min(garrison, 2)].cost}
+            onClick={buyGarrison}
+            className="flex items-center gap-2 rounded-md border-2 border-[#B49B6E] bg-[#F3E3C3] p-1.5 text-left transition-all hover:border-[#8B6B3E] disabled:opacity-50"
+            title="Żołnierze wychodzą z zamku, blokują wrogów na drodze i walczą wręcz. Nie zatrzymają latających."
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#2563EB] shadow-inner">
+              <Shield className="h-4 w-4 text-[#CBD5E1]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-bold text-[#3A2C1C]">Koszary{garrison > 0 ? ` · załoga ${garrison}/3` : ''}</span>
+              <span className="block text-[10px] font-bold tabular-nums text-[#7A4E12]">
+                {garrison >= 3 ? 'Maksymalna załoga' : `${garrison === 0 ? 'Zbuduj' : 'Ulepsz'}: ${GARRISON[garrison].cost} zł`}
+              </span>
+            </span>
+          </button>
 
           <div className="grid grid-cols-2 gap-1.5">
             <button

@@ -156,6 +156,7 @@ export type EnemyDef = {
   points: number;
   flying?: boolean;
   heals?: number;    // HP per second restored to nearby allies
+  melee: number;     // damage per second dealt to a garrison soldier that blocks it
   /** Dies into this many smaller copies — Bloons-style. */
   splitsInto?: { kind: EnemyKind; count: number };
   radius: number;
@@ -170,15 +171,15 @@ export type EnemyDef = {
  * ramp lives in endless waves — see enemyScale.
  */
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
-  peasant: { kind: 'peasant', name: 'Listokrył', desc: 'Liczny, ale bezbronny robal. Padnie od byle strzały.', hp: 32, speed: 52, armor: 0, gold: 7, points: 10, radius: 9, color: '#65A30D', dark: '#3F6212', leak: 1 },
-  soldier: { kind: 'soldier', name: 'Skorpion', desc: 'Twardy pancerz tępi słabe strzały. Balista przebija go na wylot.', hp: 78, speed: 40, armor: 2, gold: 11, points: 20, radius: 10, color: '#3B82F6', dark: '#1E3A8A', leak: 1 },
-  cavalry: { kind: 'cavalry', name: 'Ognik', desc: 'Mknie szybciej, niż zdążysz wycelować. Spowolnij go magiem.', hp: 80, speed: 98, armor: 1, gold: 12, points: 25, radius: 11, color: '#B45309', dark: '#7C2D12', leak: 2 },
-  raven: { kind: 'raven', name: 'Pustkomotyl', desc: 'Lata nad wszystkim. Katapulta i smoła go nie dosięgną.', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#7C3AED', dark: '#4C1D95', flying: true, leak: 1 },
-  brute: { kind: 'brute', name: 'Krab Magmowy', desc: 'Powolny kolos na strzały. Smoła pali go mimo pancerza.', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#EA580C', dark: '#9A3412', leak: 3 },
-  shaman: { kind: 'shaman', name: 'Żuk-znachor', desc: 'Leczy wszystko wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#0891B2', dark: '#155E75', heals: 12, leak: 2 },
-  golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 10, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', leak: 3 },
-  wraith: { kind: 'wraith', name: 'Szarańcza', desc: 'Po śmierci rozpada się na dwa motyle. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#16A34A', dark: '#14532D', splitsInto: { kind: 'raven', count: 2 }, leak: 2 },
-  boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją. Pojawia się dopiero od 10. fali.', hp: 1050, speed: 32, armor: 8, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', leak: 4 },
+  peasant: { kind: 'peasant', name: 'Listokrył', desc: 'Liczny, ale bezbronny robal. Padnie od byle strzały.', hp: 32, speed: 52, armor: 0, gold: 7, points: 10, radius: 9, color: '#65A30D', dark: '#3F6212', melee: 6, leak: 1 },
+  soldier: { kind: 'soldier', name: 'Skorpion', desc: 'Twardy pancerz tępi słabe strzały. Balista przebija go na wylot.', hp: 78, speed: 40, armor: 2, gold: 11, points: 20, radius: 10, color: '#3B82F6', dark: '#1E3A8A', melee: 11, leak: 1 },
+  cavalry: { kind: 'cavalry', name: 'Ognik', desc: 'Mknie szybciej, niż zdążysz wycelować. Spowolnij go magiem.', hp: 80, speed: 98, armor: 1, gold: 12, points: 25, radius: 11, color: '#B45309', dark: '#7C2D12', melee: 13, leak: 2 },
+  raven: { kind: 'raven', name: 'Pustkomotyl', desc: 'Lata nad wszystkim. Katapulta i smoła go nie dosięgną.', hp: 58, speed: 82, armor: 0, gold: 12, points: 25, radius: 9, color: '#7C3AED', dark: '#4C1D95', flying: true, melee: 8, leak: 1 },
+  brute: { kind: 'brute', name: 'Krab Magmowy', desc: 'Powolny kolos na strzały. Smoła pali go mimo pancerza.', hp: 320, speed: 28, armor: 6, gold: 30, points: 60, radius: 14, color: '#EA580C', dark: '#9A3412', melee: 22, leak: 3 },
+  shaman: { kind: 'shaman', name: 'Żuk-znachor', desc: 'Leczy wszystko wokół siebie. Zabij go pierwszego, bo zmarnujesz ogień.', hp: 140, speed: 46, armor: 3, gold: 26, points: 55, radius: 10, color: '#0891B2', dark: '#155E75', heals: 12, melee: 9, leak: 2 },
+  golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 10, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', melee: 17, leak: 3 },
+  wraith: { kind: 'wraith', name: 'Szarańcza', desc: 'Po śmierci rozpada się na dwa motyle. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#16A34A', dark: '#14532D', splitsInto: { kind: 'raven', count: 2 }, melee: 14, leak: 2 },
+  boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją. Pojawia się dopiero od 10. fali.', hp: 1050, speed: 32, armor: 8, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', melee: 45, leak: 4 },
 };
 
 // ---------------- Levels ----------------
@@ -447,6 +448,19 @@ export const LEVEL_CLEAR_POINTS = 750;
 /** Leftover gold carried into the next level, so hoarding isn't punished too hard. */
 export const CARRY_GOLD_RATE = 0.5;
 export const LEVEL_START_BONUS = 150;
+
+// ---------------- Garrison (castle soldiers) ----------------
+/**
+ * Buyable per chapter. Level 0 = no garrison. Each level fields more/stronger
+ * soldiers that march out of the castle, block enemies on the road and fight
+ * them, then respawn after dying. Flyers can't be blocked.
+ */
+export type GarrisonLevel = { cost: number; count: number; hp: number; dmg: number; respawnMs: number };
+export const GARRISON: [GarrisonLevel, GarrisonLevel, GarrisonLevel] = [
+  { cost: 200, count: 1, hp: 90, dmg: 15, respawnMs: 6000 },
+  { cost: 240, count: 2, hp: 130, dmg: 22, respawnMs: 5500 },
+  { cost: 340, count: 3, hp: 180, dmg: 30, respawnMs: 5000 },
+];
 
 // ---------------- Abilities ----------------
 export const ABILITIES = {
