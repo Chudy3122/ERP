@@ -10,9 +10,21 @@ import type { EnemyKind, TowerKind } from './config';
 
 const BASE = '/games/spire/';
 
+/** Chapters 2-10 recolour the grass to their own mood; chapter 1 stays green. */
+const GROUND_THEMES: Record<number, string> = {
+  2: 'ch2_stony', 3: 'ch3_desert', 4: 'ch4_marsh', 5: 'ch5_fortress',
+  6: 'ch6_frozen', 7: 'ch7_mines', 8: 'ch8_scorched', 9: 'ch9_crossing', 10: 'ch10_shadow',
+};
+
 export const IMAGE_FILES: Record<string, string> = {
   grass: 'ground_grass.png',
   grass2: 'ground_grass2.png',
+  ...Object.fromEntries(
+    Object.values(GROUND_THEMES).flatMap((t) => [
+      [`g_${t}`, `ground_${t}.png`],
+      [`g_${t}b`, `ground_${t}b.png`],
+    ])
+  ),
   dec_tree: 'dec_tree.png',
   dec_rock: 'dec_rock.png',
   dec_rock2: 'dec_rock2.png',
@@ -34,6 +46,13 @@ export const IMAGE_FILES: Record<string, string> = {
 };
 
 export type Images = Record<string, HTMLImageElement>;
+
+/** The two ground tiles for a chapter (recoloured for its theme, or plain grass). */
+export function groundTiles(images: Images, chapterId: number): [HTMLImageElement, HTMLImageElement] {
+  const t = GROUND_THEMES[chapterId];
+  if (t && images[`g_${t}`]) return [images[`g_${t}`], images[`g_${t}b`]];
+  return [images.grass, images.grass2];
+}
 
 export function loadImages(): Promise<Images> {
   const entries = Object.entries(IMAGE_FILES);

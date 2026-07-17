@@ -3,7 +3,7 @@ import { Play, RotateCcw, Crown, Heart, Coins, Pause, FastForward, Trash2, Arrow
 import * as gameApi from '../../../api/game.api';
 import GameLeaderboard, { useLeaderboard } from '../GameLeaderboard';
 import ConfettiBurst from '../ConfettiBurst';
-import { loadImages, drawEnemyFrame, drawTowerBase, type Images } from './td/art';
+import { loadImages, drawEnemyFrame, drawTowerBase, groundTiles, type Images } from './td/art';
 import {
   CELL, COLS, ROWS, W, H, START_GOLD, START_HP,
   TOWERS, TOWER_ORDER, SELL_RATE, ENEMIES, LEVELS, waveFor, enemyScale,
@@ -801,11 +801,12 @@ export default function TowerDefenseGame() {
       ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
     }
 
-    // grass ground
+    // ground, recoloured for the chapter's theme
     if (images) {
+      const [gA, gB] = groundTiles(images, LEVELS[levelRef.current].id);
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          const g = (c * 3 + r * 7) % 4 === 0 ? images.grass2 : images.grass;
+          const g = (c * 3 + r * 7) % 4 === 0 ? gB : gA;
           ctx.drawImage(g, c * CELL, r * CELL, CELL, CELL);
         }
       }
