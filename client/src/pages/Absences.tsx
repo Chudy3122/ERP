@@ -172,6 +172,62 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
     },
   };
 
+type CalendarRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const getLeaveTypeFromText = (value?: string | null): LeaveType | null => {
+  if (!value) return null;
+  const text = normalizeText(value);
+
+  if (text.includes('praca zdalna')) return 'remote_work';
+  if (text.includes('na zadanie')) return 'personal';
+  if (text.includes('wypoczynkowy')) return 'vacation';
+  if (text.includes('l4') || text.includes('lekarskie')) return 'sick_leave';
+  if (text.includes('bezplatny')) return 'unpaid';
+  if (text.includes('rodzicielski')) return 'parental';
+  if (text.includes('macierzynski')) return 'maternity';
+  if (text.includes('ojcowski')) return 'paternity';
+  if (text.includes('dzieckiem') || text.includes('14 lat')) return 'childcare_188';
+  if (text.includes('opiekunczy')) return 'care';
+  if (text.includes('okolicznosciowy')) return 'occasional';
+  if (text.includes('swieto') || text.includes('sobote')) return 'holiday_saturday';
+  if (text.includes('inne')) return 'other';
+
+  return null;
+};
+
+const getCalendarEventLeaveType = (event: calendarApi.CalendarEvent): LeaveType => {
+  const rawType =
+    event.details?.leaveType ||
+    event.details?.leave_type ||
+    event.details?.type ||
+    (event as any).leaveType ||
+    (event as any).leave_type;
+
+  if (rawType && Object.prototype.hasOwnProperty.call(leaveTypeConfig, rawType)) {
+    return rawType as LeaveType;
+  }
+
+  const detailsText = typeof event.details === 'string'
+    ? event.details
+    : [event.details?.label, event.details?.name, event.details?.reason].filter(Boolean).join(' ');
+
+  return getLeaveTypeFromText(`${event.title || ''} ${detailsText}`) || 'other';
+};
+
+const normalizeCalendarStatus = (status?: string | null): CalendarRequestStatus => {
+  if (status === 'pending' || status === 'approved' || status === 'rejected' || status === 'cancelled') {
+    return status;
+  }
+
+  return 'approved';
+};
+
 const Absences = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -496,8 +552,8 @@ const Absences = () => {
           user_id: e.userId,
           start_date: e.start,
           end_date: e.end || e.start,
-          leave_type: e.details?.leaveType,
-          status: e.status,
+          leave_type: getCalendarEventLeaveType(e),
+          status: normalizeCalendarStatus(e.status),
         })) as unknown as LeaveRequest[];
       setCalendarLeaves(leaves);
     } catch {
@@ -2149,6 +2205,28 @@ const Absences = () => {
                                   </td>
                                 );
                               const leaveRequest = getCalendarLeaveRequest(u.id, day.date);
+                              const fallbackLeaveType = !leaveRequest && du.status === 'on_leave'
+                                ? getLeaveTypeFromText(du.details)
+                                : null;
+                              const fallbackLeaveStatus = !leaveRequest && du.status === 'on_leave'
+                                ? 'approved'
+                                : null;
+
+                              if (isWeekend && !leaveRequest && du.status === 'on_leave') {
+                                return (
+                                  <td
+                                    key={day.date}
+                                    className={`text-center text-gray-400 ${
+                                      isToday
+                                        ? 'border-x border-[#F7941D]/20 bg-[#F7941D]/5 px-3 py-3 dark:bg-[#F7941D]/10'
+                                        : 'bg-gray-50 px-1 py-2 dark:bg-gray-900/30'
+                                    }`}
+                                  >
+                                    -
+                                  </td>
+                                );
+                              }
+
                               const displayStatus = leaveRequest
                                 ? leaveRequest.leave_type === 'remote_work'
                                   ? 'remote'
@@ -2156,12 +2234,20 @@ const Absences = () => {
                                 : du.status;
                               const displayLabel = leaveRequest
                                 ? leaveTypeConfig[leaveRequest.leave_type as LeaveType]?.label || calStatusText(displayStatus)
+                                : fallbackLeaveType
+                                  ? leaveTypeConfig[fallbackLeaveType].label
+                                  : du.status === 'on_leave' && du.details
+                                    ? du.details
                                 : calStatusText(displayStatus);
                               const details = leaveRequest
                                 ? `${displayLabel} - ${getCalendarRequestStatusLabel(leaveRequest.status)}`
+                                : fallbackLeaveStatus
+                                  ? `${displayLabel} - ${getCalendarRequestStatusLabel(fallbackLeaveStatus)}`
                                 : du.details;
                               const displayIcon = leaveRequest
                                 ? getCalendarRequestIcon(leaveRequest)
+                                : fallbackLeaveType
+                                  ? leaveTypeConfig[fallbackLeaveType].icon
                                 : calStatusIcon(displayStatus);
 
                               return (
@@ -2193,14 +2279,14 @@ const Absences = () => {
                                         {displayLabel}
                                       </span>
                                     )}
-                                    {leaveRequest && !isWeekend && (
-                                      <span className={`block w-full truncate text-center text-[10px] font-semibold leading-none ${getCalendarRequestStatusClass(leaveRequest.status)}`}>
-                                        {getCalendarRequestStatusLabel(leaveRequest.status)}
+                                    {(leaveRequest || fallbackLeaveStatus) && !isWeekend && (
+                                      <span className={`block w-full truncate text-center text-[10px] font-semibold leading-none ${getCalendarRequestStatusClass(leaveRequest?.status || fallbackLeaveStatus || '')}`}>
+                                        {getCalendarRequestStatusLabel(leaveRequest?.status || fallbackLeaveStatus || '')}
                                       </span>
                                     )}
-                                    {leaveRequest && isWeekend && (
-                                      <span className={`block w-full truncate text-center text-[9px] font-semibold leading-none ${getCalendarRequestStatusClass(leaveRequest.status)}`}>
-                                        {getCalendarRequestStatusLabel(leaveRequest.status)}
+                                    {(leaveRequest || fallbackLeaveStatus) && isWeekend && (
+                                      <span className={`block w-full truncate text-center text-[9px] font-semibold leading-none ${getCalendarRequestStatusClass(leaveRequest?.status || fallbackLeaveStatus || '')}`}>
+                                        {getCalendarRequestStatusLabel(leaveRequest?.status || fallbackLeaveStatus || '')}
                                       </span>
                                     )}
                                     {!isWeekend && !leaveRequest && (du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (

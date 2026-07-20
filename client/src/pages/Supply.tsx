@@ -47,6 +47,7 @@ const PRIORITY_CLS: Record<SupplyPriority, string> = {
 };
 
 const PAGE_SIZE_OPTIONS = [10, 30, 50];
+type SupplyTab = 'all' | 'pending' | 'resolved' | 'mine';
 
 const EMPTY: CreateSupplyRequest = {
   item_name: '',
@@ -65,7 +66,7 @@ export default function Supply() {
 
   const [requests, setRequests] = useState<SupplyRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'all' | 'pending' | 'mine'>(isManager ? 'pending' : 'mine');
+  const [tab, setTab] = useState<SupplyTab>(isManager ? 'pending' : 'mine');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -201,25 +202,36 @@ export default function Supply() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
+    const tabRequests = tab === 'resolved'
+      ? requests.filter((request) => request.status === 'approved' || request.status === 'rejected')
+      : requests;
 
-    if (!query) return requests;
+    const searched = !query
+      ? tabRequests
+      : tabRequests.filter((request) =>
+          request.item_name.toLowerCase().includes(query) ||
+          request.description?.toLowerCase().includes(query) ||
+          SUPPLY_CATEGORY_LABELS[request.category].toLowerCase().includes(query) ||
+          (request.user && `${request.user.first_name} ${request.user.last_name}`.toLowerCase().includes(query))
+        );
 
-    return requests.filter((request) =>
-      request.item_name.toLowerCase().includes(query) ||
-      request.description?.toLowerCase().includes(query) ||
-      SUPPLY_CATEGORY_LABELS[request.category].toLowerCase().includes(query) ||
-      (request.user && `${request.user.first_name} ${request.user.last_name}`.toLowerCase().includes(query))
-    );
-  }, [requests, search]);
+    return [...searched].sort((first, second) => (
+      new Date(second.created_at).getTime() - new Date(first.created_at).getTime()
+    ));
+  }, [requests, search, tab]);
 
   const stats = useMemo(() => {
+    const scopedRequests = tab === 'resolved'
+      ? requests.filter((request) => request.status === 'approved' || request.status === 'rejected')
+      : requests;
+
     return {
-      total: requests.length,
-      pending: requests.filter((request) => request.status === 'pending').length,
-      approved: requests.filter((request) => request.status === 'approved').length,
-      rejected: requests.filter((request) => request.status === 'rejected').length,
+      total: scopedRequests.length,
+      pending: scopedRequests.filter((request) => request.status === 'pending').length,
+      approved: scopedRequests.filter((request) => request.status === 'approved').length,
+      rejected: scopedRequests.filter((request) => request.status === 'rejected').length,
     };
-  }, [requests]);
+  }, [requests, tab]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -234,6 +246,14 @@ export default function Supply() {
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
+        })
+      : '—';
+  const formatDateShort = (date: string | null) =>
+    date
+      ? new Date(date).toLocaleDateString('pl-PL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
         })
       : '—';
   const getUserName = (request: SupplyRequest) =>
@@ -290,6 +310,9 @@ export default function Supply() {
                 <>
                   <TabBtn active={tab === 'pending'} onClick={() => setTab('pending')}>
                     Do rozpatrzenia
+                  </TabBtn>
+                  <TabBtn active={tab === 'resolved'} onClick={() => setTab('resolved')}>
+                    Rozpatrzone
                   </TabBtn>
                   <TabBtn active={tab === 'all'} onClick={() => setTab('all')}>
                     Wszystkie
@@ -348,7 +371,7 @@ export default function Supply() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-[980px] w-full text-sm">
+                <table className="min-w-[1120px] w-full text-sm">
                   <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
                     <tr>
                       <th className="px-4 py-3 text-left">Artykuł</th>
@@ -356,6 +379,7 @@ export default function Supply() {
                       <th className="px-4 py-3 text-left">Kategoria</th>
                       <th className="px-4 py-3 text-center">Priorytet</th>
                       {tab !== 'mine' && <th className="px-4 py-3 text-left">Zgłaszający</th>}
+                      <th className="px-4 py-3 text-left">Data zgłoszenia</th>
                       <th className="px-4 py-3 text-center">Status</th>
                       <th className="px-4 py-3 text-right">Akcje</th>
                     </tr>
@@ -374,7 +398,14 @@ export default function Supply() {
                                 <Package className="h-4 w-4" />
                               </div>
                               <div className="min-w-0">
-                                <p className="font-semibold text-gray-950 dark:text-white">{request.item_name}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/supply/${request.id}`)}
+                                  className="max-w-[360px] truncate text-left font-semibold text-gray-950 transition-colors hover:text-[#F7941D] hover:underline dark:text-white dark:hover:text-orange-300"
+                                  title="Otwórz szczegóły zgłoszenia"
+                                >
+                                  {request.item_name}
+                                </button>
                                 {request.description && (
                                   <p className="mt-1 max-w-[340px] truncate text-xs text-gray-500 dark:text-gray-400">
                                     {request.description}
@@ -402,6 +433,12 @@ export default function Supply() {
                               )}
                             </td>
                           )}
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                              <CalendarDays className="h-4 w-4 text-gray-400" />
+                              {formatDateShort(request.created_at)}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 text-center">
                             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusConfig.cls}`}>
                               <StatusIcon className="h-3.5 w-3.5" />
