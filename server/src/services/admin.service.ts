@@ -37,6 +37,7 @@ interface UpdateUserData {
   annual_leave_days?: number;
   isActive?: boolean;
   mobile_allowed?: boolean;
+  can_edit_boss_calendar?: boolean;
 }
 
 class AdminService {
@@ -73,6 +74,7 @@ class AdminService {
         'user.phone',
         'user.is_active',
         'user.mobile_allowed',
+        'user.can_edit_boss_calendar',
         'user.last_login',
         'user.created_at',
         'user.avatar_url',
@@ -128,6 +130,7 @@ class AdminService {
         'avatar_url',
         'is_active',
         'mobile_allowed',
+        'can_edit_boss_calendar',
         'last_login',
         'created_at',
         'updated_at',
@@ -236,6 +239,7 @@ class AdminService {
     if (data.annual_leave_days !== undefined) user.annual_leave_days = data.annual_leave_days;
     if (data.isActive !== undefined) user.is_active = data.isActive;
     if (data.mobile_allowed !== undefined) user.mobile_allowed = data.mobile_allowed;
+    if (data.can_edit_boss_calendar !== undefined) user.can_edit_boss_calendar = data.can_edit_boss_calendar;
 
     await this.userRepository.save(user);
 

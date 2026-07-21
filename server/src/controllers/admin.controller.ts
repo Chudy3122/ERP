@@ -125,6 +125,7 @@ class AdminController {
         annual_leave_days,
         isActive,
         mobile_allowed,
+        can_edit_boss_calendar,
       } = req.body;
 
       const user = await adminService.updateUser(id, {
@@ -144,6 +145,7 @@ class AdminController {
         annual_leave_days,
         isActive,
         mobile_allowed,
+        can_edit_boss_calendar,
       });
 
       if (!user) {

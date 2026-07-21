@@ -17,6 +17,7 @@ export interface AdminUser {
   avatar_url: string | null;
   is_active: boolean;
   mobile_allowed?: boolean;
+  can_edit_boss_calendar?: boolean;
   last_login: string | null;
   created_at: string;
   updated_at: string;
@@ -97,4 +98,5 @@ export interface UpdateUserData {
   annual_leave_days?: number;
   isActive?: boolean;
   mobile_allowed?: boolean;
+  can_edit_boss_calendar?: boolean;
 }
