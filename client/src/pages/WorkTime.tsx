@@ -785,6 +785,18 @@ export default function WorkTime() {
     }
   }
 
+  async function handleManualEntrySaved() {
+    await loadMyData();
+
+    if (activeTab === 'all' && isManager) {
+      await loadAllEntries();
+    }
+
+    if (activeTab === 'attendance' && canViewAttendance) {
+      await loadAttendance();
+    }
+  }
+
   // ── Action handlers ───────────────────────────────────────────────────────
   async function handleStartWork() {
     if (isTimeTrackingBlocked) {
@@ -1179,7 +1191,7 @@ export default function WorkTime() {
       {isManager && showManualEntry && (
         <ManualEntryModal
           onClose={() => setShowManualEntry(false)}
-          onSaved={loadMyData}
+          onSaved={handleManualEntrySaved}
           users={managerUsers}
           isTimeTrackingBlocked={isTimeTrackingBlocked}
         />
