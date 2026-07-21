@@ -93,6 +93,11 @@ export class User {
   @Column({ type: 'boolean', default: false })
   is_fleet_manager: boolean;
 
+  // Individually granted the right to add/edit meetings in the boss calendar,
+  // on top of the roles that always can (szef, sekretariat, admin, kierownik, kadry).
+  @Column({ type: 'boolean', default: false })
+  can_edit_boss_calendar: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   last_login: Date | null;
 

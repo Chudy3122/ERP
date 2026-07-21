@@ -151,7 +151,7 @@ const EMPTY_FORM: CreateEntryPayload = {
 
 export default function BossCalendar() {
   const { user } = useAuth();
-  const canEdit = CAN_EDIT_ROLES.includes(user?.role || '');
+  const canEdit = CAN_EDIT_ROLES.includes(user?.role || '') || !!user?.can_edit_boss_calendar;
   const canComplete = CAN_COMPLETE_ROLES.includes(user?.role || '');
   // Drag-and-drop rescheduling — boss and admins only
   const canDrag = ['szef', 'admin'].includes(user?.role || '');

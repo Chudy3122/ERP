@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import bossCalendarController from '../controllers/boss-calendar.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
+import { requireRole, requireBossCalendarEditor } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
 
 const router = Router();
 
 router.use(authenticate);
 
-const canEdit = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KADRY]);
+// Editor roles, plus anyone individually flagged with can_edit_boss_calendar.
+const canEdit = requireBossCalendarEditor();
 // Marking a meeting as finished is limited to the boss, secretariat and admins
 const canComplete = requireRole([UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN]);
 

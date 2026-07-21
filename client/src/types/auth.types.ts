@@ -29,6 +29,8 @@ export interface User {
   manager_id: string | null;
   working_hours_per_day: number;
   annual_leave_days: number;
+  /** Individually granted the right to add/edit meetings in the boss calendar. */
+  can_edit_boss_calendar?: boolean;
   created_at: string;
   updated_at: string;
 }

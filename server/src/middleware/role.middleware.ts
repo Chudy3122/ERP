@@ -73,6 +73,31 @@ export const requireResourceOwnerOrAdmin = (resourceUserIdParam: string = 'userI
 export const roleMiddleware = requireRole;
 
 /**
+ * Boss-calendar edit access: allowed for the editor roles, or for any user
+ * individually flagged with can_edit_boss_calendar. The flag isn't in the JWT,
+ * so it's checked against the DB only when the role check doesn't already pass.
+ */
+export const requireBossCalendarEditor = () => {
+  const editorRoles = [UserRole.SZEF, UserRole.SEKRETARIAT, UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KADRY];
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    }
+    if (editorRoles.includes(req.user.role)) return next();
+    try {
+      const user = await AppDataSource.getRepository(User).findOne({
+        where: { id: req.user.userId },
+        select: ['id', 'can_edit_boss_calendar'],
+      });
+      if (user?.can_edit_boss_calendar) return next();
+      return res.status(403).json({ error: 'Forbidden', message: 'Brak uprawnień do edycji kalendarza szefa' });
+    } catch {
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  };
+};
+
+/**
  * Allows ADMIN unconditionally.
  * Allows KIEROWNIK only if the target user (req.params.id) is in the same department.
  * Rejects everyone else.
