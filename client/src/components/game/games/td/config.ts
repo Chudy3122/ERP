@@ -326,12 +326,12 @@ export const LEVELS: LevelDef[] = [
     path: [{ x: -1, y: 3 }, { x: 5, y: 3 }, { x: 5, y: 9 }, { x: 9, y: 9 }, { x: 9, y: 5 }, { x: 13, y: 5 }, { x: 13, y: 11 }, { x: 14.4, y: 11 }],
     base: 'water', alt: 'grass',
     decor: ['pineL', 'pineS', 'treeB', 'rockM', 'bush'],
-    decorDensity: 0.4,
+    decorDensity: 0.24,
     waves: 14,
-    hpMul: 4.6,
+    hpMul: 4.4,
     armorAdd: 6,
     pool: ['cavalry', 'raven', 'wraith', 'brute', 'shaman', 'boss'],
-    fog: 0.85,
+    fog: 0.92,
   },
   {
     id: 10,
@@ -345,7 +345,7 @@ export const LEVELS: LevelDef[] = [
     hpMul: 4.8,
     armorAdd: 7,
     pool: ['cavalry', 'raven', 'wraith', 'brute', 'golem', 'shaman', 'boss'],
-    fog: 0.92,
+    fog: 0.88,
   },
 ];
 
