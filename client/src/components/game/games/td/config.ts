@@ -206,6 +206,8 @@ export type LevelDef = {
   fireResist?: number;
   /** Fog: every tower's range is cut. */
   fog?: number;
+  /** Multiplier on every wave's enemy counts — thins overly dense swarms. */
+  waveScale?: number;
 };
 
 export const LEVELS: LevelDef[] = [
@@ -332,6 +334,7 @@ export const LEVELS: LevelDef[] = [
     armorAdd: 6,
     pool: ['cavalry', 'raven', 'wraith', 'brute', 'shaman', 'boss'],
     fog: 0.92,
+    waveScale: 0.65,
   },
   {
     id: 10,
@@ -422,6 +425,10 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
   // Fall back to the chapter's own first enemy — never an off-pool one.
   if (!groups.length) {
     groups.push({ kind: L.pool[0], count: Math.max(2, scale(4)), gap: 520 });
+  }
+  // Per-chapter thinning of the swarm (some maps stack too many enemies at once).
+  if (L.waveScale && L.waveScale !== 1) {
+    for (const g of groups) g.count = Math.max(1, Math.round(g.count * L.waveScale));
   }
   return groups;
 }
