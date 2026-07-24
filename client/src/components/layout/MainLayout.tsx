@@ -131,6 +131,7 @@ type NavigationItem = NavItem | NavHeader | NavDivider;
 
 /** The only modules an external lawyer (PRAWNIK) may see and reach. */
 export const PRAWNIK_NAV_PATHS = [
+  '/projects', // list is filtered server-side to the projects they're a member of
   '/tasks',
   '/private-zone',
   '/employees',
