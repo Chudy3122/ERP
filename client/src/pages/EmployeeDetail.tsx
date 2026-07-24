@@ -178,6 +178,7 @@ const EmployeeDetail = () => {
       ksiegowosc: 'Księgowość',
       kadry: 'Kadry',
       sekretariat: 'Sekretariat',
+      prawnik: 'Prawnik',
     };
     return labels[role] || role;
   };
@@ -214,6 +215,7 @@ const EmployeeDetail = () => {
       ksiegowosc: 'Księgowość — finanse (faktury, płatności, umowy) + aktywność',
       kadry: 'Kadry — pełny dostęp HR: czas pracy, urlopy, nadgodziny, profile',
       sekretariat: 'Podstawowy dostęp oraz edycja kalendarza szefa',
+      prawnik: 'Zewnętrzny prawnik — dostęp do wybranych modułów',
       employee: 'Podstawowy dostęp do funkcji pracowniczych',
     })[role] ?? 'Podstawowy dostęp do funkcji pracowniczych';
 
@@ -490,6 +492,7 @@ const EmployeeDetail = () => {
                   <option value="kadry">Kadry</option>
                   <option value="ksiegowosc">Księgowość</option>
                   <option value="sekretariat">Sekretariat</option>
+                  <option value="prawnik">Prawnik</option>
                   <option value="admin">Administrator</option>
                 </select>
               ) : (

@@ -34,6 +34,7 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   ksiegowosc: { label: 'Księgowość', cls: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' },
   kadry: { label: 'Kadry', cls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300' },
   sekretariat: { label: 'Sekretariat', cls: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' },
+  prawnik: { label: 'Prawnik', cls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300' },
 };
 
 const Organization = () => {

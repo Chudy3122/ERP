@@ -166,6 +166,7 @@ const Employees = () => {
       kadry: 'Kadry',
       szef: 'Szef',
       sekretariat: 'Sekretariat',
+      prawnik: 'Prawnik',
     };
     return labels[role] || role;
   };

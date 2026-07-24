@@ -17,7 +17,7 @@ import { getFileUrl } from '../api/axios-config';
 // ── Role colour helpers ──────────────────────────────────────────────────────
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator', kierownik: 'Kierownik', employee: 'Pracownik',
-  szef: 'Szef', ksiegowosc: 'Księgowość', kadry: 'Kadry', sekretariat: 'Sekretariat',
+  szef: 'Szef', ksiegowosc: 'Księgowość', kadry: 'Kadry', sekretariat: 'Sekretariat', prawnik: 'Prawnik',
 };
 const ROLE_BADGE: Record<string, string> = {
   admin: 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800',
@@ -27,10 +27,11 @@ const ROLE_BADGE: Record<string, string> = {
   ksiegowosc: 'bg-blue-100 text-blue-800',
   kadry: 'bg-teal-100 text-teal-800',
   sekretariat: 'bg-green-100 text-green-800',
+  prawnik: 'bg-indigo-100 text-indigo-800',
 };
 const ROLE_DOT: Record<string, string> = {
   admin: 'bg-purple-500', kierownik: 'bg-amber-400', employee: 'bg-gray-400',
-  szef: 'bg-red-500', ksiegowosc: 'bg-blue-500', kadry: 'bg-teal-500', sekretariat: 'bg-green-500',
+  szef: 'bg-red-500', ksiegowosc: 'bg-blue-500', kadry: 'bg-teal-500', sekretariat: 'bg-green-500', prawnik: 'bg-indigo-500',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

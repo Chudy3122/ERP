@@ -21,6 +21,7 @@ export enum UserRole {
   KADRY = 'kadry',           // Kadry — pełny dostęp HR (dawna „księgowość")
   SZEF = 'szef',
   SEKRETARIAT = 'sekretariat',
+  PRAWNIK = 'prawnik',       // Prawnik (zewnętrzna kancelaria) — ograniczony dostęp do wybranych modułów
 }
 
 @Entity('users')

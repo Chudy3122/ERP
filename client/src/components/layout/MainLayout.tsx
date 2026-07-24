@@ -129,6 +129,18 @@ interface NavDivider {
 
 type NavigationItem = NavItem | NavHeader | NavDivider;
 
+/** The only modules an external lawyer (PRAWNIK) may see and reach. */
+export const PRAWNIK_NAV_PATHS = [
+  '/tasks',
+  '/private-zone',
+  '/employees',
+  '/organization',
+  '/procedures',
+  '/boss-calendar',
+  '/tickets',
+  '/settings',
+];
+
 interface NotificationItem {
   id: string;
   title: string;
@@ -367,6 +379,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   };
 
   const renderNavigationItem = (item: NavigationItem, idx: number) => {
+    // The external lawyer sees only a flat, curated set of modules — no section
+    // headers, and nothing outside this whitelist.
+    if (user?.role === UserRole.PRAWNIK) {
+      if ('type' in item) return null;
+      const path = (item as NavItem).href.split('?')[0];
+      if (!PRAWNIK_NAV_PATHS.includes(path)) return null;
+    }
     if ('type' in item) {
       if (item.type === 'divider') {
         return <div key={`divider-${idx}`} className="my-2 h-px bg-gray-100 dark:bg-gray-700" />;

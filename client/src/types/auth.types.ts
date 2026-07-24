@@ -6,6 +6,7 @@ export enum UserRole {
   KADRY = 'kadry',
   SZEF = 'szef',
   SEKRETARIAT = 'sekretariat',
+  PRAWNIK = 'prawnik',
 }
 
 export interface User {

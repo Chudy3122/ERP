@@ -1,15 +1,22 @@
 /* eslint-disable react/prop-types */
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/auth.types';
+import { PRAWNIK_NAV_PATHS } from '../components/layout/MainLayout';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
   roles?: UserRole[];
 }
 
+/** Where the lawyer is sent when they hit a page outside their allowed set. */
+const PRAWNIK_HOME = '/tasks';
+const prawnikAllowed = (path: string) =>
+  PRAWNIK_NAV_PATHS.some((p) => path === p || path.startsWith(p + '/'));
+
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, roles }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -24,6 +31,11 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, roles }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // External lawyer: hard-lock to the whitelisted modules, whatever URL is typed.
+  if (user?.role === UserRole.PRAWNIK && !prawnikAllowed(location.pathname)) {
+    return <Navigate to={PRAWNIK_HOME} replace />;
   }
 
   if (roles?.length && (!user || !roles.includes(user.role))) {

@@ -23,7 +23,9 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       await login({ email, password });
-      navigate('/dashboard');
+      // The external lawyer has no dashboard — send them straight to their tasks.
+      const loggedIn = JSON.parse(localStorage.getItem('user') || 'null');
+      navigate(loggedIn?.role === 'prawnik' ? '/tasks' : '/dashboard');
     } catch (error: any) {
       const status = error?.response?.status;
       setLoginError(
