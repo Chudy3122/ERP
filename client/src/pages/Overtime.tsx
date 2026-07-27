@@ -123,6 +123,62 @@ export default function Overtime() {
   const [teamSort, setTeamSort] = useState<TeamSort>('name');
   const canExpand = ['admin', 'kadry', 'szef', 'kierownik'].includes(user?.role || '');
 
+  // Time report (managers): per-user overtime/collection report over a date range
+  const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]; };
+  const monthEnd = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0]; };
+  const [reportUserId, setReportUserId] = useState('');
+  const [reportFrom, setReportFrom] = useState(monthStart);
+  const [reportTo, setReportTo] = useState(monthEnd);
+  const [reportData, setReportData] = useState<WorkLog[] | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const generateReport = async () => {
+    if (!reportUserId) { toast.error('Wybierz pracownika'); return; }
+    if (reportFrom && reportTo && reportFrom > reportTo) { toast.error('Data „od" jest późniejsza niż „do"'); return; }
+    setReportLoading(true);
+    try {
+      const logs = await worklogApi.getWorkLogs({
+        user_id: reportUserId,
+        start_date: reportFrom || undefined,
+        end_date: reportTo || undefined,
+      });
+      setReportData(
+        logs
+          .filter((l) => l.work_type === WorkLogType.OVERTIME || l.work_type === WorkLogType.OVERTIME_COMP)
+          .sort((a, b) => String(a.work_date).localeCompare(String(b.work_date))),
+      );
+    } catch {
+      setReportData(null);
+      toast.error('Nie udało się wygenerować raportu');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const exportReportCsv = () => {
+    if (!reportData || !reportData.length) return;
+    const emp = summary.find((s) => s.user_id === reportUserId);
+    const nameSlug = emp ? `${emp.last_name}_${emp.first_name}` : reportUserId;
+    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+    const header = ['Data', 'Typ', 'Godziny', 'Projekt', 'Zadanie', 'Opis'];
+    const rows = reportData.map((l) => [
+      String(l.work_date).slice(0, 10),
+      l.work_type === WorkLogType.OVERTIME ? 'Nadgodziny' : 'Odbiór nadgodzin',
+      formatHM(l.hours),
+      l.project?.name || '',
+      l.task?.title || '',
+      (l.description || '').replace(/\r?\n/g, ' '),
+    ]);
+    const csv = '﻿' + [header, ...rows].map((r) => r.map(esc).join(';')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `raport_nadgodzin_${nameSlug}_${reportFrom || 'poczatek'}_${reportTo || 'koniec'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const myEntry = summary.find((s) => s.user_id === user?.id);
   const selectedProjectUserId = isAdmin && form.user_id ? form.user_id : user?.id;
   const availableProjects = projects.filter((project) => {
@@ -834,6 +890,128 @@ export default function Overtime() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Time report (managers): pick a person + date range, generate + export */}
+        {canExpand && (
+          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
+              <Search className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Raport czasu pracownika</h2>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3 p-4">
+              <div className="min-w-[220px]">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
+                <select
+                  value={reportUserId}
+                  onChange={(e) => { setReportUserId(e.target.value); setReportData(null); }}
+                  className="h-10 w-64 max-w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">— wybierz pracownika —</option>
+                  {[...summary]
+                    .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                    .map((u) => (
+                      <option key={u.user_id} value={u.user_id}>{u.last_name} {u.first_name}</option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Od</label>
+                <input
+                  type="date"
+                  value={reportFrom}
+                  onChange={(e) => { setReportFrom(e.target.value); setReportData(null); }}
+                  className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Do</label>
+                <input
+                  type="date"
+                  value={reportTo}
+                  onChange={(e) => { setReportTo(e.target.value); setReportData(null); }}
+                  className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <button
+                onClick={generateReport}
+                disabled={!reportUserId || reportLoading}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+              >
+                {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                Generuj raport
+              </button>
+              {reportData && reportData.length > 0 && (
+                <button
+                  onClick={exportReportCsv}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
+                  Eksport CSV
+                </button>
+              )}
+            </div>
+
+            {reportData !== null && (
+              reportLoading ? null : reportData.length === 0 ? (
+                <div className="border-t border-gray-100 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  Brak wpisów nadgodzin/odbiorów w wybranym zakresie.
+                </div>
+              ) : (() => {
+                const totalOt = reportData.filter((l) => l.work_type === WorkLogType.OVERTIME).reduce((s, l) => s + Number(l.hours), 0);
+                const totalComp = reportData.filter((l) => l.work_type === WorkLogType.OVERTIME_COMP).reduce((s, l) => s + Number(l.hours), 0);
+                return (
+                  <div className="border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex flex-wrap gap-3 px-4 py-3">
+                      <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        Nadgodziny: {formatHM(totalOt)}
+                      </span>
+                      <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        Odebrane: {formatHM(totalComp)}
+                      </span>
+                      <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                        Saldo: {formatHM(totalOt - totalComp)}
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="border-t border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400">
+                          <tr>
+                            <th className="px-4 py-2.5 text-left">Data</th>
+                            <th className="px-4 py-2.5 text-left">Typ</th>
+                            <th className="px-4 py-2.5 text-right">Godziny</th>
+                            <th className="px-4 py-2.5 text-left">Projekt / zadanie</th>
+                            <th className="px-4 py-2.5 text-left">Opis</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {reportData.map((l) => (
+                            <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                              <td className="whitespace-nowrap px-4 py-2 text-gray-700 dark:text-gray-300">{String(l.work_date).slice(0, 10)}</td>
+                              <td className="px-4 py-2">
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  l.work_type === WorkLogType.OVERTIME
+                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                    : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                }`}>
+                                  {l.work_type === WorkLogType.OVERTIME ? 'Nadgodziny' : 'Odbiór'}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-gray-900 dark:text-white">{formatHM(l.hours)}</td>
+                              <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                                {[l.project?.name, l.task?.title].filter(Boolean).join(' · ') || '—'}
+                              </td>
+                              <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{l.description || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
           </div>
         )}
 
