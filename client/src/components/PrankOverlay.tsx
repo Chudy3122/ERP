@@ -3,7 +3,22 @@ import { X } from 'lucide-react';
 import socketService from '../services/socket.service';
 import { useChatContext } from '../contexts/ChatContext';
 
-export type PrankType = 'confetti' | 'rickroll' | 'fake_notification' | 'shake' | 'meme';
+export type PrankType =
+  | 'confetti'
+  | 'rickroll'
+  | 'fake_notification'
+  | 'shake'
+  | 'meme'
+  | 'nyancat'
+  | 'troll'
+  | 'dramatic';
+
+// Fullscreen video pranks: play for a few seconds, then vanish on their own.
+const VIDEO_PRANKS: Record<string, { id: string; caption: string; seconds: number }> = {
+  nyancat: { id: 'QH2-TGUlwu4', caption: '🌈🐱 Nyan nyan nyan nyan…', seconds: 8 },
+  troll: { id: '2Z4m4lnjxkY', caption: '😜 Trololololo…', seconds: 8 },
+  dramatic: { id: 'y8Kyi0WNg40', caption: '😱', seconds: 5 },
+};
 
 interface PrankPayload {
   type: PrankType;
@@ -69,6 +84,9 @@ export default function PrankOverlay() {
     }
     if (prank.type === 'rickroll') {
       timers.push(window.setTimeout(() => setCanCloseRoll(true), 4000));
+    }
+    if (VIDEO_PRANKS[prank.type]) {
+      timers.push(window.setTimeout(dismiss, VIDEO_PRANKS[prank.type].seconds * 1000));
     }
 
     return () => {
@@ -202,6 +220,24 @@ export default function PrankOverlay() {
             {MEMES[Math.floor(prank.id) % MEMES.length]}
           </p>
           <p className="mt-6 text-sm text-gray-400">(kliknij, aby zamknąć)</p>
+        </div>
+      )}
+
+      {/* FULLSCREEN VIDEO — plays a few seconds, then disappears on its own */}
+      {VIDEO_PRANKS[prank.type] && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black p-4">
+          <p className="mb-3 text-center text-2xl font-bold text-white" style={{ animation: 'prank-pop 0.5s ease-out' }}>
+            {VIDEO_PRANKS[prank.type].caption}
+          </p>
+          <div className="relative w-full max-w-3xl overflow-hidden rounded-xl" style={{ paddingBottom: '56.25%' }}>
+            <iframe
+              className="absolute inset-0 h-full w-full"
+              src={`https://www.youtube.com/embed/${VIDEO_PRANKS[prank.type].id}?autoplay=1&playsinline=1&controls=0`}
+              title="prank"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
         </div>
       )}
     </>

@@ -5,7 +5,7 @@ import {
   Users, Clock, CalendarDays, MessageSquare, Shield, Plus, Search,
   RefreshCw, Edit2, Trash2, KeyRound, CheckCircle, XCircle,
   Building2, BarChart3, Activity, UserPlus, Eye, Tv2,
-  PartyPopper, Send, Music, Bell, Vibrate, Laugh,
+  PartyPopper, Send, Music, Bell, Vibrate, Laugh, Cat, Film,
 } from 'lucide-react';
 import * as adminApi from '../api/admin.api';
 import * as departmentApi from '../api/department.api';
@@ -612,6 +612,9 @@ const Admin = () => {
                 { type: 'fake_notification', label: 'Fałszywe powiadomienie', desc: '„Formatowanie dysku C:…”', icon: Bell, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
                 { type: 'shake', label: 'Trzęsący się ekran', desc: 'Ekran się zatrzęsie na chwilę', icon: Vibrate, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
                 { type: 'meme', label: 'Losowy mem', desc: 'Wyskakujący mem na cały ekran', icon: Laugh, color: 'text-green-500 bg-green-50 dark:bg-green-900/20' },
+                { type: 'nyancat', label: 'Nyan Cat', desc: 'Tęczowy kot na cały ekran (sam znika)', icon: Cat, color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20' },
+                { type: 'troll', label: 'Trololo', desc: 'Klasyczny filmik (sam znika)', icon: Music, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20' },
+                { type: 'dramatic', label: 'Dramatic zoom', desc: 'Dramatyczny filmik (sam znika)', icon: Film, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
               ] as { type: string; label: string; desc: string; icon: typeof Bell; color: string }[]).map(p => (
                 <button
                   key={p.type}

@@ -4,7 +4,16 @@ import { AppDataSource } from '../config/database';
 import { User } from '../models/User.model';
 
 // Harmless, in-app-only prank effects an admin can fire at a colleague.
-const PRANK_TYPES = ['confetti', 'rickroll', 'fake_notification', 'shake', 'meme'] as const;
+const PRANK_TYPES = [
+  'confetti',
+  'rickroll',
+  'fake_notification',
+  'shake',
+  'meme',
+  'nyancat',
+  'troll',
+  'dramatic',
+] as const;
 type PrankType = (typeof PRANK_TYPES)[number];
 
 class PrankController {
