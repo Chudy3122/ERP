@@ -15,11 +15,13 @@ export type PrankType =
   | 'surprise';
 
 // Fullscreen video pranks: play for a few seconds, then vanish on their own.
-const VIDEO_PRANKS: Record<string, { id: string; caption: string; seconds: number }> = {
-  nyancat: { id: 'QH2-TGUlwu4', caption: '🌈🐱 Nyan nyan nyan nyan…', seconds: 8 },
-  troll: { id: '2Z4m4lnjxkY', caption: '😜 Trololololo…', seconds: 8 },
-  dramatic: { id: 'y8Kyi0WNg40', caption: '😱', seconds: 5 },
-  surprise: { id: 'JX8JnmKfhiw', caption: '🎬', seconds: 10 },
+// Rendered inside a neutral "media player" window with the YouTube chrome
+// cropped/hidden, so it doesn't read as an embedded YouTube clip.
+const VIDEO_PRANKS: Record<string, { id: string; seconds: number; start?: number }> = {
+  nyancat: { id: '2yJgwwDcgV8', seconds: 8 },
+  troll: { id: '2Z4m4lnjxkY', seconds: 9, start: 8 },
+  dramatic: { id: 'y8Kyi0WNg40', seconds: 5 },
+  surprise: { id: 'JX8JnmKfhiw', seconds: 10 },
 };
 
 interface PrankPayload {
@@ -225,23 +227,40 @@ export default function PrankOverlay() {
         </div>
       )}
 
-      {/* FULLSCREEN VIDEO — plays a few seconds, then disappears on its own */}
-      {VIDEO_PRANKS[prank.type] && (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black p-4">
-          <p className="mb-3 text-center text-2xl font-bold text-white" style={{ animation: 'prank-pop 0.5s ease-out' }}>
-            {VIDEO_PRANKS[prank.type].caption}
-          </p>
-          <div className="relative w-full max-w-3xl overflow-hidden rounded-xl" style={{ paddingBottom: '56.25%' }}>
-            <iframe
-              className="absolute inset-0 h-full w-full"
-              src={`https://www.youtube.com/embed/${VIDEO_PRANKS[prank.type].id}?autoplay=1&playsinline=1&controls=0`}
-              title="prank"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
+      {/* FULLSCREEN VIDEO — plays a few seconds inside a neutral "media player"
+          window (YouTube chrome cropped away), then disappears on its own */}
+      {VIDEO_PRANKS[prank.type] && (() => {
+        const vp = VIDEO_PRANKS[prank.type];
+        const src =
+          `https://www.youtube-nocookie.com/embed/${vp.id}` +
+          `?autoplay=1&controls=0&modestbranding=1&rel=0&disablekb=1&fs=0&iv_load_policy=3&playsinline=1` +
+          (vp.start ? `&start=${vp.start}` : '');
+        return (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4" style={{ animation: 'prank-pop 0.35s ease-out' }}>
+            <div className="w-full max-w-3xl overflow-hidden rounded-lg border border-gray-600 bg-[#1e1e1e] shadow-2xl">
+              {/* fake system-app title bar */}
+              <div className="flex select-none items-center gap-2 bg-gradient-to-b from-[#3a3a3a] to-[#2a2a2a] px-3 py-2">
+                <span className="text-sm font-medium text-gray-100">Odtwarzacz multimediów</span>
+                <div className="ml-auto flex items-center gap-3 text-gray-300">
+                  <span className="inline-block h-px w-3 bg-gray-300" />
+                  <span className="inline-block h-2.5 w-2.5 border border-gray-300" />
+                  <button onClick={dismiss} className="leading-none text-gray-300 hover:text-white">✕</button>
+                </div>
+              </div>
+              {/* cropped player: zoomed 116% so YouTube's title/logo/controls fall outside the frame */}
+              <div className="relative w-full overflow-hidden bg-black" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute"
+                  style={{ top: '-8%', left: '-8%', width: '116%', height: '116%', pointerEvents: 'none' }}
+                  src={src}
+                  title="Odtwarzacz multimediów"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }
