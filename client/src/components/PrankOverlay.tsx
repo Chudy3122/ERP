@@ -123,12 +123,6 @@ export default function PrankOverlay() {
 
   if (!prank) return null;
 
-  const fromLabel = (
-    <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-sm font-semibold text-white shadow-lg">
-      🎭 Prank od {prank.from}
-    </div>
-  );
-
   return (
     <>
       <style>{`
@@ -147,20 +141,13 @@ export default function PrankOverlay() {
       {/* CONFETTI */}
       {prank.type === 'confetti' && (
         <div className="fixed inset-0 z-[9999] pointer-events-none">
-          {fromLabel}
           <canvas ref={canvasRef} className="h-full w-full" />
         </div>
-      )}
-
-      {/* SHAKE — label only, the body animates */}
-      {prank.type === 'shake' && (
-        <div className="fixed inset-0 z-[9999] pointer-events-none">{fromLabel}</div>
       )}
 
       {/* RICKROLL */}
       {prank.type === 'rickroll' && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 p-4">
-          {fromLabel}
           <div className="w-full max-w-2xl">
             <p className="mb-3 text-center text-2xl font-bold text-white" style={{ animation: 'prank-pop 0.5s ease-out' }}>
               🎵 Never gonna give you up! 🎵
@@ -201,7 +188,7 @@ export default function PrankOverlay() {
               <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-700">
                 <div className="h-full rounded-full bg-[#F7941D]" style={{ width: '47%' }} />
               </div>
-              <p className="mt-2 text-right text-xs font-semibold text-[#F7941D]">to tylko żart 🎭 — od {prank.from}</p>
+              <p className="mt-2 text-right text-xs text-gray-500">Nie zamykaj tego okna…</p>
             </div>
           </div>
         </div>
@@ -210,7 +197,6 @@ export default function PrankOverlay() {
       {/* MEME */}
       {prank.type === 'meme' && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 p-6" onClick={dismiss}>
-          {fromLabel}
           <div className="text-8xl" style={{ animation: 'prank-bounce 1s ease-in-out infinite' }}>🐸</div>
           <p className="mt-6 max-w-lg text-center text-2xl font-bold text-white" style={{ animation: 'prank-pop 0.5s ease-out' }}>
             {MEMES[Math.floor(prank.id) % MEMES.length]}
