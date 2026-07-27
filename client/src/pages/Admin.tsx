@@ -5,6 +5,7 @@ import {
   Users, Clock, CalendarDays, MessageSquare, Shield, Plus, Search,
   RefreshCw, Edit2, Trash2, KeyRound, CheckCircle, XCircle,
   Building2, BarChart3, Activity, UserPlus, Eye, Tv2,
+  PartyPopper, Send, Music, Bell, Vibrate, Laugh,
 } from 'lucide-react';
 import * as adminApi from '../api/admin.api';
 import * as departmentApi from '../api/department.api';
@@ -40,7 +41,7 @@ const initials = (u: AdminUser) => `${u.first_name[0] ?? ''}${u.last_name[0] ?? 
 
 const DEPT_COLORS = ['#F7941D','#0d6efd','#198754','#dc3545','#6f42c1','#0dcaf0','#fd7e14','#20c997','#d63384','#6c757d'];
 
-type Tab = 'dashboard' | 'users' | 'departments' | 'fun';
+type Tab = 'dashboard' | 'users' | 'departments' | 'fun' | 'prank';
 
 const EMPTY_USER: CreateUserData = { email: '', password: '', firstName: '', lastName: '', role: 'employee', department: '', position: '', phone: '' };
 const EMPTY_DEPT: CreateDepartmentData = { name: '', code: '', color: '#F7941D' };
@@ -71,6 +72,12 @@ const Admin = () => {
   const [newPassword, setNewPassword] = useState('');
   const [userForm, setUserForm] = useState<CreateUserData>(EMPTY_USER);
 
+  // Pranks
+  const [prankTargets, setPrankTargets] = useState<AdminUser[]>([]);
+  const [prankUserId, setPrankUserId] = useState('');
+  const [prankSending, setPrankSending] = useState<string | null>(null);
+  const [prankSearch, setPrankSearch] = useState('');
+
   // Departments
   const [departments, setDepartments] = useState<Department[]>([]);
   const [deptCounts, setDeptCounts] = useState<Record<string, number>>({});
@@ -83,6 +90,30 @@ const Admin = () => {
   // ── Load ─────────────────────────────────────────────────────────────────
   useEffect(() => { loadStats(); loadDepartments(); }, []);
   useEffect(() => { if (tab === 'users') loadUsers(); }, [tab, search, roleFilter, deptFilter]);
+  useEffect(() => { if (tab === 'prank' && prankTargets.length === 0) loadPrankTargets(); }, [tab]);
+
+  const loadPrankTargets = async () => {
+    try {
+      const list = await adminApi.getUsers();
+      setPrankTargets(list.filter(u => u.is_active));
+    } catch {
+      toast.error('Nie udało się pobrać listy pracowników');
+    }
+  };
+
+  const handleSendPrank = async (prankType: string) => {
+    if (!prankUserId) { toast.error('Najpierw wybierz pracownika'); return; }
+    setPrankSending(prankType);
+    try {
+      const { delivered } = await adminApi.sendPrank(prankUserId, prankType);
+      if (delivered) toast.success('Prank wysłany! 🎭');
+      else toast('Wysłano, ale pracownik jest offline — nie zobaczy go teraz.', { icon: '💤' });
+    } catch {
+      toast.error('Nie udało się wysłać pranku');
+    } finally {
+      setPrankSending(null);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -213,6 +244,7 @@ const Admin = () => {
     { id: 'users', label: 'Użytkownicy', icon: Users },
     { id: 'departments', label: 'Działy', icon: Building2 },
     { id: 'fun', label: 'Rozrywka', icon: Tv2 },
+    { id: 'prank', label: 'Pranki', icon: PartyPopper },
   ];
 
   return (
@@ -525,6 +557,80 @@ const Admin = () => {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
+            </div>
+          </div>
+        )}
+
+        {tab === 'prank' && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center gap-2">
+                <PartyPopper className="w-5 h-5 text-[#F7941D]" />
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Pranki</h2>
+              </div>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Wybierz pracownika i wyślij mu nieszkodliwy żart. Efekt pojawi się u niego na ekranie od razu —
+                pod warunkiem, że jest w tej chwili zalogowany. Nic nie jest zapisywane.
+              </p>
+
+              <div className="mt-4">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Pracownik</label>
+                <div className="relative max-w-md mb-2">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="search"
+                    value={prankSearch}
+                    onChange={e => setPrankSearch(e.target.value)}
+                    placeholder="Szukaj pracownika..."
+                    className={inp + ' pl-9'}
+                  />
+                </div>
+                <select
+                  value={prankUserId}
+                  onChange={e => setPrankUserId(e.target.value)}
+                  className={inp + ' max-w-md'}
+                >
+                  <option value="">— wybierz pracownika —</option>
+                  {[...prankTargets]
+                    .filter(u => {
+                      const q = prankSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(q);
+                    })
+                    .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                    .map(u => (
+                      <option key={u.id} value={u.id}>{u.last_name} {u.first_name} · {u.email}</option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {([
+                { type: 'confetti', label: 'Konfetti', desc: 'Deszcz konfetti na cały ekran', icon: PartyPopper, color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20' },
+                { type: 'rickroll', label: 'Rickroll', desc: 'Never gonna give you up 🎵', icon: Music, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20' },
+                { type: 'fake_notification', label: 'Fałszywe powiadomienie', desc: '„Formatowanie dysku C:…”', icon: Bell, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
+                { type: 'shake', label: 'Trzęsący się ekran', desc: 'Ekran się zatrzęsie na chwilę', icon: Vibrate, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
+                { type: 'meme', label: 'Losowy mem', desc: 'Wyskakujący mem na cały ekran', icon: Laugh, color: 'text-green-500 bg-green-50 dark:bg-green-900/20' },
+              ] as { type: string; label: string; desc: string; icon: typeof Bell; color: string }[]).map(p => (
+                <button
+                  key={p.type}
+                  onClick={() => handleSendPrank(p.type)}
+                  disabled={!prankUserId || prankSending !== null}
+                  className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition-colors hover:border-[#F7941D] hover:bg-[#F7941D]/5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-[#F7941D]"
+                >
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${p.color}`}>
+                    <p.icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
+                      {p.label}
+                      {prankSending === p.type ? <RefreshCw className="h-3.5 w-3.5 animate-spin text-[#F7941D]" /> : <Send className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600" />}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{p.desc}</span>
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         )}

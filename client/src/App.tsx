@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ChatProvider } from './contexts/ChatContext';
 import AppRoutes from './routes/AppRoutes';
+import PrankOverlay from './components/PrankOverlay';
 import './i18n';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <AuthProvider>
           <ChatProvider>
           <AppRoutes />
+          <PrankOverlay />
           <ToastContainer
             position="top-right"
             autoClose={3000}

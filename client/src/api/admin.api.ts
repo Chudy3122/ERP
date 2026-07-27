@@ -118,3 +118,17 @@ export const getUsers = async (): Promise<AdminUser[]> => {
   const response = await getAllUsers(1, 1000); // Get up to 1000 users
   return response.users;
 };
+
+/**
+ * Send a harmless, in-app-only prank to a user (delivered live over the socket).
+ */
+export const sendPrank = async (
+  targetUserId: string,
+  prankType: string,
+): Promise<{ delivered: boolean }> => {
+  const response = await apiClient.post('/admin/prank', {
+    target_user_id: targetUserId,
+    prank_type: prankType,
+  });
+  return response.data;
+};
