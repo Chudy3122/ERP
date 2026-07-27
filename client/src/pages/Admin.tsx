@@ -615,6 +615,7 @@ const Admin = () => {
                 { type: 'nyancat', label: 'Nyan Cat', desc: 'Tęczowy kot na cały ekran (sam znika)', icon: Cat, color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20' },
                 { type: 'troll', label: 'Trololo', desc: 'Klasyczny filmik (sam znika)', icon: Music, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20' },
                 { type: 'dramatic', label: 'Dramatic zoom', desc: 'Dramatyczny filmik (sam znika)', icon: Film, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
+                { type: 'surprise', label: 'Kupa 💩', desc: 'Wyskakujący filmik (sam znika)', icon: Film, color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' },
               ] as { type: string; label: string; desc: string; icon: typeof Bell; color: string }[]).map(p => (
                 <button
                   key={p.type}

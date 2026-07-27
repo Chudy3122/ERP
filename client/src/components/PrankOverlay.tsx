@@ -11,13 +11,15 @@ export type PrankType =
   | 'meme'
   | 'nyancat'
   | 'troll'
-  | 'dramatic';
+  | 'dramatic'
+  | 'surprise';
 
 // Fullscreen video pranks: play for a few seconds, then vanish on their own.
 const VIDEO_PRANKS: Record<string, { id: string; caption: string; seconds: number }> = {
   nyancat: { id: 'QH2-TGUlwu4', caption: '🌈🐱 Nyan nyan nyan nyan…', seconds: 8 },
   troll: { id: '2Z4m4lnjxkY', caption: '😜 Trololololo…', seconds: 8 },
   dramatic: { id: 'y8Kyi0WNg40', caption: '😱', seconds: 5 },
+  surprise: { id: 'JX8JnmKfhiw', caption: '🎬', seconds: 10 },
 };
 
 interface PrankPayload {
