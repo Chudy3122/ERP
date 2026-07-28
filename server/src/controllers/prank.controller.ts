@@ -14,6 +14,7 @@ const PRANK_TYPES = [
   'troll',
   'dramatic',
   'surprise',
+  'bomba',
 ] as const;
 type PrankType = (typeof PRANK_TYPES)[number];
 

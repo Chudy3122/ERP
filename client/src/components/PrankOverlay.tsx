@@ -11,7 +11,8 @@ export type PrankType =
   | 'nyancat'
   | 'troll'
   | 'dramatic'
-  | 'surprise';
+  | 'surprise'
+  | 'bomba';
 
 // Fullscreen video pranks: play for a few seconds, then vanish on their own.
 // Rendered inside a neutral "media player" window with the YouTube chrome
@@ -21,6 +22,7 @@ const VIDEO_PRANKS: Record<string, { id: string; start?: number }> = {
   troll: { id: '2Z4m4lnjxkY', start: 8 },
   dramatic: { id: 'y8Kyi0WNg40' },
   surprise: { id: 'JX8JnmKfhiw' },
+  bomba: { id: 'DJmLzyr-guM' },
 };
 
 interface PrankPayload {
