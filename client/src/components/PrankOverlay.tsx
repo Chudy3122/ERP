@@ -53,18 +53,44 @@ export default function PrankOverlay() {
 
   const dismiss = useCallback(() => setPrank(null), []);
 
-  // Subscribe to live pranks once the socket is up.
+  // Subscribe to live pranks. The socket is a singleton owned by ChatContext and
+  // may not exist yet on first mount, so we poll for it and (re)attach on every
+  // (re)connect. This is deliberately defensive — a missed attach = silent no-op.
   useEffect(() => {
-    const socket = socketService.getSocket();
-    if (!socket) return;
     const handler = (payload: PrankPayload) => {
+      console.log('🎭 prank:receive', payload);
       if (!payload?.type) return;
       idRef.current += 1;
       setPrank({ ...payload, id: idRef.current });
     };
-    socket.on('prank:receive', handler);
-    return () => {
+
+    let attachedSocket: ReturnType<typeof socketService.getSocket> | null = null;
+    const attach = () => {
+      const socket = socketService.getSocket();
+      if (!socket) return false;
       socket.off('prank:receive', handler);
+      socket.on('prank:receive', handler);
+      // Re-attach after a reconnect (same instance, but be safe).
+      socket.off('connect', attach);
+      socket.on('connect', attach);
+      if (attachedSocket !== socket) {
+        attachedSocket = socket;
+        console.log('🎭 prank listener attached to socket', socket.id);
+      }
+      return true;
+    };
+
+    if (!attach()) {
+      const poll = window.setInterval(() => { if (attach()) window.clearInterval(poll); }, 500);
+      return () => {
+        window.clearInterval(poll);
+        attachedSocket?.off('prank:receive', handler);
+        attachedSocket?.off('connect', attach);
+      };
+    }
+    return () => {
+      attachedSocket?.off('prank:receive', handler);
+      attachedSocket?.off('connect', attach);
     };
   }, [isConnected]);
 

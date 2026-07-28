@@ -51,10 +51,15 @@ class PrankController {
       }
 
       const io = getIO();
-      const room = io.sockets.adapter.rooms.get(`user:${target_user_id}`);
+      const roomName = `user:${target_user_id}`;
+      const room = io.sockets.adapter.rooms.get(roomName);
       const delivered = !!room && room.size > 0;
 
-      io.to(`user:${target_user_id}`).emit('prank:receive', {
+      console.log(
+        `🎭 prank '${prank_type}' → ${roomName}: ${delivered ? `${room!.size} socket(s)` : 'NObody in room (target offline?)'}`,
+      );
+
+      io.to(roomName).emit('prank:receive', {
         type: prank_type,
         from: fromName,
         at: new Date().toISOString(),
