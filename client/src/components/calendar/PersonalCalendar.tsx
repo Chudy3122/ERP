@@ -46,6 +46,7 @@ export default function PersonalCalendar() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dayView, setDayView] = useState<Date | null>(null); // day-detail modal
 
   // 6-week grid starting on Monday.
   const gridStart = useMemo(() => {
@@ -93,6 +94,13 @@ export default function PersonalCalendar() {
     const d = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0, 0);
     setForm(emptyForm(d));
   };
+
+  // Events on a given day, all-day first then chronological.
+  const eventsOnDay = (day: Date) =>
+    [...(byDay.get(dateKey(day)) || [])].sort((a, b) => {
+      if (a.all_day !== b.all_day) return a.all_day ? -1 : 1;
+      return new Date(a.occurrence_date).getTime() - new Date(b.occurrence_date).getTime();
+    });
 
   const openEdit = (o: CalendarOccurrence) => {
     setForm({
@@ -193,7 +201,7 @@ export default function PersonalCalendar() {
           return (
             <div
               key={k}
-              onClick={() => openNew(day)}
+              onClick={() => setDayView(day)}
               className={`min-h-[54px] cursor-pointer rounded-lg border p-1 text-left transition-colors ${
                 inMonth ? 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700/50' : 'border-transparent bg-gray-50/60 text-gray-400 dark:bg-gray-900/30'
               }`}
@@ -251,6 +259,69 @@ export default function PersonalCalendar() {
           </ul>
         )}
       </div>
+
+      {/* Day-detail modal: preview everything on a day, then view/add/edit */}
+      {dayView && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" onClick={() => setDayView(null)}>
+          <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
+                  <span className="text-[10px] uppercase leading-none">{MONTHS[dayView.getMonth()].slice(0, 3)}</span>
+                  <span className="text-lg font-bold leading-none">{dayView.getDate()}</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold capitalize text-gray-900 dark:text-white">
+                    {dayView.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {eventsOnDay(dayView).length === 0
+                      ? 'Brak wydarzeń'
+                      : `${eventsOnDay(dayView).length} ${eventsOnDay(dayView).length === 1 ? 'wydarzenie' : 'wydarzeń'}`}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setDayView(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {eventsOnDay(dayView).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <CalendarDays className="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Nic zaplanowanego na ten dzień.</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {eventsOnDay(dayView).map((o, i) => (
+                    <li key={`${o.id}-dv-${i}`}>
+                      <button
+                        onClick={() => openEdit(o)}
+                        className="flex w-full items-start gap-3 rounded-lg border border-gray-100 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
+                      >
+                        <div className="mt-0.5 flex w-16 flex-shrink-0 flex-col items-center rounded-lg bg-[#F7941D]/10 px-1 py-1 text-[#9a5a00] dark:bg-[#F7941D]/15 dark:text-orange-200">
+                          <span className="text-xs font-bold tabular-nums leading-tight">{fmtTime(o.occurrence_date, o.all_day)}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">{o.title}</span>
+                            {o.is_recurring && <Repeat className="h-3 w-3 flex-shrink-0 text-gray-400" />}
+                            {o.remind_minutes_before != null && <Bell className="h-3 w-3 flex-shrink-0 text-gray-400" />}
+                          </div>
+                          {o.description && <p className="mt-0.5 whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">{o.description}</p>}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+              <button onClick={() => openNew(dayView)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f]"><Plus className="h-4 w-4" /> Dodaj wydarzenie</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {form && (
