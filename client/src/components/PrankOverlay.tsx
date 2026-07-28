@@ -17,11 +17,11 @@ export type PrankType =
 // Fullscreen video pranks: play for a few seconds, then vanish on their own.
 // Rendered inside a neutral "media player" window with the YouTube chrome
 // cropped/hidden, so it doesn't read as an embedded YouTube clip.
-const VIDEO_PRANKS: Record<string, { id: string; seconds: number; start?: number }> = {
-  nyancat: { id: '2yJgwwDcgV8', seconds: 8 },
-  troll: { id: '2Z4m4lnjxkY', seconds: 9, start: 8 },
-  dramatic: { id: 'y8Kyi0WNg40', seconds: 5 },
-  surprise: { id: 'JX8JnmKfhiw', seconds: 10 },
+const VIDEO_PRANKS: Record<string, { id: string; start?: number }> = {
+  nyancat: { id: '2yJgwwDcgV8' },
+  troll: { id: '2Z4m4lnjxkY', start: 8 },
+  dramatic: { id: 'y8Kyi0WNg40' },
+  surprise: { id: 'JX8JnmKfhiw' },
 };
 
 interface PrankPayload {
@@ -47,10 +47,57 @@ export default function PrankOverlay() {
   const { isConnected } = useChatContext();
   const [prank, setPrank] = useState<ActivePrank | null>(null);
   const [canCloseRoll, setCanCloseRoll] = useState(false);
+  const [videoCanClose, setVideoCanClose] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const idRef = useRef(0);
 
   const dismiss = useCallback(() => setPrank(null), []);
+
+  // ── Cross-tab attention: OS notification + flashing tab title ───────────────
+  // A browser tab can't spawn a real independent window over other apps (popup
+  // blockers forbid it without a user gesture). The closest thing is an OS-level
+  // notification that shows regardless of the active tab/app, plus a flashing
+  // title so a returning user immediately sees the ERP tab lit up.
+  const originalTitleRef = useRef<string>(typeof document !== 'undefined' ? document.title : '');
+  const titleTimerRef = useRef<number | null>(null);
+
+  const stopTitleFlash = useCallback(() => {
+    if (titleTimerRef.current) { clearInterval(titleTimerRef.current); titleTimerRef.current = null; }
+    if (originalTitleRef.current) document.title = originalTitleRef.current;
+  }, []);
+
+  const startTitleFlash = useCallback(() => {
+    if (titleTimerRef.current) return;
+    let on = false;
+    titleTimerRef.current = window.setInterval(() => {
+      document.title = on ? originalTitleRef.current : '🔔 (1) Nowe powiadomienie';
+      on = !on;
+    }, 800);
+  }, []);
+
+  // Ask for notification permission on the first user interaction (browsers
+  // require a gesture to show the prompt).
+  useEffect(() => {
+    if (!('Notification' in window) || Notification.permission !== 'default') return;
+    const ask = () => {
+      Notification.requestPermission().catch(() => {});
+      window.removeEventListener('pointerdown', ask);
+      window.removeEventListener('keydown', ask);
+    };
+    window.addEventListener('pointerdown', ask, { once: true });
+    window.addEventListener('keydown', ask, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', ask);
+      window.removeEventListener('keydown', ask);
+    };
+  }, []);
+
+  // Stop the flashing as soon as the user comes back to the tab.
+  useEffect(() => {
+    const onVisible = () => { if (!document.hidden) stopTitleFlash(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [stopTitleFlash]);
 
   // Subscribe to live pranks once the socket is up.
   useEffect(() => {
@@ -60,17 +107,37 @@ export default function PrankOverlay() {
       if (!payload?.type) return;
       idRef.current += 1;
       setPrank({ ...payload, id: idRef.current });
+
+      // If the target isn't looking at the ERP tab, pull them back to it.
+      if (document.hidden) {
+        startTitleFlash();
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            const n = new Notification('System ERP', {
+              body: 'Masz nowe powiadomienie — kliknij, aby otworzyć.',
+              tag: 'erp-prank',
+            });
+            n.onclick = () => { window.focus(); n.close(); };
+          } catch { /* notification may be unsupported in this context */ }
+        }
+      }
     };
     socket.on('prank:receive', handler);
     return () => {
       socket.off('prank:receive', handler);
     };
-  }, [isConnected]);
+  }, [isConnected, startTitleFlash]);
+
+  // When a prank is cleared, stop any leftover title flashing.
+  useEffect(() => {
+    if (!prank) stopTitleFlash();
+  }, [prank, stopTitleFlash]);
 
   // Per-prank lifecycle: auto-dismiss timers, body shake, rickroll close gate.
   useEffect(() => {
     if (!prank) return;
     setCanCloseRoll(false);
+    setVideoCanClose(false);
     const timers: number[] = [];
 
     if (prank.type === 'shake') {
@@ -90,7 +157,8 @@ export default function PrankOverlay() {
       timers.push(window.setTimeout(() => setCanCloseRoll(true), 4000));
     }
     if (VIDEO_PRANKS[prank.type]) {
-      timers.push(window.setTimeout(dismiss, VIDEO_PRANKS[prank.type].seconds * 1000));
+      // The video never auto-stops — only the close button appears, after 10s.
+      timers.push(window.setTimeout(() => setVideoCanClose(true), 10000));
     }
 
     return () => {
@@ -227,8 +295,9 @@ export default function PrankOverlay() {
         </div>
       )}
 
-      {/* FULLSCREEN VIDEO — plays a few seconds inside a neutral "media player"
-          window (YouTube chrome cropped away), then disappears on its own */}
+      {/* FULLSCREEN VIDEO — fills the whole viewport, plays without stopping.
+          YouTube chrome is cropped away (cover-fit + zoom) and the player is
+          click-through-disabled. The close button only appears after 10s. */}
       {VIDEO_PRANKS[prank.type] && (() => {
         const vp = VIDEO_PRANKS[prank.type];
         const src =
@@ -236,28 +305,36 @@ export default function PrankOverlay() {
           `?autoplay=1&controls=0&modestbranding=1&rel=0&disablekb=1&fs=0&iv_load_policy=3&playsinline=1` +
           (vp.start ? `&start=${vp.start}` : '');
         return (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4" style={{ animation: 'prank-pop 0.35s ease-out' }}>
-            <div className="w-full max-w-3xl overflow-hidden rounded-lg border border-gray-600 bg-[#1e1e1e] shadow-2xl">
-              {/* fake system-app title bar */}
-              <div className="flex select-none items-center gap-2 bg-gradient-to-b from-[#3a3a3a] to-[#2a2a2a] px-3 py-2">
-                <span className="text-sm font-medium text-gray-100">Odtwarzacz multimediów</span>
-                <div className="ml-auto flex items-center gap-3 text-gray-300">
-                  <span className="inline-block h-px w-3 bg-gray-300" />
-                  <span className="inline-block h-2.5 w-2.5 border border-gray-300" />
-                  <button onClick={dismiss} className="leading-none text-gray-300 hover:text-white">✕</button>
-                </div>
-              </div>
-              {/* cropped player: zoomed 116% so YouTube's title/logo/controls fall outside the frame */}
-              <div className="relative w-full overflow-hidden bg-black" style={{ paddingBottom: '56.25%' }}>
-                <iframe
-                  className="absolute"
-                  style={{ top: '-8%', left: '-8%', width: '116%', height: '116%', pointerEvents: 'none' }}
-                  src={src}
-                  title="Odtwarzacz multimediów"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                />
-              </div>
-            </div>
+          <div className="fixed inset-0 z-[9999] overflow-hidden bg-black">
+            {/* cover-fit player: sized to the larger of 16:9-by-width or 16:9-by-height,
+                then scaled up so YouTube's title/logo/controls fall outside the screen */}
+            <iframe
+              src={src}
+              title="Odtwarzacz multimediów"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '100vw',
+                height: '56.25vw',
+                minHeight: '100vh',
+                minWidth: '177.78vh',
+                transform: 'translate(-50%, -50%) scale(1.2)',
+                pointerEvents: 'none',
+                border: 0,
+              }}
+            />
+            {videoCanClose && (
+              <button
+                onClick={dismiss}
+                className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-2xl text-white/90 ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-black/80 hover:text-white"
+                style={{ animation: 'prank-pop 0.3s ease-out' }}
+                aria-label="Zamknij"
+              >
+                ✕
+              </button>
+            )}
           </div>
         );
       })()}
