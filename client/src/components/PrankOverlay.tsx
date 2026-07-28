@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { X } from 'lucide-react';
 import socketService from '../services/socket.service';
-import { useChatContext } from '../contexts/ChatContext';
 
 export type PrankType =
   | 'confetti'
@@ -44,7 +43,6 @@ const MEMES: string[] = [
 ];
 
 export default function PrankOverlay() {
-  const { isConnected } = useChatContext();
   const [prank, setPrank] = useState<ActivePrank | null>(null);
   const [canCloseRoll, setCanCloseRoll] = useState(false);
   const [videoCanClose, setVideoCanClose] = useState(false);
@@ -53,9 +51,12 @@ export default function PrankOverlay() {
 
   const dismiss = useCallback(() => setPrank(null), []);
 
-  // Subscribe to live pranks. The socket is a singleton owned by ChatContext and
-  // may not exist yet on first mount, so we poll for it and (re)attach on every
-  // (re)connect. This is deliberately defensive — a missed attach = silent no-op.
+  // Subscribe to live pranks. The socket is a singleton owned by ChatContext,
+  // and ChatContext tears it down and creates a *brand-new* socket instance
+  // whenever the `user` object changes (which happens right after login). A
+  // listener bound to the old instance would silently go dead. So instead of
+  // binding once, we keep watching for the current socket and rebind whenever
+  // the instance is replaced.
   useEffect(() => {
     const handler = (payload: PrankPayload) => {
       console.log('🎭 prank:receive', payload);
@@ -64,35 +65,25 @@ export default function PrankOverlay() {
       setPrank({ ...payload, id: idRef.current });
     };
 
-    let attachedSocket: ReturnType<typeof socketService.getSocket> | null = null;
-    const attach = () => {
+    let bound: ReturnType<typeof socketService.getSocket> | null = null;
+    const sync = () => {
       const socket = socketService.getSocket();
-      if (!socket) return false;
-      socket.off('prank:receive', handler);
-      socket.on('prank:receive', handler);
-      // Re-attach after a reconnect (same instance, but be safe).
-      socket.off('connect', attach);
-      socket.on('connect', attach);
-      if (attachedSocket !== socket) {
-        attachedSocket = socket;
-        console.log('🎭 prank listener attached to socket', socket.id);
+      if (socket && socket !== bound) {
+        bound?.off('prank:receive', handler);
+        socket.off('prank:receive', handler);
+        socket.on('prank:receive', handler);
+        bound = socket;
+        console.log('🎭 prank listener bound to socket', socket.id ?? '(connecting)');
       }
-      return true;
     };
 
-    if (!attach()) {
-      const poll = window.setInterval(() => { if (attach()) window.clearInterval(poll); }, 500);
-      return () => {
-        window.clearInterval(poll);
-        attachedSocket?.off('prank:receive', handler);
-        attachedSocket?.off('connect', attach);
-      };
-    }
+    sync();
+    const interval = window.setInterval(sync, 1000);
     return () => {
-      attachedSocket?.off('prank:receive', handler);
-      attachedSocket?.off('connect', attach);
+      window.clearInterval(interval);
+      bound?.off('prank:receive', handler);
     };
-  }, [isConnected]);
+  }, []);
 
   // Per-prank lifecycle: auto-dismiss timers, body shake, rickroll close gate.
   useEffect(() => {
