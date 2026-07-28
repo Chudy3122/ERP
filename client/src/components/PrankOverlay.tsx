@@ -53,52 +53,6 @@ export default function PrankOverlay() {
 
   const dismiss = useCallback(() => setPrank(null), []);
 
-  // ── Cross-tab attention: OS notification + flashing tab title ───────────────
-  // A browser tab can't spawn a real independent window over other apps (popup
-  // blockers forbid it without a user gesture). The closest thing is an OS-level
-  // notification that shows regardless of the active tab/app, plus a flashing
-  // title so a returning user immediately sees the ERP tab lit up.
-  const originalTitleRef = useRef<string>(typeof document !== 'undefined' ? document.title : '');
-  const titleTimerRef = useRef<number | null>(null);
-
-  const stopTitleFlash = useCallback(() => {
-    if (titleTimerRef.current) { clearInterval(titleTimerRef.current); titleTimerRef.current = null; }
-    if (originalTitleRef.current) document.title = originalTitleRef.current;
-  }, []);
-
-  const startTitleFlash = useCallback(() => {
-    if (titleTimerRef.current) return;
-    let on = false;
-    titleTimerRef.current = window.setInterval(() => {
-      document.title = on ? originalTitleRef.current : '🔔 (1) Nowe powiadomienie';
-      on = !on;
-    }, 800);
-  }, []);
-
-  // Ask for notification permission on the first user interaction (browsers
-  // require a gesture to show the prompt).
-  useEffect(() => {
-    if (!('Notification' in window) || Notification.permission !== 'default') return;
-    const ask = () => {
-      Notification.requestPermission().catch(() => {});
-      window.removeEventListener('pointerdown', ask);
-      window.removeEventListener('keydown', ask);
-    };
-    window.addEventListener('pointerdown', ask, { once: true });
-    window.addEventListener('keydown', ask, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', ask);
-      window.removeEventListener('keydown', ask);
-    };
-  }, []);
-
-  // Stop the flashing as soon as the user comes back to the tab.
-  useEffect(() => {
-    const onVisible = () => { if (!document.hidden) stopTitleFlash(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [stopTitleFlash]);
-
   // Subscribe to live pranks once the socket is up.
   useEffect(() => {
     const socket = socketService.getSocket();
@@ -107,31 +61,12 @@ export default function PrankOverlay() {
       if (!payload?.type) return;
       idRef.current += 1;
       setPrank({ ...payload, id: idRef.current });
-
-      // If the target isn't looking at the ERP tab, pull them back to it.
-      if (document.hidden) {
-        startTitleFlash();
-        if ('Notification' in window && Notification.permission === 'granted') {
-          try {
-            const n = new Notification('System ERP', {
-              body: 'Masz nowe powiadomienie — kliknij, aby otworzyć.',
-              tag: 'erp-prank',
-            });
-            n.onclick = () => { window.focus(); n.close(); };
-          } catch { /* notification may be unsupported in this context */ }
-        }
-      }
     };
     socket.on('prank:receive', handler);
     return () => {
       socket.off('prank:receive', handler);
     };
-  }, [isConnected, startTitleFlash]);
-
-  // When a prank is cleared, stop any leftover title flashing.
-  useEffect(() => {
-    if (!prank) stopTitleFlash();
-  }, [prank, stopTitleFlash]);
+  }, [isConnected]);
 
   // Per-prank lifecycle: auto-dismiss timers, body shake, rickroll close gate.
   useEffect(() => {
