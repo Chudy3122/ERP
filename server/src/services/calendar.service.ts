@@ -2,7 +2,7 @@ import { AppDataSource } from '../config/database';
 import { TimeEntry, TimeEntryStatus } from '../models/TimeEntry.model';
 import { LeaveRequest, LeaveStatus, LeaveType } from '../models/LeaveRequest.model';
 import { User } from '../models/User.model';
-import { Between, In } from 'typeorm';
+import { Between, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 
 export interface CalendarEvent {
   id: string;
@@ -37,10 +37,14 @@ export class CalendarService {
   async getTeamCalendarEvents(startDate: Date, endDate: Date): Promise<CalendarEvent[]> {
     const events: CalendarEvent[] = [];
 
-    // Get leave requests
+    // Get leave requests that OVERLAP the window — not just those starting in it.
+    // A leave intersects [startDate, endDate] when it begins on/before the window
+    // ends and finishes on/after the window starts. (The old start_date-only
+    // filter dropped multi-week leaves from every week after the one they began.)
     const leaveRequests = await this.leaveRepository.find({
       where: {
-        start_date: Between(startDate, endDate),
+        start_date: LessThanOrEqual(endDate),
+        end_date: MoreThanOrEqual(startDate),
         status: In([LeaveStatus.APPROVED, LeaveStatus.PENDING]),
       },
       relations: ['user'],
