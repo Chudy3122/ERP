@@ -360,6 +360,9 @@ export default function TowerDefenseGame() {
 
   const damageEnemy = (e: Enemy, dmg: number, pierce: boolean) => {
     if (e.dead) return;
+    // Evasive variants shrug off ranged shots outright.
+    const dodge = ENEMIES[e.kind].dodge;
+    if (dodge && Math.random() < dodge) { popup(e.x, e.y - 10, 'Unik!', '#CBD5E1', 10); return; }
     e.hp -= applyArmor(dmg, e.armor, pierce);
     e.hitFlash = 1;
     if (e.hp <= 0) {
@@ -643,7 +646,11 @@ export default function TowerDefenseGame() {
             }
           }
           if (e.hitFlash > 0) e.hitFlash -= rawMs / 200;
-          const mult = e.frozenMs > 0 ? 0 : e.slowFactor;
+          // Self-regen + enrage (looked up per kind; not stored on the enemy).
+          const kd = ENEMIES[e.kind];
+          if (kd.regen && e.frozenMs <= 0 && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + kd.regen * dt);
+          const enrage = kd.enrageBelow && e.hp < e.maxHp * kd.enrageBelow ? (kd.enrageMult ?? 1) : 1;
+          const mult = (e.frozenMs > 0 ? 0 : e.slowFactor) * enrage;
           if (e.blockedBy == null) e.dist += e.speed * mult * dt; // a soldier holds it in place
           e.wobble += dt * 9;
           const p = pointAt(route, e.dist);

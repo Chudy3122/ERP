@@ -10,10 +10,15 @@ import type { EnemyKind, TowerKind } from './config';
 
 const BASE = '/games/spire/';
 
-/** Chapters 2-10 recolour the grass to their own mood; chapter 1 stays green. */
+/** Chapters 2+ recolour the grass to their own mood; chapter 1 stays green. */
 const GROUND_THEMES: Record<number, string> = {
   2: 'ch2_stony', 3: 'ch3_desert', 4: 'ch4_marsh', 5: 'ch5_fortress',
   6: 'ch6_frozen', 7: 'ch7_mines', 8: 'ch8_scorched', 9: 'ch9_crossing', 10: 'ch10_shadow',
+  // Expansion (11-30): 8 new recoloured themes, then a curated reuse of the lot.
+  11: 'ch11_lava', 12: 'ch12_crystal', 13: 'ch13_toxic', 14: 'ch14_necro', 15: 'ch15_void',
+  16: 'ch16_bone', 17: 'ch17_blight', 18: 'ch18_ember', 19: 'ch4_marsh', 20: 'ch5_fortress',
+  21: 'ch11_lava', 22: 'ch12_crystal', 23: 'ch7_mines', 24: 'ch14_necro', 25: 'ch15_void',
+  26: 'ch8_scorched', 27: 'ch13_toxic', 28: 'ch18_ember', 29: 'ch6_frozen', 30: 'ch15_void',
 };
 
 export const IMAGE_FILES: Record<string, string> = {
@@ -43,6 +48,15 @@ export const IMAGE_FILES: Record<string, string> = {
   e_locust: 'e_locust.png',
   e_butterfly: 'e_butterfly.png',
   e_queen: 'e_queen.png', // the crab recoloured royal purple — a distinct boss
+  // Expansion variants — recolours of the base sprites (see gen_sprites).
+  e_frostgolem: 'e_frostgolem.png',
+  e_venom: 'e_venom.png',
+  e_bloodcrab: 'e_bloodcrab.png',
+  e_goldlocust: 'e_goldlocust.png',
+  e_shadowwraith: 'e_shadowwraith.png',
+  e_plaguebeetle: 'e_plaguebeetle.png',
+  e_hornet: 'e_hornet.png',
+  e_warlord: 'e_warlord.png', // the queen recoloured steel-black — the Black Knight boss
 };
 
 export type Images = Record<string, HTMLImageElement>;
@@ -81,6 +95,15 @@ export const ENEMY_ART: Record<EnemyKind, EnemyArt> = {
   golem: { img: 'e_wasp', frame: 96, frames: 8, scale: 0.95, sheetW: 1152, sheetH: 864 },
   wraith: { img: 'e_locust', frame: 64, frames: 8, scale: 0.92, sheetW: 896, sheetH: 576 },
   boss: { img: 'e_queen', frame: 64, frames: 8, scale: 1.9, sheetW: 640, sheetH: 576 },
+  // Expansion variants mirror their source sprite's sheet layout.
+  frostgolem: { img: 'e_frostgolem', frame: 96, frames: 8, scale: 1.0, sheetW: 1152, sheetH: 864 },
+  venom: { img: 'e_venom', frame: 64, frames: 8, scale: 0.86, sheetW: 512, sheetH: 576 },
+  bloodcrab: { img: 'e_bloodcrab', frame: 64, frames: 8, scale: 1.12, sheetW: 640, sheetH: 576 },
+  goldlocust: { img: 'e_goldlocust', frame: 64, frames: 8, scale: 0.9, sheetW: 896, sheetH: 576 },
+  shadowwraith: { img: 'e_shadowwraith', frame: 64, frames: 8, scale: 0.94, sheetW: 896, sheetH: 576 },
+  plaguebeetle: { img: 'e_plaguebeetle', frame: 64, frames: 8, scale: 0.92, sheetW: 832, sheetH: 576 },
+  hornet: { img: 'e_hornet', frame: 64, frames: 4, scale: 0.84, sheetW: 832, sheetH: 576 },
+  warlord: { img: 'e_warlord', frame: 64, frames: 8, scale: 2.0, sheetW: 640, sheetH: 576 },
 };
 
 const MOVE_ROW = 3;

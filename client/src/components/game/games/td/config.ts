@@ -142,7 +142,10 @@ export const TOWER_ORDER: TowerKind[] = ['archer', 'catapult', 'mage', 'ballista
 export const SELL_RATE = 0.55;
 
 // ---------------- Enemies ----------------
-export type EnemyKind = 'peasant' | 'soldier' | 'cavalry' | 'raven' | 'brute' | 'shaman' | 'golem' | 'wraith' | 'boss';
+export type EnemyKind =
+  | 'peasant' | 'soldier' | 'cavalry' | 'raven' | 'brute' | 'shaman' | 'golem' | 'wraith' | 'boss'
+  // Expansion variants (recolours with new stats + mechanics)
+  | 'venom' | 'goldlocust' | 'hornet' | 'bloodcrab' | 'plaguebeetle' | 'shadowwraith' | 'frostgolem' | 'warlord';
 
 export type EnemyDef = {
   kind: EnemyKind;
@@ -159,6 +162,13 @@ export type EnemyDef = {
   melee: number;     // damage per second dealt to a garrison soldier that blocks it
   /** Dies into this many smaller copies — Bloons-style. */
   splitsInto?: { kind: EnemyKind; count: number };
+  /** Self-heals this many HP per second (distinct from `heals`, which heals allies). */
+  regen?: number;
+  /** Below this fraction of max HP it enrages, moving `enrageMult`× faster. */
+  enrageBelow?: number;
+  enrageMult?: number;
+  /** Chance (0..1) to completely shrug off an incoming hit — an evasive dodge. */
+  dodge?: number;
   radius: number;
   color: string;
   dark: string;
@@ -180,6 +190,16 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   golem: { kind: 'golem', name: 'Pancerna Osa', desc: 'Twarda skorupa. Bez balisty albo smoły ledwo ją zadrapiesz.', hp: 520, speed: 22, armor: 10, gold: 45, points: 90, radius: 15, color: '#CA8A04', dark: '#854D0E', melee: 17, leak: 3 },
   wraith: { kind: 'wraith', name: 'Szarańcza', desc: 'Po śmierci rozpada się na dwa motyle. Miej czym strącić latające.', hp: 190, speed: 60, armor: 2, gold: 20, points: 45, radius: 11, color: '#16A34A', dark: '#14532D', splitsInto: { kind: 'raven', count: 2 }, melee: 14, leak: 2 },
   boss: { kind: 'boss', name: 'Królowa Roju', desc: 'Potężna matka roju. Skup na niej balisty i zamroź ją. Pojawia się dopiero od 10. fali.', hp: 1050, speed: 32, armor: 8, gold: 110, points: 250, radius: 18, color: '#DC2626', dark: '#7F1D1D', melee: 45, leak: 4 },
+
+  // ---- Expansion variants (chapters 11-30) ----
+  venom: { kind: 'venom', name: 'Jadowity Skorpion', desc: 'Zwinny — co piąty strzał mija go zupełnie. Zasyp go ilością albo obszarowo.', hp: 95, speed: 46, armor: 3, gold: 13, points: 28, radius: 10, color: '#4D7C0F', dark: '#365314', dodge: 0.2, melee: 12, leak: 1 },
+  goldlocust: { kind: 'goldlocust', name: 'Złota Szarańcza', desc: 'Mknie i uskakuje, ale ubita sypie złotem. Dopadnij ją, zanim ucieknie.', hp: 70, speed: 116, armor: 1, gold: 30, points: 30, radius: 10, color: '#EAB308', dark: '#A16207', dodge: 0.15, melee: 10, leak: 2 },
+  hornet: { kind: 'hornet', name: 'Szerszeń', desc: 'Lata i szarżuje. Ranny wpada w szał i przyspiesza — strąć go szybko, nim oberwie zamek.', hp: 90, speed: 100, armor: 1, gold: 14, points: 30, radius: 9, color: '#DC2626', dark: '#7F1D1D', flying: true, enrageBelow: 0.4, enrageMult: 1.6, melee: 12, leak: 2 },
+  bloodcrab: { kind: 'bloodcrab', name: 'Krwawy Krab', desc: 'Powolny kolos, ale poniżej połowy życia wpada w amok i pędzi dwa razy szybciej. Zbij go z nóg od razu.', hp: 360, speed: 30, armor: 6, gold: 34, points: 65, radius: 14, color: '#B91C1C', dark: '#7F1D1D', enrageBelow: 0.5, enrageMult: 2.0, melee: 26, leak: 3 },
+  plaguebeetle: { kind: 'plaguebeetle', name: 'Zaraźliwy Żuk', desc: 'Leczy sojuszników jeszcze mocniej niż znachor i sam się regeneruje. Ubij go pierwszego, bez wyjątku.', hp: 170, speed: 44, armor: 3, gold: 30, points: 60, radius: 10, color: '#84CC16', dark: '#4D7C0F', heals: 18, regen: 6, melee: 10, leak: 2 },
+  shadowwraith: { kind: 'shadowwraith', name: 'Cienisty Wid', desc: 'Uskakuje przed strzałami, a po śmierci pęka na dwa latające cienie. Potrzebujesz pewnego obszaru i anty-lotu.', hp: 210, speed: 66, armor: 2, gold: 22, points: 50, radius: 11, color: '#6D28D9', dark: '#4C1D95', dodge: 0.25, splitsInto: { kind: 'raven', count: 2 }, melee: 14, leak: 2 },
+  frostgolem: { kind: 'frostgolem', name: 'Lodowy Golem', desc: 'Grubszy pancerz niż zwykły golem i wolno się regeneruje. Bez balisty i smoły ledwo go zadrapiesz.', hp: 620, speed: 20, armor: 12, gold: 50, points: 100, radius: 15, color: '#0EA5E9', dark: '#075985', regen: 10, melee: 18, leak: 3 },
+  warlord: { kind: 'warlord', name: 'Czarny Rycerz', desc: 'Drugi boss. Regeneruje się i szarżuje przy niskim życiu. Skup na nim wszystko, zamroź i dobij jednym ciosem.', hp: 1400, speed: 30, armor: 10, gold: 140, points: 320, radius: 18, color: '#334155', dark: '#0F172A', regen: 14, enrageBelow: 0.3, enrageMult: 1.5, melee: 50, leak: 5 },
 };
 
 // ---------------- Levels ----------------
@@ -350,6 +370,239 @@ export const LEVELS: LevelDef[] = [
     pool: ['cavalry', 'raven', 'wraith', 'brute', 'golem', 'shaman', 'boss'],
     fog: 0.88,
   },
+
+  // ================= Expansion: chapters 11-30 =================
+  {
+    id: 11,
+    name: 'Lawowe Rozlewiska',
+    blurb: 'Popękana skorupa nad ogniem. Ogień już tu nikogo nie parzy, a jadowite skorpiony uskakują przed strzałami.',
+    path: [{ x: -1, y: 5 }, { x: 4, y: 5 }, { x: 4, y: 1 }, { x: 9, y: 1 }, { x: 9, y: 9 }, { x: 13, y: 9 }, { x: 13, y: 4 }, { x: 14.4, y: 4 }],
+    base: 'dirt', alt: 'stone',
+    decor: ['rockL', 'rockM', 'rockS'],
+    decorDensity: 0.22,
+    waves: 14, hpMul: 5.2, armorAdd: 7,
+    pool: ['venom', 'cavalry', 'raven', 'brute', 'shaman'],
+    fireResist: 0.5,
+  },
+  {
+    id: 12,
+    name: 'Kryształowe Groty',
+    blurb: 'Lśniące jaskinie. Złota szarańcza mknie przez korytarze — ubita sypie złotem, jeśli zdążysz ją dopaść.',
+    path: [{ x: -1, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 10 }, { x: 7, y: 10 }, { x: 7, y: 3 }, { x: 11, y: 3 }, { x: 11, y: 8 }, { x: 14.4, y: 8 }],
+    base: 'stone', alt: 'water',
+    decor: ['rockL', 'rockM', 'pineS'],
+    decorDensity: 0.24,
+    waves: 14, hpMul: 5.6, armorAdd: 7,
+    pool: ['venom', 'goldlocust', 'raven', 'shaman', 'brute'],
+  },
+  {
+    id: 13,
+    name: 'Jadowite Bagna',
+    blurb: 'Trujące opary i chmara szerszeni. Ranny szerszeń wpada w szał — strącaj je, nim dolecą do murów.',
+    path: [{ x: -1, y: 10 }, { x: 2, y: 10 }, { x: 2, y: 2 }, { x: 6, y: 2 }, { x: 6, y: 7 }, { x: 10, y: 7 }, { x: 10, y: 1 }, { x: 14.4, y: 1 }],
+    base: 'grass', alt: 'water',
+    decor: ['pineS', 'pineL', 'bush', 'rockS'],
+    decorDensity: 0.26,
+    waves: 14, hpMul: 6.0, armorAdd: 8,
+    pool: ['venom', 'cavalry', 'hornet', 'shaman', 'brute'],
+  },
+  {
+    id: 14,
+    name: 'Nekropolia',
+    blurb: 'Miasto grobów. Cieniste widy uskakują i pękają na latające cienie — bez anty-lotu przepadniesz.',
+    path: [{ x: -1, y: 1 }, { x: 13, y: 1 }, { x: 13, y: 4 }, { x: 2, y: 4 }, { x: 2, y: 7 }, { x: 13, y: 7 }, { x: 13, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 11 }, { x: 14.4, y: 11 }],
+    base: 'stone', alt: 'dirt',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.24,
+    waves: 15, hpMul: 6.4, armorAdd: 8,
+    pool: ['venom', 'shadowwraith', 'raven', 'brute', 'shaman', 'boss'],
+  },
+  {
+    id: 15,
+    name: 'Otchłań',
+    blurb: 'Ciemność zżera zasięg wież. W mroku czają się golemy i cienie — walcz niemal na oślep.',
+    path: [{ x: -1, y: 6 }, { x: 5, y: 6 }, { x: 5, y: 1 }, { x: 9, y: 1 }, { x: 9, y: 10 }, { x: 13, y: 10 }, { x: 13, y: 3 }, { x: 14.4, y: 3 }],
+    base: 'stone', alt: 'stone',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.2,
+    waves: 15, hpMul: 6.8, armorAdd: 8,
+    pool: ['goldlocust', 'hornet', 'shadowwraith', 'brute', 'golem', 'boss'],
+    fog: 0.9, waveScale: 0.85,
+  },
+  {
+    id: 16,
+    name: 'Kościane Pustkowie',
+    blurb: 'Wybielone kości po horyzont. Krwawe kraby brną powoli, ale ranne wpadają w amok i pędzą wprost na zamek.',
+    path: [{ x: -1, y: 0 }, { x: 12, y: 0 }, { x: 12, y: 3 }, { x: 3, y: 3 }, { x: 3, y: 6 }, { x: 12, y: 6 }, { x: 12, y: 9 }, { x: 2, y: 9 }, { x: 2, y: 11 }, { x: 14.4, y: 11 }],
+    base: 'sand', alt: 'sand',
+    decor: ['rockS', 'rockM', 'bush'],
+    decorDensity: 0.22,
+    waves: 15, hpMul: 7.1, armorAdd: 9,
+    pool: ['venom', 'cavalry', 'hornet', 'bloodcrab', 'shaman'],
+  },
+  {
+    id: 17,
+    name: 'Zgnilizna',
+    blurb: 'Wszystko tu gnije. Zaraźliwe żuki leczą całą hordę i same się regenerują — ubijaj je pierwsze, zawsze.',
+    path: [{ x: -1, y: 11 }, { x: 1, y: 11 }, { x: 1, y: 1 }, { x: 14, y: 1 }, { x: 14, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 8 }, { x: 10, y: 8 }, { x: 10, y: 10 }, { x: 14.4, y: 10 }],
+    base: 'grass', alt: 'water',
+    decor: ['pineL', 'pineS', 'bush'],
+    decorDensity: 0.26,
+    waves: 15, hpMul: 7.4, armorAdd: 9,
+    pool: ['venom', 'shadowwraith', 'plaguebeetle', 'brute', 'golem'],
+  },
+  {
+    id: 18,
+    name: 'Żarowa Kuźnia',
+    blurb: 'Rozgrzane do białości hale. Ogień nie robi wrażenia, a krwawe kraby i golemy walą jak młoty.',
+    path: [{ x: -1, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 9 }, { x: 8, y: 9 }, { x: 8, y: 2 }, { x: 12, y: 2 }, { x: 12, y: 10 }, { x: 14.4, y: 10 }],
+    base: 'dirt', alt: 'stone',
+    decor: ['rockL', 'rockM', 'rockS'],
+    decorDensity: 0.24,
+    waves: 16, hpMul: 7.7, armorAdd: 9,
+    pool: ['cavalry', 'hornet', 'bloodcrab', 'golem', 'shaman', 'boss'],
+    fireResist: 0.5,
+  },
+  {
+    id: 19,
+    name: 'Trzęsawisko Zmarłych',
+    blurb: 'Grząski labirynt pełen widów i żuków. Miejsca na wieże brak, a horda leczy się szybciej, niż ją ranisz.',
+    path: [{ x: -1, y: 3 }, { x: 6, y: 3 }, { x: 6, y: 8 }, { x: 2, y: 8 }, { x: 2, y: 11 }, { x: 11, y: 11 }, { x: 11, y: 5 }, { x: 14.4, y: 5 }],
+    base: 'grass', alt: 'water',
+    decor: ['pineL', 'pineS', 'treeB', 'bush'],
+    decorDensity: 0.26,
+    waves: 16, hpMul: 8.0, armorAdd: 10,
+    pool: ['venom', 'goldlocust', 'shadowwraith', 'plaguebeetle', 'brute', 'boss'],
+  },
+  {
+    id: 20,
+    name: 'Twierdza Czarnego Rycerza',
+    blurb: 'Bastion nowego wroga. Czarny Rycerz regeneruje się i szarżuje przy niskim życiu — skup na nim wszystko.',
+    path: [{ x: -1, y: 5 }, { x: 3, y: 5 }, { x: 3, y: 1 }, { x: 6, y: 1 }, { x: 6, y: 9 }, { x: 9, y: 9 }, { x: 9, y: 1 }, { x: 12, y: 1 }, { x: 12, y: 9 }, { x: 14.4, y: 9 }],
+    base: 'stone', alt: 'grass',
+    decor: ['rockL', 'rockM', 'pineL'],
+    decorDensity: 0.26,
+    waves: 16, hpMul: 8.4, armorAdd: 10,
+    pool: ['soldier', 'cavalry', 'hornet', 'bloodcrab', 'frostgolem', 'warlord'],
+  },
+  {
+    id: 21,
+    name: 'Lawowa Otchłań',
+    blurb: 'Rzeki magmy i lodowe golemy prosto z jej brzegów — kontrast, który łamie każdą obronę.',
+    path: [{ x: -1, y: 1 }, { x: 14, y: 1 }, { x: 14, y: 4 }, { x: 1, y: 4 }, { x: 1, y: 8 }, { x: 14, y: 8 }, { x: 14, y: 11 }, { x: 4, y: 11 }, { x: 4, y: 10 }, { x: 14.4, y: 10 }],
+    base: 'dirt', alt: 'stone',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.22,
+    waves: 16, hpMul: 8.7, armorAdd: 10,
+    pool: ['hornet', 'bloodcrab', 'frostgolem', 'shadowwraith', 'golem', 'boss'],
+    fireResist: 0.5,
+  },
+  {
+    id: 22,
+    name: 'Kryształowy Labirynt',
+    blurb: 'Mróz osadza się na wieżach — magowie ledwo spowalniają. Czarny Rycerz krąży po korytarzach.',
+    path: [{ x: -1, y: 9 }, { x: 3, y: 9 }, { x: 3, y: 2 }, { x: 7, y: 2 }, { x: 7, y: 10 }, { x: 11, y: 10 }, { x: 11, y: 3 }, { x: 14.4, y: 3 }],
+    base: 'stone', alt: 'water',
+    decor: ['rockL', 'rockM', 'pineS'],
+    decorDensity: 0.24,
+    waves: 16, hpMul: 9.0, armorAdd: 11,
+    pool: ['goldlocust', 'hornet', 'shadowwraith', 'frostgolem', 'shaman', 'warlord'],
+    frostResist: 0.5,
+  },
+  {
+    id: 23,
+    name: 'Głębiny Kopalni',
+    blurb: 'Najgłębszy szyb. Z ciemności suną lodowe golemy w podwójnym pancerzu — bez balisty ani drasniesz.',
+    path: [{ x: -1, y: 10 }, { x: 2, y: 10 }, { x: 2, y: 1 }, { x: 6, y: 1 }, { x: 6, y: 8 }, { x: 10, y: 8 }, { x: 10, y: 2 }, { x: 13, y: 2 }, { x: 13, y: 7 }, { x: 14.4, y: 7 }],
+    base: 'stone', alt: 'dirt',
+    decor: ['rockL', 'rockM', 'rockS'],
+    decorDensity: 0.3,
+    waves: 17, hpMul: 9.3, armorAdd: 11,
+    pool: ['venom', 'bloodcrab', 'frostgolem', 'golem', 'plaguebeetle', 'boss'],
+  },
+  {
+    id: 24,
+    name: 'Miasto Umarłych',
+    blurb: 'Ulice pełne cieni we mgle. Czarny Rycerz i widy nadchodzą tam, gdzie wieże ledwo widzą.',
+    path: [{ x: -1, y: 2 }, { x: 5, y: 2 }, { x: 5, y: 6 }, { x: 1, y: 6 }, { x: 1, y: 10 }, { x: 9, y: 10 }, { x: 9, y: 4 }, { x: 13, y: 4 }, { x: 13, y: 9 }, { x: 14.4, y: 9 }],
+    base: 'stone', alt: 'stone',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.22,
+    waves: 17, hpMul: 9.6, armorAdd: 11,
+    pool: ['shadowwraith', 'hornet', 'plaguebeetle', 'bloodcrab', 'golem', 'warlord'],
+    fog: 0.9, waveScale: 0.85,
+  },
+  {
+    id: 25,
+    name: 'Serce Otchłani',
+    blurb: 'Sama otchłań. Obaj bossowie naraz, mgła i chmara cieni — próba dla mistrzów obrony.',
+    path: [{ x: -1, y: 6 }, { x: 4, y: 6 }, { x: 4, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 9 }, { x: 12, y: 9 }, { x: 12, y: 3 }, { x: 14, y: 3 }, { x: 14, y: 11 }, { x: 14.4, y: 11 }],
+    base: 'stone', alt: 'stone',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.2,
+    waves: 17, hpMul: 9.9, armorAdd: 12,
+    pool: ['goldlocust', 'hornet', 'shadowwraith', 'frostgolem', 'golem', 'boss', 'warlord'],
+    fog: 0.88, waveScale: 0.85,
+  },
+  {
+    id: 26,
+    name: 'Spopielony Tron',
+    blurb: 'Wypalona sala tronowa. Ogień daremny, a przez zgliszcza suną krwawe kraby i lodowe golemy.',
+    path: [{ x: -1, y: 0 }, { x: 7, y: 0 }, { x: 7, y: 4 }, { x: 2, y: 4 }, { x: 2, y: 8 }, { x: 12, y: 8 }, { x: 12, y: 1 }, { x: 14.4, y: 1 }],
+    base: 'dirt', alt: 'sand',
+    decor: ['rockS', 'rockM', 'bush'],
+    decorDensity: 0.22,
+    waves: 17, hpMul: 10.2, armorAdd: 12,
+    pool: ['cavalry', 'hornet', 'bloodcrab', 'frostgolem', 'golem', 'shaman', 'boss'],
+    fireResist: 0.55,
+  },
+  {
+    id: 27,
+    name: 'Toksyczna Kotłownia',
+    blurb: 'Wrzące trucizny i regeneracja bez końca. Złota szarańcza kusi złotem, żuki leczą resztę.',
+    path: [{ x: -1, y: 11 }, { x: 2, y: 11 }, { x: 2, y: 3 }, { x: 13, y: 3 }, { x: 13, y: 6 }, { x: 5, y: 6 }, { x: 5, y: 9 }, { x: 14.4, y: 9 }],
+    base: 'grass', alt: 'water',
+    decor: ['pineS', 'bush', 'rockS'],
+    decorDensity: 0.24,
+    waves: 18, hpMul: 10.6, armorAdd: 12,
+    pool: ['venom', 'goldlocust', 'plaguebeetle', 'shadowwraith', 'frostgolem', 'warlord'],
+  },
+  {
+    id: 28,
+    name: 'Piec Zagłady',
+    blurb: 'Kuźnia u kresu świata. Golemy, kraby i obaj bossowie w ogniu, który nikogo już nie parzy.',
+    path: [{ x: -1, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 1 }, { x: 10, y: 1 }, { x: 10, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 7 }, { x: 14.4, y: 7 }],
+    base: 'dirt', alt: 'stone',
+    decor: ['rockL', 'rockM', 'rockS'],
+    decorDensity: 0.24,
+    waves: 18, hpMul: 11.0, armorAdd: 13,
+    pool: ['hornet', 'bloodcrab', 'frostgolem', 'golem', 'plaguebeetle', 'boss', 'warlord'],
+    fireResist: 0.5,
+  },
+  {
+    id: 29,
+    name: 'Lodowa Krypta',
+    blurb: 'Wieczny mróz tłumi magię. Lodowe golemy regenerują się w śniegu — trzeba je zdjąć z pancerza.',
+    path: [{ x: -1, y: 6 }, { x: 4, y: 6 }, { x: 4, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 10 }, { x: 12, y: 10 }, { x: 12, y: 3 }, { x: 14.4, y: 3 }],
+    base: 'stone', alt: 'water',
+    decor: ['pineL', 'pineS', 'rockL'],
+    decorDensity: 0.24,
+    waves: 18, hpMul: 11.4, armorAdd: 13,
+    pool: ['frostgolem', 'shadowwraith', 'hornet', 'bloodcrab', 'golem', 'boss'],
+    frostResist: 0.65,
+  },
+  {
+    id: 30,
+    name: 'Wrota Otchłani',
+    blurb: 'Ostateczna brama. Za falą 18 nadchodzi wszystko, co żyje i umarło — hordy nie ustają nigdy.',
+    path: [{ x: -1, y: 0 }, { x: 7, y: 0 }, { x: 7, y: 4 }, { x: 2, y: 4 }, { x: 2, y: 8 }, { x: 12, y: 8 }, { x: 12, y: 2 }, { x: 14, y: 2 }, { x: 14, y: 11 }, { x: 5, y: 11 }, { x: 5, y: 10 }],
+    base: 'stone', alt: 'stone',
+    decor: ['rockL', 'rockM'],
+    decorDensity: 0.26,
+    waves: 18, hpMul: 12.0, armorAdd: 14,
+    pool: ['goldlocust', 'hornet', 'shadowwraith', 'bloodcrab', 'frostgolem', 'plaguebeetle', 'golem', 'boss', 'warlord'],
+    fog: 0.85, waveScale: 0.8,
+  },
 ];
 
 /** Towers you start with; the rest are earned by clearing levels. */
@@ -393,6 +646,33 @@ export function waveFor(levelIdx: number, waveIdx: number): WaveGroup[] {
   const bossWave = has('boss') && ((n >= 10 && n % 5 === 0) || (endless && n % 3 === 0));
   if (bossWave) {
     groups.push({ kind: 'boss', count: 1 + Math.floor(over / 4), gap: 2400 });
+  }
+  // Second boss — the Black Knight, a touch more frequent than the Queen.
+  if (has('warlord') && ((n >= 8 && n % 4 === 0) || (endless && n % 3 === 0))) {
+    groups.push({ kind: 'warlord', count: 1 + Math.floor(over / 4), gap: 2600 });
+  }
+
+  // ---- Expansion variants — slotted onto the same escalation curve ----
+  if (has('frostgolem') && (t > 0.3 || endless)) {
+    groups.push({ kind: 'frostgolem', count: Math.max(1, Math.round(1 + t * 3 + over)), gap: 1600 });
+  }
+  if (has('bloodcrab') && (t > 0.25 || endless)) {
+    groups.push({ kind: 'bloodcrab', count: Math.max(1, scale(2)), gap: 1150 });
+  }
+  if (has('plaguebeetle') && (t > 0.4 || endless)) {
+    groups.push({ kind: 'plaguebeetle', count: Math.max(1, Math.round(1 + t * 2 + over)), gap: 1600 });
+  }
+  if (has('shadowwraith') && (t > 0.2 || endless)) {
+    groups.push({ kind: 'shadowwraith', count: Math.max(2, scale(3)), gap: 760 });
+  }
+  if (has('hornet') && (t > 0.15 || endless)) {
+    groups.push({ kind: 'hornet', count: Math.max(2, scale(3)), gap: 560 });
+  }
+  if (has('goldlocust') && (t > 0.1 || endless)) {
+    groups.push({ kind: 'goldlocust', count: Math.max(1, scale(2)), gap: 640 });
+  }
+  if (has('venom')) {
+    groups.push({ kind: 'venom', count: Math.max(2, scale(4)), gap: 560 });
   }
 
   if (has('golem') && (t > 0.3 || endless)) {
