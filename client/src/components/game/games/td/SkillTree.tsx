@@ -1,4 +1,4 @@
-import { Star, Lock, Check, X } from 'lucide-react';
+import { Star, Lock, Check, X, RotateCcw } from 'lucide-react';
 import { BRANCHES, availableStars, earnedStars, saveMeta, type Meta, type BranchId } from './perks';
 
 interface Props {
@@ -22,6 +22,17 @@ export default function SkillTree({ meta, onChange, onClose }: Props) {
     const cost = branch.nodes[idx].cost;
     if (left < cost) return;
     const next: Meta = { ...meta, perks: { ...meta.perks, [id]: bought + 1 } };
+    saveMeta(next);
+    onChange(next);
+  };
+
+  // Refund every spent star (perks cleared) while keeping the stars you earned,
+  // so you can redistribute the whole tree from scratch.
+  const spent = total - left;
+  const reset = () => {
+    if (spent === 0) return;
+    if (!window.confirm('Wyzerować kronikę? Wszystkie gwiazdki wrócą do puli i rozdasz je od nowa.')) return;
+    const next: Meta = { ...meta, perks: {} };
     saveMeta(next);
     onChange(next);
   };
@@ -97,6 +108,16 @@ export default function SkillTree({ meta, onChange, onClose }: Props) {
             <Star className="h-3 w-3 fill-[#C9A227] text-[#C9A227]" />
             {left} / {total}
           </span>
+          <button
+            type="button"
+            onClick={reset}
+            disabled={spent === 0}
+            title="Zresetuj kronikę — odzyskaj wszystkie gwiazdki"
+            className="flex items-center gap-1 rounded border border-[#C9A227]/50 px-2 py-0.5 text-[11px] font-bold text-[#D8C49A] transition-colors hover:bg-[#C9A227]/25 hover:text-[#F3E3C3] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </button>
           <button
             type="button"
             onClick={onClose}
