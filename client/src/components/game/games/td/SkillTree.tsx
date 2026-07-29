@@ -36,7 +36,7 @@ export default function SkillTree({ meta, onChange, onClose }: Props) {
         <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-[#3A2C1C]">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.color }} />
           {b.name}
-          <span className="ml-auto text-[9px] text-[#7A6A4B]">{bought}/3</span>
+          <span className="ml-auto text-[9px] text-[#7A6A4B]">{bought}/{b.nodes.length}</span>
         </p>
         <div className="flex flex-col gap-1">
           {b.nodes.map((n, i) => {

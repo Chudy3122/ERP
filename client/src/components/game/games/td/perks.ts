@@ -20,10 +20,24 @@ export type Branch = {
   name: string;
   kind: 'tower' | 'support';
   color: string;
-  nodes: [PerkNode, PerkNode, PerkNode];
+  nodes: [PerkNode, PerkNode, PerkNode, PerkNode];
 };
 
-/** Tower branches all follow the same shape: hit harder, reach further, build cheaper. */
+/**
+ * The 4th "Mistrzostwo" node is a per-tower capstone — a unique twist, not just
+ * more numbers. It costs 5 stars, so it only comes online once you're deep into
+ * the expansion chapters; early balance is untouched.
+ */
+const TOWER_CAPSTONE: Record<TowerKind, PerkNode> = {
+  archer: { name: 'Sokole oko', desc: '+35% obrażeń', cost: 5 },
+  catapult: { name: 'Wielka nawała', desc: '+30% promienia rażenia', cost: 5 },
+  mage: { name: 'Odwieczny mróz', desc: '+40% czasu spowolnienia', cost: 5 },
+  ballista: { name: 'Przebicie absolutne', desc: '+35% obrażeń', cost: 5 },
+  oil: { name: 'Piekielny war', desc: '+50% obrażeń od ognia', cost: 5 },
+  tesla: { name: 'Burza', desc: '+2 cele łańcucha', cost: 5 },
+};
+
+/** Tower branches all follow the same shape: hit harder, reach further, build cheaper, then master. */
 const towerBranch = (k: TowerKind): Branch => ({
   id: k,
   name: TOWERS[k].name,
@@ -33,6 +47,7 @@ const towerBranch = (k: TowerKind): Branch => ({
     { name: 'Wprawa', desc: '+15% obrażeń', cost: 1 },
     { name: 'Dalekowzroczność', desc: '+12% zasięgu', cost: 2 },
     { name: 'Tania budowa', desc: '-20% kosztu budowy', cost: 3 },
+    TOWER_CAPSTONE[k],
   ],
 });
 
@@ -47,6 +62,7 @@ export const BRANCHES: Branch[] = [
       { name: 'Szybkie ręce', desc: '-15% czasu odnowienia', cost: 1 },
       { name: 'Grad strzał', desc: '+40% obrażeń deszczu strzał', cost: 2 },
       { name: 'Głęboki mróz', desc: '+1.5s zamrożenia', cost: 3 },
+      { name: 'Błyskawiczne ręce', desc: 'Łącznie -30% czasu odnowienia', cost: 5 },
     ],
   },
   {
@@ -58,6 +74,7 @@ export const BRANCHES: Branch[] = [
       { name: 'Skarbiec', desc: '+120 złota na start', cost: 1 },
       { name: 'Łupy', desc: '+25% złota za zabójstwa', cost: 2 },
       { name: 'Danina', desc: '+50% złota za odpartą falę', cost: 3 },
+      { name: 'Fortuna', desc: 'Łącznie +50% złota za zabójstwa', cost: 5 },
     ],
   },
   {
@@ -69,6 +86,7 @@ export const BRANCHES: Branch[] = [
       { name: 'Mury', desc: '+4 HP zamku', cost: 1 },
       { name: 'Fosa', desc: 'Przecieki ranią o 1 mniej', cost: 2 },
       { name: 'Donżon', desc: '+6 HP zamku', cost: 3 },
+      { name: 'Cytadela', desc: '+10 HP zamku', cost: 5 },
     ],
   },
 ];
@@ -88,6 +106,11 @@ export type Perks = {
   waveGold: number;
   castleHp: number;
   leakReduce: number;
+  // Tower "Mistrzostwo" capstones
+  catapultSplashMult: number;
+  mageSlowMult: number;
+  oilBurnMult: number;
+  teslaChainBonus: number;
 };
 
 /** Turn bought nodes into the multipliers the game actually reads. */
@@ -105,27 +128,42 @@ export function perksFrom(state: PerkState): Perks {
     waveGold: 1,
     castleHp: 0,
     leakReduce: 0,
+    catapultSplashMult: 1,
+    mageSlowMult: 1,
+    oilBurnMult: 1,
+    teslaChainBonus: 0,
   };
   for (const k of TOWER_ORDER) {
     const n = state[k] ?? 0;
     if (n >= 1) p.towerDmg[k] = 1.15;
     if (n >= 2) p.towerRange[k] = 1.12;
     if (n >= 3) p.towerCost[k] = 0.8;
+    if (n >= 4) {
+      // Per-tower "Mistrzostwo" capstone.
+      if (k === 'archer' || k === 'ballista') p.towerDmg[k] *= 1.35;
+      if (k === 'catapult') p.catapultSplashMult = 1.3;
+      if (k === 'mage') p.mageSlowMult = 1.4;
+      if (k === 'oil') p.oilBurnMult = 1.5;
+      if (k === 'tesla') p.teslaChainBonus = 2;
+    }
   }
   const ab = state.abilities ?? 0;
   if (ab >= 1) p.abilityCd = 0.85;
   if (ab >= 2) p.arrowsDmg = 1.4;
   if (ab >= 3) p.freezeBonusMs = 1500;
+  if (ab >= 4) p.abilityCd = 0.7;
 
   const ec = state.economy ?? 0;
   if (ec >= 1) p.startGold = 120;
   if (ec >= 2) p.killGold = 1.25;
   if (ec >= 3) p.waveGold = 1.5;
+  if (ec >= 4) p.killGold = 1.5;
 
   const ca = state.castle ?? 0;
   if (ca >= 1) p.castleHp += 4;
   if (ca >= 2) p.leakReduce = 1;
   if (ca >= 3) p.castleHp += 6;
+  if (ca >= 4) p.castleHp += 10;
 
   return p;
 }

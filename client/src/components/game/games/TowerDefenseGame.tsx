@@ -699,8 +699,9 @@ export default function TowerDefenseGame() {
               t.cd = lvl.cooldown;
               t.recoil = 1;
               if (def.chain) {
-                // lightning resolves instantly along a chain
-                const hits = [target, ...chainTargets(target, enemies.current, def.chain, 90)];
+                // lightning resolves instantly along a chain (tesla capstone adds links)
+                const chain = def.chain + perksRef.current.teslaChainBonus;
+                const hits = [target, ...chainTargets(target, enemies.current, chain, 90)];
                 bolts.current.push({ pts: [{ x: t.x, y: t.y }, ...hits.map((h) => ({ x: h.x, y: h.y }))], life: 1 });
                 hits.forEach((h, i) => damageEnemy(h, lvl.damage * Math.pow(0.75, i), false));
               } else {
@@ -727,14 +728,16 @@ export default function TowerDefenseGame() {
           if (s.t >= s.dur) {
             const def = TOWERS[s.kind];
             if (def.splash) {
+              // catapult "Wielka nawała" widens the blast; oil "Piekielny war" burns hotter
+              const splash = def.splash * (s.kind === 'catapult' ? perksRef.current.catapultSplashMult : 1);
               for (const e of enemies.current) {
                 if (e.dead || (e.flying && !def.hitsAir)) continue;
-                if (Math.hypot(e.x - s.tx, e.y - s.ty) <= def.splash) {
+                if (Math.hypot(e.x - s.tx, e.y - s.ty) <= splash) {
                   damageEnemy(e, s.damage, !!def.armorPierce);
                   if (def.burn) {
                     const resist = LEVELS[levelRef.current]?.fireResist ?? 1;
                     e.burnMs = def.burnMs ?? 2000;
-                    e.burnDps = def.burn * resist;
+                    e.burnDps = def.burn * resist * perksRef.current.oilBurnMult;
                   }
                 }
               }
@@ -745,10 +748,11 @@ export default function TowerDefenseGame() {
               if (e) {
                 damageEnemy(e, s.damage, !!def.armorPierce);
                 if (def.slow) {
-                  // frost-resistant chapters blunt the slow rather than remove it
+                  // frost-resistant chapters blunt the slow rather than remove it;
+                  // mage "Odwieczny mróz" capstone stretches how long it lasts
                   const resist = LEVELS[levelRef.current]?.frostResist ?? 1;
                   e.slowFactor = 1 - (1 - def.slow) * resist;
-                  e.slowMs = (def.slowMs ?? 1000) * resist;
+                  e.slowMs = (def.slowMs ?? 1000) * resist * perksRef.current.mageSlowMult;
                 }
                 puff(e.x, e.y, def.accent, 4, 2);
               }
