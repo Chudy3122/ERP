@@ -47,6 +47,7 @@ export enum NotificationType {
   VEHICLE_REMINDER = 'vehicle_reminder',
   // Tickets / helpdesk
   TICKET_NEW = 'ticket_new',
+  TICKET_COMMENT = 'ticket_comment',
   // Boss calendar
   BOSS_CALENDAR_NEW = 'boss_calendar_new',
   BOSS_CALENDAR_UPDATE = 'boss_calendar_update',

@@ -356,6 +356,27 @@ export class TicketService {
         `${user.first_name} ${user.last_name} dodał komentarz do zgłoszenia "${ticket.ticket_number}"`,
         { is_internal: isInternal }
       );
+
+      // Notify the people watching this ticket — its reporter and its assignee —
+      // except whoever just commented. Internal notes stay staff-only, so the
+      // reporter isn't pinged about those (they can't see them anyway).
+      try {
+        const commenterName = `${user.first_name} ${user.last_name}`;
+        const recipients = new Set<string>();
+        if (!isInternal && ticket.created_by && ticket.created_by !== userId) {
+          recipients.add(ticket.created_by);
+        }
+        if (ticket.assigned_to && ticket.assigned_to !== userId) {
+          recipients.add(ticket.assigned_to);
+        }
+        for (const recipientId of recipients) {
+          await notificationService.notifyTicketComment(
+            recipientId, commenterName, ticket.ticket_number, ticket.title, ticketId, userId,
+          );
+        }
+      } catch (e) {
+        console.error('Ticket comment notify error:', e);
+      }
     }
 
     return savedComment;

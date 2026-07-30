@@ -459,6 +459,30 @@ class NotificationService {
   }
 
   /**
+   * Notify a ticket participant (creator / assignee) about a new comment.
+   */
+  async notifyTicketComment(
+    recipientId: string,
+    commenterName: string,
+    ticketNumber: string,
+    ticketTitle: string,
+    ticketId: string,
+    commenterId: string,
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: recipientId,
+      type: NotificationType.TICKET_COMMENT,
+      title: 'Nowy komentarz do zgłoszenia',
+      message: `${commenterName} skomentował zgłoszenie "${ticketNumber}: ${ticketTitle}"`,
+      actionUrl: `/tickets/${ticketId}/edit`,
+      priority: NotificationPriority.NORMAL,
+      relatedUserId: commenterId,
+      relatedEntityType: 'ticket',
+      relatedEntityId: ticketId,
+    });
+  }
+
+  /**
    * Notify fleet managers about a new car request
    */
   async notifyNewVehicleRequest(
