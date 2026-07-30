@@ -51,6 +51,7 @@ import {
   TicketPriority,
 } from '../types/ticket.types';
 import { Project } from '../types/project.types';
+import Linkify from '../components/common/Linkify';
 import { AdminUser } from '../types/admin.types';
 import { useAuth } from '../contexts/AuthContext';
 import { getFileUrl } from '../api/axios-config';
@@ -1034,7 +1035,7 @@ const TicketForm = () => {
                               </span>
                             )}
                           </div>
-                          <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">{comment.content}</p>
+                          <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300"><Linkify text={comment.content} /></p>
                         </div>
                       </div>
                     </div>
