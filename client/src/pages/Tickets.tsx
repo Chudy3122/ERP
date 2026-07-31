@@ -56,9 +56,10 @@ const Tickets = () => {
   const isITorAdmin = user?.role === 'admin' || userDept === 'it' || userDept === 'dział it' || userDept === 'dzial it';
   // kept name `isAdmin` for existing references = who can see/manage all tickets
   const isAdmin = isITorAdmin;
+  const canUseAssignedTickets = isITorAdmin;
   const requestedTab = searchParams.get('tab') as ViewTab | null;
   const activeTab: ViewTab =
-    requestedTab === 'assigned' || requestedTab === 'my' || (requestedTab === 'all' && isAdmin)
+    (requestedTab === 'assigned' && canUseAssignedTickets) || requestedTab === 'my' || (requestedTab === 'all' && isAdmin)
       ? requestedTab
       : isAdmin
         ? 'all'
@@ -281,7 +282,7 @@ const Tickets = () => {
   const tabs = [
     ...(isAdmin ? [{ key: 'all' as ViewTab, label: t('tickets:all') }] : []),
     { key: 'my' as ViewTab, label: t('tickets:myTickets') },
-    { key: 'assigned' as ViewTab, label: t('tickets:assigned') },
+    ...(canUseAssignedTickets ? [{ key: 'assigned' as ViewTab, label: t('tickets:assigned') }] : []),
   ];
 
   return (

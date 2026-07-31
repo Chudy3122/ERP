@@ -66,6 +66,15 @@ function formatHM(value: number | string): string {
   return `${sign}${h}h ${String(m).padStart(2, '0')}min`;
 }
 
+function getLocalDateKey(value = new Date()): string {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
+function getCurrentMonthStartKey(): string {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 export default function Overtime() {
   const { user } = useAuth();
   const [summary, setSummary] = useState<OvertimeSummaryEntry[]>([]);
@@ -77,7 +86,7 @@ export default function Overtime() {
   const [modal, setModal] = useState<ModalType>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<LogForm>({
-    work_date: new Date().toISOString().split('T')[0],
+    work_date: getLocalDateKey(),
     hours: '',
     minutes: '',
     description: '',
@@ -89,6 +98,8 @@ export default function Overtime() {
   // Kadry get the same full overtime management as admin (log/edit/delete for anyone)
   const isAdmin = user?.role === 'admin' || user?.role === 'kadry';
   const canManageEntries = user?.role === 'admin' || user?.role === 'kadry';
+  const overtimeDateMin = getCurrentMonthStartKey();
+  const isOvertimeDateRestricted = Boolean(modal) && !canManageEntries;
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   // Manage-entries modal (admin: view/delete a user's overtime entries)
   const [manageUser, setManageUser] = useState<OvertimeSummaryEntry | null>(null);
@@ -358,7 +369,7 @@ export default function Overtime() {
   function openModal(type: ModalType, targetUserId?: string) {
     setTasks([]);
     setForm({
-      work_date: new Date().toISOString().split('T')[0],
+      work_date: getLocalDateKey(),
       hours: '',
       minutes: '',
       description: '',
@@ -471,6 +482,10 @@ export default function Overtime() {
   async function handleSubmit() {
     const h = parseInt(form.hours || '0', 10) || 0;
     const m = parseInt(form.minutes || '0', 10) || 0;
+    if (modal && !canManageEntries && form.work_date < overtimeDateMin) {
+      toast.error('Wpisy za poprzednie miesiące może dodać tylko Administrator lub Kadry.');
+      return;
+    }
     if (m < 0 || m > 59) {
       toast.error('Minuty muszą być z zakresu 0–59');
       return;
@@ -1199,6 +1214,7 @@ export default function Overtime() {
                   <input
                     type="date"
                     value={form.work_date}
+                    min={isOvertimeDateRestricted ? overtimeDateMin : undefined}
                     onChange={(e) => setForm({ ...form, work_date: e.target.value })}
                     className={inputClass}
                   />

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Activity, Briefcase, Folder, CheckSquare, AlertCircle, Clock, User, FileText, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WidgetCard from '../widgets/WidgetCard';
+import { useAuth } from '../../contexts/AuthContext';
 import { getRecentActivities } from '../../api/activity.api';
 import { getWorkLogById } from '../../api/worklog.api';
 import { getTicketById } from '../../api/ticket.api';
@@ -29,11 +30,13 @@ const TASK_STATUS_LABELS: Record<string, string> = {
 };
 
 const ActivityStreamWidget = () => {
+  const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const workLogDetailsCache = useRef(new Map<string, { workType: WorkLogType; hours: number }>());
-  const ticketDetailsCache = useRef(new Map<string, { title: string; number: string; status: TicketStatus }>());
+  const ticketDetailsCache = useRef(new Map<string, { title: string; number: string; status: TicketStatus; createdBy: string }>());
   const navigate = useNavigate();
+  const canSeeAllTicketActivities = user?.role === 'admin';
 
   useEffect(() => {
     fetchActivities();
@@ -42,7 +45,7 @@ const ActivityStreamWidget = () => {
     const interval = setInterval(fetchActivities, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.id, user?.role]);
 
   const fetchActivities = async () => {
     try {
@@ -53,6 +56,10 @@ const ActivityStreamWidget = () => {
             const cachedTicketDetails = ticketDetailsCache.current.get(activity.entity_id);
 
             if (cachedTicketDetails) {
+              if (!canSeeAllTicketActivities && cachedTicketDetails.createdBy !== user?.id) {
+                return null;
+              }
+
               return {
                 ...activity,
                 metadata: {
@@ -70,8 +77,13 @@ const ActivityStreamWidget = () => {
                 title: ticket.title,
                 number: ticket.ticket_number,
                 status: ticket.status,
+                createdBy: ticket.created_by,
               };
               ticketDetailsCache.current.set(activity.entity_id, details);
+
+              if (!canSeeAllTicketActivities && details.createdBy !== user?.id) {
+                return null;
+              }
 
               return {
                 ...activity,
@@ -83,7 +95,7 @@ const ActivityStreamWidget = () => {
                 },
               };
             } catch {
-              return activity;
+              return canSeeAllTicketActivities ? activity : null;
             }
           }
 
@@ -121,7 +133,7 @@ const ActivityStreamWidget = () => {
         })
       );
 
-      setActivities(enrichedActivities);
+      setActivities(enrichedActivities.filter((activity): activity is ActivityLog => Boolean(activity)));
     } catch (error) {
       console.error('Error fetching activities:', error);
     } finally {

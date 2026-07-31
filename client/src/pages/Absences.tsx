@@ -248,6 +248,7 @@ const Absences = () => {
   const canManageLeavePlans = ['admin', 'kadry'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
   const canViewAllAbsences = ['admin', 'kadry'].includes(user?.role || '');
+  const canViewTeamWorkHours = ['admin', 'kadry', 'szef', 'kierownik'].includes(user?.role || '');
   // Merged "Wszystkie nieobecności" tab (view + approve/reject) — boss included
   const canManageAbsences = ['admin', 'kadry', 'szef'].includes(user?.role || '');
   const activeTabStorageKey = `${ABSENCES_ACTIVE_TAB_KEY}:${user?.id || 'current-user'}`;
@@ -588,7 +589,7 @@ const Absences = () => {
           ? <Plane className="h-4 w-4" />
           : <X className="h-4 w-4" />;
   const calStatusText = (s: string) =>
-    s === 'working' ? 'Pracuje' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Brak';
+    s === 'working' ? 'W pracy' : s === 'remote' ? 'Zdalna' : s === 'on_leave' ? 'Urlop' : 'Brak';
 
   const getCalendarRequestIcon = (request: LeaveRequest) => {
     const config = leaveTypeConfig[request.leave_type as LeaveType];
@@ -611,6 +612,12 @@ const Absences = () => {
     if (status === 'cancelled') return 'text-gray-500 dark:text-gray-400';
     return 'text-gray-500 dark:text-gray-400';
   };
+
+  const isFinishedWorkTimeDetails = (details?: string) =>
+    Boolean(details?.trim().match(/^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$/));
+
+  const formatCalendarWorkDetails = (details?: string) =>
+    details?.replace(/^W pracy od\b/, 'Pracuje od') || '';
 
   // Everyone sees the whole team's leaves in the calendar — including unapproved
   // (pending) ones, just like admins. Own requests are merged in for completeness.
@@ -2411,7 +2418,7 @@ const Absences = () => {
             <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
               <span className="font-medium">Legenda:</span>
               {[
-                ['working', 'Pracuje'],
+                ['working', 'W pracy'],
                 ['remote', 'Praca zdalna'],
                 ['on_leave', 'Urlop'],
                 ['absent', 'Brak'],
@@ -2567,6 +2574,15 @@ const Absences = () => {
                                 : fallbackLeaveType
                                   ? leaveTypeConfig[fallbackLeaveType].icon
                                 : calStatusIcon(displayStatus);
+                              const isWorkOrRemote = du.status === 'working' || du.status === 'remote';
+                              const hasFinishedWorkTime = !leaveRequest && isWorkOrRemote && isFinishedWorkTimeDetails(du.details);
+                              const canShowWorkDetails = canViewTeamWorkHours || u.id === user?.id || hasFinishedWorkTime;
+                              const workDetailsLabel = formatCalendarWorkDetails(du.details);
+                              const cellTitle = isWorkOrRemote && !canShowWorkDetails
+                                ? displayLabel
+                                : isWorkOrRemote && workDetailsLabel
+                                  ? workDetailsLabel
+                                  : details;
 
                               return (
                                 <td
@@ -2587,7 +2603,7 @@ const Absences = () => {
                                         ? 'min-h-12 w-[48px] max-w-[48px] px-1 py-1 opacity-70'
                                         : 'min-h-16 w-[104px] max-w-[104px] px-2 py-1.5'
                                     } ${calStatusColor(displayStatus)}`}
-                                    title={details}
+                                    title={cellTitle}
                                   >
                                     <span className="flex h-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4">
                                       {displayIcon}
@@ -2607,8 +2623,8 @@ const Absences = () => {
                                         {getCalendarRequestStatusLabel(leaveRequest?.status || fallbackLeaveStatus || '')}
                                       </span>
                                     )}
-                                    {!isWeekend && !leaveRequest && (du.status === 'working' || du.status === 'remote') && du.details && du.details !== 'Praca zdalna' && (
-                                      <span className="block w-full truncate text-center text-[10px] font-normal leading-none opacity-90">{du.details}</span>
+                                    {!isWeekend && canShowWorkDetails && !leaveRequest && isWorkOrRemote && workDetailsLabel && workDetailsLabel !== 'Praca zdalna' && (
+                                      <span className="block w-full truncate text-center text-[10px] font-normal leading-none opacity-90">{workDetailsLabel}</span>
                                     )}
                                   </div>
                                 </td>
