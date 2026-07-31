@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
 import MainLayout from '../components/layout/MainLayout';
 import {
   Calendar,
@@ -18,6 +19,8 @@ import {
   ArrowUpDown,
   UsersRound,
   Stethoscope,
+  FileText,
+  Printer,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,6 +70,15 @@ function getMondayOfWeek(value: Date) {
   date.setDate(date.getDate() + diff);
   date.setHours(0, 0, 0, 0);
   return date;
+}
+
+function getMonthDateRange(value: Date) {
+  const start = new Date(value.getFullYear(), value.getMonth(), 1);
+  const end = new Date(value.getFullYear(), value.getMonth() + 1, 0);
+  return {
+    start: getDateKey(start),
+    end: getDateKey(end),
+  };
 }
 
 function formatHoursMinutes(value: number) {
@@ -271,12 +283,9 @@ const Absences = () => {
     return isAbsenceTab(storedTab) && canOpenAbsenceTab(storedTab) ? storedTab : 'my';
   });
   const [reportUserId, setReportUserId] = useState('');
-  const [reportMonth, setReportMonth] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  });
-  const [reportData, setReportData] = useState<any | null>(null);
-  const [reportLoading, setReportLoading] = useState(false);
+  const [reportDateFrom, setReportDateFrom] = useState(() => getMonthDateRange(new Date()).start);
+  const [reportDateTo, setReportDateTo] = useState(() => getMonthDateRange(new Date()).end);
+  const [reportLeaveType, setReportLeaveType] = useState<'all' | LeaveType>('all');
   const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
@@ -385,25 +394,22 @@ const Absences = () => {
   }, [activeTab, canManageAbsences]);
 
   useEffect(() => {
+    if (activeTab === 'report' && canViewAllAbsences) {
+      setAllLoading(true);
+      timeApi.getAllLeaveRequests()
+        .then(setAllRequests)
+        .catch(() => setAllRequests([]))
+        .finally(() => setAllLoading(false));
+    }
+  }, [activeTab, canViewAllAbsences]);
+
+  useEffect(() => {
     if (canViewAllAbsences && directoryUsers.length === 0) {
       userApi.getDirectory()
         .then(u => setDirectoryUsers(u as any))
         .catch(() => {});
     }
   }, [canViewAllAbsences]);
-
-  useEffect(() => {
-    if (activeTab === 'report' && canViewAllAbsences && reportUserId) {
-      const [y, m] = reportMonth.split('-').map(Number);
-      setReportLoading(true);
-      timeApi.getMonthlyReport(reportUserId, y, m)
-        .then(setReportData)
-        .catch(() => setReportData(null))
-        .finally(() => setReportLoading(false));
-    } else if (activeTab === 'report') {
-      setReportData(null);
-    }
-  }, [activeTab, canViewAllAbsences, reportUserId, reportMonth]);
 
   useEffect(() => {
     if (!hasMountedRequestFiltersRef.current) {
@@ -916,6 +922,244 @@ const Absences = () => {
     return configs[status] || configs.cancelled;
   };
 
+  const formatReportDate = (value?: string | null) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleDateString('pl-PL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const reportLeaveTypeOptions = (Object.entries(leaveTypeConfig) as [LeaveType, typeof leaveTypeConfig[LeaveType]][])
+    .filter(([type]) => type !== 'occasional_hourly');
+  const selectedReportUser = directoryUsers.find(u => u.id === reportUserId);
+  const reportEmployeeName = selectedReportUser
+    ? `${selectedReportUser.first_name} ${selectedReportUser.last_name}`
+    : '';
+  const filteredReportRequests = allRequests
+    .filter(request => {
+      if (!reportUserId || request.user_id !== reportUserId) return false;
+      if (reportLeaveType !== 'all' && request.leave_type !== reportLeaveType) return false;
+
+      const start = getDateKey(request.start_date);
+      const end = getDateKey(request.end_date || request.start_date);
+      if (reportDateFrom && end < reportDateFrom) return false;
+      if (reportDateTo && start > reportDateTo) return false;
+
+      return true;
+    })
+    .sort((firstRequest, secondRequest) =>
+      new Date(firstRequest.start_date).getTime() - new Date(secondRequest.start_date).getTime()
+    );
+  const reportTotalDays = filteredReportRequests.reduce(
+    (sum, request) => sum + Number(request.total_days || 0),
+    0
+  );
+  const reportTotalHours = filteredReportRequests.reduce(
+    (sum, request) => sum + Number(request.hours || 0),
+    0
+  );
+
+  const handleReportDateFromChange = (value: string) => {
+    setReportDateFrom(value);
+
+    if (!value.endsWith('-01')) return;
+
+    setReportDateTo(getMonthDateRange(new Date(`${value}T00:00:00`)).end);
+  };
+
+  const handleDownloadLeaveReport = () => {
+    if (!reportUserId || !selectedReportUser) {
+      toast.error('Wybierz pracownika do raportu.');
+      return;
+    }
+
+    if (reportDateFrom && reportDateTo && reportDateFrom > reportDateTo) {
+      toast.error('Data początkowa nie może być późniejsza niż końcowa.');
+      return;
+    }
+
+    const typeLabel = reportLeaveType === 'all'
+      ? 'Wszystkie rodzaje'
+      : leaveTypeConfig[reportLeaveType]?.label || reportLeaveType;
+    const generatedAt = new Date().toLocaleString('pl-PL');
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const margin = 12;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - margin * 2;
+    let y = 14;
+
+    const setText = (color: [number, number, number]) => doc.setTextColor(color[0], color[1], color[2]);
+    const toPdfText = (value: string | number | null | undefined) =>
+      String(value ?? '')
+        .replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, char => ({
+          ą: 'a',
+          ć: 'c',
+          ę: 'e',
+          ł: 'l',
+          ń: 'n',
+          ó: 'o',
+          ś: 's',
+          ź: 'z',
+          ż: 'z',
+          Ą: 'A',
+          Ć: 'C',
+          Ę: 'E',
+          Ł: 'L',
+          Ń: 'N',
+          Ó: 'O',
+          Ś: 'S',
+          Ź: 'Z',
+          Ż: 'Z',
+        }[char] || char));
+
+    const drawHeader = () => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      setText([107, 114, 128]);
+      doc.text('ERP ITComplete', margin, y);
+      doc.setFontSize(18);
+      setText([17, 24, 39]);
+      doc.text(toPdfText('Raport wniosków urlopowych'), margin, y + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      setText([107, 114, 128]);
+      doc.text(toPdfText(`Wygenerowano: ${generatedAt}`), pageWidth - margin, y, { align: 'right' });
+      doc.setDrawColor(247, 148, 29);
+      doc.setLineWidth(0.6);
+      doc.line(margin, y + 13, pageWidth - margin, y + 13);
+      y += 21;
+    };
+
+    const ensureSpace = (height: number) => {
+      if (y + height <= pageHeight - margin) return;
+      doc.addPage();
+      y = 14;
+      drawHeader();
+    };
+
+    const drawSummaryBox = (x: number, width: number, label: string, value: string, subValue?: string) => {
+      doc.setDrawColor(229, 231, 235);
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(x, y, width, 18, 2, 2, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      setText([107, 114, 128]);
+      doc.text(toPdfText(label.toUpperCase()), x + 3, y + 5);
+      doc.setFontSize(9);
+      setText([17, 24, 39]);
+      doc.text(doc.splitTextToSize(toPdfText(value), width - 6), x + 3, y + 10);
+      if (subValue) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        setText([107, 114, 128]);
+        doc.text(doc.splitTextToSize(toPdfText(subValue), width - 6), x + 3, y + 15);
+      }
+    };
+
+    const drawTableHeader = () => {
+      const columns = [
+        { label: 'Lp.', width: 10 },
+        { label: 'Złożono', width: 25 },
+        { label: 'Rodzaj nieobecności', width: 48 },
+        { label: 'Od', width: 24 },
+        { label: 'Do', width: 24 },
+        { label: 'Wymiar', width: 30 },
+        { label: 'Status', width: 30 },
+        { label: 'Uzasadnienie', width: 82 },
+      ];
+      let x = margin;
+      doc.setFillColor(17, 24, 39);
+      doc.setDrawColor(17, 24, 39);
+      doc.rect(margin, y, contentWidth, 9, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      setText([255, 255, 255]);
+      columns.forEach(column => {
+        doc.text(toPdfText(column.label), x + 2, y + 6);
+        x += column.width;
+      });
+      y += 9;
+      return columns;
+    };
+
+    drawHeader();
+
+    const summaryGap = 3;
+    const summaryWidths = [78, 53, 50, 38, 42];
+    let summaryX = margin;
+    drawSummaryBox(summaryX, summaryWidths[0], 'Pracownik', reportEmployeeName, selectedReportUser.email || '');
+    summaryX += summaryWidths[0] + summaryGap;
+    drawSummaryBox(summaryX, summaryWidths[1], 'Zakres', `${reportDateFrom || 'od początku'} - ${reportDateTo || 'bez końca'}`);
+    summaryX += summaryWidths[1] + summaryGap;
+    drawSummaryBox(summaryX, summaryWidths[2], 'Rodzaj', typeLabel);
+    summaryX += summaryWidths[2] + summaryGap;
+    drawSummaryBox(summaryX, summaryWidths[3], 'Wnioski', String(filteredReportRequests.length));
+    summaryX += summaryWidths[3] + summaryGap;
+    drawSummaryBox(
+      summaryX,
+      summaryWidths[4],
+      'Razem',
+      `${formatDaysLabel(reportTotalDays)}${reportTotalHours > 0 ? ` / ${formatHoursMinutes(reportTotalHours)}` : ''}`
+    );
+    y += 25;
+
+    let columns = drawTableHeader();
+    const tableRows = filteredReportRequests.length > 0
+      ? filteredReportRequests.map((request, index) => {
+        const typeConfig = leaveTypeConfig[request.leave_type as LeaveType];
+        const statusConfig = getStatusConfig(request.status);
+        return [
+          String(index + 1),
+          formatReportDate(request.created_at),
+          typeConfig?.label || request.leave_type,
+          formatReportDate(request.start_date),
+          formatReportDate(request.end_date || request.start_date),
+          formatLeaveDuration(request),
+          statusConfig.label,
+          request.reason || '-',
+        ];
+      })
+      : [['', '', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']];
+
+    tableRows.forEach((row, rowIndex) => {
+      const wrappedCells = row.map((cell, index) =>
+        doc.splitTextToSize(toPdfText(cell), columns[index].width - 4) as string[]
+      );
+      const rowHeight = Math.max(9, ...wrappedCells.map(lines => lines.length * 4 + 4));
+      ensureSpace(rowHeight);
+      if (y < 40) columns = drawTableHeader();
+
+      let x = margin;
+      doc.setDrawColor(229, 231, 235);
+      doc.setFillColor(rowIndex % 2 === 0 ? 255 : 250, rowIndex % 2 === 0 ? 255 : 250, rowIndex % 2 === 0 ? 255 : 250);
+      doc.rect(margin, y, contentWidth, rowHeight, 'FD');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      setText([55, 65, 81]);
+
+      wrappedCells.forEach((lines, index) => {
+        doc.text(lines, x + 2, y + 5);
+        if (index < wrappedCells.length - 1) {
+          doc.line(x + columns[index].width, y, x + columns[index].width, y + rowHeight);
+        }
+        x += columns[index].width;
+      });
+      y += rowHeight;
+    });
+
+    const fileNamePart = reportEmployeeName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'pracownik';
+    doc.save(`wnioski-urlopowe-${fileNamePart}-${reportDateFrom || 'od'}-${reportDateTo || 'do'}.pdf`);
+  };
+
   const hpd = balance?.hoursPerDay ?? 8;
   const fmtD = (v?: number) => (v == null ? '—' : Number.isInteger(v) ? `${v}` : v.toFixed(1));
   const fmtHrs = (v?: number) => (v == null ? '' : `${Math.round(v * hpd)} h`);
@@ -1223,7 +1467,7 @@ const Absences = () => {
                   }`}
                 >
                   <Calendar className="h-4 w-4" />
-                  Raport miesięczny
+                  Raporty
                 </button>
               )}
               {canManageLeavePlans && (
@@ -1563,101 +1807,175 @@ const Absences = () => {
 
         {/* Monthly report tab (admin / kadry) */}
         {activeTab === 'report' && canViewAllAbsences && (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700 print:hidden">
-              <div className="flex flex-wrap items-end gap-3">
+          <>
+          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-100 p-4 dark:border-gray-700">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
-                  <select
-                    value={reportUserId}
-                    onChange={e => setReportUserId(e.target.value)}
-                    className="h-10 w-64 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="">— wybierz pracownika —</option>
-                    {[...directoryUsers]
-                      .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
-                      .map(u => <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>)}
-                  </select>
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#F7941D]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#F7941D]">
+                    <FileText className="h-3.5 w-3.5" />
+                    Eksport PDF
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Raport złożonych wniosków</h2>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-500 dark:text-gray-400">
+                    Wybierz pracownika, zakres terminu oraz rodzaj nieobecności. Raport zostanie pobrany na komputer jako plik PDF.
+                  </p>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Miesiąc</label>
-                  <input
-                    type="month"
-                    value={reportMonth}
-                    onChange={e => setReportMonth(e.target.value)}
-                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-              </div>
-              {reportData && reportUserId && (
                 <button
-                  onClick={() => window.print()}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                  type="button"
+                  onClick={handleDownloadLeaveReport}
+                  disabled={!reportUserId || allLoading}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e6830f] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Drukuj
+                  <Printer className="h-4 w-4" />
+                  Generuj PDF
                 </button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 p-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
+                <select
+                  value={reportUserId}
+                  onChange={e => setReportUserId(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">— wybierz pracownika —</option>
+                  {[...directoryUsers]
+                    .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, 'pl'))
+                    .map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Data od</label>
+                <input
+                  type="date"
+                  value={reportDateFrom}
+                  onChange={e => handleReportDateFromChange(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Data do</label>
+                <input
+                  type="date"
+                  value={reportDateTo}
+                  onChange={e => setReportDateTo(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rodzaj nieobecności</label>
+                <select
+                  value={reportLeaveType}
+                  onChange={e => setReportLeaveType(e.target.value as 'all' | LeaveType)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="all">Wszystkie rodzaje</option>
+                  {reportLeaveTypeOptions.map(([type, config]) => (
+                    <option key={type} value={type}>{config.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-t border-gray-100 p-4 dark:border-gray-700 sm:grid-cols-3">
+              <div className="rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-900/30">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Wnioski w raporcie</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{filteredReportRequests.length}</p>
+              </div>
+              <div className="rounded-xl bg-blue-50 px-4 py-3 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                <p className="text-xs font-semibold uppercase tracking-wide">Łącznie dni</p>
+                <p className="mt-1 text-2xl font-bold">{formatDaysLabel(reportTotalDays)}</p>
+              </div>
+              <div className="rounded-xl bg-purple-50 px-4 py-3 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300">
+                <p className="text-xs font-semibold uppercase tracking-wide">Łącznie godzinowo</p>
+                <p className="mt-1 text-2xl font-bold">{reportTotalHours > 0 ? formatHoursMinutes(reportTotalHours) : '0h'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Podgląd danych do raportu</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Lista poniżej pokazuje dokładnie te wnioski, które spełniają kryteria wybrane w sekcji Eksport PDF.
+                </p>
+              </div>
+              {reportUserId && (
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportEmployeeName}</span>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportDateFrom || 'od początku'} - {reportDateTo || 'bez końca'}</span>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">
+                    {reportLeaveType === 'all' ? 'Wszystkie rodzaje' : leaveTypeConfig[reportLeaveType]?.label}
+                  </span>
+                </div>
               )}
             </div>
 
             {!reportUserId ? (
-              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Wybierz pracownika, aby zobaczyć raport.</div>
-            ) : reportLoading ? (
-              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie…</div>
-            ) : !reportData ? (
-              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Brak danych.</div>
-            ) : (() => {
-              const pad = (n: number) => String(n).padStart(2, '0');
-              const empName = directoryUsers.find(u => u.id === reportUserId);
-              const monthLabel = new Date(reportData.year, reportData.month - 1, 1).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
-              const rows = Array.from({ length: reportData.daysInMonth }, (_, i) => {
-                const day = i + 1;
-                const dayStr = `${reportData.year}-${pad(reportData.month)}-${pad(day)}`;
-                const dow = new Date(reportData.year, reportData.month - 1, day).getDay();
-                const leave = (reportData.leaves || []).find((l: any) =>
-                  dayStr >= String(l.start_date).slice(0, 10) && dayStr <= String(l.end_date || l.start_date).slice(0, 10));
-                const ot = (reportData.workLogs || []).filter((w: any) => String(w.work_date).slice(0, 10) === dayStr && w.work_type === 'overtime')
-                  .reduce((s: number, w: any) => s + Number(w.hours), 0);
-                const comp = (reportData.workLogs || []).filter((w: any) => String(w.work_date).slice(0, 10) === dayStr && w.work_type === 'overtime_comp')
-                  .reduce((s: number, w: any) => s + Number(w.hours), 0);
-                return { day, dayStr, dow, leave, ot, comp };
-              });
-              const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'];
-              return (
-                <div className="overflow-x-auto">
-                  <div className="px-4 pt-4 text-sm font-semibold text-gray-900 dark:text-white">
-                    {empName ? `${empName.last_name} ${empName.first_name}` : ''} — {monthLabel}
-                  </div>
-                  <table className="mt-2 min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dzień</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Nieobecność</th>
-                        <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Nadgodziny</th>
-                        <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Odbiór</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {rows.map(r => {
-                        const weekend = r.dow === 0 || r.dow === 6;
-                        return (
-                          <tr key={r.day} className={weekend ? 'bg-gray-50/60 dark:bg-gray-900/30' : ''}>
-                            <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                              {pad(r.day)} <span className="text-gray-400">{DOW[r.dow]}</span>
-                            </td>
-                            <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">
-                              {r.leave ? (leaveTypeConfig[r.leave.leave_type as LeaveType]?.label || r.leave.leave_type) : ''}
-                            </td>
-                            <td className="px-4 py-1.5 text-center text-sm text-blue-600 dark:text-blue-400">{r.ot > 0 ? formatHoursMinutes(r.ot) : ''}</td>
-                            <td className="px-4 py-1.5 text-center text-sm text-emerald-600 dark:text-emerald-400">{r.comp > 0 ? formatHoursMinutes(r.comp) : ''}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()}
+              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                Wybierz pracownika, aby zobaczyć listę wniosków z podanego zakresu.
+              </div>
+            ) : allLoading ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">Ładowanie wniosków…</div>
+            ) : filteredReportRequests.length === 0 ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                Brak wniosków spełniających wybrane kryteria.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Złożono</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Rodzaj</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Termin</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wymiar</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Uzasadnienie</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {filteredReportRequests.map(request => {
+                      const typeConfig = leaveTypeConfig[request.leave_type as LeaveType];
+                      const statusConfig = getStatusConfig(request.status);
+                      return (
+                        <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            {formatReportDate(request.created_at)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                            <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ${typeConfig?.color || GRAY_LEAVE_COLOR}`}>
+                              {typeConfig?.icon}
+                              {typeConfig?.label || request.leave_type}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            {formatReportDate(request.start_date)} - {formatReportDate(request.end_date || request.start_date)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                            {formatLeaveDuration(request)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusConfig.classes}`}>
+                              {statusConfig.label}
+                            </span>
+                          </td>
+                          <td className="max-w-md px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                            <span className="line-clamp-2">{request.reason || '-'}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
+          </>
         )}
 
         {/* All absences tab (admin / kadry) */}
