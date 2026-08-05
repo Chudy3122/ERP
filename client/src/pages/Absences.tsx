@@ -40,6 +40,7 @@ type RequestDateField = 'submitted' | 'absence';
 type AbsenceTab = 'my' | 'pending' | 'calendar' | 'management' | 'all' | 'report';
 type LeaveDateMode = 'range' | 'multiple';
 type RequestPageSize = 10 | 30 | 50;
+type ReportStatusFilter = 'active' | 'all' | 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 type RequestListState = {
   page?: number;
@@ -287,6 +288,8 @@ const Absences = () => {
   const [reportDateFrom, setReportDateFrom] = useState(() => getMonthDateRange(new Date()).start);
   const [reportDateTo, setReportDateTo] = useState(() => getMonthDateRange(new Date()).end);
   const [reportLeaveType, setReportLeaveType] = useState<'all' | LeaveType>('all');
+  const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatusFilter>('active');
+  const [reportIncludeReason, setReportIncludeReason] = useState(true);
   const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
@@ -944,10 +947,22 @@ const Absences = () => {
   const reportEmployeeName = selectedReportUser
     ? `${selectedReportUser.first_name} ${selectedReportUser.last_name}`
     : '';
+  const reportStatusOptions: { value: ReportStatusFilter; label: string }[] = [
+    { value: 'active', label: 'Oczekujące i zatwierdzone' },
+    { value: 'all', label: 'Wszystkie statusy' },
+    { value: 'pending', label: 'Tylko oczekujące' },
+    { value: 'approved', label: 'Tylko zatwierdzone' },
+    { value: 'rejected', label: 'Tylko odrzucone' },
+    { value: 'cancelled', label: 'Tylko anulowane' },
+  ];
+  const reportStatusLabel =
+    reportStatusOptions.find(option => option.value === reportStatusFilter)?.label || 'Wszystkie statusy';
   const filteredReportRequests = allRequests
     .filter(request => {
       if (!reportUserId || request.user_id !== reportUserId) return false;
       if (reportLeaveType !== 'all' && request.leave_type !== reportLeaveType) return false;
+      if (reportStatusFilter === 'active' && !['pending', 'approved'].includes(request.status)) return false;
+      if (reportStatusFilter !== 'active' && reportStatusFilter !== 'all' && request.status !== reportStatusFilter) return false;
 
       const start = getDateKey(request.start_date);
       const end = getDateKey(request.end_date || request.start_date);
@@ -1068,16 +1083,26 @@ const Absences = () => {
     };
 
     const drawTableHeader = () => {
-      const columns = [
-        { label: 'Lp.', width: 10 },
-        { label: 'Złożono', width: 25 },
-        { label: 'Rodzaj nieobecności', width: 48 },
-        { label: 'Od', width: 24 },
-        { label: 'Do', width: 24 },
-        { label: 'Wymiar', width: 30 },
-        { label: 'Status', width: 30 },
-        { label: 'Uzasadnienie', width: 82 },
-      ];
+      const columns = reportIncludeReason
+        ? [
+            { label: 'Lp.', width: 10 },
+            { label: 'Złożono', width: 25 },
+            { label: 'Rodzaj nieobecności', width: 48 },
+            { label: 'Od', width: 24 },
+            { label: 'Do', width: 24 },
+            { label: 'Wymiar', width: 30 },
+            { label: 'Status', width: 30 },
+            { label: 'Uzasadnienie', width: 82 },
+          ]
+        : [
+            { label: 'Lp.', width: 10 },
+            { label: 'Złożono', width: 32 },
+            { label: 'Rodzaj nieobecności', width: 78 },
+            { label: 'Od', width: 34 },
+            { label: 'Do', width: 34 },
+            { label: 'Wymiar', width: 42 },
+            { label: 'Status', width: 43 },
+          ];
       let x = margin;
       doc.setFillColor(17, 24, 39);
       doc.setDrawColor(17, 24, 39);
@@ -1102,7 +1127,7 @@ const Absences = () => {
     summaryX += summaryWidths[0] + summaryGap;
     drawSummaryBox(summaryX, summaryWidths[1], 'Zakres', `${reportDateFrom || 'od początku'} - ${reportDateTo || 'bez końca'}`);
     summaryX += summaryWidths[1] + summaryGap;
-    drawSummaryBox(summaryX, summaryWidths[2], 'Rodzaj', typeLabel);
+    drawSummaryBox(summaryX, summaryWidths[2], 'Rodzaj', typeLabel, reportStatusLabel);
     summaryX += summaryWidths[2] + summaryGap;
     drawSummaryBox(summaryX, summaryWidths[3], 'Wnioski', String(filteredReportRequests.length));
     summaryX += summaryWidths[3] + summaryGap;
@@ -1119,7 +1144,7 @@ const Absences = () => {
       ? filteredReportRequests.map((request, index) => {
         const typeConfig = leaveTypeConfig[request.leave_type as LeaveType];
         const statusConfig = getStatusConfig(request.status);
-        return [
+        const row = [
           String(index + 1),
           formatReportDate(request.created_at),
           typeConfig?.label || request.leave_type,
@@ -1127,10 +1152,14 @@ const Absences = () => {
           formatReportDate(request.end_date || request.start_date),
           formatLeaveDuration(request),
           statusConfig.label,
-          request.reason || '-',
         ];
+        if (reportIncludeReason) row.push(request.reason || '-');
+        return row;
       })
-      : [['', '', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']];
+      : [reportIncludeReason
+          ? ['', '', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
+          : ['', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
+        ];
 
     tableRows.forEach((row, rowIndex) => {
       const wrappedCells = row.map((cell, index) =>
@@ -1840,7 +1869,7 @@ const Absences = () => {
               </div>
             </div>
 
-            <div className="grid gap-4 p-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
+            <div className="grid gap-4 p-4 lg:grid-cols-3 xl:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto]">
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
                 <select
@@ -1885,6 +1914,27 @@ const Absences = () => {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status wniosku</label>
+                <select
+                  value={reportStatusFilter}
+                  onChange={e => setReportStatusFilter(e.target.value as ReportStatusFilter)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  {reportStatusOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex h-10 items-center gap-2 self-end rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                <input
+                  type="checkbox"
+                  checked={reportIncludeReason}
+                  onChange={e => setReportIncludeReason(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]"
+                />
+                Uwzględnij opis
+              </label>
             </div>
 
             <div className="grid gap-3 border-t border-gray-100 p-4 dark:border-gray-700 sm:grid-cols-3">
@@ -1918,6 +1968,10 @@ const Absences = () => {
                   <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">
                     {reportLeaveType === 'all' ? 'Wszystkie rodzaje' : leaveTypeConfig[reportLeaveType]?.label}
                   </span>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportStatusLabel}</span>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">
+                    {reportIncludeReason ? 'Z opisem' : 'Bez opisu'}
+                  </span>
                 </div>
               )}
             </div>
@@ -1942,7 +1996,9 @@ const Absences = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Termin</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wymiar</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Uzasadnienie</th>
+                      {reportIncludeReason && (
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Uzasadnienie</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1971,9 +2027,11 @@ const Absences = () => {
                               {statusConfig.label}
                             </span>
                           </td>
-                          <td className="max-w-md px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                            <span className="line-clamp-2">{request.reason || '-'}</span>
-                          </td>
+                          {reportIncludeReason && (
+                            <td className="max-w-md px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                              <span className="line-clamp-2">{request.reason || '-'}</span>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
