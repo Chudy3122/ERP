@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../api/boss-calendar.api';
+import * as calendarApi from '../api/calendar.api';
 import * as userApi from '../api/user.api';
 import type { AdminUser } from '../types/admin.types';
 import { BossCalendarEntry, CreateEntryPayload, EntryType } from '../types/boss-calendar.types';
@@ -15,9 +16,12 @@ import {
   ChevronRight,
   Clock3,
   Edit3,
+  Home,
   Loader2,
   MapPin,
+  Plane,
   Plus,
+  Stethoscope,
   Trash2,
   Users,
   X,
@@ -138,6 +142,93 @@ const DEFAULT_PARTICIPANT_EMAIL = 'marcin.rokoszewski@itcomplete.pl';
 // Marking a meeting as finished is limited to the boss, secretariat and admins
 const CAN_COMPLETE_ROLES = ['szef', 'sekretariat', 'admin'];
 
+type BossLeaveStatus = 'pending' | 'approved';
+
+type BossLeaveMarker = {
+  id: string;
+  start: string;
+  end: string;
+  status: BossLeaveStatus;
+  title: string;
+  leaveType: string | null;
+};
+
+const BOSS_LEAVE_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  vacation: {
+    label: 'Urlop wypoczynkowy',
+    icon: <Plane className="h-3.5 w-3.5" />,
+    color: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800/70 dark:bg-blue-900/20 dark:text-blue-200',
+  },
+  personal: {
+    label: 'Urlop na żądanie',
+    icon: <CalendarDays className="h-3.5 w-3.5" />,
+    color: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800/70 dark:bg-blue-900/20 dark:text-blue-200',
+  },
+  sick_leave: {
+    label: 'L4',
+    icon: <Stethoscope className="h-3.5 w-3.5" />,
+    color: 'border-red-300 bg-red-50 text-red-700 dark:border-red-800/70 dark:bg-red-900/20 dark:text-red-200',
+  },
+  remote_work: {
+    label: 'Praca zdalna',
+    icon: <Home className="h-3.5 w-3.5" />,
+    color: 'border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800/70 dark:bg-purple-900/20 dark:text-purple-200',
+  },
+  default: {
+    label: 'Nieobecność',
+    icon: <CalendarDays className="h-3.5 w-3.5" />,
+    color: 'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800/70 dark:bg-orange-900/20 dark:text-orange-200',
+  },
+};
+
+function normalizeBossLeaveStatus(status?: string | null): BossLeaveStatus | null {
+  if (status === 'pending' || status === 'approved') return status;
+  return null;
+}
+
+function normalizeBossLeaveType(value?: string | null): string | null {
+  if (!value) return null;
+  if (Object.prototype.hasOwnProperty.call(BOSS_LEAVE_LABELS, value)) return value;
+
+  const text = value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (text.includes('praca zdalna')) return 'remote_work';
+  if (text.includes('na zadanie')) return 'personal';
+  if (text.includes('wypoczynkowy')) return 'vacation';
+  if (text.includes('l4') || text.includes('lekarskie')) return 'sick_leave';
+  return null;
+}
+
+function getBossLeaveConfig(marker: BossLeaveMarker) {
+  return BOSS_LEAVE_LABELS[marker.leaveType || ''] || BOSS_LEAVE_LABELS.default;
+}
+
+function getBossLeaveStatusLabel(status: BossLeaveStatus) {
+  return status === 'pending' ? 'oczekuje' : 'zatwierdzone';
+}
+
+function getBossLeaveStatusClass(status: BossLeaveStatus) {
+  return status === 'pending'
+    ? 'text-amber-700 dark:text-amber-300'
+    : 'text-emerald-700 dark:text-emerald-300';
+}
+
+function isDateInRange(date: string, start: string, end: string) {
+  return date >= start && date <= end;
+}
+
+function isWeekendDate(date: string) {
+  const day = parseLocalDate(date).getDay();
+  return day === 0 || day === 6;
+}
+
+function getDatePart(value?: string | null) {
+  return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || '';
+}
+
 const EMPTY_FORM: CreateEntryPayload = {
   date: formatDate(new Date()),
   start_time: '09:00',
@@ -161,6 +252,7 @@ export default function BossCalendar() {
   const [selectedDay, setSelectedDay] = useState<string>(formatDate(new Date()));
   const [entries, setEntries] = useState<BossCalendarEntry[]>([]);
   const [monthEntries, setMonthEntries] = useState<BossCalendarEntry[]>([]);
+  const [bossLeaves, setBossLeaves] = useState<BossLeaveMarker[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -184,6 +276,8 @@ export default function BossCalendar() {
     const u = users.find((x) => x.id === id);
     return u ? `${u.first_name} ${u.last_name}` : id;
   };
+  const bossUser = users.find((u) => u.email === DEFAULT_PARTICIPANT_EMAIL)
+    || users.find((u) => `${u.first_name} ${u.last_name}`.toLowerCase() === 'marcin rokoszewski');
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const from = formatDate(weekDays[0]);
@@ -211,6 +305,48 @@ export default function BossCalendar() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadBossLeaves = useCallback(async () => {
+    if (!bossUser?.id) {
+      setBossLeaves([]);
+      return;
+    }
+
+    try {
+      const events = await calendarApi.getTeamCalendarEvents(from, to);
+      const markers = events
+        .filter((event) => event.type === 'leave' && event.userId === bossUser.id)
+        .map((event) => {
+          const status = normalizeBossLeaveStatus(event.status);
+          const leaveType = normalizeBossLeaveType(
+            event.details?.leaveType
+            || event.details?.leave_type
+            || event.details?.type
+            || event.title
+          );
+
+          if (!status) return null;
+
+          return {
+            id: event.id,
+            start: getDatePart(event.start),
+            end: getDatePart(event.end) || getDatePart(event.start),
+            status,
+            title: event.title,
+            leaveType,
+          };
+        })
+        .filter((marker): marker is BossLeaveMarker => Boolean(marker?.start && marker.end));
+
+      setBossLeaves(markers);
+    } catch {
+      setBossLeaves([]);
+    }
+  }, [bossUser?.id, from, to]);
+
+  useEffect(() => {
+    loadBossLeaves();
+  }, [loadBossLeaves]);
 
   const monthKey = selectedDay.slice(0, 7); // YYYY-MM of the selected day
 
@@ -391,6 +527,12 @@ export default function BossCalendar() {
       .filter((entry) => dayStr >= entry.date && dayStr <= (entry.end_date || entry.date))
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
+  const bossLeavesByDay = (dayStr: string) =>
+    bossLeaves.filter((leave) =>
+      isDateInRange(dayStr, leave.start, leave.end)
+      && !(isWeekendDate(dayStr) && leave.leaveType !== 'remote_work')
+    );
+
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
   const weekLabel = () => {
@@ -461,6 +603,7 @@ export default function BossCalendar() {
     { label: 'Dostępność', value: availableCount, dot: 'bg-emerald-400' },
     { label: 'Blokady', value: blockedCount, dot: 'bg-gray-400' },
     { label: 'Wielodniowe', value: multiDayCount, dot: 'bg-blue-400' },
+    { label: 'Urlopy szefa', value: bossLeaves.length, dot: 'bg-sky-400' },
   ];
 
   return (
@@ -496,7 +639,7 @@ export default function BossCalendar() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
           {statCards.map((card) => (
             <div
               key={card.label}
@@ -596,6 +739,10 @@ export default function BossCalendar() {
                   {cfg.label}
                 </span>
               ))}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 dark:bg-gray-900/40">
+                <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+                Urlop szefa
+              </span>
             </div>
           </div>
 
@@ -609,7 +756,7 @@ export default function BossCalendar() {
               </div>
             ) : (
               <div className="min-w-[900px]">
-                {entries.length === 0 && (
+                {entries.length === 0 && bossLeaves.length === 0 && (
                   <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
                     Brak wpisów w tym tygodniu. {canEdit ? 'Kliknij w wybrany dzień w siatce albo użyj przycisku „Dodaj wpis”.' : 'Po dodaniu wpisów pojawią się w siatce kalendarza.'}
                   </div>
@@ -628,6 +775,7 @@ export default function BossCalendar() {
                     const isToday = dayStr === todayStr;
                     const isSelected = dayStr === selectedDay;
                     const dayEntriesCount = entriesByDay(dayStr).length;
+                    const dayBossLeaves = bossLeavesByDay(dayStr);
                     return (
                       <button
                         type="button"
@@ -650,6 +798,31 @@ export default function BossCalendar() {
                         {dayEntriesCount > 0 && (
                           <div className="mt-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500">
                             {dayEntriesCount} wpis{dayEntriesCount === 1 ? '' : 'y'}
+                          </div>
+                        )}
+                        {dayBossLeaves.length > 0 && (
+                          <div className="mx-2 mt-2 flex flex-col gap-1">
+                            {dayBossLeaves.slice(0, 2).map((leave) => {
+                              const leaveCfg = getBossLeaveConfig(leave);
+                              return (
+                                <div
+                                  key={leave.id}
+                                  className={`rounded-lg border px-2 py-1 text-left text-[10px] font-semibold shadow-sm ${leaveCfg.color}`}
+                                  title={`${leaveCfg.label} - ${getBossLeaveStatusLabel(leave.status)}`}
+                                >
+                                  <div className="flex min-w-0 items-center gap-1.5">
+                                    {leaveCfg.icon}
+                                    <span className="truncate">{leaveCfg.label}</span>
+                                  </div>
+                                  <span className={`mt-0.5 block truncate text-[9px] ${getBossLeaveStatusClass(leave.status)}`}>
+                                    {getBossLeaveStatusLabel(leave.status)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                            {dayBossLeaves.length > 2 && (
+                              <span className="text-center text-[10px] font-semibold text-gray-400">+{dayBossLeaves.length - 2}</span>
+                            )}
                           </div>
                         )}
                       </button>
@@ -675,6 +848,8 @@ export default function BossCalendar() {
                     const isToday = dayStr === todayStr;
                     const isSelected = dayStr === selectedDay;
                     const dayEntries = entriesByDay(dayStr);
+                    const dayBossLeaves = bossLeavesByDay(dayStr);
+                    const hasBossLeave = dayBossLeaves.length > 0;
 
                     return (
                       <div
@@ -684,6 +859,8 @@ export default function BossCalendar() {
                             ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10'
                             : isToday
                               ? 'bg-[#F7941D]/5 dark:bg-[#F7941D]/5'
+                              : hasBossLeave
+                                ? 'bg-sky-50/50 dark:bg-sky-900/10'
                               : 'bg-white dark:bg-gray-800'
                         }`}
                         style={{ height: SLOT_PX * (HOUR_END - HOUR_START) }}
