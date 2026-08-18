@@ -1,9 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl" translate="no">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Block in-browser page translation (Google Translate et al.). It rewrites
+         text nodes into <font> wrappers, which breaks React's DOM reconciliation
+         and crashes the app to a white screen ("insertBefore ... not a child"). -->
+    <meta name="google" content="notranslate" />
     <title>ERP - ITComplete</title>
   </head>
   <body>

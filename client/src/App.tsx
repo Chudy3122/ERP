@@ -6,10 +6,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ChatProvider } from './contexts/ChatContext';
 import AppRoutes from './routes/AppRoutes';
 import PrankOverlay from './components/PrankOverlay';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import './i18n';
 
 function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <ThemeProvider>
         <AuthProvider>
@@ -31,6 +33,7 @@ function App() {
         </AuthProvider>
       </ThemeProvider>
     </Router>
+    </ErrorBoundary>
   );
 }
 
