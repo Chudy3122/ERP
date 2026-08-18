@@ -453,10 +453,14 @@ export class WorkLogService {
     const overtimeRows = await qb.getRawMany();
 
     return overtimeRows.map((row) => {
-      const total = parseFloat(row.total_overtime) || 0;
-      const overtimeThisMonth = parseFloat(row.overtime_this_month) || 0;
-      const collected = parseFloat(row.total_collected) || 0;
-      const thisMonth = parseFloat(row.collected_this_month) || 0;
+      // Entries are all 5-minute increments, but the decimal(5,2) `hours` column
+      // can't store 1/12h exactly (5min = 0.0833… → 0.08), so summing many rows
+      // drifts by up to a minute or two. Snap each total back to the nearest 5
+      // minutes to recover the true value (e.g. a 7h59 balance becomes 8h).
+      const total = roundHoursTo5Min(parseFloat(row.total_overtime) || 0);
+      const overtimeThisMonth = roundHoursTo5Min(parseFloat(row.overtime_this_month) || 0);
+      const collected = roundHoursTo5Min(parseFloat(row.total_collected) || 0);
+      const thisMonth = roundHoursTo5Min(parseFloat(row.collected_this_month) || 0);
       return {
         user_id: row.user_id,
         first_name: row.first_name,
@@ -466,7 +470,7 @@ export class WorkLogService {
         overtime_this_month: overtimeThisMonth,
         total_collected: collected,
         collected_this_month: thisMonth,
-        balance: total - collected,
+        balance: roundHoursTo5Min(total - collected),
       };
     });
   }

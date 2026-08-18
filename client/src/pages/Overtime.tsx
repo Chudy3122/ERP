@@ -52,6 +52,9 @@ interface EditLogForm {
   work_type: WorkLogType.OVERTIME | WorkLogType.OVERTIME_COMP;
 }
 
+/** Snap decimal hours to the nearest 5 minutes — cancels decimal(5,2) storage drift. */
+const round5 = (h: number) => Math.round((Number(h) || 0) * 12) / 12;
+
 /** Format decimal hours (e.g. 6.03) as "6h 02min" / "45min" / "6h". */
 function formatHM(value: number | string): string {
   const v = Number(value) || 0;
@@ -974,8 +977,8 @@ export default function Overtime() {
                   Brak wpisów nadgodzin/odbiorów w wybranym zakresie.
                 </div>
               ) : (() => {
-                const totalOt = reportData.filter((l) => l.work_type === WorkLogType.OVERTIME).reduce((s, l) => s + Number(l.hours), 0);
-                const totalComp = reportData.filter((l) => l.work_type === WorkLogType.OVERTIME_COMP).reduce((s, l) => s + Number(l.hours), 0);
+                const totalOt = round5(reportData.filter((l) => l.work_type === WorkLogType.OVERTIME).reduce((s, l) => s + Number(l.hours), 0));
+                const totalComp = round5(reportData.filter((l) => l.work_type === WorkLogType.OVERTIME_COMP).reduce((s, l) => s + Number(l.hours), 0));
                 return (
                   <div className="border-t border-gray-100 dark:border-gray-700">
                     <div className="flex flex-wrap gap-3 px-4 py-3">
@@ -986,7 +989,7 @@ export default function Overtime() {
                         Odebrane: {formatHM(totalComp)}
                       </span>
                       <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                        Saldo: {formatHM(totalOt - totalComp)}
+                        Saldo: {formatHM(round5(totalOt - totalComp))}
                       </span>
                     </div>
                     <div className="overflow-x-auto">
