@@ -54,7 +54,7 @@ interface AttendanceLeaveInfo {
 }
 type AttendanceRange = 'week' | '2weeks' | '4weeks';
 type AttendanceSort = 'first_name' | 'last_name';
-type HistoryDateFilter = 'all' | 'week' | 'month';
+type HistoryDateFilter = 'all' | 'week' | 'month' | 'selectedMonth';
 type HistoryTypeFilter = 'all' | 'manual' | 'active';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -64,6 +64,11 @@ function getLocalDateKey(date: Date) {
 
 function todayStr() {
   return getLocalDateKey(new Date());
+}
+
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function getDateKey(value: string | Date) {
@@ -204,6 +209,7 @@ function getFilteredHistoryEntries(
   entries: TimeEntry[],
   dateFilter: HistoryDateFilter,
   typeFilter: HistoryTypeFilter,
+  selectedMonth = currentMonthKey(),
 ) {
   const { start: weekStart, end: weekEnd } = getCurrentWeekRange();
   const monthStart = new Date();
@@ -215,11 +221,22 @@ function getFilteredHistoryEntries(
   monthEnd.setDate(0);
   monthEnd.setHours(23, 59, 59, 999);
 
+  const [selectedYear, selectedMonthNumber] = selectedMonth.split('-').map(Number);
+  const selectedMonthStart = selectedYear && selectedMonthNumber
+    ? new Date(selectedYear, selectedMonthNumber - 1, 1)
+    : monthStart;
+  selectedMonthStart.setHours(0, 0, 0, 0);
+  const selectedMonthEnd = new Date(selectedMonthStart);
+  selectedMonthEnd.setMonth(selectedMonthEnd.getMonth() + 1);
+  selectedMonthEnd.setDate(0);
+  selectedMonthEnd.setHours(23, 59, 59, 999);
+
   return entries.filter((entry) => {
     const entryDate = new Date(entry.clock_in);
     const matchesDate = dateFilter === 'all'
       || (dateFilter === 'week' && entryDate >= weekStart && entryDate <= weekEnd)
-      || (dateFilter === 'month' && entryDate >= monthStart && entryDate <= monthEnd);
+      || (dateFilter === 'month' && entryDate >= monthStart && entryDate <= monthEnd)
+      || (dateFilter === 'selectedMonth' && entryDate >= selectedMonthStart && entryDate <= selectedMonthEnd);
     const matchesType = typeFilter === 'all'
       || (typeFilter === 'manual' && entry.is_manual)
       || (typeFilter === 'active' && entry.status === 'in_progress');
@@ -562,6 +579,7 @@ export default function WorkTime() {
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState<10 | 30 | 50>(10);
   const [historyDateFilter, setHistoryDateFilter] = useState<HistoryDateFilter>('all');
+  const [historySelectedMonth, setHistorySelectedMonth] = useState(currentMonthKey());
   const [historyTypeFilter, setHistoryTypeFilter] = useState<HistoryTypeFilter>('all');
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
@@ -634,19 +652,20 @@ export default function WorkTime() {
 
   useEffect(() => {
     setHistoryPage(1);
-  }, [historyPageSize, historyDateFilter, historyTypeFilter]);
+  }, [historyPageSize, historyDateFilter, historySelectedMonth, historyTypeFilter]);
 
   useEffect(() => {
     const filteredCount = getFilteredHistoryEntries(
       entries,
       historyDateFilter,
       historyTypeFilter,
+      historySelectedMonth,
     ).length;
     const totalPages = Math.max(1, Math.ceil(filteredCount / historyPageSize));
     if (historyPage > totalPages) {
       setHistoryPage(totalPages);
     }
-  }, [entries, historyDateFilter, historyPage, historyPageSize, historyTypeFilter]);
+  }, [entries, historyDateFilter, historyPage, historyPageSize, historySelectedMonth, historyTypeFilter]);
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -902,7 +921,12 @@ export default function WorkTime() {
     ? 'Dzień pracy został zamknięty'
     : 'Gotowe do rozpoczęcia';
   const todayEntryCountLabel = `${todayEntries.length} ${todayEntries.length === 1 ? 'wpis' : 'wpisów'}`;
-  const filteredEntries = getFilteredHistoryEntries(entries, historyDateFilter, historyTypeFilter);
+  const filteredEntries = getFilteredHistoryEntries(
+    entries,
+    historyDateFilter,
+    historyTypeFilter,
+    historySelectedMonth,
+  );
   const activeEntriesCount = filteredEntries.filter((entry) => entry.status === 'in_progress').length;
   const manualEntriesCount = filteredEntries.filter((entry) => entry.is_manual).length;
   const historyTotalMinutes = filteredEntries.reduce((sum, entry) => {
@@ -1487,6 +1511,7 @@ export default function WorkTime() {
                     { value: 'all', label: 'Wszystkie' },
                     { value: 'week', label: 'Ten tydzień' },
                     { value: 'month', label: 'Ten miesiąc' },
+                    { value: 'selectedMonth', label: 'Wybierz miesiąc' },
                   ] as { value: HistoryDateFilter; label: string }[]).map((filter) => (
                     <button
                       key={filter.value}
@@ -1501,6 +1526,15 @@ export default function WorkTime() {
                       {filter.label}
                     </button>
                   ))}
+                  {historyDateFilter === 'selectedMonth' && (
+                    <input
+                      type="month"
+                      value={historySelectedMonth}
+                      onChange={(event) => setHistorySelectedMonth(event.target.value || currentMonthKey())}
+                      className="h-[30px] rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                      aria-label="Wybierz miesiąc historii wpisów"
+                    />
+                  )}
                 </div>
 
                 <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
@@ -1554,6 +1588,7 @@ export default function WorkTime() {
                   type="button"
                   onClick={() => {
                     setHistoryDateFilter('all');
+                    setHistorySelectedMonth(currentMonthKey());
                     setHistoryTypeFilter('all');
                   }}
                   className="mt-4 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
