@@ -680,7 +680,10 @@ export default function WorkTime() {
     try {
       const [status, hist] = await Promise.all([
         timeApi.getDayStatus(),
-        timeApi.getUserTimeEntries(),
+        // Fetch the full history — the server defaults to only the last 30 days
+        // when no startDate is given, which hid older entries. The tab filters
+        // (week/month/all) are applied client-side over whatever we load here.
+        timeApi.getUserTimeEntries(new Date('2000-01-01').toISOString()),
       ]);
       setDayStatus(status);
       setEntries(hist);
