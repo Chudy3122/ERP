@@ -67,8 +67,10 @@ const FloatingChatPanel: React.FC = () => {
             )}
           </div>
 
-          {/* Right Panel - Chat Window (flex-1 = ~520px) */}
-          <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900">
+          {/* Right Panel - Chat Window (flex-1 = ~520px). min-w-0 is critical:
+              without it a wide message won't let this flex child shrink, so it
+              overflows the 800px panel and gets clipped by overflow-hidden. */}
+          <div className="flex-1 min-w-0 flex flex-col bg-gray-50 dark:bg-gray-900">
             {activeChannel ? (
               <CompactChatWindow onBack={handleBackFromChat} />
             ) : (
