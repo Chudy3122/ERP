@@ -448,14 +448,15 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
                         loading="lazy"
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1.5 px-1">{attachment.file_name}</p>
+                    <p className="text-xs text-gray-500 mt-1.5 px-1 truncate max-w-full" title={attachment.file_name}>{attachment.file_name}</p>
                   </a>
                 ) : (
                   // File download card
                   <a
                     href={getFileUrl(attachment.file_url) || ''}
                     download={attachment.file_name}
-                    className={`flex items-center gap-3 p-3 rounded-md border ${
+                    title={attachment.file_name}
+                    className={`flex max-w-full min-w-0 items-center gap-3 p-3 rounded-md border ${
                       isOwnMessage
                         ? 'bg-blue-500 border-blue-400 text-white'
                         : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
