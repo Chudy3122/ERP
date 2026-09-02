@@ -379,7 +379,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
   }
 
   return (
-    <div className={`flex mb-2 group hover:bg-white dark:hover:bg-gray-800 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} ${compact ? 'gap-2 py-1 px-2' : 'gap-3 py-2 px-3'}`}>
+    <div className={`flex min-w-0 mb-2 group hover:bg-white dark:hover:bg-gray-800 rounded-md transition-colors ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} ${compact ? 'gap-2 py-1 px-2' : 'gap-3 py-2 px-3'}`}>
       {/* Avatar */}
       {!isOwnMessage && (
         <div className={`rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold flex-shrink-0 overflow-hidden ${compact ? 'w-8 h-8 text-xs' : 'w-10 h-10'}`}>
@@ -399,7 +399,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
       )}
 
       {/* Message Content */}
-      <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col min-w-0 max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
         {/* Sender name (only for others' messages) */}
         {!isOwnMessage && message.sender && (
           <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 px-1">
@@ -410,7 +410,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
         {/* Message bubble */}
         {message.content && (
           <div
-            className={`relative px-4 py-2.5 rounded-md shadow-sm transition-colors ${
+            className={`relative max-w-full px-4 py-2.5 rounded-md shadow-sm transition-colors [overflow-wrap:anywhere] ${
               isOwnMessage
                 ? 'bg-blue-600 text-white'
                 : message.is_deleted

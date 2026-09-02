@@ -159,7 +159,7 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
       </div>
 
       {/* Messages Container */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-3 bg-gray-50 dark:bg-gray-900 min-h-0">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 px-3 py-3 bg-gray-50 dark:bg-gray-900 min-h-0">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
