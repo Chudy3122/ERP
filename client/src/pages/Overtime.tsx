@@ -525,8 +525,8 @@ export default function Overtime() {
     return 'text-gray-500';
   };
 
-  const selectClass = 'w-full appearance-none border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white';
-  const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+  const selectClass = 'w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-9 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+  const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
   const renderOvertimeRow = (entry: OvertimeSummaryEntry) => (
     <Fragment key={entry.user_id}>
@@ -654,7 +654,7 @@ export default function Overtime() {
     <MainLayout title="Nadgodziny">
       <div className="mx-auto max-w-[1600px]">
         {/* Header */}
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <TrendingUp className="h-6 w-6" />
@@ -672,14 +672,14 @@ export default function Overtime() {
           <div className="flex gap-2">
             <button
               onClick={() => openModal('collection')}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-[#F7941D]/40 hover:bg-gray-50 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               <Minus className="h-4 w-4" />
               Odbiór nadgodzin
             </button>
             <button
               onClick={() => openModal('overtime')}
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <Plus className="h-4 w-4" />
               Dodaj nadgodziny
@@ -694,7 +694,7 @@ export default function Overtime() {
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Moje nadgodziny</h2>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
                     <TrendingUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -708,13 +708,13 @@ export default function Overtime() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30">
                     <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-blue-600">
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-300">
                       {formatHM(myEntry.overtime_this_month)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">W tym miesiącu</p>
@@ -722,7 +722,7 @@ export default function Overtime() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/30">
                     <TrendingDown className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -736,7 +736,7 @@ export default function Overtime() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-900/30">
                     <Minus className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -750,7 +750,7 @@ export default function Overtime() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                     myEntry.balance > 0
@@ -770,9 +770,9 @@ export default function Overtime() {
                   <div>
                     <p className={`text-2xl font-bold ${
                       myEntry.balance > 0
-                        ? 'text-green-600'
+                        ? 'text-green-600 dark:text-green-300'
                         : myEntry.balance < 0
-                          ? 'text-red-600'
+                          ? 'text-red-600 dark:text-red-300'
                           : 'text-gray-900 dark:text-white'
                     }`}>
                       {myEntry.balance > 0 ? '+' : ''}{formatHM(myEntry.balance)}
@@ -787,7 +787,7 @@ export default function Overtime() {
 
         {/* My overtime / time-off entries (date + comment) */}
         {myLogs.length > 0 && (
-          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -913,7 +913,7 @@ export default function Overtime() {
 
         {/* Time report (managers): pick a person + date range, generate + export */}
         {canExpand && (
-          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
               <Search className="h-5 w-5 text-gray-600 dark:text-gray-400" />
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Raport czasu pracownika</h2>
@@ -956,7 +956,7 @@ export default function Overtime() {
               <button
                 onClick={generateReport}
                 disabled={!reportUserId || reportLoading}
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Generuj raport
@@ -1034,7 +1034,7 @@ export default function Overtime() {
         )}
 
         {/* Team Summary */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -1160,7 +1160,7 @@ export default function Overtime() {
       {/* Modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+          <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-white shadow-xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50">
             <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-gray-700">
               <div className="flex items-center gap-2">
                 {modal === 'overtime' ? (
@@ -1259,7 +1259,7 @@ export default function Overtime() {
               {modal === 'overtime' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Projekt <span className="text-gray-400 font-normal">(opcjonalnie)</span>
                     </label>
                     <div className="relative">
@@ -1276,7 +1276,7 @@ export default function Overtime() {
                       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
                     {availableProjects.length === 0 && (
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                         Brak projektów, w których wybrany użytkownik jest członkiem zespołu.
                       </p>
                     )}
@@ -1284,12 +1284,12 @@ export default function Overtime() {
 
                   {form.project_id && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Zadanie <span className="text-gray-400 font-normal">(opcjonalnie)</span>
                       </label>
                       <div className="relative">
                         {tasksLoading ? (
-                          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400">
+                          <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
                             <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
                             Ładowanie zadań...
                           </div>
@@ -1310,7 +1310,7 @@ export default function Overtime() {
                         )}
                       </div>
                       {!tasksLoading && tasks.length === 0 && (
-                        <p className="text-xs text-gray-400 mt-1">Brak zadań w tym projekcie</p>
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Brak zadań w tym projekcie</p>
                       )}
                     </div>
                   )}
@@ -1318,30 +1318,28 @@ export default function Overtime() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Opis</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={3}
                   placeholder={modal === 'overtime' ? 'Zakres prac w nadgodzinach...' : 'Powód odbioru...'}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-5 border-t border-gray-100">
+            <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/70 p-5 dark:border-gray-700 dark:bg-gray-800">
               <button
                 onClick={() => setModal(null)}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               >
                 Anuluj
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className={`px-4 py-2 text-sm text-white rounded-lg font-medium disabled:opacity-60 ${
-                  modal === 'overtime' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-500 hover:bg-orange-600'
-                }`}
+                className="rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:opacity-60"
               >
                 {submitting ? 'Zapisywanie...' : 'Zapisz'}
               </button>
@@ -1356,7 +1354,7 @@ export default function Overtime() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={() => { setManageUser(null); setEditingLog(null); }}
         >
-          <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+          <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D]">
@@ -1551,7 +1549,7 @@ export default function Overtime() {
 
       {canManageEntries && editingLog && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" onClick={() => setEditingLog(null)}>
-          <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-lg overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
               <div>
                 <h2 className="font-semibold text-gray-900 dark:text-white">Edytuj wpis</h2>

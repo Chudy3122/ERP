@@ -61,7 +61,7 @@ const DashboardQuickActions = () => {
               key={action.path}
               type="button"
               onClick={() => navigate(action.path)}
-              className="group flex min-h-[84px] items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
+              className="group flex min-h-[84px] items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-700/60"
             >
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${action.accent}`}>
                 <Icon className="h-5 w-5" />

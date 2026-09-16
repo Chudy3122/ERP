@@ -648,7 +648,7 @@ const TaskForm = () => {
     return (
       <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
         <div className="mx-auto flex max-w-[1200px] items-center justify-center py-16">
-          <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#F7941D]"></div>
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
               Ładowanie formularza zadania...
@@ -662,7 +662,7 @@ const TaskForm = () => {
   return (
     <MainLayout title={isEdit ? 'Edytuj zadanie' : 'Nowe zadanie'}>
       <div className="mx-auto max-w-[1200px]">
-        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-wrap items-start gap-4">
             <button
               type="button"
@@ -714,7 +714,7 @@ const TaskForm = () => {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <form onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <form onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">Zakres zadania</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -757,7 +757,7 @@ const TaskForm = () => {
             </form>
 
             {canManageSubtasks && (
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-700">
                   <div>
                     <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
@@ -778,7 +778,7 @@ const TaskForm = () => {
                       type="button"
                       onClick={handleCompleteAllSubtasks}
                       disabled={!hasIncompleteSubtasks || isCompletingSubtasks}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       {isCompletingSubtasks ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -824,7 +824,7 @@ const TaskForm = () => {
                         return (
                           <div
                             key={subtask.id}
-                            className="group flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 transition-colors hover:border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700/40 dark:hover:bg-gray-700"
+                            className="group flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 transition-colors hover:border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700/40 dark:hover:border-gray-600 dark:hover:bg-gray-700"
                           >
                             <button
                               type="button"
@@ -855,7 +855,7 @@ const TaskForm = () => {
                                 <button
                                   type="submit"
                                   disabled={isUpdating || !editingSubtaskTitle.trim()}
-                                  className="inline-flex h-8 items-center justify-center rounded-lg bg-gray-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-600 dark:hover:bg-gray-500"
+                                  className="inline-flex h-8 items-center justify-center rounded-lg bg-[#F7941D] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Zapisz
                                 </button>
@@ -905,7 +905,7 @@ const TaskForm = () => {
             )}
 
             {isEdit && (
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
                   <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
                     <Paperclip className="h-4 w-4 text-[#F7941D]" />
@@ -962,7 +962,7 @@ const TaskForm = () => {
                         const isImage = attachment.file_type.startsWith('image/');
 
                         return (
-                          <div key={attachment.id} className="group flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 transition-colors hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700">
+                          <div key={attachment.id} className="group flex items-center gap-3 rounded-lg border border-transparent bg-gray-50 px-3 py-2 transition-colors hover:border-gray-200 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:border-gray-600 dark:hover:bg-gray-700">
                             {isImage ? (
                               <img src={getFileUrl(attachment.file_url) || ''} alt={attachment.original_name} className="h-7 w-7 rounded object-cover" />
                             ) : (
@@ -993,7 +993,7 @@ const TaskForm = () => {
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">Szczegóły zadania</h2>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Projekt, osoby, termin i parametry zadania.</p>
@@ -1039,7 +1039,7 @@ const TaskForm = () => {
                       ))}
                     </div>
                   )}
-                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800">
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-600 dark:bg-gray-800 dark:shadow-black/20">
                     {!formData.project_id ? (
                       <div className="px-2.5 py-2 text-xs text-gray-400 dark:text-gray-500">Najpierw wybierz projekt</div>
                     ) : isLoadingProjectMembers ? (
@@ -1068,7 +1068,7 @@ const TaskForm = () => {
                             filteredProjectMembers.map(member => {
                               const selected = selectedAssigneeIds.includes(member.user_id);
                               return (
-                                <label key={member.user_id} className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}>
+                                <label key={member.user_id} className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${selected ? 'bg-orange-50/70 dark:bg-orange-900/10' : ''}`}>
                                   <input type="checkbox" checked={selected} onChange={() => toggleAssignee(member.user_id)} className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D]" />
                                   <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-200">
                                     {member.user ? `${member.user.first_name?.[0] || ''}${member.user.last_name?.[0] || ''}` : '?'}
@@ -1146,7 +1146,7 @@ const TaskForm = () => {
             </div>
 
             {isEdit && task?.creator && (
-              <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Utworzył</div>
                 <p className="truncate font-semibold text-gray-900 dark:text-white">{task.creator.first_name} {task.creator.last_name}</p>
               </div>
@@ -1155,7 +1155,7 @@ const TaskForm = () => {
           </aside>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
             Akcje zadania
           </div>
@@ -1182,7 +1182,7 @@ const TaskForm = () => {
               type="button"
               onClick={saveTask}
               disabled={isSaving}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSaving ? (
                 <>
@@ -1201,7 +1201,7 @@ const TaskForm = () => {
         {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+          <div className="mx-4 w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-lg shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-full">
                 <Trash2 className="w-5 h-5 text-red-600" />
@@ -1240,7 +1240,7 @@ const TaskForm = () => {
       {/* Pick existing project files to link to this task */}
       {showProjectFiles && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-gray-800">
+          <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white shadow-xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">Pliki z projektu</h3>
               <button type="button" onClick={() => setShowProjectFiles(false)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">

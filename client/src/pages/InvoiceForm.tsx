@@ -95,7 +95,7 @@ const InvoiceForm = () => {
   const labelClass =
     'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
   const sectionClass =
-    'rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800';
+    'rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20';
 
   useEffect(() => {
     loadClients();
@@ -348,7 +348,7 @@ const InvoiceForm = () => {
   if (isLoading) {
     return (
       <MainLayout title={isEdit ? t('editInvoice') : t('newInvoice')}>
-        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
             <Loader2 className="h-10 w-10 animate-spin text-[#F7941D]" />
             <span className="text-sm font-medium">Ładowanie faktury...</span>
@@ -361,13 +361,13 @@ const InvoiceForm = () => {
   return (
     <MainLayout title={isEdit ? t('editInvoice') : t('newInvoice')}>
       <div className="mx-auto max-w-[1500px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <button
                 type="button"
                 onClick={() => navigate('/invoices')}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 aria-label="Powrót do listy faktur"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -390,7 +390,7 @@ const InvoiceForm = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-[#F7941D]/20 bg-[#F7941D]/10 px-4 py-2 text-right dark:bg-[#F7941D]/15">
+            <div className="rounded-xl border border-[#F7941D]/20 bg-[#F7941D]/10 px-4 py-2 text-right shadow-sm shadow-orange-100/60 dark:bg-[#F7941D]/15 dark:shadow-black/10">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D] dark:text-orange-300">
                 Wartość brutto
               </p>
@@ -402,7 +402,7 @@ const InvoiceForm = () => {
         </section>
 
         {error && (
-          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm shadow-red-100/60 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300 dark:shadow-black/20">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>{error}</p>
           </div>
@@ -515,7 +515,7 @@ const InvoiceForm = () => {
               {/* Scans */}
               <div className="mt-5">
                 <label className={labelClass}>Skany / zdjęcia faktury</label>
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500 transition-colors hover:border-[#F7941D] hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700/40 dark:text-gray-400">
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500 transition-colors hover:border-[#F7941D] hover:text-[#F7941D] focus-within:border-[#F7941D] focus-within:ring-2 focus-within:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700/40 dark:text-gray-400">
                   <Upload className="h-5 w-5" />
                   <span>Dodaj pliki (PDF, JPG, PNG) — można kilka</span>
                   <input type="file" multiple accept="image/*,application/pdf" onChange={handleScanSelect} className="hidden" />
@@ -524,18 +524,18 @@ const InvoiceForm = () => {
                 {(existingScans.length > 0 || scanFiles.length > 0) && (
                   <ul className="mt-3 space-y-2">
                     {existingScans.map(s => (
-                      <li key={s.url} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+                      <li key={s.url} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
                         <Paperclip className="h-4 w-4 shrink-0 text-gray-400" />
                         <a href={getFileUrl(s.url) || '#'} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 truncate text-blue-600 hover:underline dark:text-blue-300">{s.name}</a>
-                        <button type="button" onClick={() => handleDeleteExistingScan(s.url)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => handleDeleteExistingScan(s.url)} className="rounded p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
                       </li>
                     ))}
                     {scanFiles.map((f, i) => (
-                      <li key={i} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+                      <li key={i} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
                         <Paperclip className="h-4 w-4 shrink-0 text-gray-400" />
                         <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{f.name}</span>
                         <span className="text-xs text-emerald-600 dark:text-emerald-400">do wgrania</span>
-                        <button type="button" onClick={() => removeScanFile(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => removeScanFile(i)} className="rounded p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
                       </li>
                     ))}
                   </ul>
@@ -544,7 +544,7 @@ const InvoiceForm = () => {
 
               {/* Computed preview */}
               <div className="mt-5 flex justify-end">
-                <div className="w-full rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30 sm:w-80">
+                <div className="w-full rounded-xl border border-gray-100 bg-gray-50 p-4 shadow-sm shadow-gray-200/40 dark:border-gray-700 dark:bg-gray-900/30 dark:shadow-black/10 sm:w-80">
                   {(() => {
                     const gross = parseFloat(grossInput) || 0;
                     const rate = vatChoice === 'zw' ? 0 : (parseFloat(vatChoice) || 0);
@@ -819,7 +819,7 @@ const InvoiceForm = () => {
                           type="button"
                           onClick={() => removeItem(index)}
                           disabled={items.length === 1}
-                          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
                           aria-label="Usun pozycje"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -834,7 +834,7 @@ const InvoiceForm = () => {
 
           {/* Totals */}
           <div className="mt-6 flex justify-end">
-            <div className="w-full rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30 sm:w-80">
+            <div className="w-full rounded-xl border border-gray-100 bg-gray-50 p-4 shadow-sm shadow-gray-200/40 dark:border-gray-700 dark:bg-gray-900/30 dark:shadow-black/10 sm:w-80">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">{t('netTotal')}:</span>
                 <span className="text-gray-900 dark:text-white">{formatCurrency(totals.net)}</span>
@@ -900,7 +900,7 @@ const InvoiceForm = () => {
           </>)}
 
         {/* Actions */}
-          <section className="sticky bottom-4 z-10 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+          <section className="sticky bottom-4 z-10 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg shadow-gray-300/60 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95 dark:shadow-black/40">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 {t('grossTotal')}: <span className="font-semibold text-gray-950 dark:text-white">{formatCurrency(displayGross)}</span>
@@ -909,14 +909,14 @@ const InvoiceForm = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/invoices')}
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
                   {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

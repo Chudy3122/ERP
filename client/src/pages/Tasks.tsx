@@ -408,7 +408,7 @@ const Tasks = () => {
     <MainLayout title={t('title')}>
       <div className="mx-auto max-w-[1600px]">
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
             <CheckSquare className="h-6 w-6" />
@@ -423,7 +423,7 @@ const Tasks = () => {
         </div>
         <button
           onClick={() => navigate('/tasks/new')}
-          className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
         >
           <Plus className="w-4 h-4" />
           {t('newTask')}
@@ -432,7 +432,7 @@ const Tasks = () => {
 
       {/* Stats Cards */}
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
               <CheckSquare className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -443,35 +443,35 @@ const Tasks = () => {
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30">
-              <Clock className="w-5 h-5 text-blue-600" />
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-300" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-300">{stats.inProgress}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{t('inProgress')}</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 dark:bg-green-900/30">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-300" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-600">{stats.done}</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-300">{stats.done}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{t('done')}</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/30">
-              <AlertCircle className="w-5 h-5 text-red-600" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-300" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-300">{stats.overdue}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{t('overdueCount')}</p>
             </div>
           </div>
@@ -479,7 +479,7 @@ const Tasks = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-3 dark:border-gray-700">
           {/* Tabs */}
           {!selectedProjectId ? (
@@ -546,7 +546,7 @@ const Tasks = () => {
         </div>
 
         {/* Search and filters */}
-        <div className="flex flex-wrap items-start gap-3 bg-gray-50/70 p-4 dark:bg-gray-800/60">
+        <div className="flex flex-wrap items-start gap-3 bg-gray-50/70 p-4 dark:bg-gray-900/30">
           <div className="min-w-[260px] flex-1">
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               Szukaj zadania
@@ -630,7 +630,7 @@ const Tasks = () => {
 
       {/* Task List */}
       {isLoading ? (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="animate-pulse px-4 py-4">
@@ -648,7 +648,7 @@ const Tasks = () => {
           </div>
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-16 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-16 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500">
             <CheckSquare className="h-7 w-7" />
           </div>
@@ -665,7 +665,7 @@ const Tasks = () => {
           {!searchQuery && priorityFilter === 'all' && assigneeFilter === 'all' && (
             <button
               onClick={() => navigate('/tasks/new')}
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <Plus className="w-4 h-4" />
               {t('createTask')}
@@ -673,9 +673,9 @@ const Tasks = () => {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           {/* Table header */}
-          <div className="grid min-w-[1010px] grid-cols-[minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
+          <div className="grid min-w-[1010px] grid-cols-[minmax(240px,1fr)_140px_170px_90px_110px_100px_42px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300">
             <div>{t('taskName')}</div>
             <div>{t('project')}</div>
             <div>Osoby</div>
@@ -811,7 +811,7 @@ const Tasks = () => {
                     </button>
 
                     {openMenuId === task.id && (
-                      <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                      <div className="absolute right-0 top-full z-10 mt-1 min-w-[120px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/70 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/40">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

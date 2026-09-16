@@ -33,14 +33,14 @@ type LeaveType =
   | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
   | 'remote_work' | 'holiday_saturday' | 'other';
 
-const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30';
-const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30';
-const GRAY_LEAVE_COLOR = 'text-gray-600 bg-gray-100 dark:bg-gray-700';
-const PINK_LEAVE_COLOR = 'text-rose-500 bg-rose-50 dark:bg-rose-900/20';
-const PURPLE_LEAVE_COLOR = 'text-purple-600 bg-purple-50 dark:bg-purple-900/30';
+const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300';
+const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-300';
+const GRAY_LEAVE_COLOR = 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300';
+const PINK_LEAVE_COLOR = 'text-rose-500 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-300';
+const PURPLE_LEAVE_COLOR = 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 dark:text-purple-300';
 const YELLOW_LEAVE_COLOR = 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-300';
-const ORANGE_LEAVE_COLOR = 'text-orange-600 bg-orange-50 dark:bg-orange-900/30';
-const GREEN_LEAVE_COLOR = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30';
+const ORANGE_LEAVE_COLOR = 'text-orange-600 bg-orange-50 dark:bg-orange-900/30 dark:text-orange-300';
+const GREEN_LEAVE_COLOR = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300';
 
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> = {
   vacation: {
@@ -329,7 +329,7 @@ const AbsenceDetail = () => {
     variant?: 'primary' | 'neutral' | 'warning' | 'danger';
   }) => {
     const variantClasses = {
-      primary: 'border-gray-900 bg-gray-900 text-white hover:bg-gray-800 dark:border-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600',
+      primary: 'border-[#F7941D] bg-[#F7941D] text-white hover:bg-[#e08317]',
       neutral: 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
       warning: 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
       danger: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/10 dark:text-red-300',
@@ -358,7 +358,7 @@ const AbsenceDetail = () => {
   return (
     <MainLayout title="Szczegóły nieobecności">
       <div className="mx-auto max-w-[1100px]">
-        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-wrap items-start gap-4">
             <button
               onClick={() => navigate('/absences')}
@@ -382,12 +382,12 @@ const AbsenceDetail = () => {
         </div>
 
         {isLoading ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#F7941D]" />
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Ładowanie wniosku...</p>
           </div>
         ) : error || !request ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <Calendar className="mx-auto mb-3 h-10 w-10 text-gray-300" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Nie znaleziono wniosku</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{error}</p>
@@ -395,7 +395,7 @@ const AbsenceDetail = () => {
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${typeConfig.color}`}>
@@ -448,7 +448,7 @@ const AbsenceDetail = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">Uzasadnienie</h3>
                 <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
                   {request.reason || 'Brak dodatkowego uzasadnienia.'}
@@ -456,7 +456,7 @@ const AbsenceDetail = () => {
               </div>
 
               {/* Comments */}
-              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
                   <MessageSquare className="h-4 w-4 text-[#F7941D]" />
                   Komentarze {comments.length > 0 && <span className="text-sm font-normal text-gray-400">({comments.length})</span>}
@@ -513,7 +513,7 @@ const AbsenceDetail = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Pracownik
                 </h3>
@@ -537,7 +537,7 @@ const AbsenceDetail = () => {
               </div>
 
               {request.reviewer && (
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Rozpatrzył
                   </h3>
@@ -553,7 +553,7 @@ const AbsenceDetail = () => {
               )}
 
               {request.review_notes && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-900/40 dark:bg-amber-900/10">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm shadow-amber-100/60 dark:border-amber-900/40 dark:bg-amber-900/10 dark:shadow-black/20">
                   <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                     <ShieldAlert className="h-4 w-4" />
                     Notatka do decyzji
@@ -563,7 +563,7 @@ const AbsenceDetail = () => {
               )}
 
               {canShowAnyActions && (
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">

@@ -221,7 +221,7 @@ export default function Procedures() {
     <MainLayout title="Procedury">
       <div className="mx-auto flex max-w-[1600px] flex-col space-y-6">
         {/* Header */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Wiedza firmowa</p>
@@ -254,7 +254,7 @@ export default function Procedures() {
             return (
               <div
                 key={card.label}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20"
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.iconClass}`}>
@@ -271,19 +271,19 @@ export default function Procedures() {
         </section>
 
         {error && (
-          <div className="mb-3 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 shadow-sm shadow-red-100/60 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400 dark:shadow-black/20">
             {error}
           </div>
         )}
 
         {/* Form panel */}
         {showForm && (
-          <div className="mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-5">
+          <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-gray-900 dark:text-white">
                 {editingId ? 'Edytuj procedurę' : 'Nowa procedura'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -365,14 +365,14 @@ export default function Procedures() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
               >
                 Anuluj
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-4 py-2 text-sm bg-[#F7941D] hover:bg-[#e08317] text-white rounded-lg font-medium disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-50"
               >
                 {isSaving ? 'Zapisywanie...' : 'Zapisz procedurę'}
               </button>
@@ -384,7 +384,7 @@ export default function Procedures() {
           {/* Left panel — list */}
           <div className={`flex min-w-0 flex-col ${selected ? 'xl:w-[390px] xl:flex-shrink-0' : 'flex-1'}`}>
             {/* Filters */}
-            <div className="mb-3 space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -407,7 +407,7 @@ export default function Procedures() {
                       setActiveCategory(cat);
                       setCurrentPage(1);
                     }}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 ${
                       activeCategory === cat
                         ? 'bg-[#F7941D] text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -426,7 +426,7 @@ export default function Procedures() {
                       setActiveStatus(s.val);
                       setCurrentPage(1);
                     }}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 ${
                       activeStatus === s.val
                         ? 'bg-[#F7941D] text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -454,9 +454,9 @@ export default function Procedures() {
                   <div
                     key={p.id}
                     onClick={() => setSelected(selected?.id === p.id ? null : p)}
-                    className={`bg-white dark:bg-gray-800 border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${
+                    className={`cursor-pointer rounded-xl border bg-white p-4 shadow-sm transition-all hover:shadow-md hover:shadow-gray-200/70 dark:bg-gray-800 dark:shadow-black/10 dark:hover:shadow-black/30 ${
                       selected?.id === p.id
-                        ? 'border-[#F7941D] shadow-md'
+                        ? 'border-[#F7941D] shadow-md shadow-[#F7941D]/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                   >
@@ -499,7 +499,7 @@ export default function Procedures() {
             </div>
 
             {!isLoading && filtered.length > 0 && (
-              <div className="mt-3 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+              <div className="mt-3 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-black/20">
                 <div>
                   Pokazano {pageStart}-{pageEnd} z {filtered.length} procedur
                 </div>
@@ -527,18 +527,18 @@ export default function Procedures() {
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                       disabled={safeCurrentPage === 1}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="px-2 font-medium text-gray-700 dark:text-gray-200">
+                    <span className="rounded-lg bg-[#F7941D]/10 px-3 py-1.5 text-xs font-semibold text-[#d87f16] dark:bg-[#F7941D]/15 dark:text-orange-300">
                       {safeCurrentPage} / {totalPages}
                     </span>
                     <button
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                       disabled={safeCurrentPage === totalPages}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
@@ -550,7 +550,7 @@ export default function Procedures() {
 
           {/* Right panel — detail */}
           {selected && (
-            <div className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col min-h-0">
+            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               {/* Detail header */}
               <div className="flex items-start justify-between p-5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex-1 min-w-0">
@@ -588,7 +588,7 @@ export default function Procedures() {
                     <>
                       <button
                         onClick={() => openEdit(selected)}
-                        className="p-2 text-gray-500 hover:text-[#F7941D] hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
+                        className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-orange-50 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-orange-900/20"
                         title="Edytuj"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -596,7 +596,7 @@ export default function Procedures() {
                       {user?.role === 'admin' && (
                         <button
                           onClick={() => handleDelete(selected.id)}
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:hover:bg-red-900/20"
                           title="Usuń"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -606,7 +606,7 @@ export default function Procedures() {
                   )}
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -639,7 +639,7 @@ export default function Procedures() {
                         <button
                           onClick={() => attachInputRef.current?.click()}
                           disabled={uploadingAttachment}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D]/10 px-3 py-1.5 text-xs font-medium text-[#F7941D] hover:bg-[#F7941D]/20 disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#F7941D]/10 px-3 py-1.5 text-xs font-medium text-[#F7941D] transition-colors hover:bg-[#F7941D]/20 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:opacity-60"
                         >
                           {uploadingAttachment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                           Dodaj PDF
@@ -653,13 +653,13 @@ export default function Procedures() {
                   ) : (
                     <div className="space-y-2">
                       {selected.attachments.map((att) => (
-                        <div key={att.url} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                        <div key={att.url} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
                           <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
                           <span className="flex-1 min-w-0 truncate text-sm text-gray-700 dark:text-gray-300" title={att.name}>{att.name}</span>
                           <span className="text-xs text-gray-400">{(att.size / 1024).toFixed(0)} KB</span>
                           <button
                             onClick={() => setPdfPreview({ name: att.name, url: att.url })}
-                            className="p-1.5 rounded text-gray-400 hover:text-[#F7941D] hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700"
                             title="Podgląd"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -668,7 +668,7 @@ export default function Procedures() {
                             href={getFileUrl(att.url) || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:hover:bg-gray-700"
                             title="Otwórz w nowej karcie"
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -676,7 +676,7 @@ export default function Procedures() {
                           {isEditor && (
                             <button
                               onClick={() => handleDeleteAttachment(att.url)}
-                              className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:hover:bg-red-900/20"
                               title="Usuń"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -696,7 +696,7 @@ export default function Procedures() {
       {/* PDF preview modal */}
       {pdfPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPdfPreview(null)}>
-          <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+          <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl shadow-black/30 dark:border-gray-700 dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
                 <FileText className="h-4 w-4 text-red-500" />
@@ -707,11 +707,11 @@ export default function Procedures() {
                   href={getFileUrl(pdfPreview.url) || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Otwórz w nowej karcie
                 </a>
-                <button onClick={() => setPdfPreview(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <button onClick={() => setPdfPreview(null)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700">
                   <X className="h-4 w-4" />
                 </button>
               </div>

@@ -163,7 +163,7 @@ const GlobalSearch = () => {
   return (
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
         <input
           type="text"
           value={query}
@@ -173,14 +173,14 @@ const GlobalSearch = () => {
           }}
           onFocus={() => setIsOpen(true)}
           placeholder="Szukaj projektów, zadań, pracowników..."
-          className="h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-gray-800 placeholder-gray-400 outline-none transition-colors focus:border-[#F7941D]/50 focus:bg-white focus:ring-2 focus:ring-[#F7941D]/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500"
+          className="h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-gray-800 placeholder-gray-400 outline-none transition-colors focus:border-[#F7941D]/50 focus:bg-white focus:ring-2 focus:ring-[#F7941D]/10 dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#F7941D]/50 dark:focus:bg-gray-900"
         />
         {query && (
           <button
             type="button"
             onClick={() => { setQuery(''); setResults([]); setError(''); }}
             aria-label="Wyczyść wyszukiwanie"
-            className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+            className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             <X className="h-4 w-4" />
           </button>
@@ -188,7 +188,7 @@ const GlobalSearch = () => {
       </div>
 
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg shadow-gray-200/70 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/30">
           {trimmedQuery.length < 2 && (
             <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
               Wpisz co najmniej 2 znaki.
@@ -229,7 +229,7 @@ const GlobalSearch = () => {
                         key={`${result.type}-${result.id}`}
                         type="button"
                         onClick={() => handleSelect(result.href)}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus:bg-gray-50 focus:outline-none dark:hover:bg-gray-700 dark:focus:bg-gray-700"
                       >
                         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${config.color}`}>
                           <Icon className="h-4 w-4" />
@@ -242,7 +242,7 @@ const GlobalSearch = () => {
                             {result.type === 'project' ? getTranslatedProjectStatus(result.subtitle) : result.subtitle}
                           </span>
                         </span>
-                        <ArrowRight className="h-4 w-4 shrink-0 text-gray-300" />
+                        <ArrowRight className="h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600" />
                       </button>
                     ))}
                   </div>

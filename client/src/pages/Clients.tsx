@@ -161,7 +161,7 @@ const Clients = () => {
   return (
     <MainLayout title={t('title')}>
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -198,7 +198,7 @@ const Clients = () => {
             return (
               <div
                 key={card.label}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20"
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.iconClass}`}>
@@ -214,7 +214,7 @@ const Clients = () => {
           })}
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {viewTabs.map((tab) => (
@@ -227,8 +227,8 @@ const Clients = () => {
                   }}
                   className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
                     viewFilter === tab.key
-                      ? 'bg-[#F7941D] text-white shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:bg-gray-700'
+                      ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:bg-gray-700'
                   }`}
                 >
                   {tab.label}
@@ -289,7 +289,7 @@ const Clients = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/clients/new')}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
                 >
                   <Plus className="h-4 w-4" />
                   {t('createClient')}
@@ -392,7 +392,7 @@ const Clients = () => {
                                   <button
                                     type="button"
                                     onClick={() => setMenuOpenId(menuOpenId === client.id ? null : client.id)}
-                                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                                     aria-label="Menu kontrahenta"
                                   >
                                     <MoreVertical className="h-4 w-4" />
@@ -400,14 +400,14 @@ const Clients = () => {
                                   {menuOpenId === client.id && (
                                     <>
                                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                                      <div className="absolute right-0 top-9 z-20 min-w-[140px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                      <div className="absolute right-0 top-9 z-20 min-w-[140px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/70 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/40">
                                         <button
                                           type="button"
                                           onClick={() => {
                                             setMenuOpenId(null);
                                             navigate(`/clients/${client.id}/edit`);
                                           }}
-                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F7941D]/30 dark:text-gray-300 dark:hover:bg-gray-700"
                                         >
                                           <Edit className="h-4 w-4" />
                                           {t('edit')}
@@ -415,7 +415,7 @@ const Clients = () => {
                                         <button
                                           type="button"
                                           onClick={() => handleDelete(client.id)}
-                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/20 dark:hover:bg-red-900/20"
                                         >
                                           <Trash2 className="h-4 w-4" />
                                           {t('delete')}
@@ -428,7 +428,7 @@ const Clients = () => {
                                 <button
                                   type="button"
                                   onClick={() => navigate(`/clients/${client.id}`)}
-                                  className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700"
+                                  className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-100 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700"
                                   aria-label="Przejdź do kontrahenta"
                                 >
                                   <ChevronRight className="h-4 w-4" />
@@ -472,18 +472,18 @@ const Clients = () => {
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                       disabled={safeCurrentPage === 1}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="px-2 font-medium text-gray-700 dark:text-gray-200">
+                    <span className="rounded-lg bg-[#F7941D]/10 px-3 py-1.5 text-xs font-semibold text-[#d87f16] dark:bg-[#F7941D]/15 dark:text-orange-300">
                       {safeCurrentPage} / {totalPages}
                     </span>
                     <button
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                       disabled={safeCurrentPage === totalPages}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>

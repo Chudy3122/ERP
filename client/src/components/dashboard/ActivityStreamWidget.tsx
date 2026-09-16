@@ -419,7 +419,7 @@ const ActivityStreamWidget = () => {
     return (
       <WidgetCard
         title="Stream aktywności"
-        icon={<Activity className="w-5 h-4 text-gray-600" />}
+        icon={<Activity className="w-5 h-4 text-gray-600 dark:text-gray-300" />}
       >
         <DashboardWidgetLoading label="Ładowanie aktywności..." />
       </WidgetCard>
@@ -429,7 +429,7 @@ const ActivityStreamWidget = () => {
   return (
     <WidgetCard
       title="Stream aktywności"
-      icon={<Activity className="w-5 h-5 text-gray-600" />}
+      icon={<Activity className="w-5 h-5 text-gray-600 dark:text-gray-300" />}
       className="h-full"
       actions={
         <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -437,7 +437,7 @@ const ActivityStreamWidget = () => {
         </span>
       }
     >
-      <div className="max-h-72 space-y-2 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="max-h-72 space-y-2 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
         {activities.length === 0 ? (
           <DashboardWidgetEmpty
             icon={<Activity className="h-5 w-5" />}
@@ -452,7 +452,7 @@ const ActivityStreamWidget = () => {
               type="button"
               onClick={() => handleActivityClick(activity)}
               className={`flex w-full items-start gap-3 rounded-lg p-2.5 text-left transition-colors ${
-                activity.entity_id ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : 'cursor-default'
+                activity.entity_id ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/70' : 'cursor-default'
               }`}
             >
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${getActivityAccent(activity)}`}>
@@ -487,7 +487,7 @@ const ActivityStreamWidget = () => {
         <div className="mt-3 border-t border-gray-100 pt-3 text-center dark:border-gray-700">
           <button
             onClick={() => navigate('/activities')}
-            className="text-xs font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+            className="rounded-md px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
           >
             Zobacz wszystkie aktywności →
           </button>

@@ -323,7 +323,7 @@ const Invoices = () => {
   return (
     <MainLayout title={t('title')}>
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -355,15 +355,15 @@ const Invoices = () => {
 
         {/* Income vs cost balance */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/20">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm shadow-emerald-100/60 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:shadow-black/10">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Przychody (brutto)</p>
             <p className="mt-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(statistics?.income_gross || 0)}</p>
           </div>
-          <div className="rounded-xl border border-red-200 bg-red-50/60 p-4 shadow-sm dark:border-red-900/40 dark:bg-red-900/20">
+          <div className="rounded-xl border border-red-200 bg-red-50/60 p-4 shadow-sm shadow-red-100/60 dark:border-red-900/40 dark:bg-red-900/20 dark:shadow-black/10">
             <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Koszty (brutto)</p>
             <p className="mt-1 text-2xl font-bold text-red-700 dark:text-red-300">{formatCurrency(statistics?.cost_gross || 0)}</p>
           </div>
-          <div className={`rounded-xl border p-4 shadow-sm ${(statistics?.balance || 0) >= 0 ? 'border-[#F7941D]/30 bg-[#F7941D]/5 dark:border-[#F7941D]/40 dark:bg-[#F7941D]/10' : 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/30'}`}>
+          <div className={`rounded-xl border p-4 shadow-sm ${(statistics?.balance || 0) >= 0 ? 'border-[#F7941D]/30 bg-[#F7941D]/5 shadow-orange-100/60 dark:border-[#F7941D]/40 dark:bg-[#F7941D]/10 dark:shadow-black/10' : 'border-red-300 bg-red-50 shadow-red-100/60 dark:border-red-800 dark:bg-red-900/30 dark:shadow-black/10'}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Wynik (przychody − koszty)</p>
             <p className={`mt-1 text-2xl font-bold ${(statistics?.balance || 0) >= 0 ? 'text-[#F7941D]' : 'text-red-600 dark:text-red-300'}`}>
               {(statistics?.balance || 0) >= 0 ? '' : '−'}{formatCurrency(Math.abs(statistics?.balance || 0))}
@@ -378,7 +378,7 @@ const Invoices = () => {
             return (
               <div
                 key={card.label}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20"
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.iconClass}`}>
@@ -394,7 +394,7 @@ const Invoices = () => {
           })}
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           {/* Kind filter: income vs cost */}
           <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-4 dark:border-gray-700">
             {([
@@ -408,8 +408,8 @@ const Invoices = () => {
                 onClick={() => { setKindFilter(k.key); setViewFilter('all'); setCurrentPage(1); }}
                 className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                   kindFilter === k.key
-                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
                 {k.label}
@@ -430,8 +430,8 @@ const Invoices = () => {
                     }}
                     className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
                       viewFilter === tab.key
-                        ? 'bg-[#F7941D] text-white shadow-sm'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:bg-gray-700'
+                        ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
                   >
                     {tab.label}
@@ -462,15 +462,15 @@ const Invoices = () => {
                     }}
                     className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                       paymentFilter === tab.key
-                        ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-900/40 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                        ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-900/40 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
                     }`}
                   >
                     {tab.label}
                     <span
                       className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                         paymentFilter === tab.key
-                          ? 'bg-white/20 text-white dark:bg-gray-900/15 dark:text-gray-900'
+                          ? 'bg-white/20 text-white'
                           : 'bg-white text-gray-400 dark:bg-gray-800 dark:text-gray-400'
                       }`}
                     >
@@ -525,7 +525,7 @@ const Invoices = () => {
                 <button
                   type="button"
                   onClick={() => navigate(kindFilter === InvoiceKind.COST ? '/invoices/new?kind=cost' : kindFilter === InvoiceKind.INCOME ? '/invoices/new?kind=income' : '/invoices/new')}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
                 >
                   <Plus className="h-4 w-4" />
                   {t('createInvoice')}
@@ -634,7 +634,7 @@ const Invoices = () => {
                                         handleMarkInvoicePaid(invoice);
                                       }}
                                       disabled={updatingPaymentId === invoice.id}
-                                      className="inline-flex h-7 items-center rounded-md bg-white/70 px-2.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-950/30 dark:text-emerald-300 dark:hover:bg-gray-950/50"
+                                      className="inline-flex h-7 items-center rounded-md bg-white/70 px-2.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-950/30 dark:text-emerald-300 dark:hover:bg-gray-950/50"
                                     >
                                       Opłacona
                                     </button>
@@ -646,7 +646,7 @@ const Invoices = () => {
                                         setResetPaymentInvoice(invoice);
                                       }}
                                       disabled={updatingPaymentId === invoice.id}
-                                      className="inline-flex h-7 items-center rounded-md bg-white/70 px-2.5 text-[11px] font-semibold text-amber-700 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-950/30 dark:text-amber-300 dark:hover:bg-gray-950/50"
+                                      className="inline-flex h-7 items-center rounded-md bg-white/70 px-2.5 text-[11px] font-semibold text-amber-700 shadow-sm transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-950/30 dark:text-amber-300 dark:hover:bg-gray-950/50"
                                     >
                                       Cofnij
                                     </button>
@@ -681,7 +681,7 @@ const Invoices = () => {
                                       setMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
                                       setMenuOpenId(invoice.id);
                                     }}
-                                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                                     aria-label="Menu faktury"
                                   >
                                     <MoreVertical className="h-4 w-4" />
@@ -691,7 +691,7 @@ const Invoices = () => {
                                       <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />
                                       <div
                                         style={{ top: menuPos.top, right: menuPos.right }}
-                                        className="fixed z-50 min-w-[150px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                                        className="fixed z-50 min-w-[150px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/70 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/40"
                                       >
                                         <button
                                           type="button"
@@ -699,7 +699,7 @@ const Invoices = () => {
                                             setMenuOpenId(null);
                                             navigate(`/invoices/${invoice.id}`);
                                           }}
-                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F7941D]/30 dark:text-gray-300 dark:hover:bg-gray-700"
                                         >
                                           <Eye className="h-4 w-4" />
                                           {t('view')}
@@ -709,7 +709,7 @@ const Invoices = () => {
                                             type="button"
                                             onClick={() => handleMarkInvoicePaid(invoice)}
                                             disabled={updatingPaymentId === invoice.id}
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-emerald-700 transition-colors hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
                                           >
                                             <CheckCircle2 className="h-4 w-4" />
                                             Oznacz jako opłaconą
@@ -723,7 +723,7 @@ const Invoices = () => {
                                               setMenuOpenId(null);
                                             }}
                                             disabled={updatingPaymentId === invoice.id}
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-700 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-700 transition-colors hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-300 dark:hover:bg-amber-900/20"
                                           >
                                             <AlertCircle className="h-4 w-4" />
                                             Cofnij płatność
@@ -736,7 +736,7 @@ const Invoices = () => {
                                               setMenuOpenId(null);
                                               navigate(`/invoices/${invoice.id}/edit`);
                                             }}
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F7941D]/30 dark:text-gray-300 dark:hover:bg-gray-700"
                                           >
                                             <Edit className="h-4 w-4" />
                                             {t('edit')}
@@ -746,7 +746,7 @@ const Invoices = () => {
                                           <button
                                             type="button"
                                             onClick={() => handleDelete(invoice.id)}
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/20 dark:hover:bg-red-900/20"
                                           >
                                             <Trash2 className="h-4 w-4" />
                                             {t('delete')}
@@ -760,7 +760,7 @@ const Invoices = () => {
                                 <button
                                   type="button"
                                   onClick={() => navigate(`/invoices/${invoice.id}`)}
-                                  className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:hover:bg-gray-700"
+                                  className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-100 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:hover:bg-gray-700"
                                   aria-label="Przejdź do faktury"
                                 >
                                   <ChevronRight className="h-4 w-4" />
@@ -804,18 +804,18 @@ const Invoices = () => {
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                       disabled={safeCurrentPage === 1}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="px-2 font-medium text-gray-700 dark:text-gray-200">
+                    <span className="rounded-lg bg-[#F7941D]/10 px-3 py-1.5 text-xs font-semibold text-[#d87f16] dark:bg-[#F7941D]/15 dark:text-orange-300">
                       {safeCurrentPage} / {totalPages}
                     </span>
                     <button
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                       disabled={safeCurrentPage === totalPages}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
