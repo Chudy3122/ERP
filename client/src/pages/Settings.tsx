@@ -722,7 +722,7 @@ const Settings: React.FC = () => {
   return (
     <MainLayout title={t('settings.title')}>
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -752,7 +752,7 @@ const Settings: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
           <aside>
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="border-b border-gray-100 p-4 dark:border-gray-700">
                 <h2 className="font-semibold text-gray-950 dark:text-white">{t('settings.title')}</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Wybierz obszar konfiguracji</p>
@@ -797,7 +797,7 @@ const Settings: React.FC = () => {
           </aside>
 
           <section className="min-w-0">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="mb-6 border-b border-gray-100 pb-4 dark:border-gray-700">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
                   {sections.find((section) => section.id === activeSection)?.description}

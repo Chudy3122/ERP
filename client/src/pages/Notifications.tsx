@@ -153,7 +153,7 @@ const Notifications = () => {
   return (
     <MainLayout title="Powiadomienia">
       <div className="space-y-5">
-        <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
               Centrum powiadomień
@@ -175,7 +175,7 @@ const Notifications = () => {
               }}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 !unreadOnly
-                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                  ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
               }`}
             >
@@ -189,7 +189,7 @@ const Notifications = () => {
               }}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 unreadOnly
-                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                  ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
               }`}
             >
@@ -215,7 +215,7 @@ const Notifications = () => {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 p-10 text-sm text-gray-500 dark:text-gray-400">
               <Loader2 className="h-5 w-5 animate-spin" />

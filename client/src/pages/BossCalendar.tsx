@@ -609,7 +609,7 @@ export default function BossCalendar() {
   return (
     <MainLayout title="Kalendarz Szefa">
       <div className="mx-auto flex max-w-[1600px] flex-col space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Plan tygodnia</p>
@@ -643,7 +643,7 @@ export default function BossCalendar() {
           {statCards.map((card) => (
             <div
               key={card.label}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20"
             >
               <div className="flex items-center gap-3">
                 <span className={`h-3 w-3 rounded-full ${card.dot}`} />
@@ -656,7 +656,7 @@ export default function BossCalendar() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -701,7 +701,7 @@ export default function BossCalendar() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -980,7 +980,7 @@ export default function BossCalendar() {
         </section>
 
         {/* Meeting statistics */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <BarChart3 className="h-5 w-5" />

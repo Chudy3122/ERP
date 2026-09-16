@@ -270,7 +270,7 @@ export default function Supply() {
   return (
     <MainLayout title="Zaopatrzenie">
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
@@ -303,7 +303,7 @@ export default function Supply() {
           <StatCard icon={XCircle} label="Odrzucone" value={stats.rejected} tone="red" />
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {isManager && (
@@ -878,7 +878,7 @@ function StatCard({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
       <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone]}`}>
         <Icon className="h-5 w-5" />
       </div>

@@ -288,7 +288,7 @@ const Tickets = () => {
   return (
     <MainLayout title="Zgłoszenia">
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Obsługa spraw</p>
@@ -347,7 +347,7 @@ const Tickets = () => {
           })}
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {tabs.map((tab) => (
@@ -552,7 +552,7 @@ const Tickets = () => {
                                 </button>
 
                                 {openStatusDropdown === ticket.id && (
-                                  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/70 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/40">
                                     <div className="border-b border-gray-100 px-3 py-2 dark:border-gray-700">
                                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         {t('tickets:changeStatus')}

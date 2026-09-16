@@ -154,7 +154,7 @@ const Organization = () => {
   return (
     <MainLayout title={t('organization.title')}>
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#F7941D]">
@@ -228,7 +228,7 @@ const Organization = () => {
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
                 <Building2 className="h-5 w-5" />
@@ -240,7 +240,7 @@ const Organization = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300">
                 <Users className="h-5 w-5" />
@@ -252,7 +252,7 @@ const Organization = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
                 <Network className="h-5 w-5" />
@@ -266,14 +266,14 @@ const Organization = () => {
         </section>
 
         {isLoading ? (
-          <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
               <Loader2 className="h-9 w-9 animate-spin text-[#F7941D]" />
               <span className="text-sm font-medium">Ładowanie struktury...</span>
             </div>
           </div>
         ) : departments.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <GitBranch className="h-8 w-8" />
             </div>
@@ -310,7 +310,7 @@ const Organization = () => {
 
             <div className="min-w-0">
               {selectedDepartment ? (
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                   <div className="border-b border-gray-100 p-5 dark:border-gray-700">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-center gap-4">
@@ -464,7 +464,7 @@ const Organization = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                   <div>
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
                       <GitBranch className="h-8 w-8" />
@@ -478,7 +478,7 @@ const Organization = () => {
             </div>
           </section>
         ) : (
-          <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-950 dark:text-white">
                 {t('organization.chartView')}

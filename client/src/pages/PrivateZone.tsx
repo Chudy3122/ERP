@@ -302,7 +302,7 @@ export default function PrivateZone() {
     <MainLayout title="Strefa prywatna">
       <div className="mx-auto max-w-[1600px] space-y-6">
         {/* Header */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
@@ -324,7 +324,7 @@ export default function PrivateZone() {
         <div className="flex flex-col gap-6 xl:flex-row xl:items-stretch">
           <div className="min-w-0 flex-1 space-y-6">
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               <ListTodo className="h-5 w-5" />
             </div>
@@ -332,7 +332,7 @@ export default function PrivateZone() {
             <p className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{totalTasks}</p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <Clock3 className="h-5 w-5" />
             </div>
@@ -340,7 +340,7 @@ export default function PrivateZone() {
             <p className="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{activeTasks}</p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
               <CheckCircle2 className="h-5 w-5" />
             </div>
@@ -349,7 +349,7 @@ export default function PrivateZone() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-950 dark:text-white">Widok zadań</p>
@@ -392,7 +392,7 @@ export default function PrivateZone() {
         </section>
 
         {loading ? (
-          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#F7941D]" />
             <p className="text-sm text-gray-500 dark:text-gray-400">Ładowanie prywatnych zadań...</p>
           </div>
@@ -429,7 +429,7 @@ export default function PrivateZone() {
 
                   <div className="min-h-[360px] space-y-2.5 bg-gray-50/70 p-3 dark:bg-gray-900/30">
                     {adding === status && (
-                      <div className="rounded-xl border border-[#F7941D]/40 bg-white p-3 shadow-sm dark:bg-gray-800">
+                      <div className="rounded-xl border border-[#F7941D]/40 bg-white p-3 shadow-sm shadow-orange-100/60 dark:bg-gray-800 dark:shadow-black/20">
                         <input
                           autoFocus value={newTitle}
                           onChange={e => setNewTitle(e.target.value)}
