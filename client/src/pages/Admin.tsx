@@ -425,7 +425,7 @@ const Admin = () => {
                   <option value="">Wszystkie działy</option>
                   {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                 </select>
-                <button onClick={() => { setUserForm(EMPTY_USER); setEditingUser(null); setShowCreateUser(true); }} className="flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
+                <button onClick={() => { setUserForm(EMPTY_USER); setEditingUser(null); setShowCreateUser(true); }} className="module-create-button flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
                   <Plus className="w-4 h-4" />
                   Nowy użytkownik
                 </button>
@@ -503,7 +503,7 @@ const Admin = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500 dark:text-gray-400">{departments.length} działów w systemie</p>
-              <button onClick={() => { setDeptForm(EMPTY_DEPT); setEditingDept(null); setShowCreateDept(true); }} className="flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
+              <button onClick={() => { setDeptForm(EMPTY_DEPT); setEditingDept(null); setShowCreateDept(true); }} className="module-create-button flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
                 <Plus className="w-4 h-4" />
                 Nowy dział
               </button>

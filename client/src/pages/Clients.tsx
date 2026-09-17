@@ -182,7 +182,7 @@ const Clients = () => {
               <button
                 type="button"
                 onClick={() => navigate('/clients/new')}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+                className="module-create-button inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
               >
                 <Plus className="h-4 w-4" />
                 {t('newClient')}
@@ -289,7 +289,7 @@ const Clients = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/clients/new')}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+                  className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
                 >
                   <Plus className="h-4 w-4" />
                   {t('createClient')}

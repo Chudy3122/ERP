@@ -383,7 +383,7 @@ function ManualEntryModal({
               onChange={(e) => setDate(e.target.value)}
               max={todayStr()}
               required
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
             />
           </div>
           <div className={`grid gap-3 ${mode === 'full' ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -394,7 +394,7 @@ function ManualEntryModal({
                 value={clockIn}
                 onChange={(e) => setClockIn(e.target.value)}
                 required
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
               />
             </div>
             {mode === 'full' && (
@@ -405,7 +405,7 @@ function ManualEntryModal({
                   value={clockOut}
                   onChange={(e) => setClockOut(e.target.value)}
                   required
-                  className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white ${
+                  className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark] ${
                     isInvalidTimeRange
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-800'
                       : 'border-gray-200 focus:border-[#F7941D] focus:ring-[#F7941D]/30 dark:border-gray-600'
@@ -537,12 +537,12 @@ function StartFromTimeModal({
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Data</label>
               <input type="date" value={date} max={todayStr()} onChange={e => setDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Godzina startu</label>
               <input type="time" value={start} onChange={e => setStart(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -1272,7 +1272,7 @@ export default function WorkTime() {
                   type="datetime-local"
                   value={editForm.clock_in}
                   onChange={e => setEditForm(f => ({ ...f, clock_in: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1281,7 +1281,7 @@ export default function WorkTime() {
                   type="datetime-local"
                   value={editForm.clock_out}
                   onChange={e => setEditForm(f => ({ ...f, clock_out: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1352,7 +1352,7 @@ export default function WorkTime() {
           {isManager && (
             <button
               onClick={() => setShowManualEntry(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <PlusCircle className="w-4 h-4 text-[#F7941D]" />
               Wpis za pracownika
@@ -1531,7 +1531,7 @@ export default function WorkTime() {
                       type="month"
                       value={historySelectedMonth}
                       onChange={(event) => setHistorySelectedMonth(event.target.value || currentMonthKey())}
-                      className="h-[30px] rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                      className="h-[30px] rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:[color-scheme:dark]"
                       aria-label="Wybierz miesiąc historii wpisów"
                     />
                   )}
@@ -1977,11 +1977,11 @@ export default function WorkTime() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Od</label>
-                <input type="date" value={allFrom} max={allTo || undefined} onChange={(e) => setAllFrom(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                <input type="date" value={allFrom} max={allTo || undefined} onChange={(e) => setAllFrom(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Do</label>
-                <input type="date" value={allTo} min={allFrom || undefined} onChange={(e) => setAllTo(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                <input type="date" value={allTo} min={allFrom || undefined} onChange={(e) => setAllTo(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Typ</label>

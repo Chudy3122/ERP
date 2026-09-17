@@ -412,7 +412,7 @@ const Projects = () => {
               onClick={() =>
                 navigate(`/projects/new?returnTo=${encodeURIComponent(projectsReturnTo)}`)
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40"
             >
               <Plus className="w-5 h-5" />
               {t('newProject')}
@@ -636,7 +636,7 @@ const Projects = () => {
               onClick={() =>
                 navigate(`/projects/new?returnTo=${encodeURIComponent(projectsReturnTo)}`)
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40"
             >
               <Plus className="w-5 h-5" />
               {t('createProject')}

@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import WidgetCard from '../widgets/WidgetCard';
 import { getCurrentEntry, getUserLeaveRequests, getUserTimeEntries } from '../../api/time.api';
 import { getMyWorkLogs } from '../../api/worklog.api';
@@ -156,6 +157,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
 
 const TimeChartWidget = () => {
   const { user } = useAuth();
+  const { actualTheme } = useTheme();
   const [timeData, setTimeData] = useState<TimeData[]>([]);
   const [currentEntry, setCurrentEntry] = useState<TimeEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -306,6 +308,13 @@ const TimeChartWidget = () => {
   const hasReportedTime = timeData.some(day => day.totalMinutes > 0);
   const workdayData = timeData.filter(day => !isWeekend(new Date(`${day.date}T00:00:00`)));
   const weekendData = timeData.filter(day => isWeekend(new Date(`${day.date}T00:00:00`)));
+  const weekendChartMax = Math.max(12, ...weekendData.map(day =>
+    Math.ceil(day.leaveHours + day.regularHours + day.excessHours + day.overtimeHours)
+  ));
+  const weekendChartData = weekendData.map(day => ({
+    ...day,
+    weekendFillHours: day.weekendHours > 0 ? weekendChartMax : 0,
+  }));
   const { start: selectedWeekStart, end: selectedWeekEnd } = getCurrentWeekRange(weekOffset);
   const selectedWeekLabel = weekOffset === 0
     ? 'Bieżący tydzień'
@@ -316,9 +325,9 @@ const TimeChartWidget = () => {
   const renderTimeBars = () => (
     <>
       <Bar
-        dataKey="weekendHours"
+        dataKey="weekendFillHours"
         stackId="time"
-        fill="#F3F4F6"
+        fill={actualTheme === 'dark' ? '#374151' : '#F3F4F6'}
         radius={[4, 4, 0, 0]}
         onClick={handleChartClick}
       />
@@ -432,13 +441,13 @@ const TimeChartWidget = () => {
               </div>
               <div className="min-h-0 flex-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weekendData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <BarChart data={weekendChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                     <XAxis
                       dataKey="displayDate"
                       tick={{ fill: '#9CA3AF', fontSize: 11 }}
                       axisLine={{ stroke: '#E5E7EB' }}
                     />
-                    <YAxis hide domain={[0, 12]} />
+                    <YAxis hide domain={[0, weekendChartMax]} />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.08)' }} />
                     {renderTimeBars()}
                   </BarChart>

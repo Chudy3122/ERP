@@ -8,6 +8,37 @@
   body {
     @apply bg-gray-50 text-gray-900 font-sans antialiased dark:bg-gray-900 dark:text-gray-100;
   }
+
+  html.dark {
+    scrollbar-color: #6b7280 #111827;
+  }
+
+  .dark::-webkit-scrollbar,
+  .dark *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  .dark::-webkit-scrollbar-track,
+  .dark *::-webkit-scrollbar-track,
+  .dark::-webkit-scrollbar-corner,
+  .dark *::-webkit-scrollbar-corner,
+  .dark::-webkit-scrollbar-button,
+  .dark *::-webkit-scrollbar-button {
+    background-color: #111827;
+  }
+
+  .dark::-webkit-scrollbar-thumb,
+  .dark *::-webkit-scrollbar-thumb {
+    background-color: #6b7280;
+    border: 3px solid #111827;
+    border-radius: 6px;
+  }
+
+  .dark::-webkit-scrollbar-thumb:hover,
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: #9ca3af;
+  }
 }
 
 @layer components {
@@ -21,6 +52,14 @@
 
   .btn-secondary {
     @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:active:bg-gray-500;
+  }
+
+  .module-create-button {
+    @apply dark:border-transparent dark:bg-primary-600 dark:text-white dark:shadow-none dark:hover:bg-primary-700 dark:active:bg-primary-800 dark:focus:ring-primary-500/40;
+  }
+
+  .dark .module-create-button > svg {
+    color: inherit;
   }
 
   .input {
@@ -74,6 +113,7 @@
   /* Dark mode scrollbar */
   .dark .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #4b5563;
+    border: 0;
   }
 
   .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {

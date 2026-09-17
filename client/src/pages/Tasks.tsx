@@ -423,7 +423,7 @@ const Tasks = () => {
         </div>
         <button
           onClick={() => navigate('/tasks/new')}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+          className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
         >
           <Plus className="w-4 h-4" />
           {t('newTask')}
@@ -665,7 +665,7 @@ const Tasks = () => {
           {!searchQuery && priorityFilter === 'all' && assigneeFilter === 'all' && (
             <button
               onClick={() => navigate('/tasks/new')}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <Plus className="w-4 h-4" />
               {t('createTask')}

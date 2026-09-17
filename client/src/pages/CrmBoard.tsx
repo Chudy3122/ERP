@@ -266,7 +266,7 @@ const CrmBoard = () => {
           {selectedPipeline && (
             <button
               onClick={() => { setDefaultStage(sortedStages[0]); setShowCreateDeal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition-colors text-sm"
+              className="module-create-button flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition-colors text-sm"
             >
               <Plus className="w-4 h-4" />
               Nowy deal
@@ -283,7 +283,7 @@ const CrmBoard = () => {
           <p className="text-gray-500 mb-4">Utwórz pierwszy pipeline CRM, aby zarządzać dealami</p>
           <button
             onClick={() => { setShowPipelineMenu(true); setShowNewPipelineForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition-colors"
+            className="module-create-button flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition-colors"
           >
             <Plus className="w-4 h-4" /> Utwórz pipeline
           </button>

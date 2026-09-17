@@ -607,7 +607,7 @@ const ChatMeet: React.FC = () => {
                     resetExtForm();
                   }
                 }}
-                className="rounded-lg bg-[#F7941D] p-2 text-white transition-colors hover:bg-[#d87f16]"
+                className="module-create-button rounded-lg bg-[#F7941D] p-2 text-white transition-colors hover:bg-[#d87f16]"
                 title={sidebarTab === 'chat' ? 'Nowa rozmowa' : 'Zaplanuj spotkanie'}
               >
                 <Plus className="h-4 w-4" />
@@ -668,7 +668,7 @@ const ChatMeet: React.FC = () => {
                     {!chatSearch && (
                       <button
                         onClick={() => { loadUsers(); setShowNewConv(true); }}
-                        className="mt-3 px-3 py-1.5 text-sm bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg font-medium"
+                        className="module-create-button mt-3 px-3 py-1.5 text-sm bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg font-medium"
                       >
                         Nowa rozmowa
                       </button>
@@ -775,7 +775,7 @@ const ChatMeet: React.FC = () => {
                 </button>
                 <button
                   onClick={() => { loadUsers(); resetExtForm(); setShowExternalModal(true); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg text-sm font-medium transition-colors"
+                  className="module-create-button w-full flex items-center gap-2.5 px-3 py-2 bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   <CalendarPlus className="w-4 h-4 flex-shrink-0" />
                   Zaplanuj spotkanie zewnętrzne
@@ -957,7 +957,7 @@ const ChatMeet: React.FC = () => {
                     setShowNewConv(true);
                     setSidebarTab('chat');
                   }}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  className="module-create-button inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   Nowa rozmowa

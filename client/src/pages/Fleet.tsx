@@ -108,7 +108,7 @@ export default function Fleet() {
               <p className="text-sm text-gray-500 dark:text-gray-400">Zgłoś zapotrzebowanie na samochód i odbierz przydział</p>
             </div>
           </div>
-          <button onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f]">
+          <button onClick={() => setShowForm(true)} className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f]">
             <Plus className="h-4 w-4" /> Nowe zapotrzebowanie
           </button>
         </div>
@@ -309,7 +309,7 @@ function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Pojazdy</h2>
-        <button onClick={() => { setEditing(null); setModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        <button onClick={() => { setEditing(null); setModalOpen(true); }} className="module-create-button inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <Plus className="h-4 w-4" /> Dodaj pojazd
         </button>
       </div>

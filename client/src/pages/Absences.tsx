@@ -576,12 +576,12 @@ const Absences = () => {
 
   const calStatusColor = (s: string) =>
     s === 'working'
-      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
       : s === 'remote'
         ? 'bg-purple-100 text-purple-800 border-purple-200 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
         : s === 'on_leave'
           ? 'bg-orange-100 text-orange-800 border-orange-200 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-          : 'bg-gray-100 text-gray-500 border-gray-200';
+          : 'bg-gray-100 text-gray-500 border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400';
 
   const calStatusIcon = (s: string) =>
     s === 'working'
@@ -1416,7 +1416,7 @@ const Absences = () => {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+            className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
           >
             <Plus className="h-4 w-4" />
             Nowy wniosek

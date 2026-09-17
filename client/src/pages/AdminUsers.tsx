@@ -247,7 +247,7 @@ const AdminUsers: React.FC = () => {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-6 py-2.5 bg-violet-600 text-white rounded-md font-semibold hover:bg-violet-700 transition-colors"
+              className="module-create-button px-6 py-2.5 bg-violet-600 text-white rounded-md font-semibold hover:bg-violet-700 transition-colors"
             >
               + Dodaj użytkownika
             </button>

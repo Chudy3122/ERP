@@ -526,7 +526,7 @@ export default function Overtime() {
   };
 
   const selectClass = 'w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-9 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
-  const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+  const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:[color-scheme:dark]';
 
   const renderOvertimeRow = (entry: OvertimeSummaryEntry) => (
     <Fragment key={entry.user_id}>
@@ -679,7 +679,7 @@ export default function Overtime() {
             </button>
             <button
               onClick={() => openModal('overtime')}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <Plus className="h-4 w-4" />
               Dodaj nadgodziny
@@ -941,7 +941,7 @@ export default function Overtime() {
                   type="date"
                   value={reportFrom}
                   onChange={(e) => { setReportFrom(e.target.value); setReportData(null); }}
-                  className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -950,7 +950,7 @@ export default function Overtime() {
                   type="date"
                   value={reportTo}
                   onChange={(e) => { setReportTo(e.target.value); setReportData(null); }}
-                  className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <button
@@ -1276,7 +1276,7 @@ export default function Overtime() {
                       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
                     {availableProjects.length === 0 && (
-                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Brak projektów, w których wybrany użytkownik jest członkiem zespołu.
                       </p>
                     )}
@@ -1310,7 +1310,7 @@ export default function Overtime() {
                         )}
                       </div>
                       {!tasksLoading && tasks.length === 0 && (
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Brak zadań w tym projekcie</p>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Brak zadań w tym projekcie</p>
                       )}
                     </div>
                   )}
@@ -1324,7 +1324,7 @@ export default function Overtime() {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={3}
                   placeholder={modal === 'overtime' ? 'Zakres prac w nadgodzinach...' : 'Powód odbioru...'}
-                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-500"
+                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                 />
               </div>
             </div>
