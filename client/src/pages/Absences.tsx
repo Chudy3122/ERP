@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import MainLayout from '../components/layout/MainLayout';
+import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import {
   Calendar,
   CalendarDays,
@@ -986,6 +987,39 @@ const Absences = () => {
     0
   );
 
+  const resetReportFilters = () => {
+    const range = getMonthDateRange(new Date());
+    setReportUserId('');
+    setReportDateFrom(range.start);
+    setReportDateTo(range.end);
+    setReportLeaveType('all');
+    setReportStatusFilter('active');
+    setReportIncludeReason(true);
+  };
+
+  const resetRequestFilters = () => {
+    setRequestDateFrom('');
+    setRequestDateTo('');
+    setRequestSearch('');
+    setRequestStatusFilter('all');
+    setRequestDateField('absence');
+    setRequestSortAsc(false);
+    setRequestPage(1);
+  };
+
+  const resetAllAbsenceFilters = () => {
+    setAllDateFrom('');
+    setAllDateTo('');
+    setAllSearch('');
+    setAllSortAsc(false);
+  };
+
+  const resetCalendarFilters = () => {
+    setCalendarDate(getMondayOfWeek(new Date()));
+    setCalendarDays(7);
+    setShowCalendarWeekends(true);
+  };
+
   const handleReportDateFromChange = (value: string) => {
     setReportDateFrom(value);
 
@@ -1608,19 +1642,10 @@ const Absences = () => {
                       className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
-                  {(requestDateFrom || requestDateTo) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRequestDateFrom('');
-                        setRequestDateTo('');
-                      }}
-                      className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/40 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
-                    >
-                      <X className="h-4 w-4" />
-                      Wyczyść daty
-                    </button>
-                  )}
+                  <ResetFiltersButton
+                    onClick={resetRequestFilters}
+                    title="Resetuj daty, wyszukiwanie i filtry wniosków"
+                  />
                   <p className="pb-2 text-xs text-gray-500 dark:text-gray-400">
                     Zakres dotyczy: {requestDateField === 'submitted' ? 'daty złożenia wniosku' : 'terminu nieobecności'}.
                   </p>
@@ -1857,15 +1882,21 @@ const Absences = () => {
                     Wybierz pracownika, zakres terminu oraz rodzaj nieobecności. Raport zostanie pobrany na komputer jako plik PDF.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadLeaveReport}
-                  disabled={!reportUserId || allLoading}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e6830f] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Printer className="h-4 w-4" />
-                  Generuj PDF
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ResetFiltersButton
+                    onClick={resetReportFilters}
+                    title="Resetuj raport: bieżący miesiąc, bez wybranego pracownika i domyślne filtry"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDownloadLeaveReport}
+                    disabled={!reportUserId || allLoading}
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e6830f] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Generuj PDF
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2080,16 +2111,11 @@ const Absences = () => {
                     title="Do dnia"
                     className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
-                  {(allDateFrom || allDateTo) && (
-                    <button
-                      onClick={() => { setAllDateFrom(''); setAllDateTo(''); }}
-                      className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:text-[#F7941D]"
-                      title="Wyczyść daty"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
+                <ResetFiltersButton
+                  onClick={resetAllAbsenceFilters}
+                  title="Resetuj daty, wyszukiwanie pracownika i sortowanie nieobecności"
+                />
               </div>
             </div>
 
@@ -2465,6 +2491,10 @@ const Absences = () => {
                 >
                   {showCalendarWeekends ? 'Ukryj weekend' : 'Pokaż weekend'}
                 </button>
+                <ResetFiltersButton
+                  onClick={resetCalendarFilters}
+                  title="Resetuj kalendarz: bieżący tydzień z widocznym weekendem"
+                />
               </div>
             </div>
 

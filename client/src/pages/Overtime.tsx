@@ -3,6 +3,7 @@ import { isDateFilter, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
+import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import {
   Clock,
   Plus,
@@ -141,13 +142,20 @@ export default function Overtime() {
   const canExpand = ['admin', 'kadry', 'szef', 'kierownik'].includes(user?.role || '');
 
   // Time report (managers): per-user overtime/collection report over a date range
-  const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]; };
-  const monthEnd = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0]; };
+  const monthStart = () => { const d = new Date(); return getLocalDateKey(new Date(d.getFullYear(), d.getMonth(), 1)); };
+  const monthEnd = () => { const d = new Date(); return getLocalDateKey(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
   const [reportUserId, setReportUserId] = useSessionState(`${viewKey}:reportUser`, '', value => typeof value === 'string');
   const [reportFrom, setReportFrom] = useSessionState(`${viewKey}:reportFrom`, monthStart, isDateFilter);
   const [reportTo, setReportTo] = useSessionState(`${viewKey}:reportTo`, monthEnd, isDateFilter);
   const [reportData, setReportData] = useState<WorkLog[] | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+
+  const resetReportFilters = () => {
+    setReportUserId('');
+    setReportFrom(monthStart());
+    setReportTo(monthEnd());
+    setReportData(null);
+  };
 
   const generateReport = async () => {
     if (!reportUserId) { toast.error('Wybierz pracownika'); return; }
@@ -956,6 +964,11 @@ export default function Overtime() {
                   className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
+              <ResetFiltersButton
+                onClick={resetReportFilters}
+                title="Resetuj raport: bieżący miesiąc i bez wybranego pracownika"
+                disabled={reportLoading}
+              />
               <button
                 onClick={generateReport}
                 disabled={!reportUserId || reportLoading}

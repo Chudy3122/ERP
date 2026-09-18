@@ -3,6 +3,7 @@ import { isDateFilter, isMonthFilter, useSessionState } from '../hooks/useSessio
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
+import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2, Smartphone, Monitor, Tablet } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -628,6 +629,29 @@ export default function WorkTime() {
   const [allSort, setAllSort] = useState<'date_desc' | 'date_asc' | 'name' | 'duration_desc'>('date_desc');
   const [allPage, setAllPage] = useState(1);
   const [allPageSize, setAllPageSize] = useState<10 | 30 | 50>(30);
+
+  const resetHistoryFilters = () => {
+    setHistoryDateFilter('all');
+    setHistorySelectedMonth(currentMonthKey());
+    setHistoryTypeFilter('all');
+    setHistoryPage(1);
+  };
+
+  const resetAttendanceFilters = () => {
+    setAttendanceRange('week');
+    setAttendanceSort('last_name');
+  };
+
+  const resetAllTimeFilters = () => {
+    setAllFrom(`${currentMonthKey()}-01`);
+    setAllTo(todayStr());
+    setAllSearch('');
+    setSummaryUserId('');
+    setAllTypeFilter('all');
+    setAllStatusFilter('all');
+    setAllSort('date_desc');
+    setAllPage(1);
+  };
 
   async function loadAllEntries() {
     setAllLoading(true);
@@ -1542,6 +1566,11 @@ export default function WorkTime() {
                       aria-label="Wybierz miesiąc historii wpisów"
                     />
                   )}
+                  <ResetFiltersButton
+                    onClick={resetHistoryFilters}
+                    title="Resetuj zakres i filtry historii czasu pracy"
+                    compact
+                  />
                 </div>
 
                 <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
@@ -1593,11 +1622,7 @@ export default function WorkTime() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setHistoryDateFilter('all');
-                    setHistorySelectedMonth(currentMonthKey());
-                    setHistoryTypeFilter('all');
-                  }}
+                  onClick={resetHistoryFilters}
                   className="mt-4 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Wyczyść filtry
@@ -1782,6 +1807,11 @@ export default function WorkTime() {
                     {label}
                   </button>
                 ))}
+                <ResetFiltersButton
+                  onClick={resetAttendanceFilters}
+                  title="Resetuj frekwencję: bieżący tydzień i sortowanie po nazwisku"
+                  compact
+                />
               </div>
             </div>
 
@@ -2015,6 +2045,10 @@ export default function WorkTime() {
                   <option value="duration_desc">Czas pracy: malejąco</option>
                 </select>
               </div>
+              <ResetFiltersButton
+                onClick={resetAllTimeFilters}
+                title="Resetuj filtry: bieżący miesiąc do dziś, bez wybranego pracownika"
+              />
             </div>
           </div>
 

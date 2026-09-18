@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSessionDate, useSessionState } from '../hooks/useSessionState';
+import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as calendarApi from '../api/calendar.api';
@@ -109,6 +110,11 @@ const TeamCalendar: React.FC = () => {
     setSelectedDate(new Date());
   };
 
+  const resetCalendarFilters = () => {
+    setSelectedDate(new Date());
+    setDaysToShow(7);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-900">
       {/* Header */}
@@ -167,7 +173,7 @@ const TeamCalendar: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <label className="text-sm font-medium text-slate-700 dark:text-gray-300">{t('view')}:</label>
               <select
                 value={daysToShow}
@@ -178,6 +184,10 @@ const TeamCalendar: React.FC = () => {
                 <option value="14">{t('days14')}</option>
                 <option value="30">{t('days30')}</option>
               </select>
+              <ResetFiltersButton
+                onClick={resetCalendarFilters}
+                title="Resetuj kalendarz: domyślny widok 7 dni od dzisiaj"
+              />
             </div>
           </div>
         </div>
