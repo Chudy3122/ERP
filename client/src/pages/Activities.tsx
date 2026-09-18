@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -102,7 +103,7 @@ const getActivityDescription = (activity: ActivityLog) => {
 const getActivityActor = (activity: ActivityLog) => {
   const firstName = activity.user?.first_name || '';
   const lastName = activity.user?.last_name || '';
-  return `${firstName} ${lastName}`.trim() || 'System';
+  return formatUserName({ firstName, lastName }) || 'System';
 };
 
 const getTicketName = (activity: ActivityLog) => {
@@ -308,7 +309,7 @@ const Activities = () => {
 
     if (!firstName && !lastName) return 'System';
 
-    return `${firstName || ''} ${lastName || ''}`.trim();
+    return formatUserName({ firstName, lastName });
   };
 
   const getActivityIcon = (activity: ActivityLog) => {

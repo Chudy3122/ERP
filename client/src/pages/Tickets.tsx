@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -630,7 +631,7 @@ const Tickets = () => {
                                   </div>
                                 )}
                                 <span>
-                                  {ticket.creator.first_name} {ticket.creator.last_name}
+                                  {formatUserName(ticket.creator)}
                                 </span>
                               </span>
                             )}
@@ -651,7 +652,7 @@ const Tickets = () => {
                                     </div>
                                   )}
                                   <span>
-                                    {ticket.assignee.first_name} {ticket.assignee.last_name}
+                                    {formatUserName(ticket.assignee)}
                                   </span>
                                 </span>
                               </>

@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -154,10 +155,10 @@ export default function SupplyDetail() {
       : '—';
 
   const getUserName = (supplyRequest: SupplyRequest) =>
-    supplyRequest.user ? `${supplyRequest.user.first_name} ${supplyRequest.user.last_name}` : '—';
+    supplyRequest.user ? formatUserName(supplyRequest.user) : '—';
 
   const getReviewerName = (supplyRequest: SupplyRequest) =>
-    supplyRequest.reviewer ? `${supplyRequest.reviewer.first_name} ${supplyRequest.reviewer.last_name}` : '—';
+    supplyRequest.reviewer ? formatUserName(supplyRequest.reviewer) : '—';
 
   if (loading) {
     return (
@@ -342,7 +343,7 @@ export default function SupplyDetail() {
               <p className="text-sm text-gray-400 dark:text-gray-500">Brak komentarzy. Napisz pierwszy.</p>
             ) : (
               comments.map((c) => {
-                const name = c.user ? `${c.user.first_name} ${c.user.last_name}` : 'Użytkownik';
+                const name = c.user ? formatUserName(c.user) : 'Użytkownik';
                 const initials = c.user ? `${c.user.first_name?.[0] || ''}${c.user.last_name?.[0] || ''}` : '?';
                 const mine = c.user_id === user?.id;
                 return (

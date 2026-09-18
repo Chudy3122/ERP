@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
@@ -372,7 +373,7 @@ const Organization = () => {
                       </p>
                       <p className="font-medium text-gray-950 dark:text-white">
                         {selectedDepartment.head
-                          ? `${selectedDepartment.head.first_name} ${selectedDepartment.head.last_name}`
+                          ? formatUserName(selectedDepartment.head)
                           : t('organization.noHead')}
                       </p>
                     </div>
@@ -412,7 +413,7 @@ const Organization = () => {
 
                     {selectedDepartment.employees && selectedDepartment.employees.length > 0 ? (
                       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                        {selectedDepartment.employees.map((employee) => (
+                        {[...selectedDepartment.employees].sort(compareUsersByLastName).map((employee) => (
                           <div
                             key={employee.id}
                             className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-colors hover:border-[#F7941D]/25 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:border-[#F7941D]/30 dark:hover:bg-[#F7941D]/10"
@@ -423,7 +424,7 @@ const Organization = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate font-medium text-gray-950 dark:text-white">
-                                {employee.first_name} {employee.last_name}
+                                {formatUserName(employee)}
                               </p>
                               <p className="truncate text-sm text-gray-500 dark:text-gray-400">
                                 {employee.position || employee.email}

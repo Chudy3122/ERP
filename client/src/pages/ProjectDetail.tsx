@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -627,32 +628,16 @@ const ProjectDetail = () => {
       if (roleDiff !== 0) return roleDiff;
     }
 
-    return getUserDisplayName(firstMember.user).localeCompare(
-      getUserDisplayName(secondMember.user),
-      'pl',
-      {
-        sensitivity: 'base',
-      }
-    );
+    return compareUsersByLastName(firstMember.user, secondMember.user);
   });
 
   const assignableProjectMembers = [...visibleMembers].sort((firstMember, secondMember) =>
-    getUserDisplayName(firstMember.user).localeCompare(
-      getUserDisplayName(secondMember.user),
-      'pl',
-      {
-        sensitivity: 'base',
-      }
-    )
+    compareUsersByLastName(firstMember.user, secondMember.user)
   );
 
   const availableUsers = users
     .filter(userItem => !visibleMembers.some(member => member.user_id === userItem.id))
-    .sort((firstUser, secondUser) =>
-      getUserDisplayName(firstUser).localeCompare(getUserDisplayName(secondUser), 'pl', {
-        sensitivity: 'base',
-      })
-    );
+    .sort(compareUsersByLastName);
 
   const filteredAvailableUsers = availableUsers.filter(userItem => {
     const query = memberSearchQuery.trim().toLowerCase();
@@ -1697,7 +1682,7 @@ const ProjectDetail = () => {
     const query = searchQuery.toLowerCase();
     return tasks.filter(task => {
       const assignedPeopleText = getTaskAssignedPeople(task)
-        .map(person => `${person.first_name} ${person.last_name} ${person.email || ''}`)
+        .map(person => `${person.first_name} ${person.last_name} ${formatUserName(person)} ${person.email || ''}`)
         .join(' ')
         .toLowerCase();
 
@@ -1798,7 +1783,7 @@ const ProjectDetail = () => {
   );
   const bulkAssigneeName =
     assignableProjectMembers.find(member => member.user_id === bulkAssigneeId)?.user
-      ? getUserDisplayName(assignableProjectMembers.find(member => member.user_id === bulkAssigneeId)?.user)
+      ? formatUserName(assignableProjectMembers.find(member => member.user_id === bulkAssigneeId)?.user, 'Nieznany użytkownik')
       : '';
   const bulkAssignableTaskCount = bulkAssigneeId
     ? topLevelKanbanTasks
@@ -1806,7 +1791,7 @@ const ProjectDetail = () => {
     : 0;
   const bulkUnassignName =
     assignableProjectMembers.find(member => member.user_id === bulkUnassignId)?.user
-      ? getUserDisplayName(assignableProjectMembers.find(member => member.user_id === bulkUnassignId)?.user)
+      ? formatUserName(assignableProjectMembers.find(member => member.user_id === bulkUnassignId)?.user, 'Nieznany użytkownik')
       : '';
   const bulkUnassignableTaskCount = bulkUnassignId
     ? topLevelKanbanTasks
@@ -1892,7 +1877,7 @@ const ProjectDetail = () => {
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-lg">
                   <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <span className="font-medium text-gray-700 dark:text-gray-300">
-                    {projectDisplayOwner.first_name} {projectDisplayOwner.last_name}
+                    {formatUserName(projectDisplayOwner)}
                   </span>
                 </span>
               )}
@@ -2159,7 +2144,7 @@ const ProjectDetail = () => {
                     </option>
                     {assignableProjectMembers.map(member => (
                       <option key={member.user_id} value={member.user_id}>
-                        {getUserDisplayName(member.user)}
+                        {formatUserName(member.user, 'Nieznany użytkownik')}
                       </option>
                     ))}
                   </select>
@@ -2202,7 +2187,7 @@ const ProjectDetail = () => {
                     </option>
                     {assignableProjectMembers.map(member => (
                       <option key={member.user_id} value={member.user_id}>
-                        {getUserDisplayName(member.user)}
+                        {formatUserName(member.user, 'Nieznany użytkownik')}
                       </option>
                     ))}
                   </select>
@@ -2461,7 +2446,7 @@ const ProjectDetail = () => {
                       const isDragTarget = dragOverTaskId === task.id && draggedTask?.stage_id === task.stage_id;
                       const priorityAccent = getTaskPriorityAccent(task.priority);
                       const overdue = isTaskOverdue(task);
-                      const assignedPeople = getTaskAssignedPeople(task);
+                      const assignedPeople = [...getTaskAssignedPeople(task)].sort(compareUsersByLastName);
                       const assignedPersonIds = getTaskAssigneeIds(task);
                       const availableAssignees = assignableProjectMembers.filter(
                         member => !assignedPersonIds.includes(member.user_id)
@@ -2578,7 +2563,7 @@ const ProjectDetail = () => {
                                 </option>
                                 {availableAssignees.map(member => (
                                   <option key={member.user_id} value={member.user_id}>
-                                    {getUserDisplayName(member.user)}
+                                    {formatUserName(member.user, 'Nieznany użytkownik')}
                                   </option>
                                 ))}
                               </select>
@@ -2610,7 +2595,7 @@ const ProjectDetail = () => {
                                       <span
                                         key={person.id}
                                         className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 py-0.5 pl-1 pr-1.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-200"
-                                        title={`${person.first_name} ${person.last_name}`}
+                                        title={formatUserName(person)}
                                       >
                                         {person.avatar_url ? (
                                           <img
@@ -2624,7 +2609,7 @@ const ProjectDetail = () => {
                                           </span>
                                         )}
                                         <span className="truncate">
-                                          {person.first_name} {person.last_name}
+                                          {formatUserName(person)}
                                         </span>
                                         <button
                                           type="button"
@@ -2634,8 +2619,8 @@ const ProjectDetail = () => {
                                           }
                                           disabled={assigningTaskId === task.id}
                                           className="ml-0.5 rounded-full p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-600 dark:hover:text-red-300"
-                                          title={`Odepnij: ${person.first_name} ${person.last_name}`}
-                                          aria-label={`Odepnij: ${person.first_name} ${person.last_name}`}
+                                          title={`Odepnij: ${formatUserName(person)}`}
+                                          aria-label={`Odepnij: ${formatUserName(person)}`}
                                         >
                                           <X className="h-2.5 w-2.5" />
                                         </button>
@@ -2738,7 +2723,7 @@ const ProjectDetail = () => {
                   onChange={event => setMemberSortMode(event.target.value as MemberSortMode)}
                   className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                 >
-                  <option value="name">Alfabetycznie po imieniu</option>
+                  <option value="name">Alfabetycznie po nazwisku</option>
                   <option value="role">Po roli w zespole</option>
                 </select>
               </label>
@@ -2791,7 +2776,7 @@ const ProjectDetail = () => {
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                          {getUserDisplayName(userItem)}
+                          {formatUserName(userItem, 'Nieznany użytkownik')}
                         </p>
                         <p className="truncate text-xs text-gray-500 dark:text-gray-400">
                           {userItem.position || userItem.department || userItem.email}
@@ -2841,7 +2826,7 @@ const ProjectDetail = () => {
                     )}
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {getUserDisplayName(member.user)}
+                        {formatUserName(member.user, 'Nieznany użytkownik')}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {member.user?.email}
@@ -2956,7 +2941,7 @@ const ProjectDetail = () => {
                             {formatFileSize(attachment.file_size)} •{' '}
                             {formatRelativeTime(attachment.created_at)}
                             {attachment.uploader &&
-                              ` • ${attachment.uploader.first_name} ${attachment.uploader.last_name}`}
+                              ` • ${formatUserName(attachment.uploader)}`}
                           </p>
                           {attachment.source === 'task' && (
                             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">

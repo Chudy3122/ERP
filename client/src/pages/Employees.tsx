@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
@@ -140,13 +141,7 @@ const Employees = () => {
 
       return matchesSearch && matchesDepartment;
     })
-    .sort((firstEmployee, secondEmployee) =>
-      `${firstEmployee.last_name} ${firstEmployee.first_name}`.localeCompare(
-        `${secondEmployee.last_name} ${secondEmployee.first_name}`,
-        'pl',
-        { sensitivity: 'base' }
-      )
-    );
+    .sort(compareUsersByLastName);
 
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
   const startIndex = (page - 1) * pageSize;
@@ -424,7 +419,7 @@ const Employees = () => {
                             </div>
                             <div className="min-w-0">
                               <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                {employee.first_name} {employee.last_name}
+                                {formatUserName(employee)}
                               </div>
                               {employee.employee_id && (
                                 <div className="text-xs text-gray-500 dark:text-gray-400">

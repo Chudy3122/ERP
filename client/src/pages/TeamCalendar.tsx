@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useSessionDate, useSessionState } from '../hooks/useSessionState';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as calendarApi from '../api/calendar.api';
@@ -6,11 +8,13 @@ import type { TeamAvailability } from '../api/calendar.api';
 
 const TeamCalendar: React.FC = () => {
   const { t } = useTranslation('teamCalendar');
+  const { user } = useAuth();
+  const viewKey = `erp:view:teamCalendar:${user?.id || 'current-user'}`;
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [daysToShow, setDaysToShow] = useState<number>(7);
+  const [selectedDate, setSelectedDate] = useSessionDate(`${viewKey}:date`, () => new Date());
+  const [daysToShow, setDaysToShow] = useSessionState(`${viewKey}:days`, 7, value => typeof value === 'number' && [7, 14, 30].includes(value));
 
   useEffect(() => {
     loadAvailability();

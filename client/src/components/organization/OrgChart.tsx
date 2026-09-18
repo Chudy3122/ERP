@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../../utils/userSorting';
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Users, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
@@ -110,7 +111,7 @@ function PersonRow({
           ) : initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-xs font-semibold ${s.text} truncate`}>{firstName} {lastName}</p>
+          <p className={`text-xs font-semibold ${s.text} truncate`}>{formatUserName({ firstName, lastName })}</p>
           <p className={`text-[10px] ${s.subtext} truncate`}>{position || s.label}</p>
         </div>
       </div>
@@ -126,7 +127,7 @@ function PersonRow({
         ) : initials}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-xs ${s.text} truncate`}>{firstName} {lastName}</p>
+        <p className={`text-xs ${s.text} truncate`}>{formatUserName({ firstName, lastName })}</p>
         {position && <p className={`text-[10px] ${s.subtext} truncate`}>{position}</p>}
       </div>
     </div>
@@ -165,7 +166,7 @@ const OrgNode: React.FC<OrgNodeProps> = ({ node, isRoot = false }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
 
-  const nonHeadEmployees = (node.employees || []).filter((e) => e.id !== node.head_id);
+  const nonHeadEmployees = (node.employees || []).filter((e) => e.id !== node.head_id).sort(compareUsersByLastName);
   const specialEmployees = nonHeadEmployees.filter((e) => SPECIAL_ROLES.includes(e.role));
   const regularEmployees = nonHeadEmployees.filter((e) => !SPECIAL_ROLES.includes(e.role));
   const visibleRegular = regularEmployees.slice(0, MAX_VISIBLE_EMPLOYEES);

@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, PhoneOff, Video } from 'lucide-react';
@@ -112,7 +113,7 @@ const IncomingCallOverlay = () => {
 
   if (!call && !external) return null;
 
-  const callerName = call ? `${call.caller.first_name} ${call.caller.last_name}` : '';
+  const callerName = call ? formatUserName(call.caller) : '';
   const initials = call ? `${call.caller.first_name[0]}${call.caller.last_name[0]}`.toUpperCase() : '';
   const progress = (secondsLeft / AUTO_DISMISS_SEC) * 100;
 

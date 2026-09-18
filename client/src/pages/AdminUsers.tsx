@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +51,7 @@ const AdminUsers: React.FC = () => {
     try {
       setLoading(true);
       const response = await adminApi.getAllUsers(1, 100, searchTerm, roleFilter || undefined);
-      setUsers(response.users);
+      setUsers([...response.users].sort(compareUsersByLastName));
     } catch (error) {
       console.error('Failed to load users:', error);
       toast.error('Nie udało się załadować użytkowników');
@@ -290,7 +291,7 @@ const AdminUsers: React.FC = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {user.first_name} {user.last_name}
+                            {formatUserName(user)}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                         </div>

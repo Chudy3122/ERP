@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -65,7 +66,7 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
   const getChannelName = (channel: Channel): string => {
     if (channel.type === 'direct') {
       const other = getOtherMember(channel);
-      if (other?.user) return `${other.user.first_name} ${other.user.last_name}`;
+      if (other?.user) return formatUserName(other.user);
       return channel.name ?? t('chat.unnamed');
     }
     return channel.name ?? t('chat.unnamed');

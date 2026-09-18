@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +41,7 @@ const Reports: React.FC = () => {
   const loadUsers = async () => {
     try {
       const usersList = await adminApi.getUsers();
-      setUsers(usersList);
+      setUsers([...usersList].sort(compareUsersByLastName));
     } catch (err) {
       console.error('Failed to load users:', err);
     }
@@ -202,7 +203,7 @@ const Reports: React.FC = () => {
                 <option value="">{t('allEmployees', { defaultValue: 'Wszyscy' })}</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.first_name} {u.last_name}
+                    {formatUserName(u)}
                   </option>
                 ))}
               </select>

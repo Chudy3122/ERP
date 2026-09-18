@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 ﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -96,11 +97,7 @@ const TaskForm = () => {
 
   const getProjectMemberDisplayName = (member: ProjectMember) => {
     if (!member.user) return 'Użytkownik projektu';
-    return (
-      `${member.user.first_name || ''} ${member.user.last_name || ''}`.trim() ||
-      member.user.email ||
-      'Użytkownik projektu'
-    );
+    return formatUserName(member.user, 'Użytkownik projektu');
   };
 
   useEffect(() => {
@@ -136,11 +133,7 @@ const TaskForm = () => {
       setIsLoadingProjectMembers(true);
       const result = await projectApi.getProjectMembers(projectId);
       const sortedMembers = [...(result || [])].sort((firstMember, secondMember) =>
-        getProjectMemberDisplayName(firstMember).localeCompare(
-          getProjectMemberDisplayName(secondMember),
-          'pl',
-          { sensitivity: 'base' }
-        )
+        compareUsersByLastName(firstMember.user, secondMember.user)
       );
       setProjectMembers(sortedMembers);
       setFormData(prev => {
@@ -1148,7 +1141,7 @@ const TaskForm = () => {
             {isEdit && task?.creator && (
               <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Utworzył</div>
-                <p className="truncate font-semibold text-gray-900 dark:text-white">{task.creator.first_name} {task.creator.last_name}</p>
+                <p className="truncate font-semibold text-gray-900 dark:text-white">{formatUserName(task.creator)}</p>
               </div>
             )}
 

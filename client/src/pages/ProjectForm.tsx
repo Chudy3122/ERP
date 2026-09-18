@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -222,15 +223,11 @@ const ProjectForm = () => {
   };
 
   const getMemberName = (member: AdminUser) =>
-    `${member.first_name} ${member.last_name}`.trim() || member.email;
+    formatUserName(member);
 
   const availableMembers = users
     .filter(userItem => userItem.is_active && userItem.id !== user?.id)
-    .sort((firstUser, secondUser) =>
-      getMemberName(firstUser).localeCompare(getMemberName(secondUser), 'pl', {
-        sensitivity: 'base',
-      })
-    );
+    .sort(compareUsersByLastName);
 
   const filteredMembers = availableMembers.filter(userItem => {
     const query = memberSearch.trim().toLowerCase();
@@ -242,6 +239,7 @@ const ProjectForm = () => {
     return [
       userItem.first_name,
       userItem.last_name,
+      formatUserName(userItem),
       userItem.email,
       userItem.position || '',
       userItem.department || '',

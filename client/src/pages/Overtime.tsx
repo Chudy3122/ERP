@@ -1,3 +1,5 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { isDateFilter, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
@@ -80,6 +82,7 @@ function getCurrentMonthStartKey(): string {
 
 export default function Overtime() {
   const { user } = useAuth();
+  const viewKey = `erp:view:overtime:${user?.id || 'current-user'}`;
   const [summary, setSummary] = useState<OvertimeSummaryEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectMembersById, setProjectMembersById] = useState<Record<string, ProjectMember[]>>({});
@@ -140,9 +143,9 @@ export default function Overtime() {
   // Time report (managers): per-user overtime/collection report over a date range
   const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]; };
   const monthEnd = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0]; };
-  const [reportUserId, setReportUserId] = useState('');
-  const [reportFrom, setReportFrom] = useState(monthStart);
-  const [reportTo, setReportTo] = useState(monthEnd);
+  const [reportUserId, setReportUserId] = useSessionState(`${viewKey}:reportUser`, '', value => typeof value === 'string');
+  const [reportFrom, setReportFrom] = useSessionState(`${viewKey}:reportFrom`, monthStart, isDateFilter);
+  const [reportTo, setReportTo] = useSessionState(`${viewKey}:reportTo`, monthEnd, isDateFilter);
   const [reportData, setReportData] = useState<WorkLog[] | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
 
@@ -211,7 +214,7 @@ export default function Overtime() {
   const filteredTeamSummary = [...summary]
     .filter((entry) => {
       if (!normalizedTeamSearch) return true;
-      return `${entry.first_name} ${entry.last_name} ${entry.department || 'Bez działu'}`
+      return `${entry.first_name} ${entry.last_name} ${formatUserName(entry)} ${entry.department || 'Bez działu'}`
         .toLocaleLowerCase('pl')
         .includes(normalizedTeamSearch);
     })
@@ -226,7 +229,7 @@ export default function Overtime() {
       if (teamSort === 'balance_desc') return b.balance - a.balance;
       if (teamSort === 'balance_asc') return a.balance - b.balance;
       if (teamSort === 'overtime_desc') return b.total_overtime - a.total_overtime;
-      return a.first_name.localeCompare(b.first_name, 'pl') || a.last_name.localeCompare(b.last_name, 'pl');
+      return compareUsersByLastName(a, b);
     });
   const groupedSummary: Record<string, OvertimeSummaryEntry[]> = {};
   if (groupByDept) {
@@ -548,7 +551,7 @@ export default function Overtime() {
           </div>
           <div className="min-w-0">
             <p className="truncate font-medium text-gray-900 dark:text-white">
-              {entry.first_name} {entry.last_name}
+              {formatUserName(entry)}
             </p>
             {entry.user_id === user?.id && (
               <p className="text-xs text-blue-600 dark:text-blue-400">To Ty</p>
@@ -614,7 +617,7 @@ export default function Overtime() {
           ) : (
             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
               <div className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400">
-                Wpisy: {entry.first_name} {entry.last_name}
+                Wpisy: {formatUserName(entry)}
               </div>
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
                 {expandedLogs.map((log) => {
@@ -929,7 +932,7 @@ export default function Overtime() {
                 >
                   <option value="">— wybierz pracownika —</option>
                   {[...summary]
-                    .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                    .sort(compareUsersByLastName)
                     .map((u) => (
                       <option key={u.user_id} value={u.user_id}>{u.last_name} {u.first_name}</option>
                     ))}
@@ -1088,7 +1091,7 @@ export default function Overtime() {
                 aria-label="Sortuj zestawienie pracowników"
                 className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
               >
-                <option value="name">Alfabetycznie po imieniu</option>
+                <option value="name">Alfabetycznie po nazwisku</option>
                 <option value="balance_desc">Najwyższe saldo</option>
                 <option value="balance_asc">Najniższe saldo</option>
                 <option value="overtime_desc">Najwięcej nadgodzin</option>
@@ -1197,15 +1200,12 @@ export default function Overtime() {
                     onChange={(e) => setForm({ ...form, user_id: e.target.value, project_id: '', task_id: '' })}
                     className={selectClass}
                   >
-                    <option value={user?.id ?? ''}>Ja ({user?.first_name} {user?.last_name})</option>
-                    {allUsers
-                      .filter((u) => u.id !== user?.id)
-                      .sort((firstUser, secondUser) =>
-                        firstUser.first_name.localeCompare(secondUser.first_name, 'pl', { sensitivity: 'base' }) ||
-                        firstUser.last_name.localeCompare(secondUser.last_name, 'pl', { sensitivity: 'base' })
-                      )
+                    {[...allUsers.filter((u) => u.id !== user?.id), ...(user ? [user] : [])]
+                      .sort(compareUsersByLastName)
                       .map((u) => (
-                      <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
+                      <option key={u.id} value={u.id}>
+                        {formatUserName(u)}{u.id === user?.id ? ' (Ty)' : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1363,7 +1363,7 @@ export default function Overtime() {
                 <div className="min-w-0">
                   <h2 className="font-semibold text-gray-900 dark:text-white">Zarządzanie wpisami</h2>
                   <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                    {manageUser.first_name} {manageUser.last_name} · {manageLogs.length} wpisów
+                    {formatUserName(manageUser)} · {manageLogs.length} wpisów
                   </p>
                 </div>
               </div>
@@ -1554,7 +1554,7 @@ export default function Overtime() {
               <div>
                 <h2 className="font-semibold text-gray-900 dark:text-white">Edytuj wpis</h2>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  {manageUser?.first_name} {manageUser?.last_name}
+                  {formatUserName(manageUser)}
                 </p>
               </div>
               <button onClick={() => setEditingLog(null)} aria-label="Zamknij edycję" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">

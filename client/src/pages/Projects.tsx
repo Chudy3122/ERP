@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -713,7 +714,7 @@ const Projects = () => {
                                 </div>
                               )}
                               <span>
-                                {displayOwner.first_name} {displayOwner.last_name}
+                                {formatUserName(displayOwner)}
                               </span>
                             </div>
                           )}

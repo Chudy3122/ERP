@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { getDirectory } from '../api/user.api';
+import type { AdminUser } from '../types/admin.types';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebRTC } from '../hooks/useWebRTC';
@@ -29,10 +32,16 @@ const VideoMeeting: React.FC = () => {
   const [joinMode, setJoinMode] = useState<JoinMode>('selecting');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [directoryUsers, setDirectoryUsers] = useState<AdminUser[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
 
   const meetingTitle = (location.state as any)?.meetingTitle || 'Spotkanie';
+
+  useEffect(() => {
+    if (!showParticipants || directoryUsers.length > 0) return;
+    getDirectory().then(setDirectoryUsers).catch(console.error);
+  }, [showParticipants]);
 
   // Only initialize WebRTC after user selects join mode
   const shouldConnect = joinMode !== 'selecting';
@@ -194,10 +203,10 @@ const VideoMeeting: React.FC = () => {
   }
 
   const allStreams = [
-    ...(isObserver ? [] : [{ id: 'local', name: user ? `${user.first_name} ${user.last_name} (Ty)` : 'Ty', stream: localStream, isLocal: true }]),
+    ...(isObserver ? [] : [{ id: 'local', name: user ? `${formatUserName(user)} (Ty)` : 'Ty', stream: localStream, isLocal: true }]),
     ...Array.from(remoteStreams.entries()).map(([id, { stream, name }]) => ({
       id,
-      name,
+      name: formatUserName(directoryUsers.find(u => u.id === id), name),
       stream,
       isLocal: false,
     })),
@@ -352,7 +361,7 @@ const VideoMeeting: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">
-                      {user ? `${user.first_name} ${user.last_name}` : 'Ty'}
+                      {user ? formatUserName(user) : 'Ty'}
                     </p>
                     <p className="text-gray-400 text-xs">Ty</p>
                   </div>
@@ -371,7 +380,7 @@ const VideoMeeting: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">
-                      {user ? `${user.first_name} ${user.last_name}` : 'Ty'}
+                      {user ? formatUserName(user) : 'Ty'}
                     </p>
                     <p className="text-gray-400 text-xs">Obserwator</p>
                   </div>
@@ -379,7 +388,10 @@ const VideoMeeting: React.FC = () => {
               )}
 
               {/* Other participants */}
-              {participants.map((participant) => (
+              {[...participants].sort((a, b) => compareUsersByLastName(
+                directoryUsers.find(u => u.id === a.id) ?? { email: a.name },
+                directoryUsers.find(u => u.id === b.id) ?? { email: b.name },
+              )).map((participant) => (
                 <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50">
                   <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                     <span className="text-sm font-bold text-white">
@@ -387,7 +399,7 @@ const VideoMeeting: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{participant.name}</p>
+                    <p className="text-white text-sm font-medium truncate">{formatUserName(directoryUsers.find(u => u.id === participant.id), participant.name)}</p>
                   </div>
                 </div>
               ))}

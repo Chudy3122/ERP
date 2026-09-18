@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useState, useEffect, useRef } from 'react';
 import {
   Archive,
@@ -482,7 +483,7 @@ export default function Procedures() {
                           {p.creator && (
                             <span className="flex items-center gap-1">
                               <User className="w-3 h-3" />
-                              {p.creator.first_name} {p.creator.last_name}
+                              {formatUserName(p.creator)}
                             </span>
                           )}
                           <span className="flex items-center gap-1">
@@ -574,7 +575,7 @@ export default function Procedures() {
                     {selected.creator && (
                       <span className="flex items-center gap-1">
                         <User className="w-3 h-3" />
-                        Autor: {selected.creator.first_name} {selected.creator.last_name}
+                        Autor: {formatUserName(selected.creator)}
                       </span>
                     )}
                     <span className="flex items-center gap-1">

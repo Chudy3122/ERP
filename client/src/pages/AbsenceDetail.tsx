@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -476,7 +477,7 @@ const AbsenceDetail = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2">
                             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {c.user ? `${c.user.first_name} ${c.user.last_name}` : 'Użytkownik'}
+                              {c.user ? formatUserName(c.user) : 'Użytkownik'}
                             </span>
                             <span className="text-xs text-gray-400">
                               {new Date(c.created_at).toLocaleString('pl-PL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -524,7 +525,7 @@ const AbsenceDetail = () => {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                       {request.user
-                        ? `${request.user.first_name} ${request.user.last_name}`
+                        ? formatUserName(request.user)
                         : 'Brak danych pracownika'}
                     </p>
                     {request.user?.email && (
@@ -542,7 +543,7 @@ const AbsenceDetail = () => {
                     Rozpatrzył
                   </h3>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {request.reviewer.first_name} {request.reviewer.last_name}
+                    {formatUserName(request.reviewer)}
                   </p>
                   {request.reviewed_at && (
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

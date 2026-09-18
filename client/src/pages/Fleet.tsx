@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
@@ -140,7 +141,7 @@ export default function Fleet() {
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                         <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{fmtRange(r.start_at, r.end_at)}</span>
                         {r.passengers ? <span className="inline-flex items-center gap-1.5"><UsersIcon className="h-3.5 w-3.5" />{r.passengers} os.</span> : null}
-                        {canManage && r.user && <span>· {r.user.first_name} {r.user.last_name}</span>}
+                        {canManage && r.user && <span>· {formatUserName(r.user)}</span>}
                       </div>
                       {r.purpose && <p className="mt-2 whitespace-pre-line break-words text-sm text-gray-600 dark:text-gray-300">{r.purpose}</p>}
                       {r.vehicle && (
@@ -704,7 +705,7 @@ function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: (
                           <span>{fmtDate(e.entry_date)}</span>
                           <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{LOG_CATEGORY_LABELS[e.category] || e.category}</span>
                           {e.mileage != null && <span>{e.mileage} km</span>}
-                          {e.creator && <span>· {e.creator.first_name} {e.creator.last_name}</span>}
+                          {e.creator && <span>· {formatUserName(e.creator)}</span>}
                         </p>
                         {e.notes && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{e.notes}</p>}
                       </div>

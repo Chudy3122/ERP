@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -334,7 +335,7 @@ const EmployeeDetail = () => {
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Profil pracownika</p>
                 <h1 className="mt-1 truncate text-2xl font-semibold text-gray-950 dark:text-white">
-                  {employee.first_name} {employee.last_name}
+                  {formatUserName(employee)}
                 </h1>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{employee.position || 'Brak stanowiska'}</p>
                 <div className="mt-3 flex flex-wrap gap-2">

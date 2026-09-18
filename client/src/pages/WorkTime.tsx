@@ -1,3 +1,5 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { isDateFilter, isMonthFilter, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
@@ -355,7 +357,7 @@ function ManualEntryModal({
             >
               <option value="">— wybierz —</option>
               {[...users]
-                .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                .sort(compareUsersByLastName)
                 .map(u => <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>)}
             </select>
           </div>
@@ -561,11 +563,10 @@ function StartFromTimeModal({
 export default function WorkTime() {
   const { user } = useAuth();
   const isTimeTrackingBlocked = isMobileTimeTrackingBlocked(user?.email);
-  // Remember the last open tab across refreshes (e.g. stay on "Wszystkie czasy pracy").
-  const [activeTab, setActiveTab] = useState<'my' | 'attendance' | 'all'>(() => {
-    const saved = localStorage.getItem('workTime:activeTab');
-    return saved === 'attendance' || saved === 'all' ? saved : 'my';
-  });
+  const viewKey = `erp:view:workTime:${user?.id || 'current-user'}`;
+  const [activeTab, setActiveTab] = useSessionState<'my' | 'attendance' | 'all'>(
+    `${viewKey}:tab`, 'my', value => typeof value === 'string' && ['my', 'attendance', 'all'].includes(value),
+  );
 
   // Day state machine
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
@@ -578,8 +579,12 @@ export default function WorkTime() {
   const [managerUsers, setManagerUsers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState<10 | 30 | 50>(10);
-  const [historyDateFilter, setHistoryDateFilter] = useState<HistoryDateFilter>('all');
-  const [historySelectedMonth, setHistorySelectedMonth] = useState(currentMonthKey());
+  const [historyDateFilter, setHistoryDateFilter] = useSessionState<HistoryDateFilter>(
+    `${viewKey}:historyRange`, 'all', value => typeof value === 'string' && ['all', 'week', 'month', 'selectedMonth'].includes(value),
+  );
+  const [historySelectedMonth, setHistorySelectedMonth] = useSessionState(
+    `${viewKey}:historyMonth`, currentMonthKey, isMonthFilter,
+  );
   const [historyTypeFilter, setHistoryTypeFilter] = useState<HistoryTypeFilter>('all');
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
@@ -589,12 +594,11 @@ export default function WorkTime() {
   // Frekwencja pracowników: zarząd / kadry / księgowość / kierownik — nie zwykli pracownicy.
   const canViewAttendance = ['admin', 'szef', 'kadry', 'ksiegowosc', 'kierownik'].includes(user?.role || '');
 
-  // Persist the active tab; if a restored tab isn't allowed for this role, fall back to "my".
-  useEffect(() => { localStorage.setItem('workTime:activeTab', activeTab); }, [activeTab]);
+  // Przywrocona zakladka nadal musi byc dostepna dla aktualnej roli.
   useEffect(() => {
     if (activeTab === 'all' && !isManager) setActiveTab('my');
     else if (activeTab === 'attendance' && !canViewAttendance) setActiveTab('my');
-  }, [isManager, canViewAttendance]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, isManager, canViewAttendance, setActiveTab]);
 
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
@@ -605,16 +609,18 @@ export default function WorkTime() {
   // Attendance state
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [attendanceLeaveRequests, setAttendanceLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>('week');
-  const [attendanceSort, setAttendanceSort] = useState<AttendanceSort>('first_name');
+  const [attendanceRange, setAttendanceRange] = useSessionState<AttendanceRange>(
+    `${viewKey}:attendanceRange`, 'week', value => typeof value === 'string' && ['week', '2weeks', '4weeks'].includes(value),
+  );
+  const [attendanceSort, setAttendanceSort] = useState<AttendanceSort>('last_name');
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   // All-entries tab (admin/kadry): edit everyone's work time
   const monthStartStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; })();
   const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
   const [allLoading, setAllLoading] = useState(false);
-  const [allFrom, setAllFrom] = useState(monthStartStr);
-  const [allTo, setAllTo] = useState(todayStr());
+  const [allFrom, setAllFrom] = useSessionState(`${viewKey}:allFrom`, monthStartStr, isDateFilter);
+  const [allTo, setAllTo] = useSessionState(`${viewKey}:allTo`, todayStr, isDateFilter);
   const [allSearch, setAllSearch] = useState('');
   const [summaryUserId, setSummaryUserId] = useState('');
   const [allTypeFilter, setAllTypeFilter] = useState<'all' | 'auto' | 'manual'>('all');
@@ -945,6 +951,7 @@ export default function WorkTime() {
   const attendanceDaysCount = attendance?.dates.length ?? 0;
   const sortedAttendanceUsers = attendance
     ? [...attendance.users].sort((a, b) => {
+        if (attendanceSort === 'last_name') return compareUsersByLastName(a, b);
         const firstValue = attendanceSort === 'first_name'
           ? `${a.first_name} ${a.last_name}`
           : `${a.last_name} ${a.first_name}`;
@@ -1884,7 +1891,7 @@ export default function WorkTime() {
                               )}
                             </div>
                             <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                              {u.first_name} {u.last_name}
+                              {formatUserName(u)}
                               {u.id === user?.id && (
                                 <span className="ml-1.5 text-[10px] text-[#F7941D] bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">Ty</span>
                               )}

@@ -1,3 +1,5 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { isDateFilter, useSessionDate, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
@@ -243,6 +245,7 @@ const normalizeCalendarStatus = (status?: string | null): CalendarRequestStatus 
 
 const Absences = () => {
   const { user } = useAuth();
+  const viewKey = `erp:view:absences:${user?.id || 'current-user'}`;
   const navigate = useNavigate();
   const calendarTopScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarTableScrollRef = useRef<HTMLDivElement | null>(null);
@@ -284,9 +287,9 @@ const Absences = () => {
     const storedTab = sessionStorage.getItem(activeTabStorageKey);
     return isAbsenceTab(storedTab) && canOpenAbsenceTab(storedTab) ? storedTab : 'my';
   });
-  const [reportUserId, setReportUserId] = useState('');
-  const [reportDateFrom, setReportDateFrom] = useState(() => getMonthDateRange(new Date()).start);
-  const [reportDateTo, setReportDateTo] = useState(() => getMonthDateRange(new Date()).end);
+  const [reportUserId, setReportUserId] = useSessionState(`${viewKey}:reportUser`, '', value => typeof value === 'string');
+  const [reportDateFrom, setReportDateFrom] = useSessionState(`${viewKey}:reportFrom`, () => getMonthDateRange(new Date()).start, isDateFilter);
+  const [reportDateTo, setReportDateTo] = useSessionState(`${viewKey}:reportTo`, () => getMonthDateRange(new Date()).end, isDateFilter);
   const [reportLeaveType, setReportLeaveType] = useState<'all' | LeaveType>('all');
   const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatusFilter>('active');
   const [reportIncludeReason, setReportIncludeReason] = useState(true);
@@ -294,8 +297,8 @@ const Absences = () => {
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
   const [allSortAsc, setAllSortAsc] = useState(false);
-  const [allDateFrom, setAllDateFrom] = useState('');
-  const [allDateTo, setAllDateTo] = useState('');
+  const [allDateFrom, setAllDateFrom] = useSessionState(`${viewKey}:allFrom`, '', isDateFilter);
+  const [allDateTo, setAllDateTo] = useSessionState(`${viewKey}:allTo`, '', isDateFilter);
   const [requestPage, setRequestPage] = useState(() => getStoredRequestListState().page || 1);
   const [requestPageSize, setRequestPageSize] = useState<RequestPageSize>(() => getStoredRequestListState().pageSize || 10);
   const [requestSearch, setRequestSearch] = useState(() => getStoredRequestListState().search || '');
@@ -310,9 +313,9 @@ const Absences = () => {
   const [requestDateTo, setRequestDateTo] = useState(() => getStoredRequestListState().dateTo || '');
 
   // Calendar tab state
-  const [calendarDate, setCalendarDate] = useState(() => getMondayOfWeek(new Date()));
-  const [calendarDays, setCalendarDays] = useState(7);
-  const [showCalendarWeekends, setShowCalendarWeekends] = useState(true);
+  const [calendarDate, setCalendarDate] = useSessionDate(`${viewKey}:calendarDate`, () => getMondayOfWeek(new Date()));
+  const [calendarDays, setCalendarDays] = useSessionState(`${viewKey}:calendarDays`, 7, value => typeof value === 'number' && [7, 14, 30].includes(value));
+  const [showCalendarWeekends, setShowCalendarWeekends] = useSessionState(`${viewKey}:calendarWeekends`, true, value => typeof value === 'boolean');
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   // All team leave requests (approved + pending) for the calendar — visible to everyone
   const [calendarLeaves, setCalendarLeaves] = useState<LeaveRequest[]>([]);
@@ -533,7 +536,7 @@ const Absences = () => {
             : item
         )
       );
-      setManagementSuccess(`Zapisano plan dla ${row.firstName} ${row.lastName}.`);
+      setManagementSuccess(`Zapisano plan dla ${formatUserName(row)}.`);
     } catch {
       setManagementError('Nie udało się zapisać planu urlopowego.');
     } finally {
@@ -945,7 +948,7 @@ const Absences = () => {
     .filter(([type]) => type !== 'occasional_hourly');
   const selectedReportUser = directoryUsers.find(u => u.id === reportUserId);
   const reportEmployeeName = selectedReportUser
-    ? `${selectedReportUser.first_name} ${selectedReportUser.last_name}`
+    ? formatUserName(selectedReportUser)
     : '';
   const reportStatusOptions: { value: ReportStatusFilter; label: string }[] = [
     { value: 'active', label: 'Oczekujące i zatwierdzone' },
@@ -1086,8 +1089,7 @@ const Absences = () => {
       const columns = reportIncludeReason
         ? [
             { label: 'Lp.', width: 10 },
-            { label: 'Złożono', width: 25 },
-            { label: 'Rodzaj nieobecności', width: 48 },
+            { label: 'Rodzaj nieobecności', width: 73 },
             { label: 'Od', width: 24 },
             { label: 'Do', width: 24 },
             { label: 'Wymiar', width: 30 },
@@ -1096,8 +1098,7 @@ const Absences = () => {
           ]
         : [
             { label: 'Lp.', width: 10 },
-            { label: 'Złożono', width: 32 },
-            { label: 'Rodzaj nieobecności', width: 78 },
+            { label: 'Rodzaj nieobecności', width: 110 },
             { label: 'Od', width: 34 },
             { label: 'Do', width: 34 },
             { label: 'Wymiar', width: 42 },
@@ -1146,7 +1147,6 @@ const Absences = () => {
         const statusConfig = getStatusConfig(request.status);
         const row = [
           String(index + 1),
-          formatReportDate(request.created_at),
           typeConfig?.label || request.leave_type,
           formatReportDate(request.start_date),
           formatReportDate(request.end_date || request.start_date),
@@ -1157,8 +1157,8 @@ const Absences = () => {
         return row;
       })
       : [reportIncludeReason
-          ? ['', '', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
-          : ['', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
+          ? ['', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
+          : ['', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
         ];
 
     tableRows.forEach((row, rowIndex) => {
@@ -1265,7 +1265,7 @@ const Absences = () => {
   const currentRequests = baseRequests
     .filter(request => {
       const typeLabel = leaveTypeConfig[request.leave_type as LeaveType]?.label || '';
-      const userName = request.user ? `${request.user.first_name} ${request.user.last_name}` : '';
+      const userName = request.user ? `${request.user.first_name} ${request.user.last_name} ${formatUserName(request.user)}` : '';
       const searchable = [typeLabel, request.reason, userName, request.user?.email, request.status]
         .filter(Boolean)
         .join(' ')
@@ -1334,12 +1334,12 @@ const Absences = () => {
   const filteredManagementUsers = overviewRows.filter(row => {
     if (!normalizedManagementSearch) return true;
 
-    return [row.firstName, row.lastName, row.email, row.department, row.position]
+    return [row.firstName, row.lastName, formatUserName(row), row.email, row.department, row.position]
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
       .includes(normalizedManagementSearch);
-  });
+  }).sort(compareUsersByLastName);
 
   const allStatusCounts = allRequests.reduce(
     (acc, r) => {
@@ -1734,7 +1734,7 @@ const Absences = () => {
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                   Pracownik:{' '}
                                   <span className="font-medium text-gray-700 dark:text-gray-300">
-                                    {request.user.first_name} {request.user.last_name}
+                                    {formatUserName(request.user)}
                                   </span>
                                 </p>
                               )}
@@ -1879,8 +1879,8 @@ const Absences = () => {
                 >
                   <option value="">— wybierz pracownika —</option>
                   {[...directoryUsers]
-                    .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, 'pl'))
-                    .map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
+                    .sort(compareUsersByLastName)
+                    .map(u => <option key={u.id} value={u.id}>{formatUserName(u)}</option>)}
                 </select>
               </div>
               <div>
@@ -1889,7 +1889,7 @@ const Absences = () => {
                   type="date"
                   value={reportDateFrom}
                   onChange={e => handleReportDateFromChange(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1898,7 +1898,7 @@ const Absences = () => {
                   type="date"
                   value={reportDateTo}
                   onChange={e => setReportDateTo(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -2143,7 +2143,7 @@ const Absences = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="font-semibold text-gray-900 dark:text-white">
-                              {u ? `${u.first_name} ${u.last_name}` : '—'}
+                              {u ? formatUserName(u) : '—'}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">{u?.email}</div>
                           </td>
@@ -2313,7 +2313,7 @@ const Absences = () => {
                           <tr key={row.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-4">
                               <div className="font-semibold text-gray-900 dark:text-white">
-                                {row.firstName} {row.lastName}
+                                {formatUserName(row)}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">{row.email}</div>
                             </td>
@@ -2737,9 +2737,9 @@ const Absences = () => {
                       onChange={e => setFormUserId(e.target.value)}
                       className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     >
-                      <option value="">— ja ({user?.first_name} {user?.last_name}) —</option>
+                      <option value="">{formatUserName(user)} (Ty)</option>
                       {[...directoryUsers]
-                        .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                        .sort(compareUsersByLastName)
                         .map(u => (
                           <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>
                         ))}

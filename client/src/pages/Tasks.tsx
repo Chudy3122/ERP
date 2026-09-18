@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '../components/layout/MainLayout';
@@ -277,7 +278,7 @@ const Tasks = () => {
         (task.description?.toLowerCase().includes(query) ?? false) ||
         (task.project?.name?.toLowerCase().includes(query) ?? false) ||
         getTaskAssignees(task).some(person =>
-          `${person.first_name || ''} ${person.last_name || ''} ${person.email || ''}`
+          `${person.first_name || ''} ${person.last_name || ''} ${formatUserName(person)} ${person.email || ''}`
             .toLowerCase()
             .includes(query)
         );
@@ -693,7 +694,7 @@ const Tasks = () => {
               const taskStage = getTaskStage(task);
               const stageColor = taskStage?.color || '#6B7280';
               const dueInfo = task.due_date ? formatDueDate(task.due_date) : null;
-              const taskAssignees = getTaskAssignees(task);
+              const taskAssignees = [...getTaskAssignees(task)].sort(compareUsersByLastName);
 
               return (
                 <div
@@ -722,7 +723,7 @@ const Tasks = () => {
                     title={
                       taskAssignees.length > 0
                         ? taskAssignees
-                            .map(person => `${person.first_name} ${person.last_name}`)
+                            .map(person => formatUserName(person))
                             .join(', ')
                         : 'Brak przypisanych osób'
                     }
@@ -735,7 +736,7 @@ const Tasks = () => {
                               key={person.id}
                               className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-[9px] font-bold text-blue-700 ring-1 ring-white dark:bg-blue-900/40 dark:text-blue-200 dark:ring-gray-800"
                               style={{ marginLeft: index > 0 ? '-6px' : 0 }}
-                              title={`${person.first_name} ${person.last_name}`}
+                              title={formatUserName(person)}
                             >
                               {getInitials(person.first_name, person.last_name)}
                             </div>
@@ -746,7 +747,7 @@ const Tasks = () => {
                               style={{ marginLeft: '-6px' }}
                               title={taskAssignees
                                 .slice(3)
-                                .map(person => `${person.first_name} ${person.last_name}`)
+                                .map(person => formatUserName(person))
                                 .join(', ')}
                             >
                               +{taskAssignees.length - 3}
@@ -756,7 +757,7 @@ const Tasks = () => {
                         <div className="min-w-0 text-xs text-gray-500 dark:text-gray-400">
                           <span className="block truncate">
                             {taskAssignees.length === 1
-                              ? `${taskAssignees[0].first_name} ${taskAssignees[0].last_name}`
+                              ? formatUserName(taskAssignees[0])
                               : `${taskAssignees.length} osoby`}
                           </span>
                         </div>

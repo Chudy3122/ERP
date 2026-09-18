@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -502,7 +503,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {user.first_name} {user.last_name}
+                  {formatUserName(user)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
               </div>
@@ -698,7 +699,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {user.first_name} {user.last_name}
+                      {formatUserName(user)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                   </div>
@@ -724,7 +725,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {user.first_name} {user.last_name}
+                              {formatUserName(user)}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
                           </div>
