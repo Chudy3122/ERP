@@ -69,6 +69,7 @@ const Admin = () => {
   const [mobileAllowed, setMobileAllowed] = useState(false);
   const [canEditBossCal, setCanEditBossCal] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<{ id: string; email: string } | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
   const [resetPwdUser, setResetPwdUser] = useState<{ id: string; email: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [userForm, setUserForm] = useState<CreateUserData>(EMPTY_USER);
@@ -175,13 +176,15 @@ const Admin = () => {
   };
 
   const handleDeleteUser = async () => {
-    if (!deleteUserId) return;
+    if (!deleteUserId || deletingUser) return;
+    setDeletingUser(true);
     try {
       await adminApi.deleteUser(deleteUserId.id);
       toast.success('Użytkownik usunięty');
       setDeleteUserId(null);
       loadUsers(); loadStats();
     } catch (err: any) { toast.error(err.response?.data?.message || 'Błąd podczas usuwania'); }
+    finally { setDeletingUser(false); }
   };
 
   const handleToggleActive = async (user: AdminUser) => {
@@ -774,6 +777,7 @@ const Admin = () => {
         cancelText="Anuluj"
         variant="danger"
         icon="delete"
+        loading={deletingUser}
       />
 
       {/* Delete dept confirm */}
