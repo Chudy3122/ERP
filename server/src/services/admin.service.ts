@@ -1,3 +1,4 @@
+import { QueryRunner } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
 import { Department } from '../models/Department.model';
@@ -249,9 +250,135 @@ class AdminService {
   /**
    * Delete user (admin)
    */
-  async deleteUser(userId: string): Promise<boolean> {
-    const result = await this.userRepository.delete(userId);
-    return (result.affected || 0) > 0;
+  async deleteUser(userId: string, reassignToId?: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({ where: { id: userId }, select: ['id'] });
+    if (!user) return false;
+
+    // A user is referenced by ~dozens of tables (time entries, messages, tickets,
+    // work logs, notifications, …), almost all with ON DELETE NO ACTION — so a
+    // plain DELETE fails on a foreign-key violation. Cascade the delete manually
+    // in one transaction: for every FK pointing at the user, NULL out optional
+    // references and recursively delete the rows that own them. The FK map is read
+    // from the live schema so newly added tables/modules are never missed.
+    const runner = AppDataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      if (reassignToId && reassignToId !== userId) {
+        await this.reassignBusinessRecords(runner, userId, reassignToId);
+      }
+      await this.cascadeDeleteReferences(runner, 'users', 'id', [userId], new Set(['users']));
+      await runner.query('DELETE FROM "users" WHERE "id" = $1', [userId]);
+      await runner.commitTransaction();
+      return true;
+    } catch (err) {
+      await runner.rollbackTransaction();
+      throw err;
+    } finally {
+      await runner.release();
+    }
+  }
+
+  /**
+   * Manually cascade a delete. For every foreign key that references
+   * `table(column)`, NULL out the reference when the column is nullable, or
+   * recursively delete the dependent rows (and their own dependents) when it
+   * isn't. Runs inside the caller's transaction. Scalar IN-lists are used (not
+   * `= ANY(array)`) to avoid uuid/text array-cast ambiguity.
+   */
+  private async cascadeDeleteReferences(
+    runner: QueryRunner,
+    table: string,
+    column: string,
+    ids: string[],
+    stack: Set<string>,
+  ): Promise<void> {
+    if (ids.length === 0) return;
+
+    const fks: Array<{ child_table: string; child_col: string; nullable: string }> = await runner.query(
+      `SELECT tc.table_name AS child_table, kcu.column_name AS child_col, col.is_nullable AS nullable
+         FROM information_schema.table_constraints tc
+         JOIN information_schema.key_column_usage kcu
+           ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
+         JOIN information_schema.constraint_column_usage ccu
+           ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+         JOIN information_schema.columns col
+           ON col.table_schema = tc.table_schema AND col.table_name = tc.table_name AND col.column_name = kcu.column_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'
+          AND ccu.table_name = $1 AND ccu.column_name = $2`,
+      [table, column],
+    );
+
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+
+    for (const fk of fks) {
+      const child = fk.child_table;
+      const childCol = fk.child_col;
+
+      if (fk.nullable === 'YES') {
+        await runner.query(`UPDATE "${child}" SET "${childCol}" = NULL WHERE "${childCol}" IN (${placeholders})`, ids);
+        continue;
+      }
+
+      // Non-nullable: delete the dependent rows, but first cascade into their own
+      // dependents (e.g. a message's attachments/reactions before the message).
+      const pk = await this.primaryKeyColumn(runner, child);
+      if (pk && !stack.has(child)) {
+        const rows: Array<Record<string, string>> = await runner.query(
+          `SELECT "${pk}" AS id FROM "${child}" WHERE "${childCol}" IN (${placeholders})`,
+          ids,
+        );
+        const childIds = rows.map((r) => r.id);
+        if (childIds.length) {
+          await this.cascadeDeleteReferences(runner, child, pk, childIds, new Set([...stack, child]));
+        }
+      }
+      await runner.query(`DELETE FROM "${child}" WHERE "${childCol}" IN (${placeholders})`, ids);
+    }
+  }
+
+  /**
+   * Hand a departing user's company records over to another user (the admin
+   * performing the delete) instead of letting the cascade wipe them. Personal
+   * data (time entries, messages, tickets, tasks, notifications…) is left for
+   * the cascade to delete. Each pair is applied only if that column exists.
+   */
+  private async reassignBusinessRecords(runner: QueryRunner, fromUserId: string, toUserId: string): Promise<void> {
+    const targets: Array<[string, string]> = [
+      ['projects', 'created_by'], ['projects', 'owner_id'], ['projects', 'manager_id'],
+      ['clients', 'created_by'], ['clients', 'assigned_to'],
+      ['invoices', 'created_by'],
+      ['payments', 'created_by'],
+      ['contracts', 'created_by'],
+      ['project_templates', 'created_by'],
+    ];
+    for (const [table, column] of targets) {
+      const exists: unknown[] = await runner.query(
+        `SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2 LIMIT 1`,
+        [table, column],
+      );
+      if (exists.length) {
+        await runner.query(`UPDATE "${table}" SET "${column}" = $1 WHERE "${column}" = $2`, [toUserId, fromUserId]);
+      }
+    }
+  }
+
+  /** First primary-key column of a table (from the live schema), or null. */
+  private async primaryKeyColumn(runner: QueryRunner, table: string): Promise<string | null> {
+    const rows: Array<{ column_name: string }> = await runner.query(
+      `SELECT kcu.column_name
+         FROM information_schema.table_constraints tc
+         JOIN information_schema.key_column_usage kcu
+           ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'PRIMARY KEY'
+          AND tc.table_schema = 'public' AND tc.table_name = $1
+        ORDER BY kcu.ordinal_position
+        LIMIT 1`,
+      [table],
+    );
+    return rows[0]?.column_name ?? null;
   }
 
   /**

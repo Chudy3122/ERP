@@ -178,7 +178,10 @@ class AdminController {
     try {
       const { id } = req.params;
 
-      const deleted = await adminService.deleteUser(id);
+      // Reassign the departing user's company records (projects, clients,
+      // invoices, contracts…) to the admin doing the delete, so those aren't
+      // wiped along with the user's personal data.
+      const deleted = await adminService.deleteUser(id, req.user?.userId);
 
       if (!deleted) {
         res.status(404).json({
