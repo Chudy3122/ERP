@@ -1,4 +1,6 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import apiClient from './axios-config';
+import { getDirectory } from './user.api';
 
 export interface CalendarEvent {
   id: string;
@@ -48,8 +50,22 @@ export const getTeamAvailability = async (
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
 
-  const response = await apiClient.get(`/calendar/availability?${params.toString()}`);
-  return response.data.data;
+  const [response, directory] = await Promise.all([
+    apiClient.get(`/calendar/availability?${params.toString()}`),
+    getDirectory().catch(() => []),
+  ]);
+  const usersById = new Map(directory.map(user => [user.id, user]));
+
+  return (response.data.data as TeamAvailability[]).map(day => ({
+    ...day,
+    users: [...day.users].sort((a, b) => compareUsersByLastName(
+      usersById.get(a.id) ?? { email: a.name },
+      usersById.get(b.id) ?? { email: b.name },
+    )).map(user => ({
+      ...user,
+      name: formatUserName(usersById.get(user.id), user.name),
+    })),
+  }));
 };
 
 /**

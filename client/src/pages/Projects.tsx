@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -382,7 +383,7 @@ const Projects = () => {
     <MainLayout title={t('title')}>
       <div className="mx-auto max-w-[1600px]">
         {/* Header */}
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <Folder className="h-6 w-6" />
@@ -412,7 +413,7 @@ const Projects = () => {
               onClick={() =>
                 navigate(`/projects/new?returnTo=${encodeURIComponent(projectsReturnTo)}`)
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40"
             >
               <Plus className="w-5 h-5" />
               {t('newProject')}
@@ -422,7 +423,7 @@ const Projects = () => {
 
         {/* Stats Cards */}
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
                 <Folder className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -433,35 +434,35 @@ const Projects = () => {
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/30">
-                <FolderOpen className="w-5 h-5 text-emerald-600" />
+                <FolderOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600">{activeProjects}</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">{activeProjects}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('activeCount')}</p>
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30">
-                <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-300" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-600">{completedProjects}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-300">{completedProjects}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('completedCount')}</p>
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-900/30">
-                <TrendingUp className="w-5 h-5 text-purple-600" />
+                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-300" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-300">
                   {avgProgress !== null ? `${avgProgress}%` : '—'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('avgProgress')}</p>
@@ -471,7 +472,7 @@ const Projects = () => {
         </div>
 
         {/* Filters & Tabs */}
-        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           {/* Tabs */}
           <div className="border-b border-gray-100 p-3 dark:border-gray-700">
             <nav className="flex flex-wrap gap-2">
@@ -501,7 +502,7 @@ const Projects = () => {
           </div>
 
           {/* Search & Filters */}
-          <div className="flex flex-wrap items-start gap-3 bg-gray-50/70 p-4 dark:bg-gray-800/60">
+          <div className="flex flex-wrap items-start gap-3 bg-gray-50/70 p-4 dark:bg-gray-900/30">
             <div className="min-w-[260px] flex-1">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Szukaj projektu
@@ -604,7 +605,7 @@ const Projects = () => {
 
         {/* Projects List */}
         {isLoading ? (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="p-4 animate-pulse">
@@ -622,7 +623,7 @@ const Projects = () => {
             </div>
           </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-16 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-16 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500">
               <Folder className="h-7 w-7" />
             </div>
@@ -636,16 +637,16 @@ const Projects = () => {
               onClick={() =>
                 navigate(`/projects/new?returnTo=${encodeURIComponent(projectsReturnTo)}`)
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40"
             >
               <Plus className="w-5 h-5" />
               {t('createProject')}
             </button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             {/* Table Header */}
-            <div className="hidden grid-cols-12 gap-4 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400 lg:grid">
+            <div className="hidden grid-cols-12 gap-4 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300 lg:grid">
               <div className="col-span-5">{t('project')}</div>
               <div className="col-span-2">{t('status')}</div>
               <div className="col-span-2">{t('priority')}</div>
@@ -677,7 +678,7 @@ const Projects = () => {
                         `/projects/${project.id}?returnTo=${encodeURIComponent(projectsReturnTo)}`
                       )
                     }
-                    className="group grid w-full grid-cols-1 gap-3 px-4 py-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F7941D]/30 dark:hover:bg-gray-700 lg:grid-cols-12 lg:items-center lg:gap-4"
+                    className="group grid w-full grid-cols-1 gap-3 px-4 py-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#F7941D]/30 dark:hover:bg-gray-700/60 lg:grid-cols-12 lg:items-center lg:gap-4"
                   >
                     {/* Project Info */}
                     <div className="flex min-w-0 items-center gap-3 lg:col-span-5">
@@ -705,7 +706,7 @@ const Projects = () => {
                                   className="h-4 w-4 rounded-full object-cover"
                                 />
                               ) : (
-                                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-600">
+                                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                   {getInitials(
                                     displayOwner.first_name,
                                     displayOwner.last_name
@@ -713,7 +714,7 @@ const Projects = () => {
                                 </div>
                               )}
                               <span>
-                                {displayOwner.first_name} {displayOwner.last_name}
+                                {formatUserName(displayOwner)}
                               </span>
                             </div>
                           )}
@@ -760,7 +761,7 @@ const Projects = () => {
                           </span>
                         </div>
                       ) : (
-                        <Loader2 className="w-4 h-4 animate-spin text-gray-300" />
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-300 dark:text-gray-600" />
                       )}
                     </div>
 

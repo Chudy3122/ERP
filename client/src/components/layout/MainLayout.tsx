@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -502,7 +503,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {user.first_name} {user.last_name}
+                  {formatUserName(user)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
               </div>
@@ -563,7 +564,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             <button
               onClick={() => setGameOpen(true)}
               title="Gra"
-              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#F7941D] dark:text-gray-400 dark:hover:bg-gray-700"
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-orange-300"
             >
               <Gamepad2 className="w-5 h-5" />
             </button>
@@ -572,7 +573,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
             <div className="relative">
               <button
                 onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
-                className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
@@ -589,14 +590,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     className="fixed inset-0 z-10"
                     onClick={() => setNotificationDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-20 max-h-[500px] flex flex-col overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] bg-white dark:bg-gray-800 rounded-xl shadow-lg shadow-gray-200/70 border border-gray-200 dark:border-gray-700 dark:shadow-black/30 z-20 max-h-[500px] flex flex-col overflow-hidden">
                     {/* Header */}
                     <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900 dark:text-white">{t('common.notifications')}</h3>
                       {unreadCount > 0 && (
                         <button
                           onClick={handleMarkAllAsRead}
-                          className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
                         >
                           <Check className="w-3 h-3" />
                           {t('common.markAllRead')}
@@ -607,8 +608,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                     {/* Notifications List */}
                     <div className="min-h-0 flex-1 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
-                          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                           <p className="text-sm">{t('common.noNotifications')}</p>
                         </div>
                       ) : (
@@ -631,7 +632,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                           >
                             <div className="flex items-start gap-3">
                               <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                                notification.is_read ? 'bg-gray-300' : 'bg-blue-500'
+                                notification.is_read ? 'bg-gray-300 dark:bg-gray-600' : 'bg-blue-500'
                               }`} />
                               <div className="flex-1 min-w-0">
                                 <p className={`text-sm ${notification.is_read ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'}`}>
@@ -650,7 +651,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                                     e.stopPropagation();
                                     handleMarkAsRead(notification.id);
                                   }}
-                                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                                  className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                                   title={t('common.markAllRead')}
                                 >
                                   <Check className="w-4 h-4" />
@@ -685,7 +686,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/25 dark:hover:bg-gray-700"
                 >
                   <div className="relative">
                     <div className="w-8 h-8 rounded-full bg-gray-700 relative overflow-hidden text-white text-sm font-semibold">
@@ -698,7 +699,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {user.first_name} {user.last_name}
+                      {formatUserName(user)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                   </div>
@@ -712,7 +713,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                       className="fixed inset-0 z-10"
                       onClick={() => setUserDropdownOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg shadow-gray-200/70 border border-gray-200 dark:border-gray-700 dark:shadow-black/30 z-20">
                       {/* User Info Header */}
                       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-3">
@@ -724,7 +725,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {user.first_name} {user.last_name}
+                              {formatUserName(user)}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
                           </div>

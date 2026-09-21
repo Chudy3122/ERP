@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../../utils/userSorting';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Channel } from '../../types/chat.types';
@@ -65,9 +66,9 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
   if (!isOpen || !channel) return null;
 
   const isAdmin = channel.members?.find(m => m.user_id === currentUserId)?.role === 'admin';
-  const currentMembers = channel.members || [];
+  const currentMembers = [...(channel.members || [])].sort((a, b) => compareUsersByLastName(a.user, b.user));
   const memberIds = currentMembers.map(m => m.user_id);
-  const nonMembers = availableUsers.filter(u => !memberIds.includes(u.id));
+  const nonMembers = availableUsers.filter(u => !memberIds.includes(u.id)).sort(compareUsersByLastName);
 
   const handleAddMembers = async () => {
     if (selectedUsers.length === 0) return;
@@ -232,7 +233,7 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {user.first_name} {user.last_name}
+                              {formatUserName(user)}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">{user.email}</div>
                           </div>
@@ -265,7 +266,7 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                         </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {member.user?.first_name} {member.user?.last_name}
+                            {formatUserName(member.user)}
                             {member.user_id === currentUserId && (
                               <span className="ml-2 text-xs text-indigo-600">(Ty)</span>
                             )}
@@ -282,7 +283,7 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                         <button
                           onClick={() => setRemoveMemberConfirm({
                             userId: member.user_id,
-                            name: `${member.user?.first_name} ${member.user?.last_name}`
+                            name: formatUserName(member.user)
                           })}
                           disabled={loading}
                           className="text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"

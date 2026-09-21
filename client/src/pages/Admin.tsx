@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -133,7 +134,7 @@ const Admin = () => {
       setLoadingUsers(true);
       const res = await adminApi.getAllUsers(1, 200, search || undefined, roleFilter || undefined);
       const filtered = deptFilter ? res.users.filter(u => u.department === deptFilter) : res.users;
-      setUsers(filtered);
+      setUsers([...filtered].sort(compareUsersByLastName));
     } catch { toast.error('Nie udało się załadować użytkowników'); }
     finally { setLoadingUsers(false); }
   };
@@ -339,7 +340,7 @@ const Admin = () => {
                               {u.avatar_url ? <img src={getFileUrl(u.avatar_url) || ''} alt="" className="w-full h-full object-cover" /> : initials(u)}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{formatUserName(u)}</p>
                               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
                             </div>
                           </div>
@@ -425,7 +426,7 @@ const Admin = () => {
                   <option value="">Wszystkie działy</option>
                   {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                 </select>
-                <button onClick={() => { setUserForm(EMPTY_USER); setEditingUser(null); setShowCreateUser(true); }} className="flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
+                <button onClick={() => { setUserForm(EMPTY_USER); setEditingUser(null); setShowCreateUser(true); }} className="module-create-button flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
                   <Plus className="w-4 h-4" />
                   Nowy użytkownik
                 </button>
@@ -459,7 +460,7 @@ const Admin = () => {
                               {u.avatar_url ? <img src={getFileUrl(u.avatar_url) || ''} alt="" className="w-full h-full object-cover" /> : initials(u)}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{formatUserName(u)}</p>
                               <p className="text-xs text-gray-400 truncate">{u.email}</p>
                             </div>
                           </div>
@@ -503,7 +504,7 @@ const Admin = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500 dark:text-gray-400">{departments.length} działów w systemie</p>
-              <button onClick={() => { setDeptForm(EMPTY_DEPT); setEditingDept(null); setShowCreateDept(true); }} className="flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
+              <button onClick={() => { setDeptForm(EMPTY_DEPT); setEditingDept(null); setShowCreateDept(true); }} className="module-create-button flex items-center gap-1.5 px-4 py-2 bg-[#F7941D] text-white text-sm font-medium rounded-lg hover:bg-[#e8851a] transition-colors">
                 <Plus className="w-4 h-4" />
                 Nowy dział
               </button>
@@ -595,9 +596,9 @@ const Admin = () => {
                     .filter(u => {
                       const q = prankSearch.trim().toLowerCase();
                       if (!q) return true;
-                      return `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(q);
+                      return `${u.first_name} ${u.last_name} ${formatUserName(u)} ${u.email}`.toLowerCase().includes(q);
                     })
-                    .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                    .sort(compareUsersByLastName)
                     .map(u => (
                       <option key={u.id} value={u.id}>{u.last_name} {u.first_name} · {u.email}</option>
                     ))}

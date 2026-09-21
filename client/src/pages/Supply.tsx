@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -212,7 +213,7 @@ export default function Supply() {
           request.item_name.toLowerCase().includes(query) ||
           request.description?.toLowerCase().includes(query) ||
           SUPPLY_CATEGORY_LABELS[request.category].toLowerCase().includes(query) ||
-          (request.user && `${request.user.first_name} ${request.user.last_name}`.toLowerCase().includes(query))
+          (request.user && `${request.user.first_name} ${request.user.last_name} ${formatUserName(request.user)}`.toLowerCase().includes(query))
         );
 
     return [...searched].sort((first, second) => (
@@ -257,9 +258,9 @@ export default function Supply() {
         })
       : '—';
   const getUserName = (request: SupplyRequest) =>
-    request.user ? `${request.user.first_name} ${request.user.last_name}` : '—';
+    request.user ? formatUserName(request.user) : '—';
   const getReviewerName = (request: SupplyRequest) =>
-    request.reviewer ? `${request.reviewer.first_name} ${request.reviewer.last_name}` : '—';
+    request.reviewer ? formatUserName(request.reviewer) : '—';
 
   const fieldClass =
     'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
@@ -270,7 +271,7 @@ export default function Supply() {
   return (
     <MainLayout title="Zaopatrzenie">
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
@@ -288,7 +289,7 @@ export default function Supply() {
             <button
               type="button"
               onClick={openCreate}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+              className="module-create-button inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <Plus className="h-4 w-4" />
               Nowe zapotrzebowanie
@@ -303,7 +304,7 @@ export default function Supply() {
           <StatCard icon={XCircle} label="Odrzucone" value={stats.rejected} tone="red" />
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {isManager && (
@@ -361,7 +362,7 @@ export default function Supply() {
                 <button
                   type="button"
                   onClick={openCreate}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+                  className="module-create-button inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
                 >
                   <Plus className="h-4 w-4" />
                   Dodaj zapotrzebowanie
@@ -426,7 +427,7 @@ export default function Supply() {
                               {request.user ? (
                                 <span className="inline-flex items-center gap-2">
                                   <UserRound className="h-4 w-4 text-gray-400" />
-                                  {request.user.first_name} {request.user.last_name}
+                                  {formatUserName(request.user)}
                                 </span>
                               ) : (
                                 '—'
@@ -878,7 +879,7 @@ function StatCard({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
       <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone]}`}>
         <Icon className="h-5 w-5" />
       </div>

@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Message as MessageType, MessageReaction } from '../../types/chat.types';
@@ -183,11 +184,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
     if (reaction.user_id === user?.id) return 'Ty';
 
     const reactionUser = reaction.user || reactionUsers.find((memberUser) => memberUser.id === reaction.user_id);
-    const firstName = reactionUser?.first_name?.trim() || '';
-    const lastName = reactionUser?.last_name?.trim() || '';
-    const fullName = `${firstName} ${lastName}`.trim();
-
-    return fullName || reactionUser?.email || 'Użytkownik';
+    return formatUserName(reactionUser, 'Użytkownik');
   };
 
   const getReactionTooltip = (users: string[]): string => {
@@ -403,7 +400,7 @@ const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete, compact = 
         {/* Sender name (only for others' messages) */}
         {!isOwnMessage && message.sender && (
           <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 px-1">
-            {message.sender.first_name} {message.sender.last_name}
+            {formatUserName(message.sender)}
           </p>
         )}
 

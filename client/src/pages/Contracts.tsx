@@ -170,7 +170,7 @@ const Contracts = () => {
         {canEdit && (
           <button
             onClick={() => navigate('/contracts/new')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium"
+            className="module-create-button flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors font-medium"
           >
             <Plus className="w-5 h-5" />
             {t('newContract')}
@@ -287,7 +287,7 @@ const Contracts = () => {
           {canEdit && !searchQuery && viewFilter === 'all' && (
             <button
               onClick={() => navigate('/contracts/new')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors"
+              className="module-create-button inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors"
             >
               <Plus className="w-5 h-5" />
               {t('newContract')}

@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../../utils/userSorting';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Building2, X, Loader2 } from 'lucide-react';
@@ -56,7 +57,7 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
     try {
       setIsLoadingUsers(true);
       const userList = await adminApi.getUsers();
-      setUsers(userList.filter(u => u.is_active));
+      setUsers(userList.filter(u => u.is_active).sort(compareUsersByLastName));
     } catch (err) {
       console.error('Failed to load users:', err);
     } finally {
@@ -227,7 +228,7 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({
                 <option value="">{t('organization.selectHead')}</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.first_name} {user.last_name} ({user.email})
+                    {formatUserName(user)} ({user.email})
                   </option>
                 ))}
               </select>

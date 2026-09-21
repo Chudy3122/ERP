@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
@@ -201,7 +202,7 @@ const Profile: React.FC = () => {
               {/* Name & Role */}
               <div className="flex-1 sm:pb-2 min-w-0">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-                  {user?.first_name} {user?.last_name}
+                  {formatUserName(user)}
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   {user?.position || 'Brak stanowiska'}

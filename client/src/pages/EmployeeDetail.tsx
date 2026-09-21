@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -35,7 +36,7 @@ const fullTimeOptions = [
 ];
 
 const inputClass =
-  'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+  'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
 
 const EmployeeDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -246,12 +247,12 @@ const EmployeeDetail = () => {
   if (error && !employee) {
     return (
       <MainLayout title="Błąd">
-        <div className="mx-auto max-w-xl rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
+        <div className="mx-auto max-w-xl rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-700 shadow-sm shadow-red-100/60 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 dark:shadow-black/20">
           <p className="mb-4">{error}</p>
           <button
             type="button"
             onClick={() => navigate('/employees')}
-            className="rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e08317]"
+            className="rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
           >
             Wróć do listy pracowników
           </button>
@@ -269,12 +270,12 @@ const EmployeeDetail = () => {
   return (
     <MainLayout title="Szczegóły pracownika">
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => navigate('/employees')}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               <ArrowLeft className="h-4 w-4" />
               Wróć do listy
@@ -286,7 +287,7 @@ const EmployeeDetail = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="inline-flex h-10 items-center justify-center rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
+                    className="inline-flex h-10 items-center justify-center rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
                   >
                     Edytuj dane
                   </button>
@@ -295,7 +296,7 @@ const EmployeeDetail = () => {
                     <button
                       type="button"
                       onClick={handleCancel}
-                      className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                      className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       <X className="h-4 w-4" />
                       Anuluj
@@ -304,7 +305,7 @@ const EmployeeDetail = () => {
                       type="button"
                       onClick={handleSave}
                       disabled={isSaving}
-                      className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:opacity-50"
+                      className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-50"
                     >
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                       Zapisz
@@ -317,7 +318,7 @@ const EmployeeDetail = () => {
 
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-[#F7941D]/10 text-[#F7941D] shadow-sm dark:border-gray-800 dark:bg-[#F7941D]/15">
+              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-[#F7941D]/10 text-[#F7941D] shadow-sm shadow-gray-200/60 dark:border-gray-800 dark:bg-[#F7941D]/15 dark:shadow-black/20">
                 <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold">{initials}</span>
                 {employee.avatar_url && (
                   <img
@@ -334,7 +335,7 @@ const EmployeeDetail = () => {
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Profil pracownika</p>
                 <h1 className="mt-1 truncate text-2xl font-semibold text-gray-950 dark:text-white">
-                  {employee.first_name} {employee.last_name}
+                  {formatUserName(employee)}
                 </h1>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{employee.position || 'Brak stanowiska'}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -520,7 +521,7 @@ const EmployeeDetail = () => {
                     type="button"
                     onClick={handleToggleActive}
                     disabled={isSaving}
-                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:opacity-50 ${
                       employee.is_active
                         ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300'
                         : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300'
@@ -610,7 +611,7 @@ interface SummaryTileProps {
 }
 
 const SummaryTile = ({ label, value, icon }: SummaryTileProps) => (
-  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 shadow-sm shadow-gray-200/40 dark:border-gray-700 dark:bg-gray-900/30 dark:shadow-black/10">
     <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
       {icon}
     </div>
@@ -626,7 +627,7 @@ interface DetailCardProps {
 }
 
 const DetailCard = ({ title, icon, children }: DetailCardProps) => (
-  <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
     <div className="mb-5 flex items-center gap-3 border-b border-gray-100 pb-4 dark:border-gray-700">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
         {icon}

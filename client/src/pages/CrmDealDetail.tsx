@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -343,7 +344,7 @@ const CrmDealDetail = () => {
                   {deal.assignee.first_name[0]}{deal.assignee.last_name[0]}
                 </div>
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {deal.assignee.first_name} {deal.assignee.last_name}
+                  {formatUserName(deal.assignee)}
                 </span>
               </div>
             ) : (
@@ -485,7 +486,7 @@ const CrmDealDetail = () => {
                         </div>
                         {activity.creator && !isSystem && (
                           <p className="text-xs text-gray-400 mt-1">
-                            {activity.creator.first_name} {activity.creator.last_name}
+                            {formatUserName(activity.creator)}
                           </p>
                         )}
                       </div>

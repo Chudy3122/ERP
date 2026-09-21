@@ -76,7 +76,7 @@ const DeadlineCounterWidget = () => {
     return (
       <WidgetCard
         title="Terminarz moich zadań"
-        icon={<Calendar className="w-5 h-5 text-gray-600" />}
+        icon={<Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" />}
       >
         <DashboardWidgetLoading label="Ładowanie terminów zadań..." />
       </WidgetCard>
@@ -132,7 +132,7 @@ const DeadlineCounterWidget = () => {
     <WidgetCard
       className="h-full"
       title="Terminarz moich zadań"
-      icon={<Calendar className="w-5 h-5 text-gray-600" />}
+      icon={<Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" />}
       actions={
         totalUrgent > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300 font-medium">
@@ -147,7 +147,7 @@ const DeadlineCounterWidget = () => {
           <button
             key={counter.label}
             onClick={() => handleCounterClick(counter.filter)}
-            className={`${counter.bgColor} dark:bg-gray-700 ${counter.borderColor} dark:border-gray-600 rounded-lg border p-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400`}
+            className={`${counter.bgColor} dark:bg-gray-700 ${counter.borderColor} dark:border-gray-600 rounded-lg border p-3 text-center transition-all hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 dark:hover:bg-gray-600/70`}
           >
             <div className={`text-2xl font-bold ${counter.textColor} dark:text-white`}>
               {counter.value}

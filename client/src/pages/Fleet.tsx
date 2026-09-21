@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
@@ -108,7 +109,7 @@ export default function Fleet() {
               <p className="text-sm text-gray-500 dark:text-gray-400">Zgłoś zapotrzebowanie na samochód i odbierz przydział</p>
             </div>
           </div>
-          <button onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f]">
+          <button onClick={() => setShowForm(true)} className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f]">
             <Plus className="h-4 w-4" /> Nowe zapotrzebowanie
           </button>
         </div>
@@ -140,7 +141,7 @@ export default function Fleet() {
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                         <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{fmtRange(r.start_at, r.end_at)}</span>
                         {r.passengers ? <span className="inline-flex items-center gap-1.5"><UsersIcon className="h-3.5 w-3.5" />{r.passengers} os.</span> : null}
-                        {canManage && r.user && <span>· {r.user.first_name} {r.user.last_name}</span>}
+                        {canManage && r.user && <span>· {formatUserName(r.user)}</span>}
                       </div>
                       {r.purpose && <p className="mt-2 whitespace-pre-line break-words text-sm text-gray-600 dark:text-gray-300">{r.purpose}</p>}
                       {r.vehicle && (
@@ -309,7 +310,7 @@ function VehiclePanel({ vehicles, onChange }: { vehicles: Vehicle[]; onChange: (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Pojazdy</h2>
-        <button onClick={() => { setEditing(null); setModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        <button onClick={() => { setEditing(null); setModalOpen(true); }} className="module-create-button inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <Plus className="h-4 w-4" /> Dodaj pojazd
         </button>
       </div>
@@ -704,7 +705,7 @@ function VehicleDetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: (
                           <span>{fmtDate(e.entry_date)}</span>
                           <span className="rounded bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{LOG_CATEGORY_LABELS[e.category] || e.category}</span>
                           {e.mileage != null && <span>{e.mileage} km</span>}
-                          {e.creator && <span>· {e.creator.first_name} {e.creator.last_name}</span>}
+                          {e.creator && <span>· {formatUserName(e.creator)}</span>}
                         </p>
                         {e.notes && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{e.notes}</p>}
                       </div>

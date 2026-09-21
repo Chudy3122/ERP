@@ -1,6 +1,9 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { isDateFilter, isMonthFilter, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
+import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2, Smartphone, Monitor, Tablet } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -320,7 +323,7 @@ function ManualEntryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50">
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#F7941D] dark:bg-orange-900/20">
@@ -351,11 +354,11 @@ function ManualEntryModal({
               value={targetUser}
               onChange={(e) => setTargetUser(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
               <option value="">— wybierz —</option>
               {[...users]
-                .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                .sort(compareUsersByLastName)
                 .map(u => <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>)}
             </select>
           </div>
@@ -383,7 +386,7 @@ function ManualEntryModal({
               onChange={(e) => setDate(e.target.value)}
               max={todayStr()}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
             />
           </div>
           <div className={`grid gap-3 ${mode === 'full' ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -394,7 +397,7 @@ function ManualEntryModal({
                 value={clockIn}
                 onChange={(e) => setClockIn(e.target.value)}
                 required
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
               />
             </div>
             {mode === 'full' && (
@@ -405,7 +408,7 @@ function ManualEntryModal({
                   value={clockOut}
                   onChange={(e) => setClockOut(e.target.value)}
                   required
-                  className={`w-full rounded-lg border px-3 py-2 font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white ${
+                  className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark] ${
                     isInvalidTimeRange
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-800'
                       : 'border-gray-200 focus:border-[#F7941D] focus:ring-[#F7941D]/30 dark:border-gray-600'
@@ -421,7 +424,7 @@ function ManualEntryModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="np. Praca zdalna, spotkanie..."
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -457,7 +460,7 @@ function ManualEntryModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="flex-1 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
             >
               Anuluj
             </button>
@@ -520,7 +523,7 @@ function StartFromTimeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50" onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3 border-b border-gray-100 px-6 py-5 dark:border-gray-700">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#F7941D] dark:bg-orange-900/20">
             <Play className="w-5 h-5" />
@@ -537,16 +540,16 @@ function StartFromTimeModal({
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Data</label>
               <input type="date" value={date} max={todayStr()} onChange={e => setDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Godzina startu</label>
               <input type="time" value={start} onChange={e => setStart(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
+            <button type="button" onClick={onClose} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Anuluj</button>
             <button type="submit" disabled={saving || isTimeTrackingBlocked} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />} Rozpocznij
             </button>
@@ -561,11 +564,10 @@ function StartFromTimeModal({
 export default function WorkTime() {
   const { user } = useAuth();
   const isTimeTrackingBlocked = isMobileTimeTrackingBlocked(user?.email);
-  // Remember the last open tab across refreshes (e.g. stay on "Wszystkie czasy pracy").
-  const [activeTab, setActiveTab] = useState<'my' | 'attendance' | 'all'>(() => {
-    const saved = localStorage.getItem('workTime:activeTab');
-    return saved === 'attendance' || saved === 'all' ? saved : 'my';
-  });
+  const viewKey = `erp:view:workTime:${user?.id || 'current-user'}`;
+  const [activeTab, setActiveTab] = useSessionState<'my' | 'attendance' | 'all'>(
+    `${viewKey}:tab`, 'my', value => typeof value === 'string' && ['my', 'attendance', 'all'].includes(value),
+  );
 
   // Day state machine
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
@@ -578,8 +580,12 @@ export default function WorkTime() {
   const [managerUsers, setManagerUsers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState<10 | 30 | 50>(10);
-  const [historyDateFilter, setHistoryDateFilter] = useState<HistoryDateFilter>('all');
-  const [historySelectedMonth, setHistorySelectedMonth] = useState(currentMonthKey());
+  const [historyDateFilter, setHistoryDateFilter] = useSessionState<HistoryDateFilter>(
+    `${viewKey}:historyRange`, 'all', value => typeof value === 'string' && ['all', 'week', 'month', 'selectedMonth'].includes(value),
+  );
+  const [historySelectedMonth, setHistorySelectedMonth] = useSessionState(
+    `${viewKey}:historyMonth`, currentMonthKey, isMonthFilter,
+  );
   const [historyTypeFilter, setHistoryTypeFilter] = useState<HistoryTypeFilter>('all');
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
@@ -589,12 +595,11 @@ export default function WorkTime() {
   // Frekwencja pracowników: zarząd / kadry / księgowość / kierownik — nie zwykli pracownicy.
   const canViewAttendance = ['admin', 'szef', 'kadry', 'ksiegowosc', 'kierownik'].includes(user?.role || '');
 
-  // Persist the active tab; if a restored tab isn't allowed for this role, fall back to "my".
-  useEffect(() => { localStorage.setItem('workTime:activeTab', activeTab); }, [activeTab]);
+  // Przywrocona zakladka nadal musi byc dostepna dla aktualnej roli.
   useEffect(() => {
     if (activeTab === 'all' && !isManager) setActiveTab('my');
     else if (activeTab === 'attendance' && !canViewAttendance) setActiveTab('my');
-  }, [isManager, canViewAttendance]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, isManager, canViewAttendance, setActiveTab]);
 
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editForm, setEditForm] = useState({ clock_in: '', clock_out: '', notes: '' });
@@ -605,16 +610,18 @@ export default function WorkTime() {
   // Attendance state
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [attendanceLeaveRequests, setAttendanceLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>('week');
-  const [attendanceSort, setAttendanceSort] = useState<AttendanceSort>('first_name');
+  const [attendanceRange, setAttendanceRange] = useSessionState<AttendanceRange>(
+    `${viewKey}:attendanceRange`, 'week', value => typeof value === 'string' && ['week', '2weeks', '4weeks'].includes(value),
+  );
+  const [attendanceSort, setAttendanceSort] = useState<AttendanceSort>('last_name');
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   // All-entries tab (admin/kadry): edit everyone's work time
   const monthStartStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; })();
   const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
   const [allLoading, setAllLoading] = useState(false);
-  const [allFrom, setAllFrom] = useState(monthStartStr);
-  const [allTo, setAllTo] = useState(todayStr());
+  const [allFrom, setAllFrom] = useSessionState(`${viewKey}:allFrom`, monthStartStr, isDateFilter);
+  const [allTo, setAllTo] = useSessionState(`${viewKey}:allTo`, todayStr, isDateFilter);
   const [allSearch, setAllSearch] = useState('');
   const [summaryUserId, setSummaryUserId] = useState('');
   const [allTypeFilter, setAllTypeFilter] = useState<'all' | 'auto' | 'manual'>('all');
@@ -622,6 +629,29 @@ export default function WorkTime() {
   const [allSort, setAllSort] = useState<'date_desc' | 'date_asc' | 'name' | 'duration_desc'>('date_desc');
   const [allPage, setAllPage] = useState(1);
   const [allPageSize, setAllPageSize] = useState<10 | 30 | 50>(30);
+
+  const resetHistoryFilters = () => {
+    setHistoryDateFilter('all');
+    setHistorySelectedMonth(currentMonthKey());
+    setHistoryTypeFilter('all');
+    setHistoryPage(1);
+  };
+
+  const resetAttendanceFilters = () => {
+    setAttendanceRange('week');
+    setAttendanceSort('last_name');
+  };
+
+  const resetAllTimeFilters = () => {
+    setAllFrom(`${currentMonthKey()}-01`);
+    setAllTo(todayStr());
+    setAllSearch('');
+    setSummaryUserId('');
+    setAllTypeFilter('all');
+    setAllStatusFilter('all');
+    setAllSort('date_desc');
+    setAllPage(1);
+  };
 
   async function loadAllEntries() {
     setAllLoading(true);
@@ -945,6 +975,7 @@ export default function WorkTime() {
   const attendanceDaysCount = attendance?.dates.length ?? 0;
   const sortedAttendanceUsers = attendance
     ? [...attendance.users].sort((a, b) => {
+        if (attendanceSort === 'last_name') return compareUsersByLastName(a, b);
         const firstValue = attendanceSort === 'first_name'
           ? `${a.first_name} ${a.last_name}`
           : `${a.last_name} ${a.first_name}`;
@@ -1057,7 +1088,7 @@ export default function WorkTime() {
             <button
               onClick={handleEndWork}
               disabled={clocking || isTimeTrackingBlocked}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-60"
             >
               <Square className="w-5 h-5" />
               {clocking ? 'Zapisywanie...' : 'Zakończ pracę'}
@@ -1100,7 +1131,7 @@ export default function WorkTime() {
             <button
               onClick={handleEndWork}
               disabled={clocking || isTimeTrackingBlocked}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 disabled:opacity-60"
             >
               <Square className="w-5 h-5" />
               {clocking ? 'Zapisywanie...' : 'Zakończ pracę'}
@@ -1233,7 +1264,7 @@ export default function WorkTime() {
 
       {editNotesEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditNotesEntry(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-5 shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50" onClick={e => e.stopPropagation()}>
             <h3 className="mb-1 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
               <Pencil className="h-4 w-4 text-[#F7941D]" /> Opis wpisu
             </h3>
@@ -1249,7 +1280,7 @@ export default function WorkTime() {
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setEditNotesEntry(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
+              <button onClick={() => setEditNotesEntry(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Anuluj</button>
               <button onClick={handleSaveNotes} disabled={savingNotes} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
                 {savingNotes && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz
               </button>
@@ -1261,7 +1292,7 @@ export default function WorkTime() {
       {/* Admin: edit time entry */}
       {isManager && editEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditEntry(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-5 shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50" onClick={e => e.stopPropagation()}>
             <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
               <Pencil className="h-4 w-4 text-[#F7941D]" /> Edytuj wpis czasu pracy
             </h3>
@@ -1272,7 +1303,7 @@ export default function WorkTime() {
                   type="datetime-local"
                   value={editForm.clock_in}
                   onChange={e => setEditForm(f => ({ ...f, clock_in: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1281,7 +1312,7 @@ export default function WorkTime() {
                   type="datetime-local"
                   value={editForm.clock_out}
                   onChange={e => setEditForm(f => ({ ...f, clock_out: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1295,7 +1326,7 @@ export default function WorkTime() {
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setEditEntry(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Anuluj</button>
+              <button onClick={() => setEditEntry(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Anuluj</button>
               <button onClick={handleSaveEntry} disabled={savingEntry} className="flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-medium text-white hover:bg-[#e08317] disabled:opacity-60">
                 {savingEntry && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz
               </button>
@@ -1317,7 +1348,7 @@ export default function WorkTime() {
       />
 
       <div className="mx-auto max-w-[1600px] space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
             <Clock className="h-6 w-6" />
@@ -1352,7 +1383,7 @@ export default function WorkTime() {
           {isManager && (
             <button
               onClick={() => setShowManualEntry(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              className="module-create-button inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
             >
               <PlusCircle className="w-4 h-4 text-[#F7941D]" />
               Wpis za pracownika
@@ -1395,7 +1426,7 @@ export default function WorkTime() {
       {activeTab === 'my' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Status dnia
@@ -1414,7 +1445,7 @@ export default function WorkTime() {
               <p className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{statusHint}</p>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Dzisiaj
@@ -1425,7 +1456,7 @@ export default function WorkTime() {
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{todayEntryCountLabel}</p>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Plan wg etatu
@@ -1436,7 +1467,7 @@ export default function WorkTime() {
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Na podstawie ustawień użytkownika</p>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Do planu
@@ -1451,7 +1482,7 @@ export default function WorkTime() {
           </div>
 
           {/* Clock widget */}
-          <div className={`rounded-xl border p-6 text-center shadow-sm transition-colors lg:p-8 ${widgetBorderClass}`}>
+          <div className={`rounded-xl border p-6 text-center shadow-sm shadow-gray-200/60 transition-colors dark:shadow-black/20 lg:p-8 ${widgetBorderClass}`}>
             {loadingMy ? (
               <div className="flex justify-center py-6">
                 <div className="animate-spin w-8 h-8 border-2 border-gray-300 border-t-[#F7941D] rounded-full" />
@@ -1460,7 +1491,7 @@ export default function WorkTime() {
           </div>
 
           {/* History */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#F7941D] dark:bg-orange-900/20">
@@ -1531,10 +1562,15 @@ export default function WorkTime() {
                       type="month"
                       value={historySelectedMonth}
                       onChange={(event) => setHistorySelectedMonth(event.target.value || currentMonthKey())}
-                      className="h-[30px] rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                      className="h-[30px] rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:[color-scheme:dark]"
                       aria-label="Wybierz miesiąc historii wpisów"
                     />
                   )}
+                  <ResetFiltersButton
+                    onClick={resetHistoryFilters}
+                    title="Resetuj zakres i filtry historii czasu pracy"
+                    compact
+                  />
                 </div>
 
                 <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
@@ -1586,11 +1622,7 @@ export default function WorkTime() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setHistoryDateFilter('all');
-                    setHistorySelectedMonth(currentMonthKey());
-                    setHistoryTypeFilter('all');
-                  }}
+                  onClick={resetHistoryFilters}
                   className="mt-4 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Wyczyść filtry
@@ -1742,7 +1774,7 @@ export default function WorkTime() {
       {/* ── ATTENDANCE TAB ── */}
       {activeTab === 'attendance' && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
@@ -1775,6 +1807,11 @@ export default function WorkTime() {
                     {label}
                   </button>
                 ))}
+                <ResetFiltersButton
+                  onClick={resetAttendanceFilters}
+                  title="Resetuj frekwencję: bieżący tydzień i sortowanie po nazwisku"
+                  compact
+                />
               </div>
             </div>
 
@@ -1815,7 +1852,7 @@ export default function WorkTime() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-black/20">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Legenda:</span>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-purple-400" /> Praca zdalna</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-orange-400" /> Urlop / Nieobecność</div>
@@ -1830,7 +1867,7 @@ export default function WorkTime() {
               <div className="animate-spin w-8 h-8 border-2 border-gray-300 border-t-[#F7941D] rounded-full" />
             </div>
           ) : attendance && attendance.users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-14 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-14 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500">
                 <Users className="h-6 w-6" />
               </div>
@@ -1840,12 +1877,12 @@ export default function WorkTime() {
               </p>
             </div>
           ) : attendance ? (
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="sticky left-0 z-20 min-w-[190px] border-r border-gray-100 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                      <th className="sticky left-0 z-20 min-w-[190px] border-r border-gray-100 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300">
                         Pracownik
                       </th>
                       {attendance.dates.map((date) => {
@@ -1855,7 +1892,7 @@ export default function WorkTime() {
                         return (
                           <th key={date} className={`min-w-[118px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider ${
                             isToday
-                              ? 'bg-orange-50 text-[#F7941D] dark:bg-orange-900/20'
+                              ? 'bg-orange-50 text-[#F7941D] dark:bg-orange-900/20 dark:text-orange-300'
                               : isWeekend
                                 ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
                               : 'text-gray-500 dark:text-gray-400'
@@ -1884,7 +1921,7 @@ export default function WorkTime() {
                               )}
                             </div>
                             <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                              {u.first_name} {u.last_name}
+                              {formatUserName(u)}
                               {u.id === user?.id && (
                                 <span className="ml-1.5 text-[10px] text-[#F7941D] bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">Ty</span>
                               )}
@@ -1963,7 +2000,7 @@ export default function WorkTime() {
       {activeTab === 'all' && isManager && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[200px] flex-1">
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pracownik</label>
@@ -1977,11 +2014,11 @@ export default function WorkTime() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Od</label>
-                <input type="date" value={allFrom} max={allTo || undefined} onChange={(e) => setAllFrom(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                <input type="date" value={allFrom} max={allTo || undefined} onChange={(e) => setAllFrom(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Do</label>
-                <input type="date" value={allTo} min={allFrom || undefined} onChange={(e) => setAllTo(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                <input type="date" value={allTo} min={allFrom || undefined} onChange={(e) => setAllTo(e.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Typ</label>
@@ -2008,11 +2045,15 @@ export default function WorkTime() {
                   <option value="duration_desc">Czas pracy: malejąco</option>
                 </select>
               </div>
+              <ResetFiltersButton
+                onClick={resetAllTimeFilters}
+                title="Resetuj filtry: bieżący miesiąc do dziś, bez wybranego pracownika"
+              />
             </div>
           </div>
 
           {/* Per-employee period summary */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Podsumowanie pracownika</h3>
@@ -2053,7 +2094,7 @@ export default function WorkTime() {
           </div>
 
           {/* Table */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Wszystkie czasy pracy</h3>
@@ -2070,7 +2111,7 @@ export default function WorkTime() {
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <thead className="bg-gray-50 dark:bg-gray-700/60">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Pracownik</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Data</th>
@@ -2094,7 +2135,7 @@ export default function WorkTime() {
                       const fmtT = (d: string) => new Date(d).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
                       const inProgress = entry.status === 'in_progress';
                       return (
-                        <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <tr key={entry.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40">
                           <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{u ? `${u.last_name} ${u.first_name}` : '—'}</td>
                           <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{new Date(entry.clock_in).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                           <td className="px-4 py-2.5 font-mono text-sm text-gray-700 dark:text-gray-300">
@@ -2135,8 +2176,8 @@ export default function WorkTime() {
               <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 <span>Strona {allPage} / {allTotalPages}</span>
                 <div className="flex gap-2">
-                  <button disabled={allPage <= 1} onClick={() => setAllPage((p) => Math.max(1, p - 1))} className="rounded-lg border border-gray-200 px-3 py-1 disabled:opacity-50 dark:border-gray-600">Poprzednia</button>
-                  <button disabled={allPage >= allTotalPages} onClick={() => setAllPage((p) => Math.min(allTotalPages, p + 1))} className="rounded-lg border border-gray-200 px-3 py-1 disabled:opacity-50 dark:border-gray-600">Następna</button>
+                  <button disabled={allPage <= 1} onClick={() => setAllPage((p) => Math.max(1, p - 1))} className="rounded-lg border border-gray-200 px-3 py-1 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-700">Poprzednia</button>
+                  <button disabled={allPage >= allTotalPages} onClick={() => setAllPage((p) => Math.min(allTotalPages, p + 1))} className="rounded-lg border border-gray-200 px-3 py-1 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-700">Następna</button>
                 </div>
               </div>
             )}

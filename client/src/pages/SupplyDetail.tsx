@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -154,10 +155,10 @@ export default function SupplyDetail() {
       : '—';
 
   const getUserName = (supplyRequest: SupplyRequest) =>
-    supplyRequest.user ? `${supplyRequest.user.first_name} ${supplyRequest.user.last_name}` : '—';
+    supplyRequest.user ? formatUserName(supplyRequest.user) : '—';
 
   const getReviewerName = (supplyRequest: SupplyRequest) =>
-    supplyRequest.reviewer ? `${supplyRequest.reviewer.first_name} ${supplyRequest.reviewer.last_name}` : '—';
+    supplyRequest.reviewer ? formatUserName(supplyRequest.reviewer) : '—';
 
   if (loading) {
     return (
@@ -173,7 +174,7 @@ export default function SupplyDetail() {
   if (!request) {
     return (
       <MainLayout title="Szczegóły zapotrzebowania">
-        <div className="mx-auto max-w-3xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mx-auto max-w-3xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <Package className="mx-auto mb-4 h-10 w-10 text-gray-300 dark:text-gray-600" />
           <h1 className="text-xl font-semibold text-gray-950 dark:text-white">Nie znaleziono zgłoszenia</h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -198,7 +199,7 @@ export default function SupplyDetail() {
   return (
     <MainLayout title="Szczegóły zapotrzebowania">
       <div className="mx-auto max-w-[1200px] space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
               <button
@@ -276,7 +277,7 @@ export default function SupplyDetail() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
               <UserRound className="h-4 w-4 text-[#F7941D]" />
               Zgłaszający
@@ -290,7 +291,7 @@ export default function SupplyDetail() {
             )}
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
               <CalendarDays className="h-4 w-4 text-[#F7941D]" />
               Daty
@@ -303,7 +304,7 @@ export default function SupplyDetail() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Opis / uzasadnienie</h2>
           <p className="mt-3 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm leading-6 text-gray-600 dark:text-gray-300">
             {request.description || 'Brak dodatkowego opisu.'}
@@ -311,7 +312,7 @@ export default function SupplyDetail() {
         </section>
 
         {(request.reviewer || request.review_notes) && (
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Decyzja</h2>
             <dl className="mt-3 space-y-3 text-sm">
               <InfoRow label="Rozpatrujący" value={getReviewerName(request)} />
@@ -326,7 +327,7 @@ export default function SupplyDetail() {
         )}
 
         {/* Comments */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
             <MessageSquare className="h-4 w-4 text-[#F7941D]" />
             Komentarze
@@ -342,7 +343,7 @@ export default function SupplyDetail() {
               <p className="text-sm text-gray-400 dark:text-gray-500">Brak komentarzy. Napisz pierwszy.</p>
             ) : (
               comments.map((c) => {
-                const name = c.user ? `${c.user.first_name} ${c.user.last_name}` : 'Użytkownik';
+                const name = c.user ? formatUserName(c.user) : 'Użytkownik';
                 const initials = c.user ? `${c.user.first_name?.[0] || ''}${c.user.last_name?.[0] || ''}` : '?';
                 const mine = c.user_id === user?.id;
                 return (
@@ -404,7 +405,7 @@ export default function SupplyDetail() {
 
 function DetailTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-950 dark:text-white">{value}</p>
     </div>

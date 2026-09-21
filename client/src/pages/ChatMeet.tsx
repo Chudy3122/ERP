@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -258,6 +259,7 @@ const ChatMeet: React.FC = () => {
     window.scrollTo(0, 0);
     loadChannels();
     loadScheduledMeetings();
+    loadUsers();
   }, [loadChannels]);
 
   // Auto-open channel from ?channel= query param
@@ -295,7 +297,7 @@ const ChatMeet: React.FC = () => {
     setLoadingUsers(true);
     try {
       const users = await userApi.getDirectory();
-      setAllUsers(users);
+      setAllUsers([...users].sort(compareUsersByLastName));
     } catch {
       // silently fail
     } finally {
@@ -329,7 +331,7 @@ const ChatMeet: React.FC = () => {
   const getChannelName = (channel: Channel): string => {
     if (channel.type === 'direct') {
       const other = getOtherMember(channel);
-      if (other?.user) return `${other.user.first_name} ${other.user.last_name}`;
+      if (other?.user) return formatUserName(other.user);
     }
     return channel.name ?? 'Bez nazwy';
   };
@@ -364,7 +366,7 @@ const ChatMeet: React.FC = () => {
     });
 
   const filteredAllUsers = allUsers.filter((u) =>
-    `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(convSearch.toLowerCase())
+    `${u.first_name} ${u.last_name} ${formatUserName(u)} ${u.email}`.toLowerCase().includes(convSearch.toLowerCase())
   );
 
   const handleChannelClick = (channel: Channel) => {
@@ -607,7 +609,7 @@ const ChatMeet: React.FC = () => {
                     resetExtForm();
                   }
                 }}
-                className="rounded-lg bg-[#F7941D] p-2 text-white transition-colors hover:bg-[#d87f16]"
+                className="module-create-button rounded-lg bg-[#F7941D] p-2 text-white transition-colors hover:bg-[#d87f16]"
                 title={sidebarTab === 'chat' ? 'Nowa rozmowa' : 'Zaplanuj spotkanie'}
               >
                 <Plus className="h-4 w-4" />
@@ -668,7 +670,7 @@ const ChatMeet: React.FC = () => {
                     {!chatSearch && (
                       <button
                         onClick={() => { loadUsers(); setShowNewConv(true); }}
-                        className="mt-3 px-3 py-1.5 text-sm bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg font-medium"
+                        className="module-create-button mt-3 px-3 py-1.5 text-sm bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg font-medium"
                       >
                         Nowa rozmowa
                       </button>
@@ -775,7 +777,7 @@ const ChatMeet: React.FC = () => {
                 </button>
                 <button
                   onClick={() => { loadUsers(); resetExtForm(); setShowExternalModal(true); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg text-sm font-medium transition-colors"
+                  className="module-create-button w-full flex items-center gap-2.5 px-3 py-2 bg-[#F7941D] hover:bg-[#d87f16] text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   <CalendarPlus className="w-4 h-4 flex-shrink-0" />
                   Zaplanuj spotkanie zewnętrzne
@@ -865,7 +867,7 @@ const ChatMeet: React.FC = () => {
                       const call = item.data;
                       const isSelected = selectedVideoCall?.id === call.id;
                       const status = getVideoCallStatus(call.status);
-                      const visibleParticipants = (call.participants || []).slice(0, 4);
+                      const visibleParticipants = [...(call.participants || [])].sort((a, b) => compareUsersByLastName(a.user, b.user)).slice(0, 4);
                       const extraCount = Math.max(0, (call.participants?.length || 0) - 4);
                       return (
                         <div
@@ -904,7 +906,7 @@ const ChatMeet: React.FC = () => {
                                     <div
                                       key={p.id}
                                       className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border border-white dark:border-gray-800 flex items-center justify-center text-white overflow-hidden"
-                                      title={p.user ? `${p.user.first_name} ${p.user.last_name}` : ''}
+                                      title={p.user ? formatUserName(p.user) : ''}
                                     >
                                       {p.user?.avatar_url ? (
                                         <img src={getFileUrl(p.user.avatar_url) || ''} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget.style.display = 'none'); }} />
@@ -957,7 +959,7 @@ const ChatMeet: React.FC = () => {
                     setShowNewConv(true);
                     setSidebarTab('chat');
                   }}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  className="module-create-button inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   Nowa rozmowa
@@ -1036,16 +1038,15 @@ const ChatMeet: React.FC = () => {
           {/* Active chat view */}
           {activeChannel && !selectedMeeting && !selectedVideoCall && (() => {
             const isGroup = activeChannel.type !== 'direct';
-            const members = activeChannel.members ?? [];
+            const members = [...(activeChannel.members ?? [])].sort((a, b) => compareUsersByLastName(a.user, b.user));
             const mentionUsers = members
               .map((member) => member.user)
               .filter((memberUser): memberUser is NonNullable<typeof memberUser> => Boolean(memberUser && memberUser.id !== user?.id))
               .map((memberUser) => ({
                 id: memberUser.id,
-                name: `${memberUser.first_name} ${memberUser.last_name}`.trim() || memberUser.email,
+                name: formatUserName(memberUser),
                 email: memberUser.email,
-              }))
-              .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+              }));
             const onlineMembers = members.filter((m) => {
               const s = getUserStatus(m.user_id);
               return s && s.status !== 'offline';
@@ -1230,7 +1231,7 @@ const ChatMeet: React.FC = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                                  {u.first_name} {u.last_name}{isMe ? ' (Ty)' : ''}
+                                  {formatUserName(u)}{isMe ? ' (Ty)' : ''}
                                 </p>
                                 <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
                                   {member.role === 'admin' ? 'Admin' :
@@ -1361,12 +1362,15 @@ const ChatMeet: React.FC = () => {
                         Uczestnicy ({selectedMeeting.participants.length})
                       </h3>
                       <div className="space-y-2">
-                        {selectedMeeting.participants.map((p) => (
+                        {[...selectedMeeting.participants].sort((a, b) => compareUsersByLastName(
+                          allUsers.find(u => u.id === a.id) ?? { email: a.name },
+                          allUsers.find(u => u.id === b.id) ?? { email: b.name },
+                        )).map((p) => (
                           <div key={p.id} className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
                               {getNameInitials(p.name)}
                             </div>
-                            <span className="text-sm text-gray-900 dark:text-white">{p.name}</span>
+                            <span className="text-sm text-gray-900 dark:text-white">{formatUserName(allUsers.find(u => u.id === p.id), p.name)}</span>
                           </div>
                         ))}
                       </div>
@@ -1451,13 +1455,13 @@ const ChatMeet: React.FC = () => {
                         Uczestnicy ({selectedVideoCall.participants.length})
                       </h3>
                       <div className="space-y-2">
-                        {selectedVideoCall.participants.map((p) => (
+                        {[...selectedVideoCall.participants].sort((a, b) => compareUsersByLastName(a.user, b.user)).map((p) => (
                           <div key={p.id} className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
                               {p.user ? `${p.user.first_name[0]}${p.user.last_name[0]}` : '?'}
                             </div>
                             <span className="text-sm text-gray-900 dark:text-white">
-                              {p.user ? `${p.user.first_name} ${p.user.last_name}` : p.user_id}
+                              {p.user ? formatUserName(p.user) : p.user_id}
                             </span>
                           </div>
                         ))}
@@ -1543,7 +1547,7 @@ const ChatMeet: React.FC = () => {
                         {u.first_name[0]}{u.last_name[0]}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{formatUserName(u)}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
                       </div>
                     </button>
@@ -1636,12 +1640,14 @@ const ChatMeet: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Uczestnicy ({intParticipants.length} wybrano) *</label>
                 {intParticipants.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {intParticipants.map((id) => {
+                    {[...intParticipants].sort((a, b) => compareUsersByLastName(
+                      allUsers.find(u => u.id === a), allUsers.find(u => u.id === b),
+                    )).map((id) => {
                       const u = allUsers.find((x) => x.id === id);
                       if (!u) return null;
                       return (
                         <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 text-[#F7941D] px-2.5 py-1 text-xs font-medium">
-                          {u.first_name} {u.last_name}
+                          {formatUserName(u)}
                           <button type="button" onClick={() => setIntParticipants((p) => p.filter((x) => x !== id))} className="hover:text-red-600" title="Usuń">
                             <X className="w-3 h-3" />
                           </button>
@@ -1660,12 +1666,12 @@ const ChatMeet: React.FC = () => {
                   />
                 </div>
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-44 overflow-y-auto">
-                  {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(intSearch.toLowerCase())).map((u) => (
+                  {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${formatUserName(u)} ${u.email}`.toLowerCase().includes(intSearch.toLowerCase())).map((u) => (
                     <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                       <input type="checkbox" checked={intParticipants.includes(u.id)} onChange={() => setIntParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 accent-[#F7941D] rounded" />
                       <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium">{u.first_name[0]}{u.last_name[0]}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{formatUserName(u)}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
                       </div>
                     </label>
@@ -1757,12 +1763,14 @@ const ChatMeet: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Uczestnicy ({extParticipants.length} wybrano)</label>
                 {extParticipants.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {extParticipants.map((id) => {
+                    {[...extParticipants].sort((a, b) => compareUsersByLastName(
+                      allUsers.find(u => u.id === a), allUsers.find(u => u.id === b),
+                    )).map((id) => {
                       const u = allUsers.find((x) => x.id === id);
                       if (!u) return null;
                       return (
                         <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 text-[#F7941D] px-2.5 py-1 text-xs font-medium">
-                          {u.first_name} {u.last_name}
+                          {formatUserName(u)}
                           <button type="button" onClick={() => setExtParticipants((p) => p.filter((x) => x !== id))} className="hover:text-red-600" title="Usuń">
                             <X className="w-3 h-3" />
                           </button>
@@ -1776,12 +1784,12 @@ const ChatMeet: React.FC = () => {
                   <input value={extSearch} onChange={(e) => setExtSearch(e.target.value)} placeholder="Szukaj..." className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:bg-gray-700 dark:text-white" />
                 </div>
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-44 overflow-y-auto">
-                  {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(extSearch.toLowerCase())).map((u) => (
+                  {allUsers.filter((u) => u.id !== user?.id && `${u.first_name} ${u.last_name} ${formatUserName(u)} ${u.email}`.toLowerCase().includes(extSearch.toLowerCase())).map((u) => (
                     <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                       <input type="checkbox" checked={extParticipants.includes(u.id)} onChange={() => setExtParticipants((p) => p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id])} className="w-4 h-4 accent-[#F7941D] rounded" />
                       <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium">{u.first_name[0]}{u.last_name[0]}</div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.first_name} {u.last_name}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{formatUserName(u)}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
                       </div>
                     </label>

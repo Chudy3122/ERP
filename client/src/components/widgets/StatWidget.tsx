@@ -45,9 +45,9 @@ const StatWidget: React.FC<StatWidgetProps> = ({ label, value, icon, trend, colo
     </>
   );
 
-  const className = `rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800 ${
+  const className = `rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 transition-all dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20 ${
     onClick
-      ? 'w-full cursor-pointer text-left hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:hover:border-gray-600'
+      ? 'w-full cursor-pointer text-left hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md hover:shadow-gray-200/80 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40 dark:hover:border-gray-600 dark:hover:bg-gray-800/80 dark:hover:shadow-black/30'
       : ''
   }`;
 

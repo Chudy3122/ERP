@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import { Draggable } from '@hello-pangea/dnd';
 import { CrmDeal, DEAL_PRIORITY_COLORS } from '../../types/crm.types';
 import { Calendar, User, DollarSign, AlertTriangle } from 'lucide-react';
@@ -76,7 +77,7 @@ const DealCard = ({ deal, index, onClick }: DealCardProps) => {
               {deal.assignee ? (
                 <div
                   className="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-                  title={`${deal.assignee.first_name} ${deal.assignee.last_name}`}
+                  title={formatUserName(deal.assignee)}
                 >
                   {deal.assignee.first_name[0]}{deal.assignee.last_name[0]}
                 </div>

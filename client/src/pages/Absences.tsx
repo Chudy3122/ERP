@@ -1,7 +1,10 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { isDateFilter, useSessionDate, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import MainLayout from '../components/layout/MainLayout';
+import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import {
   Calendar,
   CalendarDays,
@@ -102,14 +105,14 @@ const isAbsenceTab = (value: string | null): value is AbsenceTab =>
 
 // Tylko te typy odliczają dni z puli urlopowej
 const DEDUCTING_TYPES: LeaveType[] = ['vacation', 'personal'];
-const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30';
-const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30';
-const GRAY_LEAVE_COLOR = 'text-gray-600 bg-gray-100 dark:bg-gray-700';
-const PINK_LEAVE_COLOR = 'text-rose-500 bg-rose-50 dark:bg-rose-900/20';
-const PURPLE_LEAVE_COLOR = 'text-purple-600 bg-purple-50 dark:bg-purple-900/30';
+const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300';
+const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-300';
+const GRAY_LEAVE_COLOR = 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300';
+const PINK_LEAVE_COLOR = 'text-rose-500 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-300';
+const PURPLE_LEAVE_COLOR = 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 dark:text-purple-300';
 const YELLOW_LEAVE_COLOR = 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-300';
-const ORANGE_LEAVE_COLOR = 'text-orange-600 bg-orange-50 dark:bg-orange-900/30';
-const GREEN_LEAVE_COLOR = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30';
+const ORANGE_LEAVE_COLOR = 'text-orange-600 bg-orange-50 dark:bg-orange-900/30 dark:text-orange-300';
+const GREEN_LEAVE_COLOR = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300';
 
 const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode; color: string }> =
   {
@@ -243,6 +246,7 @@ const normalizeCalendarStatus = (status?: string | null): CalendarRequestStatus 
 
 const Absences = () => {
   const { user } = useAuth();
+  const viewKey = `erp:view:absences:${user?.id || 'current-user'}`;
   const navigate = useNavigate();
   const calendarTopScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarTableScrollRef = useRef<HTMLDivElement | null>(null);
@@ -284,9 +288,9 @@ const Absences = () => {
     const storedTab = sessionStorage.getItem(activeTabStorageKey);
     return isAbsenceTab(storedTab) && canOpenAbsenceTab(storedTab) ? storedTab : 'my';
   });
-  const [reportUserId, setReportUserId] = useState('');
-  const [reportDateFrom, setReportDateFrom] = useState(() => getMonthDateRange(new Date()).start);
-  const [reportDateTo, setReportDateTo] = useState(() => getMonthDateRange(new Date()).end);
+  const [reportUserId, setReportUserId] = useSessionState(`${viewKey}:reportUser`, '', value => typeof value === 'string');
+  const [reportDateFrom, setReportDateFrom] = useSessionState(`${viewKey}:reportFrom`, () => getMonthDateRange(new Date()).start, isDateFilter);
+  const [reportDateTo, setReportDateTo] = useSessionState(`${viewKey}:reportTo`, () => getMonthDateRange(new Date()).end, isDateFilter);
   const [reportLeaveType, setReportLeaveType] = useState<'all' | LeaveType>('all');
   const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatusFilter>('active');
   const [reportIncludeReason, setReportIncludeReason] = useState(true);
@@ -294,8 +298,8 @@ const Absences = () => {
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
   const [allSortAsc, setAllSortAsc] = useState(false);
-  const [allDateFrom, setAllDateFrom] = useState('');
-  const [allDateTo, setAllDateTo] = useState('');
+  const [allDateFrom, setAllDateFrom] = useSessionState(`${viewKey}:allFrom`, '', isDateFilter);
+  const [allDateTo, setAllDateTo] = useSessionState(`${viewKey}:allTo`, '', isDateFilter);
   const [requestPage, setRequestPage] = useState(() => getStoredRequestListState().page || 1);
   const [requestPageSize, setRequestPageSize] = useState<RequestPageSize>(() => getStoredRequestListState().pageSize || 10);
   const [requestSearch, setRequestSearch] = useState(() => getStoredRequestListState().search || '');
@@ -310,9 +314,9 @@ const Absences = () => {
   const [requestDateTo, setRequestDateTo] = useState(() => getStoredRequestListState().dateTo || '');
 
   // Calendar tab state
-  const [calendarDate, setCalendarDate] = useState(() => getMondayOfWeek(new Date()));
-  const [calendarDays, setCalendarDays] = useState(7);
-  const [showCalendarWeekends, setShowCalendarWeekends] = useState(true);
+  const [calendarDate, setCalendarDate] = useSessionDate(`${viewKey}:calendarDate`, () => getMondayOfWeek(new Date()));
+  const [calendarDays, setCalendarDays] = useSessionState(`${viewKey}:calendarDays`, 7, value => typeof value === 'number' && [7, 14, 30].includes(value));
+  const [showCalendarWeekends, setShowCalendarWeekends] = useSessionState(`${viewKey}:calendarWeekends`, true, value => typeof value === 'boolean');
   const [availability, setAvailability] = useState<TeamAvailability[]>([]);
   // All team leave requests (approved + pending) for the calendar — visible to everyone
   const [calendarLeaves, setCalendarLeaves] = useState<LeaveRequest[]>([]);
@@ -533,7 +537,7 @@ const Absences = () => {
             : item
         )
       );
-      setManagementSuccess(`Zapisano plan dla ${row.firstName} ${row.lastName}.`);
+      setManagementSuccess(`Zapisano plan dla ${formatUserName(row)}.`);
     } catch {
       setManagementError('Nie udało się zapisać planu urlopowego.');
     } finally {
@@ -576,12 +580,12 @@ const Absences = () => {
 
   const calStatusColor = (s: string) =>
     s === 'working'
-      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
       : s === 'remote'
         ? 'bg-purple-100 text-purple-800 border-purple-200 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
         : s === 'on_leave'
           ? 'bg-orange-100 text-orange-800 border-orange-200 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-          : 'bg-gray-100 text-gray-500 border-gray-200';
+          : 'bg-gray-100 text-gray-500 border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400';
 
   const calStatusIcon = (s: string) =>
     s === 'working'
@@ -945,7 +949,7 @@ const Absences = () => {
     .filter(([type]) => type !== 'occasional_hourly');
   const selectedReportUser = directoryUsers.find(u => u.id === reportUserId);
   const reportEmployeeName = selectedReportUser
-    ? `${selectedReportUser.first_name} ${selectedReportUser.last_name}`
+    ? formatUserName(selectedReportUser)
     : '';
   const reportStatusOptions: { value: ReportStatusFilter; label: string }[] = [
     { value: 'active', label: 'Oczekujące i zatwierdzone' },
@@ -982,6 +986,39 @@ const Absences = () => {
     (sum, request) => sum + Number(request.hours || 0),
     0
   );
+
+  const resetReportFilters = () => {
+    const range = getMonthDateRange(new Date());
+    setReportUserId('');
+    setReportDateFrom(range.start);
+    setReportDateTo(range.end);
+    setReportLeaveType('all');
+    setReportStatusFilter('active');
+    setReportIncludeReason(true);
+  };
+
+  const resetRequestFilters = () => {
+    setRequestDateFrom('');
+    setRequestDateTo('');
+    setRequestSearch('');
+    setRequestStatusFilter('all');
+    setRequestDateField('absence');
+    setRequestSortAsc(false);
+    setRequestPage(1);
+  };
+
+  const resetAllAbsenceFilters = () => {
+    setAllDateFrom('');
+    setAllDateTo('');
+    setAllSearch('');
+    setAllSortAsc(false);
+  };
+
+  const resetCalendarFilters = () => {
+    setCalendarDate(getMondayOfWeek(new Date()));
+    setCalendarDays(7);
+    setShowCalendarWeekends(true);
+  };
 
   const handleReportDateFromChange = (value: string) => {
     setReportDateFrom(value);
@@ -1086,8 +1123,7 @@ const Absences = () => {
       const columns = reportIncludeReason
         ? [
             { label: 'Lp.', width: 10 },
-            { label: 'Złożono', width: 25 },
-            { label: 'Rodzaj nieobecności', width: 48 },
+            { label: 'Rodzaj nieobecności', width: 73 },
             { label: 'Od', width: 24 },
             { label: 'Do', width: 24 },
             { label: 'Wymiar', width: 30 },
@@ -1096,8 +1132,7 @@ const Absences = () => {
           ]
         : [
             { label: 'Lp.', width: 10 },
-            { label: 'Złożono', width: 32 },
-            { label: 'Rodzaj nieobecności', width: 78 },
+            { label: 'Rodzaj nieobecności', width: 110 },
             { label: 'Od', width: 34 },
             { label: 'Do', width: 34 },
             { label: 'Wymiar', width: 42 },
@@ -1146,7 +1181,6 @@ const Absences = () => {
         const statusConfig = getStatusConfig(request.status);
         const row = [
           String(index + 1),
-          formatReportDate(request.created_at),
           typeConfig?.label || request.leave_type,
           formatReportDate(request.start_date),
           formatReportDate(request.end_date || request.start_date),
@@ -1157,8 +1191,8 @@ const Absences = () => {
         return row;
       })
       : [reportIncludeReason
-          ? ['', '', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
-          : ['', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
+          ? ['', '', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
+          : ['', '', '', '', '', 'Brak wniosków spełniających wybrane kryteria.']
         ];
 
     tableRows.forEach((row, rowIndex) => {
@@ -1265,7 +1299,7 @@ const Absences = () => {
   const currentRequests = baseRequests
     .filter(request => {
       const typeLabel = leaveTypeConfig[request.leave_type as LeaveType]?.label || '';
-      const userName = request.user ? `${request.user.first_name} ${request.user.last_name}` : '';
+      const userName = request.user ? `${request.user.first_name} ${request.user.last_name} ${formatUserName(request.user)}` : '';
       const searchable = [typeLabel, request.reason, userName, request.user?.email, request.status]
         .filter(Boolean)
         .join(' ')
@@ -1334,12 +1368,12 @@ const Absences = () => {
   const filteredManagementUsers = overviewRows.filter(row => {
     if (!normalizedManagementSearch) return true;
 
-    return [row.firstName, row.lastName, row.email, row.department, row.position]
+    return [row.firstName, row.lastName, formatUserName(row), row.email, row.department, row.position]
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
       .includes(normalizedManagementSearch);
-  });
+  }).sort(compareUsersByLastName);
 
   const allStatusCounts = allRequests.reduce(
     (acc, r) => {
@@ -1399,7 +1433,7 @@ const Absences = () => {
   return (
     <MainLayout title="Nieobecności">
       <div className="mx-auto max-w-[1600px]">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <CalendarDays className="h-6 w-6" />
@@ -1416,7 +1450,7 @@ const Absences = () => {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700 dark:hover:bg-gray-600"
+            className="module-create-button inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
           >
             <Plus className="h-4 w-4" />
             Nowy wniosek
@@ -1429,7 +1463,7 @@ const Absences = () => {
             {balanceCards.map(card => (
               <div
                 key={card.label}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -1456,7 +1490,7 @@ const Absences = () => {
         )}
 
         {/* Tabs */}
-        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="border-b border-gray-100 p-3 dark:border-gray-700">
             <nav className="flex flex-wrap gap-2">
               <button
@@ -1524,7 +1558,7 @@ const Absences = () => {
 
         {/* Leave Requests List */}
         {(activeTab === 'my' || activeTab === 'pending') && (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="border-b border-gray-100 p-4 dark:border-gray-700">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1608,19 +1642,10 @@ const Absences = () => {
                       className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
-                  {(requestDateFrom || requestDateTo) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRequestDateFrom('');
-                        setRequestDateTo('');
-                      }}
-                      className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-600 transition-colors hover:border-[#F7941D]/40 hover:text-[#F7941D] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
-                    >
-                      <X className="h-4 w-4" />
-                      Wyczyść daty
-                    </button>
-                  )}
+                  <ResetFiltersButton
+                    onClick={resetRequestFilters}
+                    title="Resetuj daty, wyszukiwanie i filtry wniosków"
+                  />
                   <p className="pb-2 text-xs text-gray-500 dark:text-gray-400">
                     Zakres dotyczy: {requestDateField === 'submitted' ? 'daty złożenia wniosku' : 'terminu nieobecności'}.
                   </p>
@@ -1695,7 +1720,7 @@ const Absences = () => {
                             openLeaveRequestDetail(request.id);
                           }
                         }}
-                        className="block w-full p-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        className="block w-full p-4 text-left transition-colors hover:bg-gray-50 focus:bg-gray-50 focus:outline-none dark:hover:bg-gray-700/50 dark:focus:bg-gray-700/50"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -1734,7 +1759,7 @@ const Absences = () => {
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                   Pracownik:{' '}
                                   <span className="font-medium text-gray-700 dark:text-gray-300">
-                                    {request.user.first_name} {request.user.last_name}
+                                    {formatUserName(request.user)}
                                   </span>
                                 </p>
                               )}
@@ -1748,7 +1773,7 @@ const Absences = () => {
                                   event.stopPropagation();
                                   handleApprove(request.id);
                                 }}
-                                className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                className="rounded-lg bg-[#F7941D] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#e08317]"
                               >
                                 Zatwierdź
                               </button>
@@ -1844,7 +1869,7 @@ const Absences = () => {
         {/* Monthly report tab (admin / kadry) */}
         {activeTab === 'report' && canViewAllAbsences && (
           <>
-          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="border-b border-gray-100 p-4 dark:border-gray-700">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -1857,15 +1882,21 @@ const Absences = () => {
                     Wybierz pracownika, zakres terminu oraz rodzaj nieobecności. Raport zostanie pobrany na komputer jako plik PDF.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadLeaveReport}
-                  disabled={!reportUserId || allLoading}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e6830f] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Printer className="h-4 w-4" />
-                  Generuj PDF
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ResetFiltersButton
+                    onClick={resetReportFilters}
+                    title="Resetuj raport: bieżący miesiąc, bez wybranego pracownika i domyślne filtry"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDownloadLeaveReport}
+                    disabled={!reportUserId || allLoading}
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e6830f] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Generuj PDF
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1879,8 +1910,8 @@ const Absences = () => {
                 >
                   <option value="">— wybierz pracownika —</option>
                   {[...directoryUsers]
-                    .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, 'pl'))
-                    .map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
+                    .sort(compareUsersByLastName)
+                    .map(u => <option key={u.id} value={u.id}>{formatUserName(u)}</option>)}
                 </select>
               </div>
               <div>
@@ -1889,7 +1920,7 @@ const Absences = () => {
                   type="date"
                   value={reportDateFrom}
                   onChange={e => handleReportDateFromChange(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1898,7 +1929,7 @@ const Absences = () => {
                   type="date"
                   value={reportDateTo}
                   onChange={e => setReportDateTo(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
               <div>
@@ -1953,7 +1984,7 @@ const Absences = () => {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Podgląd danych do raportu</h2>
@@ -2006,7 +2037,7 @@ const Absences = () => {
                       const typeConfig = leaveTypeConfig[request.leave_type as LeaveType];
                       const statusConfig = getStatusConfig(request.status);
                       return (
-                        <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <tr key={request.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40">
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                             {formatReportDate(request.created_at)}
                           </td>
@@ -2045,7 +2076,7 @@ const Absences = () => {
 
         {/* All absences tab (admin / kadry) */}
         {activeTab === 'all' && canManageAbsences && (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wszystkie nieobecności</h2>
@@ -2080,16 +2111,11 @@ const Absences = () => {
                     title="Do dnia"
                     className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
-                  {(allDateFrom || allDateTo) && (
-                    <button
-                      onClick={() => { setAllDateFrom(''); setAllDateTo(''); }}
-                      className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:text-[#F7941D]"
-                      title="Wyczyść daty"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
+                <ResetFiltersButton
+                  onClick={resetAllAbsenceFilters}
+                  title="Resetuj daty, wyszukiwanie pracownika i sortowanie nieobecności"
+                />
               </div>
             </div>
 
@@ -2143,7 +2169,7 @@ const Absences = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="font-semibold text-gray-900 dark:text-white">
-                              {u ? `${u.first_name} ${u.last_name}` : '—'}
+                              {u ? formatUserName(u) : '—'}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">{u?.email}</div>
                           </td>
@@ -2163,7 +2189,7 @@ const Absences = () => {
                               <div className="inline-flex gap-2">
                                 <button
                                   onClick={() => handleApprove(request.id)}
-                                  className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                  className="rounded-lg bg-[#F7941D] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#e08317]"
                                 >
                                   Zatwierdź
                                 </button>
@@ -2211,7 +2237,7 @@ const Absences = () => {
         {/* Management tab content */}
         {activeTab === 'management' && canManageLeavePlans && (
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-gray-700">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -2313,7 +2339,7 @@ const Absences = () => {
                           <tr key={row.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-4">
                               <div className="font-semibold text-gray-900 dark:text-white">
-                                {row.firstName} {row.lastName}
+                                {formatUserName(row)}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">{row.email}</div>
                             </td>
@@ -2329,7 +2355,7 @@ const Absences = () => {
                                 placeholder="np. 1"
                                 className="h-10 w-14 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                               />
-                              <div className="mt-0.5 text-[10px] text-gray-400">{hpdRow}h/dzień</div>
+                              <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">{hpdRow}h/dzień</div>
                             </td>
                             <td className="px-3 py-4 text-center">
                               <input
@@ -2355,12 +2381,12 @@ const Absences = () => {
                                 className={inputCls}
                               />
                               {row.usedRequests > 0 && (
-                                <div className="mt-0.5 text-[10px] text-gray-400">+{fmtD(row.usedRequests)} z wniosków</div>
+                                <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">+{fmtD(row.usedRequests)} z wniosków</div>
                               )}
                             </td>
                             <td className="px-3 py-4 text-center">
                               <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmtD(liveAvailable)}</div>
-                              <div className="text-[10px] text-gray-400">{hrs(liveAvailable)}</div>
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500">{hrs(liveAvailable)}</div>
                             </td>
                             <td className="border-l border-gray-100 px-3 py-4 text-center dark:border-gray-700">
                               <input
@@ -2378,7 +2404,7 @@ const Absences = () => {
                                 className={inputCls}
                               />
                               {row.remoteUsedRequests > 0 && (
-                                <div className="mt-0.5 text-[10px] text-gray-400">+{fmtD(row.remoteUsedRequests)} z wniosków</div>
+                                <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">+{fmtD(row.remoteUsedRequests)} z wniosków</div>
                               )}
                               <div className="mt-0.5 text-[10px] font-semibold text-purple-500 dark:text-purple-300">
                                 Razem: {fmtD((Number.isFinite(remoteUsedV) ? remoteUsedV : row.remoteUsedBaseline) + row.remoteUsedRequests)}
@@ -2386,14 +2412,14 @@ const Absences = () => {
                             </td>
                             <td className="px-3 py-4 text-center">
                               <div className="text-sm font-bold text-purple-600 dark:text-purple-400">{fmtD(liveRemoteAvailable)}</div>
-                              <div className="text-[10px] text-gray-400">{hrs(liveRemoteAvailable)}</div>
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500">{hrs(liveRemoteAvailable)}</div>
                             </td>
                             <td className="px-4 py-4 text-right">
                               <button
                                 type="button"
                                 onClick={() => handleSaveAllocation(row)}
                                 disabled={isSaving}
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                 Zapisz
@@ -2414,7 +2440,7 @@ const Absences = () => {
         {activeTab === 'calendar' && (
           <div className="space-y-4">
             {/* Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -2459,12 +2485,16 @@ const Absences = () => {
                   onClick={() => setShowCalendarWeekends(value => !value)}
                   className={`h-10 rounded-lg px-3 text-sm font-semibold transition-colors ${
                     showCalendarWeekends
-                      ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                      ? 'bg-[#F7941D] text-white'
                       : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
                   {showCalendarWeekends ? 'Ukryj weekend' : 'Pokaż weekend'}
                 </button>
+                <ResetFiltersButton
+                  onClick={resetCalendarFilters}
+                  title="Resetuj kalendarz: bieżący tydzień z widocznym weekendem"
+                />
               </div>
             </div>
 
@@ -2473,7 +2503,7 @@ const Absences = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-600 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:shadow-black/20">
               <span className="font-medium">Legenda:</span>
               {[
                 ['working', 'W pracy'],
@@ -2498,11 +2528,11 @@ const Absences = () => {
 
             {/* Table */}
             {calendarLoading ? (
-              <div className="flex justify-center rounded-xl border border-gray-200 bg-white py-16 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex justify-center rounded-xl border border-gray-200 bg-white py-16 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#F7941D]" />
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
                 {calendarNeedsHorizontalScroll && (
                   <div
                     ref={calendarTopScrollRef}
@@ -2523,7 +2553,7 @@ const Absences = () => {
                   >
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.35)]">
                           Pracownik
                         </th>
                         {visibleAvailability.map(day => {
@@ -2565,7 +2595,7 @@ const Absences = () => {
                                 : 'bg-gray-50 dark:bg-gray-700/40'
                             }
                           >
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white sticky left-0 bg-inherit z-10">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white sticky left-0 bg-inherit z-10 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.35)]">
                               {u.name}
                             </td>
                             {visibleAvailability.map(day => {
@@ -2692,7 +2722,7 @@ const Absences = () => {
                         ))}
                       {visibleAvailability.length === 0 && (
                         <tr>
-                          <td colSpan={99} className="text-center py-12 text-gray-400 text-sm">
+                          <td colSpan={99} className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
                             Brak danych
                           </td>
                         </tr>
@@ -2708,7 +2738,7 @@ const Absences = () => {
         {/* Create Leave Request Modal */}
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl dark:bg-gray-800">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl shadow-black/20 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/50">
               <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-gray-700">
                 <div>
                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -2737,9 +2767,9 @@ const Absences = () => {
                       onChange={e => setFormUserId(e.target.value)}
                       className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     >
-                      <option value="">— ja ({user?.first_name} {user?.last_name}) —</option>
+                      <option value="">{formatUserName(user)} (Ty)</option>
                       {[...directoryUsers]
-                        .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'pl'))
+                        .sort(compareUsersByLastName)
                         .map(u => (
                           <option key={u.id} value={u.id}>{u.last_name} {u.first_name}</option>
                         ))}
@@ -2817,7 +2847,7 @@ const Absences = () => {
                       onClick={() => setLeaveDateMode('range')}
                       className={`h-9 rounded-md px-3 text-sm font-semibold transition-colors ${
                         leaveDateMode === 'range'
-                          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                          ? 'bg-[#F7941D] text-white shadow-sm'
                           : 'text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white'
                       }`}
                     >
@@ -2831,7 +2861,7 @@ const Absences = () => {
                       }}
                       className={`h-9 rounded-md px-3 text-sm font-semibold transition-colors ${
                         leaveDateMode === 'multiple'
-                          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                          ? 'bg-[#F7941D] text-white shadow-sm'
                           : 'text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white'
                       }`}
                     >
@@ -2991,7 +3021,7 @@ const Absences = () => {
                       isSubmittingLeave ||
                       (leaveDateMode === 'multiple' && selectedLeaveDates.length === 0)
                     }
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSubmittingLeave && <Loader2 className="h-4 w-4 animate-spin" />}
                     {leaveDateMode === 'multiple'

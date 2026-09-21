@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -36,7 +37,7 @@ const ChatWindow: React.FC = () => {
     if (activeChannel.type === 'direct' && activeChannel.members && activeChannel.members.length > 0) {
       const otherMember = activeChannel.members[0];
       return otherMember.user
-        ? `${otherMember.user.first_name} ${otherMember.user.last_name}`
+        ? formatUserName(otherMember.user)
         : t('chat:unnamed');
     }
     return t('chat:unnamed');

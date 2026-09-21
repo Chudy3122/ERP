@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
@@ -267,14 +268,14 @@ export default function BossCalendar() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [participantSearch, setParticipantSearch] = useState('');
   useEffect(() => {
-    userApi.getDirectory().then((u) => setUsers(u.filter((x) => x.is_active))).catch(() => {});
+    userApi.getDirectory().then((u) => setUsers(u.filter((x) => x.is_active).sort(compareUsersByLastName))).catch(() => {});
   }, []);
   // Only this person is pre-selected on new meetings (other szef-role users aren't)
   const defaultParticipantIds = users.filter((u) => u.email === DEFAULT_PARTICIPANT_EMAIL).map((u) => u.id);
   const isSzef = (id: string) => users.find((u) => u.id === id)?.role === 'szef';
   const userName = (id: string) => {
     const u = users.find((x) => x.id === id);
-    return u ? `${u.first_name} ${u.last_name}` : id;
+    return u ? formatUserName(u) : id;
   };
   const bossUser = users.find((u) => u.email === DEFAULT_PARTICIPANT_EMAIL)
     || users.find((u) => `${u.first_name} ${u.last_name}`.toLowerCase() === 'marcin rokoszewski');
@@ -609,7 +610,7 @@ export default function BossCalendar() {
   return (
     <MainLayout title="Kalendarz Szefa">
       <div className="mx-auto flex max-w-[1600px] flex-col space-y-6">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">Plan tygodnia</p>
@@ -630,7 +631,7 @@ export default function BossCalendar() {
               <button
                 type="button"
                 onClick={() => openCreate()}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
+                className="module-create-button inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/40"
               >
                 <Plus className="h-4 w-4" />
                 Dodaj wpis
@@ -643,7 +644,7 @@ export default function BossCalendar() {
           {statCards.map((card) => (
             <div
               key={card.label}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20"
             >
               <div className="flex items-center gap-3">
                 <span className={`h-3 w-3 rounded-full ${card.dot}`} />
@@ -656,7 +657,7 @@ export default function BossCalendar() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
@@ -701,7 +702,7 @@ export default function BossCalendar() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-gray-100 p-4 dark:border-gray-700 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -980,7 +981,7 @@ export default function BossCalendar() {
         </section>
 
         {/* Meeting statistics */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300">
               <BarChart3 className="h-5 w-5" />
@@ -1226,7 +1227,9 @@ export default function BossCalendar() {
                 </label>
                 {(form.participant_ids?.length ?? 0) > 0 && (
                   <div className="mb-2 flex flex-wrap gap-1.5">
-                    {form.participant_ids!.map((id) => (
+                    {[...form.participant_ids!].sort((a, b) => compareUsersByLastName(
+                      users.find(u => u.id === a), users.find(u => u.id === b),
+                    )).map((id) => (
                       <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F7941D]/10 px-2 py-0.5 text-xs font-medium text-[#b76612] dark:bg-[#F7941D]/15 dark:text-orange-200">
                         {userName(id)}{isSzef(id) ? ' (szef)' : ''}
                         <button
@@ -1250,7 +1253,7 @@ export default function BossCalendar() {
                 />
                 <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
                   {users
-                    .filter((u) => `${u.first_name} ${u.last_name}`.toLowerCase().includes(participantSearch.trim().toLowerCase()))
+                    .filter((u) => `${u.first_name} ${u.last_name} ${formatUserName(u)}`.toLowerCase().includes(participantSearch.trim().toLowerCase()))
                     .map((u) => {
                       const checked = (form.participant_ids || []).includes(u.id);
                       return (
@@ -1264,7 +1267,7 @@ export default function BossCalendar() {
                             })}
                             className="h-4 w-4 rounded border-gray-300 accent-[#F7941D]"
                           />
-                          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-gray-200">{u.first_name} {u.last_name}</span>
+                          <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-gray-200">{formatUserName(u)}</span>
                           {u.role === 'szef' && (
                             <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/20 dark:text-red-300">Szef</span>
                           )}
@@ -1449,7 +1452,9 @@ export default function BossCalendar() {
                         Uczestnicy ({selectedEntry.participant_ids.length})
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {selectedEntry.participant_ids.map((id) => (
+                        {[...selectedEntry.participant_ids].sort((a, b) => compareUsersByLastName(
+                          users.find(u => u.id === a), users.find(u => u.id === b),
+                        )).map((id) => (
                           <span key={id} className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                             {userName(id)}{isSzef(id) ? ' (szef)' : ''}
                           </span>

@@ -1,3 +1,4 @@
+import { formatUserName } from '../../utils/userSorting';
 import React, { useEffect, useState } from 'react';
 import { useChatContext } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -45,7 +46,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
     if (channel.type === 'direct' && channel.members && channel.members.length > 0) {
       const otherMember = channel.members[0];
       return otherMember.user
-        ? `${otherMember.user.first_name} ${otherMember.user.last_name}`
+        ? formatUserName(otherMember.user)
         : 'Nieznany użytkownik';
     }
     return 'Bez nazwy';

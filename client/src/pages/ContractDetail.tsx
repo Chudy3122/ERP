@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -520,7 +521,7 @@ const ContractDetail = () => {
                 <span className="text-gray-500 dark:text-gray-400">{t('createdBy')}</span>
                 <span className="text-gray-900 dark:text-white">
                   {contract.creator
-                    ? `${contract.creator.first_name} ${contract.creator.last_name}`
+                    ? formatUserName(contract.creator)
                     : '-'}
                 </span>
               </div>

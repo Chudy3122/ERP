@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -156,7 +157,7 @@ const TicketForm = () => {
         const dept = (u.department || '').toLowerCase();
         return dept === 'it' || dept === 'dział it' || dept === 'dzial it' || u.role === 'admin';
       };
-      setUsers(result.filter(u => u.is_active && isIT(u)));
+      setUsers(result.filter(u => u.is_active && isIT(u)).sort(compareUsersByLastName));
     } catch (error) {
       console.error('Failed to load users:', error);
     }
@@ -745,7 +746,7 @@ const TicketForm = () => {
                       <option value="">Nieprzypisane</option>
                       {users.map((u) => (
                         <option key={u.id} value={u.id}>
-                          {u.first_name} {u.last_name} ({u.email})
+                          {formatUserName(u)} ({u.email})
                         </option>
                       ))}
                     </select>
@@ -1024,7 +1025,7 @@ const TicketForm = () => {
                         <div className="min-w-0 flex-1">
                           <div className="mb-1 flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold text-gray-950 dark:text-white">
-                              {comment.user ? `${comment.user.first_name} ${comment.user.last_name}` : 'Nieznany'}
+                              {comment.user ? formatUserName(comment.user) : 'Nieznany'}
                             </span>
                             <span className="text-xs text-gray-400 dark:text-gray-500">
                               {formatDate(comment.created_at)}
@@ -1177,7 +1178,7 @@ const TicketForm = () => {
                   <div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">Utworzone przez</div>
                     <div className="text-sm text-gray-900 dark:text-gray-100">
-                      {ticket.creator.first_name} {ticket.creator.last_name}
+                      {formatUserName(ticket.creator)}
                     </div>
                   </div>
                 </div>
@@ -1192,7 +1193,7 @@ const TicketForm = () => {
                   <div className="text-xs text-gray-500 dark:text-gray-400">Przypisane do</div>
                   <div className="text-sm text-gray-900 dark:text-gray-100">
                     {ticket.assignee
-                      ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}`
+                      ? formatUserName(ticket.assignee)
                       : 'Nieprzypisane'}
                   </div>
                 </div>
@@ -1347,7 +1348,7 @@ const TicketForm = () => {
               </p>
               {ticket.assignee && (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Przypisane do: <span className="text-gray-700 dark:text-gray-300">{ticket.assignee.first_name} {ticket.assignee.last_name}</span>
+                  Przypisane do: <span className="text-gray-700 dark:text-gray-300">{formatUserName(ticket.assignee)}</span>
                 </p>
               )}
             </div>

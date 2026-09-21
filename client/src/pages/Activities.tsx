@@ -1,3 +1,4 @@
+import { formatUserName } from '../utils/userSorting';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -102,7 +103,7 @@ const getActivityDescription = (activity: ActivityLog) => {
 const getActivityActor = (activity: ActivityLog) => {
   const firstName = activity.user?.first_name || '';
   const lastName = activity.user?.last_name || '';
-  return `${firstName} ${lastName}`.trim() || 'System';
+  return formatUserName({ firstName, lastName }) || 'System';
 };
 
 const getTicketName = (activity: ActivityLog) => {
@@ -308,7 +309,7 @@ const Activities = () => {
 
     if (!firstName && !lastName) return 'System';
 
-    return `${firstName || ''} ${lastName || ''}`.trim();
+    return formatUserName({ firstName, lastName });
   };
 
   const getActivityIcon = (activity: ActivityLog) => {
@@ -451,7 +452,7 @@ const Activities = () => {
   return (
     <MainLayout title="Aktywność">
       <div className="space-y-5">
-        <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
               Stream aktywności
@@ -482,7 +483,7 @@ const Activities = () => {
               onClick={() => setActiveFilter(filter.value)}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 activeFilter === filter.value
-                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                  ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
                   : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-700'
               }`}
             >
@@ -491,7 +492,7 @@ const Activities = () => {
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 p-10 text-sm text-gray-500 dark:text-gray-400">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -590,7 +591,7 @@ const Activities = () => {
                         onClick={() => setPage(pageNumber)}
                         className={`h-9 min-w-9 rounded-lg px-3 text-sm font-medium transition-colors ${
                           page === pageNumber
-                            ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                            ? 'bg-[#F7941D] text-white shadow-sm shadow-[#F7941D]/20'
                             : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >

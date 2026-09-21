@@ -1,3 +1,4 @@
+import { compareUsersByLastName, formatUserName } from '../../utils/userSorting';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Search, UserPlus, Loader2, Users } from 'lucide-react';
@@ -33,7 +34,7 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
       setIsLoading(true);
       const userList = await adminApi.getUsers();
       // Filter out inactive users and users already in this department
-      setUsers(userList.filter(u => u.is_active && !currentEmployeeIds.includes(u.id)));
+      setUsers(userList.filter(u => u.is_active && !currentEmployeeIds.includes(u.id)).sort(compareUsersByLastName));
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
@@ -57,7 +58,8 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
   const filteredUsers = users.filter(user =>
     user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    formatUserName(user).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -123,7 +125,7 @@ const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 dark:text-white truncate">
-                      {user.first_name} {user.last_name}
+                      {formatUserName(user)}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                       {user.position || user.email}
