@@ -103,7 +103,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutTemplate,
-  Handshake,
+  Target,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -341,6 +341,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { name: 'Strefa prywatna', href: '/private-zone', icon: ListTodo },
 
     { type: 'divider' },
+    { type: 'header', name: 'Dane projektowe' },
+    { name: 'CRM', href: '/crm', icon: Target },
+
+    { type: 'divider' },
     { type: 'header', name: t('nav.employees') },
     { name: t('nav.employeeList'), href: '/employees', icon: Users },
     { name: t('nav.organization'), href: '/organization', icon: GitBranch },
@@ -353,7 +357,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },
     { name: 'Kontrahenci', href: '/clients', icon: Building2 },
-    { name: 'CRM', href: '/crm', icon: Handshake },
     { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT] },
 
     { type: 'divider' },
