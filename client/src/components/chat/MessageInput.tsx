@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import FileUpload from './FileUpload';
 import * as fileApi from '../../api/file.api';
@@ -295,7 +296,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         }
       } catch (error) {
         console.error('Failed to upload files:', error);
-        alert(t('chat:uploadError'));
+        toast.error(t('chat:uploadError'));
       } finally {
         setIsUploading(false);
       }

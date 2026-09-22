@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronRight, Mail, Phone, UserPlus, FileUp,
 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as api from '../api/crmProject.api';
 import type { CrmProjectRecord, CrmParticipant } from '../api/crmProject.api';
 import * as projectApi from '../api/project.api';
@@ -42,6 +43,11 @@ export default function CrmProjects() {
   const [participantForm, setParticipantForm] = useState<ParticipantForm>(EMPTY_PARTICIPANT);
 
   const [saving, setSaving] = useState(false);
+
+  // Delete confirmations (system dialog, not window.confirm)
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState<CrmProjectRecord | null>(null);
+  const [confirmDeleteParticipant, setConfirmDeleteParticipant] = useState<CrmParticipant | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // CSV import (per project)
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,13 +119,16 @@ export default function CrmProjects() {
     } finally { setSaving(false); }
   };
 
-  const deleteProject = async (r: CrmProjectRecord) => {
-    if (!window.confirm(`Usunąć projekt „${r.name}" wraz z uczestnikami? Tej operacji nie można cofnąć.`)) return;
+  const doDeleteProject = async () => {
+    if (!confirmDeleteProject) return;
+    setDeleting(true);
     try {
-      await api.deleteProjectRecord(r.id);
+      await api.deleteProjectRecord(confirmDeleteProject.id);
       toast.success('Usunięto projekt');
+      setConfirmDeleteProject(null);
       load();
     } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się usunąć'); }
+    finally { setDeleting(false); }
   };
 
   // ── CSV import (per project) ──
@@ -174,13 +183,16 @@ export default function CrmProjects() {
     } finally { setSaving(false); }
   };
 
-  const deleteParticipant = async (p: CrmParticipant) => {
-    if (!window.confirm(`Usunąć uczestnika „${p.full_name}"?`)) return;
+  const doDeleteParticipant = async () => {
+    if (!confirmDeleteParticipant) return;
+    setDeleting(true);
     try {
-      await api.deleteParticipant(p.id);
+      await api.deleteParticipant(confirmDeleteParticipant.id);
       toast.success('Usunięto uczestnika');
+      setConfirmDeleteParticipant(null);
       load();
     } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się usunąć'); }
+    finally { setDeleting(false); }
   };
 
   const inp = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
@@ -241,7 +253,7 @@ export default function CrmProjects() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <button onClick={() => openEditProject(r)} title="Edytuj projekt" className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => deleteProject(r)} title="Usuń projekt" className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setConfirmDeleteProject(r)} title="Usuń projekt" className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
 
@@ -289,7 +301,7 @@ export default function CrmProjects() {
                                   <td className="px-3 py-2 tabular-nums text-gray-600 dark:text-gray-300">{[fmtDate(p.start_date), fmtDate(p.end_date)].filter(Boolean).join(' – ') || '—'}</td>
                                   <td className="px-3 py-2 text-right">
                                     <button onClick={() => openEditParticipant(r.id, p)} title="Edytuj" className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"><Pencil className="h-3.5 w-3.5" /></button>
-                                    <button onClick={() => deleteParticipant(p)} title="Usuń" className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-3.5 w-3.5" /></button>
+                                    <button onClick={() => setConfirmDeleteParticipant(p)} title="Usuń" className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-3.5 w-3.5" /></button>
                                   </td>
                                 </tr>
                               ))}
@@ -433,6 +445,32 @@ export default function CrmProjects() {
 
       {/* Hidden CSV file input (shared, triggered per project) */}
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChosen} />
+
+      <ConfirmDialog
+        isOpen={confirmDeleteProject !== null}
+        onClose={() => setConfirmDeleteProject(null)}
+        onConfirm={doDeleteProject}
+        title="Usuń projekt"
+        message={`Czy na pewno usunąć projekt „${confirmDeleteProject?.name}" wraz ze wszystkimi uczestnikami? Tej operacji nie można cofnąć.`}
+        confirmText="Usuń"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="delete"
+        loading={deleting}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDeleteParticipant !== null}
+        onClose={() => setConfirmDeleteParticipant(null)}
+        onConfirm={doDeleteParticipant}
+        title="Usuń uczestnika"
+        message={`Czy na pewno usunąć uczestnika „${confirmDeleteParticipant?.full_name}"? Tej operacji nie można cofnąć.`}
+        confirmText="Usuń"
+        cancelText="Anuluj"
+        variant="danger"
+        icon="delete"
+        loading={deleting}
+      />
     </MainLayout>
   );
 }

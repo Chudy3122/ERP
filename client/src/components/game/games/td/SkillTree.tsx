@@ -1,5 +1,6 @@
 import { Star, Lock, Check, X, RotateCcw } from 'lucide-react';
 import { BRANCHES, availableStars, earnedStars, saveMeta, type Meta, type BranchId } from './perks';
+import { confirmDialog } from '../../../../utils/confirm';
 
 interface Props {
   meta: Meta;
@@ -29,9 +30,17 @@ export default function SkillTree({ meta, onChange, onClose }: Props) {
   // Refund every spent star (perks cleared) while keeping the stars you earned,
   // so you can redistribute the whole tree from scratch.
   const spent = total - left;
-  const reset = () => {
+  const reset = async () => {
     if (spent === 0) return;
-    if (!window.confirm('Wyzerować kronikę? Wszystkie gwiazdki wrócą do puli i rozdasz je od nowa.')) return;
+    const ok = await confirmDialog({
+      title: 'Wyzerować kronikę?',
+      message: 'Wszystkie gwiazdki wrócą do puli i rozdasz je od nowa.',
+      confirmText: 'Wyzeruj',
+      cancelText: 'Anuluj',
+      variant: 'warning',
+      icon: 'warning',
+    });
+    if (!ok) return;
     const next: Meta = { ...meta, perks: {} };
     saveMeta(next);
     onChange(next);

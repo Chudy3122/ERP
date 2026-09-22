@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import {
   CreditCard,
   Banknote,
@@ -62,7 +63,7 @@ const PaymentHistory = ({
       loadPayments();
       onPaymentChange?.();
     } catch (error: any) {
-      alert(error.response?.data?.message || t('deleteError'));
+      toast.error(error.response?.data?.message || t('deleteError'));
     } finally {
       setIsDeleting(null);
     }

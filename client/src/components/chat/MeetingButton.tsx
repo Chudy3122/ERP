@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import * as meetingApi from '../../api/meeting.api';
 import { MeetingPlatform } from '../../api/meeting.api';
 
@@ -29,7 +30,7 @@ const MeetingButton: React.FC<MeetingButtonProps> = ({ onMeetingGenerated, disab
       setIsOpen(false);
     } catch (error) {
       console.error('Failed to generate meeting link:', error);
-      alert('Nie udało się wygenerować linku do spotkania');
+      toast.error('Nie udało się wygenerować linku do spotkania');
     } finally {
       setIsGenerating(false);
     }
