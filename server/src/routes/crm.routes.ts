@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import crmController from '../controllers/crm.controller';
+import crmProjectController from '../controllers/crmProject.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { UserRole } from '../models/User.model';
@@ -7,6 +8,15 @@ import { UserRole } from '../models/User.model';
 const router = Router();
 
 router.use(authenticate);
+
+// ── Project records + participants ("Dane projektowe") — all signed-in users ──
+router.get('/records', crmProjectController.listRecords.bind(crmProjectController));
+router.post('/records', crmProjectController.createRecord.bind(crmProjectController));
+router.put('/records/:id', crmProjectController.updateRecord.bind(crmProjectController));
+router.delete('/records/:id', crmProjectController.deleteRecord.bind(crmProjectController));
+router.post('/records/:id/participants', crmProjectController.addParticipant.bind(crmProjectController));
+router.put('/participants/:id', crmProjectController.updateParticipant.bind(crmProjectController));
+router.delete('/participants/:id', crmProjectController.deleteParticipant.bind(crmProjectController));
 
 // ── Pipelines ──
 router.get('/pipelines', crmController.getAllPipelines.bind(crmController));

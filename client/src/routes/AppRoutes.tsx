@@ -38,9 +38,7 @@ import Contracts from '../pages/Contracts';
 import ContractForm from '../pages/ContractForm';
 import ContractDetail from '../pages/ContractDetail';
 import ProjectTemplates from '../pages/ProjectTemplates';
-import CrmBoard from '../pages/CrmBoard';
-import CrmDealDetail from '../pages/CrmDealDetail';
-import CrmDashboard from '../pages/CrmDashboard';
+import CrmProjects from '../pages/CrmProjects';
 import LandingPage from '../pages/LandingPage';
 import Procedures from '../pages/Procedures';
 import BossCalendar from '../pages/BossCalendar';
@@ -368,23 +366,7 @@ const AppRoutes = () => {
         path="/crm"
         element={
           <PrivateRoute>
-            <CrmBoard />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/crm/dashboard"
-        element={
-          <PrivateRoute>
-            <CrmDashboard />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/crm/deals/:id"
-        element={
-          <PrivateRoute>
-            <CrmDealDetail />
+            <CrmProjects />
           </PrivateRoute>
         }
       />
