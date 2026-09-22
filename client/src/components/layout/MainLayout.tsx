@@ -103,6 +103,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutTemplate,
+  Handshake,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -352,6 +353,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: 'Finanse' },
     { name: 'Kontrahenci', href: '/clients', icon: Building2 },
+    { name: 'CRM', href: '/crm', icon: Handshake },
     { name: t('nav.invoiceList'), href: '/invoices', icon: Receipt, roles: [UserRole.ADMIN, UserRole.SZEF, UserRole.KIEROWNIK, UserRole.KSIEGOWOSC, UserRole.KADRY, UserRole.SEKRETARIAT] },
 
     { type: 'divider' },
