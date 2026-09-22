@@ -1,20 +1,28 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
   Target, Plus, Pencil, Trash2, Users, Search, X, Loader2,
-  ChevronDown, ChevronRight, Mail, Phone, Building2, UserPlus,
+  ChevronDown, ChevronRight, Mail, Phone, UserPlus, FileUp,
 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import * as api from '../api/crmProject.api';
 import type { CrmProjectRecord, CrmParticipant } from '../api/crmProject.api';
 import * as projectApi from '../api/project.api';
+import { parseEfsCsv } from '../utils/efsCsv';
 
 type ProjectOption = { id: string; name: string };
 type ProjectForm = { projectId: string; info: string };
 type ParticipantForm = {
-  full_name: string; role: string; company: string; email: string; phone: string; notes: string;
+  full_name: string; pesel: string; gender: string; age: string; education: string;
+  city: string; postal_code: string; phone: string; email: string; labour_status: string;
+  start_date: string; end_date: string; role: string; company: string; notes: string;
 };
-const EMPTY_PARTICIPANT: ParticipantForm = { full_name: '', role: '', company: '', email: '', phone: '', notes: '' };
+const EMPTY_PARTICIPANT: ParticipantForm = {
+  full_name: '', pesel: '', gender: '', age: '', education: '', city: '', postal_code: '',
+  phone: '', email: '', labour_status: '', start_date: '', end_date: '', role: '', company: '', notes: '',
+};
+
+const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString('pl-PL') : '');
 
 export default function CrmProjects() {
   const [records, setRecords] = useState<CrmProjectRecord[]>([]);
@@ -34,6 +42,11 @@ export default function CrmProjects() {
   const [participantForm, setParticipantForm] = useState<ParticipantForm>(EMPTY_PARTICIPANT);
 
   const [saving, setSaving] = useState(false);
+
+  // CSV import (per project)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const importRecordIdRef = useRef<string | null>(null);
+  const [importing, setImporting] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -109,10 +122,36 @@ export default function CrmProjects() {
     } catch (e: any) { toast.error(e?.response?.data?.message || 'Nie udało się usunąć'); }
   };
 
+  // ── CSV import (per project) ──
+  const triggerImport = (recordId: string) => { importRecordIdRef.current = recordId; fileInputRef.current?.click(); };
+  const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-picking the same file
+    const recordId = importRecordIdRef.current;
+    if (!file || !recordId) return;
+    setImporting(recordId);
+    try {
+      const text = await file.text();
+      const { rows } = parseEfsCsv(text);
+      if (!rows.length) { toast.error('Nie znaleziono uczestników w pliku — sprawdź czy to eksport EFS (separator „;").'); return; }
+      const res = await api.bulkImportParticipants(recordId, rows);
+      toast.success(`Zaimportowano ${res.imported} uczestników${res.skipped ? `, pominięto ${res.skipped}` : ''}.`);
+      setExpanded((prev) => new Set(prev).add(recordId));
+      load();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Nie udało się zaimportować CSV');
+    } finally { setImporting(null); importRecordIdRef.current = null; }
+  };
+
   // ── Participant CRUD ──
   const openNewParticipant = (recordId: string) => { setParticipantForm(EMPTY_PARTICIPANT); setParticipantModal({ recordId, editing: null }); };
   const openEditParticipant = (recordId: string, p: CrmParticipant) => {
-    setParticipantForm({ full_name: p.full_name, role: p.role || '', company: p.company || '', email: p.email || '', phone: p.phone || '', notes: p.notes || '' });
+    setParticipantForm({
+      full_name: p.full_name, pesel: p.pesel || '', gender: p.gender || '', age: p.age != null ? String(p.age) : '',
+      education: p.education || '', city: p.city || '', postal_code: p.postal_code || '', phone: p.phone || '',
+      email: p.email || '', labour_status: p.labour_status || '', start_date: p.start_date ? p.start_date.slice(0, 10) : '',
+      end_date: p.end_date ? p.end_date.slice(0, 10) : '', role: p.role || '', company: p.company || '', notes: p.notes || '',
+    });
     setParticipantModal({ recordId, editing: p });
   };
 
@@ -122,10 +161,10 @@ export default function CrmProjects() {
     setSaving(true);
     try {
       if (participantModal.editing) {
-        await api.updateParticipant(participantModal.editing.id, participantForm);
+        await api.updateParticipant(participantModal.editing.id, { ...participantForm });
         toast.success('Zapisano uczestnika');
       } else {
-        await api.addParticipant(participantModal.recordId, participantForm);
+        await api.addParticipant(participantModal.recordId, { ...participantForm });
         toast.success('Dodano uczestnika');
       }
       setParticipantModal(null);
@@ -209,37 +248,46 @@ export default function CrmProjects() {
                   {open && (
                     <div className="border-t border-gray-100 dark:border-gray-700">
                       {count === 0 ? (
-                        <p className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">Brak uczestników.</p>
+                        <p className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">Brak uczestników — dodaj ręcznie lub wgraj CSV.</p>
                       ) : (
                         <div className="overflow-x-auto">
-                          <table className="min-w-full text-sm">
+                          <table className="min-w-full whitespace-nowrap text-sm">
                             <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
                               <tr>
-                                <th className="px-4 py-2 text-left">Imię i nazwisko</th>
-                                <th className="px-4 py-2 text-left">Rola / funkcja</th>
-                                <th className="px-4 py-2 text-left">Firma / instytucja</th>
-                                <th className="px-4 py-2 text-left">Kontakt</th>
-                                <th className="px-4 py-2 text-left">Notatki</th>
-                                <th className="px-4 py-2 text-right">Akcje</th>
+                                <th className="px-3 py-2 text-left">Imię i nazwisko</th>
+                                <th className="px-3 py-2 text-left">PESEL</th>
+                                <th className="px-3 py-2 text-left">Płeć</th>
+                                <th className="px-3 py-2 text-right">Wiek</th>
+                                <th className="px-3 py-2 text-left">Wykształcenie</th>
+                                <th className="px-3 py-2 text-left">Miejscowość</th>
+                                <th className="px-3 py-2 text-left">Kontakt</th>
+                                <th className="px-3 py-2 text-left">Status</th>
+                                <th className="px-3 py-2 text-left">Udział</th>
+                                <th className="px-3 py-2 text-right">Akcje</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                               {r.participants.map((p) => (
                                 <tr key={p.id} className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                                  <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">{p.full_name}</td>
-                                  <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{p.role || '—'}</td>
-                                  <td className="px-4 py-2 text-gray-600 dark:text-gray-300">
-                                    {p.company ? <span className="inline-flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-gray-400" />{p.company}</span> : '—'}
+                                  <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                                    {p.full_name}
+                                    {p.extra_data && <span title={p.extra_data} className="ml-1 cursor-help text-gray-300" aria-label="Dane dodatkowe">ⓘ</span>}
                                   </td>
-                                  <td className="px-4 py-2 text-gray-600 dark:text-gray-300">
+                                  <td className="px-3 py-2 tabular-nums text-gray-600 dark:text-gray-300">{p.pesel || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{p.gender || '—'}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-300">{p.age ?? '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{p.education || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{[p.postal_code, p.city].filter(Boolean).join(' ') || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                                     <div className="flex flex-col gap-0.5">
                                       {p.email && <a href={`mailto:${p.email}`} className="inline-flex items-center gap-1 text-[#F7941D] hover:underline"><Mail className="h-3.5 w-3.5" />{p.email}</a>}
                                       {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 hover:underline"><Phone className="h-3.5 w-3.5 text-gray-400" />{p.phone}</a>}
                                       {!p.email && !p.phone && '—'}
                                     </div>
                                   </td>
-                                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400"><span className="whitespace-pre-wrap">{p.notes || '—'}</span></td>
-                                  <td className="px-4 py-2 text-right">
+                                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{p.labour_status || '—'}</td>
+                                  <td className="px-3 py-2 tabular-nums text-gray-600 dark:text-gray-300">{[fmtDate(p.start_date), fmtDate(p.end_date)].filter(Boolean).join(' – ') || '—'}</td>
+                                  <td className="px-3 py-2 text-right">
                                     <button onClick={() => openEditParticipant(r.id, p)} title="Edytuj" className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"><Pencil className="h-3.5 w-3.5" /></button>
                                     <button onClick={() => deleteParticipant(p)} title="Usuń" className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"><Trash2 className="h-3.5 w-3.5" /></button>
                                   </td>
@@ -249,9 +297,12 @@ export default function CrmProjects() {
                           </table>
                         </div>
                       )}
-                      <div className="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+                      <div className="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
                         <button onClick={() => openNewParticipant(r.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                           <UserPlus className="h-4 w-4" /> Dodaj uczestnika
+                        </button>
+                        <button onClick={() => triggerImport(r.id)} disabled={importing === r.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#F7941D]/40 bg-[#F7941D]/10 px-3 py-1.5 text-sm font-semibold text-[#B76200] hover:bg-[#F7941D]/20 disabled:opacity-60 dark:text-orange-300">
+                          {importing === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />} Wgraj CSV
                         </button>
                       </div>
                     </div>
@@ -305,23 +356,39 @@ export default function CrmProjects() {
       {/* Participant modal */}
       {participantModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setParticipantModal(null)}>
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{participantModal.editing ? 'Edytuj uczestnika' : 'Nowy uczestnik'}</h3>
               <button onClick={() => setParticipantModal(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
             </div>
-            <div className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-2">
+            <div className="grid flex-1 grid-cols-1 gap-3 overflow-y-auto px-5 py-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Imię i nazwisko *</label>
                 <input autoFocus value={participantForm.full_name} onChange={(e) => setParticipantForm({ ...participantForm, full_name: e.target.value })} className={inp} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Rola / funkcja</label>
-                <input value={participantForm.role} onChange={(e) => setParticipantForm({ ...participantForm, role: e.target.value })} className={inp} placeholder="np. Inwestor, Projektant" />
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">PESEL / identyfikator</label>
+                <input value={participantForm.pesel} onChange={(e) => setParticipantForm({ ...participantForm, pesel: e.target.value })} className={inp} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Firma / instytucja</label>
-                <input value={participantForm.company} onChange={(e) => setParticipantForm({ ...participantForm, company: e.target.value })} className={inp} />
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Płeć</label>
+                <input value={participantForm.gender} onChange={(e) => setParticipantForm({ ...participantForm, gender: e.target.value })} className={inp} placeholder="Kobieta / Mężczyzna" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Wiek</label>
+                <input type="number" value={participantForm.age} onChange={(e) => setParticipantForm({ ...participantForm, age: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Wykształcenie</label>
+                <input value={participantForm.education} onChange={(e) => setParticipantForm({ ...participantForm, education: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Miejscowość</label>
+                <input value={participantForm.city} onChange={(e) => setParticipantForm({ ...participantForm, city: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Kod pocztowy</label>
+                <input value={participantForm.postal_code} onChange={(e) => setParticipantForm({ ...participantForm, postal_code: e.target.value })} className={inp} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">E-mail</label>
@@ -332,17 +399,40 @@ export default function CrmProjects() {
                 <input value={participantForm.phone} onChange={(e) => setParticipantForm({ ...participantForm, phone: e.target.value })} className={inp} />
               </div>
               <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Status na rynku pracy</label>
+                <input value={participantForm.labour_status} onChange={(e) => setParticipantForm({ ...participantForm, labour_status: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Data rozpoczęcia udziału</label>
+                <input type="date" value={participantForm.start_date} onChange={(e) => setParticipantForm({ ...participantForm, start_date: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Data zakończenia udziału</label>
+                <input type="date" value={participantForm.end_date} onChange={(e) => setParticipantForm({ ...participantForm, end_date: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Rola / rodzaj uczestnika</label>
+                <input value={participantForm.role} onChange={(e) => setParticipantForm({ ...participantForm, role: e.target.value })} className={inp} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Firma / instytucja</label>
+                <input value={participantForm.company} onChange={(e) => setParticipantForm({ ...participantForm, company: e.target.value })} className={inp} />
+              </div>
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Notatki</label>
                 <textarea rows={3} value={participantForm.notes} onChange={(e) => setParticipantForm({ ...participantForm, notes: e.target.value })} className={inp + ' resize-y'} />
               </div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-5 py-4 dark:border-gray-700">
               <button onClick={() => setParticipantModal(null)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Anuluj</button>
               <button onClick={saveParticipant} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#F7941D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e0850f] disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />} Zapisz</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Hidden CSV file input (shared, triggered per project) */}
+      <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChosen} />
     </MainLayout>
   );
 }

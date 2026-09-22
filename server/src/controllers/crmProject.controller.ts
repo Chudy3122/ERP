@@ -12,6 +12,24 @@ const cleanStr = (v: unknown): string | null => {
   return t.length ? t : null;
 };
 
+// String-valued participant fields (all optional, stored as text/varchar).
+const STR_FIELDS = [
+  'role', 'company', 'email', 'phone', 'pesel', 'gender', 'education',
+  'city', 'postal_code', 'labour_status', 'extra_data', 'notes',
+] as const;
+// Date fields expect an ISO 'YYYY-MM-DD' string (the client converts from CSV).
+const DATE_FIELDS = ['start_date', 'end_date'] as const;
+
+/** Copy the optional participant fields from a request body onto a participant. */
+const applyParticipantFields = (target: CrmProjectParticipant, body: any): void => {
+  for (const f of STR_FIELDS) if (body[f] !== undefined) (target as any)[f] = cleanStr(body[f]);
+  for (const f of DATE_FIELDS) if (body[f] !== undefined) (target as any)[f] = cleanStr(body[f]);
+  if (body.age !== undefined) {
+    const n = parseInt(String(body.age), 10);
+    target.age = Number.isFinite(n) ? n : null;
+  }
+};
+
 class CrmProjectController {
   /** GET /crm/records — all project records with their participants. */
   async listRecords(_req: Request, res: Response): Promise<void> {
@@ -102,19 +120,37 @@ class CrmProjectController {
       if (!record) { res.status(404).json({ message: 'Nie znaleziono projektu' }); return; }
       const fullName = cleanStr(req.body?.full_name);
       if (!fullName) { res.status(400).json({ message: 'Imię i nazwisko uczestnika jest wymagane' }); return; }
-      const participant = participantRepo().create({
-        project_record_id: record.id,
-        full_name: fullName,
-        role: cleanStr(req.body?.role),
-        company: cleanStr(req.body?.company),
-        email: cleanStr(req.body?.email),
-        phone: cleanStr(req.body?.phone),
-        notes: cleanStr(req.body?.notes),
-      });
+      const participant = participantRepo().create({ project_record_id: record.id, full_name: fullName });
+      applyParticipantFields(participant, req.body || {});
       await participantRepo().save(participant);
       res.status(201).json(participant);
     } catch (error: any) {
       res.status(400).json({ message: error.message || 'Błąd dodawania uczestnika' });
+    }
+  }
+
+  /** POST /crm/records/:id/participants/bulk — import many participants (CSV). */
+  async bulkAddParticipants(req: Request, res: Response): Promise<void> {
+    try {
+      const record = await recordRepo().findOne({ where: { id: req.params.id } });
+      if (!record) { res.status(404).json({ message: 'Nie znaleziono projektu' }); return; }
+      const rows: any[] = Array.isArray(req.body?.participants) ? req.body.participants : [];
+      if (!rows.length) { res.status(400).json({ message: 'Brak wierszy do importu' }); return; }
+
+      const toSave: CrmProjectParticipant[] = [];
+      let skipped = 0;
+      for (const row of rows) {
+        const fullName = cleanStr(row?.full_name);
+        if (!fullName) { skipped++; continue; }
+        const p = participantRepo().create({ project_record_id: record.id, full_name: fullName });
+        applyParticipantFields(p, row);
+        toSave.push(p);
+      }
+      if (!toSave.length) { res.status(400).json({ message: 'Żaden wiersz nie zawierał imienia i nazwiska' }); return; }
+      await participantRepo().save(toSave, { chunk: 100 });
+      res.status(201).json({ imported: toSave.length, skipped });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || 'Błąd importu uczestników' });
     }
   }
 
@@ -128,9 +164,7 @@ class CrmProjectController {
         if (!fullName) { res.status(400).json({ message: 'Imię i nazwisko nie może być puste' }); return; }
         participant.full_name = fullName;
       }
-      for (const field of ['role', 'company', 'email', 'phone', 'notes'] as const) {
-        if (req.body?.[field] !== undefined) participant[field] = cleanStr(req.body[field]);
-      }
+      applyParticipantFields(participant, req.body || {});
       await participantRepo().save(participant);
       res.json(participant);
     } catch (error: any) {

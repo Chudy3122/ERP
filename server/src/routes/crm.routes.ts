@@ -15,6 +15,7 @@ router.post('/records', crmProjectController.createRecord.bind(crmProjectControl
 router.put('/records/:id', crmProjectController.updateRecord.bind(crmProjectController));
 router.delete('/records/:id', crmProjectController.deleteRecord.bind(crmProjectController));
 router.post('/records/:id/participants', crmProjectController.addParticipant.bind(crmProjectController));
+router.post('/records/:id/participants/bulk', crmProjectController.bulkAddParticipants.bind(crmProjectController));
 router.put('/participants/:id', crmProjectController.updateParticipant.bind(crmProjectController));
 router.delete('/participants/:id', crmProjectController.deleteParticipant.bind(crmProjectController));
 
