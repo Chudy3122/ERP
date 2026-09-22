@@ -7,8 +7,10 @@ import {
 import MainLayout from '../components/layout/MainLayout';
 import * as api from '../api/crmProject.api';
 import type { CrmProjectRecord, CrmParticipant } from '../api/crmProject.api';
+import * as projectApi from '../api/project.api';
 
-type ProjectForm = { name: string; info: string };
+type ProjectOption = { id: string; name: string };
+type ProjectForm = { projectId: string; info: string };
 type ParticipantForm = {
   full_name: string; role: string; company: string; email: string; phone: string; notes: string;
 };
@@ -20,9 +22,12 @@ export default function CrmProjects() {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  // Projects pulled from the Projects module (source of truth for the dropdown)
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+
   // Project add/edit modal
   const [projectModal, setProjectModal] = useState<{ editing: CrmProjectRecord | null } | null>(null);
-  const [projectForm, setProjectForm] = useState<ProjectForm>({ name: '', info: '' });
+  const [projectForm, setProjectForm] = useState<ProjectForm>({ projectId: '', info: '' });
 
   // Participant add/edit modal
   const [participantModal, setParticipantModal] = useState<{ recordId: string; editing: CrmParticipant | null } | null>(null);
@@ -42,6 +47,12 @@ export default function CrmProjects() {
   };
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    projectApi.getProjects()
+      .then((res) => setProjects((res.projects || []).map((p) => ({ id: p.id, name: p.name }))))
+      .catch(() => setProjects([]));
+  }, []);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return records;
@@ -59,19 +70,26 @@ export default function CrmProjects() {
     return next;
   });
 
+  // Projects not yet added to the CRM (so a project appears once — no duplicates).
+  const availableProjects = useMemo(() => {
+    const used = new Set(records.map((r) => r.project_id).filter(Boolean));
+    return projects.filter((p) => !used.has(p.id)).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  }, [projects, records]);
+
   // ── Project CRUD ──
-  const openNewProject = () => { setProjectForm({ name: '', info: '' }); setProjectModal({ editing: null }); };
-  const openEditProject = (r: CrmProjectRecord) => { setProjectForm({ name: r.name, info: r.info || '' }); setProjectModal({ editing: r }); };
+  const openNewProject = () => { setProjectForm({ projectId: '', info: '' }); setProjectModal({ editing: null }); };
+  const openEditProject = (r: CrmProjectRecord) => { setProjectForm({ projectId: r.project_id || '', info: r.info || '' }); setProjectModal({ editing: r }); };
 
   const saveProject = async () => {
-    if (!projectForm.name.trim()) { toast.error('Podaj nazwę projektu'); return; }
     setSaving(true);
     try {
       if (projectModal?.editing) {
-        await api.updateProjectRecord(projectModal.editing.id, { name: projectForm.name, info: projectForm.info });
+        await api.updateProjectRecord(projectModal.editing.id, { info: projectForm.info });
         toast.success('Zapisano projekt');
       } else {
-        const created = await api.createProjectRecord({ name: projectForm.name, info: projectForm.info });
+        const picked = projects.find((p) => p.id === projectForm.projectId);
+        if (!picked) { toast.error('Wybierz projekt z listy'); setSaving(false); return; }
+        const created = await api.createProjectRecord({ project_id: picked.id, name: picked.name, info: projectForm.info });
         setExpanded((prev) => new Set(prev).add(created.id));
         toast.success('Dodano projekt');
       }
@@ -255,8 +273,21 @@ export default function CrmProjects() {
             </div>
             <div className="space-y-3 px-5 py-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Nazwa projektu *</label>
-                <input autoFocus value={projectForm.name} onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })} className={inp} placeholder="np. Budowa hali produkcyjnej" />
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Projekt *</label>
+                {projectModal.editing ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200">
+                    {projectModal.editing.name}
+                  </div>
+                ) : availableProjects.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
+                    Wszystkie projekty są już dodane (albo brak projektów w module Projekty).
+                  </p>
+                ) : (
+                  <select autoFocus value={projectForm.projectId} onChange={(e) => setProjectForm({ ...projectForm, projectId: e.target.value })} className={inp}>
+                    <option value="">— wybierz projekt z listy —</option>
+                    {availableProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Informacje (opcjonalnie)</label>

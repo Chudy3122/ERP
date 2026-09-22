@@ -15,6 +15,7 @@ export interface CrmParticipant {
 
 export interface CrmProjectRecord {
   id: string;
+  project_id: string | null;
   name: string;
   info: string | null;
   created_by: string | null;
@@ -37,7 +38,9 @@ export const listProjectRecords = async (): Promise<CrmProjectRecord[]> => {
   return res.data;
 };
 
-export const createProjectRecord = async (data: { name: string; info?: string | null }): Promise<CrmProjectRecord> => {
+export const createProjectRecord = async (
+  data: { project_id?: string | null; name: string; info?: string | null },
+): Promise<CrmProjectRecord> => {
   const res = await client.post('/crm/records', data);
   return res.data;
 };

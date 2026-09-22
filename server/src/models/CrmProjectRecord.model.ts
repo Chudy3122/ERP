@@ -18,6 +18,11 @@ export class CrmProjectRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  /** Linked project from the Projects module (source of truth). */
+  @Column({ type: 'uuid', nullable: true })
+  project_id: string | null;
+
+  /** Project name, denormalised from the linked project for display/search. */
   @Column({ type: 'varchar', length: 255 })
   name: string;
 

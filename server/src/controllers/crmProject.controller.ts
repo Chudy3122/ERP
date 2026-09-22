@@ -30,14 +30,31 @@ class CrmProjectController {
     }
   }
 
-  /** POST /crm/records — create a project record. */
+  /** POST /crm/records — create a record for a project (upsert by project_id). */
   async createRecord(req: Request, res: Response): Promise<void> {
     try {
       const name = cleanStr(req.body?.name);
       if (!name) { res.status(400).json({ message: 'Nazwa projektu jest wymagana' }); return; }
+      const projectId = cleanStr(req.body?.project_id);
+      const info = cleanStr(req.body?.info);
+
+      // A project appears once — reuse its existing record instead of duplicating.
+      if (projectId) {
+        const existing = await recordRepo().findOne({ where: { project_id: projectId } });
+        if (existing) {
+          existing.name = name;
+          if (info !== null) existing.info = info;
+          await recordRepo().save(existing);
+          const full = await recordRepo().findOne({ where: { id: existing.id }, relations: ['participants'] });
+          res.status(200).json(full);
+          return;
+        }
+      }
+
       const record = recordRepo().create({
+        project_id: projectId,
         name,
-        info: cleanStr(req.body?.info),
+        info,
         created_by: req.user?.userId ?? null,
       });
       await recordRepo().save(record);
