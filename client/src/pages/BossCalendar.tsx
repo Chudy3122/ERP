@@ -7,6 +7,7 @@ import * as calendarApi from '../api/calendar.api';
 import * as userApi from '../api/user.api';
 import type { AdminUser } from '../types/admin.types';
 import { BossCalendarEntry, CreateEntryPayload, EntryType } from '../types/boss-calendar.types';
+import { findMeetingConflict, getConflictDate } from '../utils/calendarConflicts';
 import {
   AlignLeft,
   BarChart3,
@@ -421,6 +422,13 @@ export default function BossCalendar() {
     setEditingEntry(null);
   };
 
+  const showMeetingConflict = (conflict: BossCalendarEntry, candidate: CreateEntryPayload) => {
+    const conflictDate = getConflictDate(conflict, candidate);
+    toast.warning(
+      `Termin koliduje ze spotkaniem „${conflict.title}” (${formatShortDate(conflictDate)}, ${conflict.start_time}–${conflict.end_time}).`,
+    );
+  };
+
   const handleSave = async () => {
     if (!form.title.trim()) {
       toast.warning('Tytuł jest wymagany');
@@ -443,14 +451,24 @@ export default function BossCalendar() {
       return;
     }
 
+    const payload: CreateEntryPayload = {
+      ...form,
+      end_date: multiDay && form.end_date && form.end_date !== form.date ? form.end_date : null,
+      description: form.description || undefined,
+      location: form.location || undefined,
+    };
+
     setSaving(true);
     try {
-      const payload: CreateEntryPayload = {
-        ...form,
-        end_date: multiDay && form.end_date && form.end_date !== form.date ? form.end_date : null,
-        description: form.description || undefined,
-        location: form.location || undefined,
-      };
+      if (payload.type === 'meeting') {
+        const entriesInRange = await api.getEntries(payload.date, payload.end_date || payload.date);
+        const conflict = findMeetingConflict(entriesInRange, payload, editingEntry?.id);
+        if (conflict) {
+          showMeetingConflict(conflict, payload);
+          return;
+        }
+      }
+
       if (editingEntry) {
         await api.updateEntry(editingEntry.id, payload);
         toast.success('Wpis zaktualizowany');
@@ -462,7 +480,7 @@ export default function BossCalendar() {
       load();
       loadMonth();
     } catch {
-      toast.error('Nie udało się zapisać wpisu');
+      toast.error('Nie udało się sprawdzić terminu lub zapisać wpisu');
     } finally {
       setSaving(false);
     }
@@ -512,14 +530,32 @@ export default function BossCalendar() {
     const startMin = HOUR_START * 60 + minutesFromTop;
     const start_time = fmtHM(startMin);
     const end_time = fmtHM(startMin + drag.durationMin);
+    const draggedEntry = entries.find(entry => entry.id === drag.id);
 
     try {
+      if (draggedEntry?.type === 'meeting') {
+        const entriesOnTargetDay = await api.getEntries(dayStr, dayStr);
+        const candidate: CreateEntryPayload = {
+          date: dayStr,
+          end_date: null,
+          start_time,
+          end_time,
+          title: draggedEntry.title,
+          type: 'meeting',
+        };
+        const conflict = findMeetingConflict(entriesOnTargetDay, candidate, drag.id);
+        if (conflict) {
+          showMeetingConflict(conflict, candidate);
+          return;
+        }
+      }
+
       await api.updateEntry(drag.id, { date: dayStr, start_time, end_time });
       toast.success('Przeniesiono spotkanie');
       load();
       loadMonth();
     } catch {
-      toast.error('Nie udało się przenieść spotkania');
+      toast.error('Nie udało się sprawdzić terminu lub przenieść spotkania');
     }
   };
 
