@@ -73,6 +73,13 @@ router.delete('/entries/:id', timeController.deleteTimeEntry.bind(timeController
 // Create leave request
 router.post('/leave', timeController.createLeaveRequest);
 
+// Edit an existing leave request (admin only)
+router.put(
+  '/leave/:id',
+  roleMiddleware([UserRole.ADMIN]),
+  timeController.updateLeaveRequest.bind(timeController)
+);
+
 // Get user's leave requests
 router.get('/leave', timeController.getUserLeaveRequests);
 

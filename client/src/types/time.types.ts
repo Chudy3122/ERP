@@ -169,6 +169,15 @@ export interface CreateLeaveRequest {
   userId?: string; // admin/kadry: file on behalf of another employee
 }
 
+export interface UpdateLeaveRequest {
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
 export interface ReviewLeaveRequest {
   notes?: string;
 }

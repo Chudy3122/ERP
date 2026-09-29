@@ -714,6 +714,89 @@ export class TimeService {
   }
 
   /**
+   * Update an existing leave request without replacing its identity or review history.
+   * Access control is enforced by the route (admin only).
+   */
+  async updateLeaveRequest(
+    requestId: string,
+    leaveType: LeaveType,
+    startDate: Date,
+    endDate: Date,
+    reason?: string,
+    startTime?: string,
+    endTime?: string,
+  ): Promise<LeaveRequest> {
+    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
+    if (!request) throw new Error('Wniosek nie został znaleziony');
+
+    if (!Object.values(LeaveType).includes(leaveType)) {
+      throw new Error('Nieprawidłowy typ nieobecności');
+    }
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new Error('Podaj prawidłowy termin nieobecności');
+    }
+
+    request.leave_type = leaveType;
+    request.start_date = startDate;
+    request.reason = reason?.trim() || null;
+
+    if (leaveType === LeaveType.OCCASIONAL_HOURLY) {
+      const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+      if (!startTime || !endTime || !timePattern.test(startTime) || !timePattern.test(endTime)) {
+        throw new Error('Podaj prawidłowe godziny od i do');
+      }
+
+      const toMinutes = (value: string) => {
+        const [hours, minutes] = value.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      const minutes = toMinutes(endTime) - toMinutes(startTime);
+      if (minutes <= 0) throw new Error('Godzina „do” musi być po godzinie „od”');
+
+      const user = await this.userRepository.findOne({
+        where: { id: request.user_id },
+        select: ['id', 'working_hours_per_day'],
+      });
+      const hoursPerDay = Number(user?.working_hours_per_day) || 8;
+
+      request.end_date = startDate;
+      request.start_time = startTime;
+      request.end_time = endTime;
+      request.hours = minutes / 60;
+      request.total_days = request.hours / hoursPerDay;
+    } else {
+      if (startDate > endDate) {
+        throw new Error('Data końcowa nie może być wcześniejsza niż początkowa');
+      }
+
+      request.end_date = endDate;
+      request.start_time = null;
+      request.end_time = null;
+      request.hours = null;
+      request.total_days = request.calculateTotalDays();
+    }
+
+    const approvedRequests = await this.leaveRequestRepository.find({
+      where: {
+        user_id: request.user_id,
+        status: LeaveStatus.APPROVED,
+      },
+    });
+    const conflict = approvedRequests.find(existing =>
+      existing.id !== requestId && request.isOverlapping(existing)
+    );
+    if (conflict) {
+      throw new Error('Wybrany termin koliduje z innym zatwierdzonym wnioskiem pracownika');
+    }
+
+    await this.leaveRequestRepository.save(request);
+    return (await this.leaveRequestRepository.findOne({
+      where: { id: requestId },
+      relations: ['user', 'reviewer'],
+    }))!;
+  }
+
+  /**
    * Get leave requests for a user
    */
   async getUserLeaveRequests(userId: string): Promise<LeaveRequest[]> {

@@ -1,6 +1,7 @@
 import { formatUserName } from '../utils/userSorting';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import {
@@ -22,17 +23,30 @@ import {
   Trash2,
   UsersRound,
   Stethoscope,
+  Pencil,
+  Save,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as timeApi from '../api/time.api';
 import type { LeaveComment } from '../api/time.api';
-import type { LeaveRequest } from '../types/time.types';
+import type { LeaveRequest, LeaveType as ApiLeaveType } from '../types/time.types';
 import { getFileUrl } from '../api/axios-config';
 
 type LeaveType =
   | 'vacation' | 'personal' | 'sick_leave' | 'unpaid' | 'parental'
-  | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional'
+  | 'maternity' | 'paternity' | 'childcare_188' | 'care' | 'occasional' | 'occasional_hourly'
   | 'remote_work' | 'holiday_saturday' | 'other';
+
+type EditLeaveForm = {
+  leave_type: LeaveType;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  one_day: boolean;
+};
 
 const BLUE_LEAVE_COLOR = 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300';
 const RED_LEAVE_COLOR = 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-300';
@@ -90,6 +104,11 @@ const leaveTypeConfig: Record<LeaveType, { label: string; icon: React.ReactNode;
     color: PINK_LEAVE_COLOR,
   },
   occasional: {
+    label: 'Urlop okolicznościowy',
+    icon: <Calendar className="h-5 w-5" />,
+    color: ORANGE_LEAVE_COLOR,
+  },
+  occasional_hourly: {
     label: 'Urlop okolicznościowy',
     icon: <Calendar className="h-5 w-5" />,
     color: ORANGE_LEAVE_COLOR,
@@ -154,6 +173,21 @@ const formatDaysLabel = (days: number | string) => {
   return numericDays === 1 ? `${formattedDays} dzień` : `${formattedDays} dni`;
 };
 
+const getDateInputValue = (value: string | Date) => {
+  const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
+  return match?.[0] || '';
+};
+
+const createEditForm = (request: LeaveRequest): EditLeaveForm => ({
+  leave_type: request.leave_type as LeaveType,
+  start_date: getDateInputValue(request.start_date),
+  end_date: getDateInputValue(request.end_date),
+  start_time: request.start_time || '',
+  end_time: request.end_time || '',
+  reason: request.reason || '',
+  one_day: getDateInputValue(request.start_date) === getDateInputValue(request.end_date),
+});
+
 const AbsenceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -171,6 +205,9 @@ const AbsenceDetail = () => {
   const canComment = canReview || request?.user_id === user?.id;
   const isAdmin = user?.role === 'admin';
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState<EditLeaveForm | null>(null);
 
   useEffect(() => {
     loadRequest();
@@ -301,6 +338,60 @@ const AbsenceDetail = () => {
     } catch {
       setIsReviewing(false);
       setDeleteOpen(false);
+    }
+  };
+
+  const openEdit = () => {
+    if (!request || !isAdmin) return;
+    setEditForm(createEditForm(request));
+    setEditOpen(true);
+  };
+
+  const closeEdit = () => {
+    if (isSavingEdit) return;
+    setEditOpen(false);
+    setEditForm(null);
+  };
+
+  const handleEditSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!request || !editForm || !isAdmin) return;
+
+    const isHourly = editForm.leave_type === 'occasional_hourly';
+    if (!editForm.start_date || (!isHourly && !editForm.end_date)) {
+      toast.error('Podaj termin nieobecności');
+      return;
+    }
+    if (!isHourly && editForm.end_date < editForm.start_date) {
+      toast.error('Data końcowa nie może być wcześniejsza niż początkowa');
+      return;
+    }
+    if (isHourly && (!editForm.start_time || !editForm.end_time || editForm.end_time <= editForm.start_time)) {
+      toast.error('Podaj prawidłowe godziny od i do');
+      return;
+    }
+
+    try {
+      setIsSavingEdit(true);
+      const updatedRequest = await timeApi.updateLeaveRequest(request.id, {
+        leaveType: editForm.leave_type as ApiLeaveType,
+        startDate: editForm.start_date,
+        endDate: isHourly || editForm.one_day ? editForm.start_date : editForm.end_date,
+        reason: editForm.reason.trim() || undefined,
+        ...(isHourly
+          ? { startTime: editForm.start_time, endTime: editForm.end_time }
+          : {}),
+      });
+      setRequest(updatedRequest);
+      setEditOpen(false);
+      setEditForm(null);
+      toast.success('Wniosek został zaktualizowany');
+    } catch (editError: unknown) {
+      const message = (editError as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      toast.error(message || 'Nie udało się zaktualizować wniosku');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -632,7 +723,15 @@ const AbsenceDetail = () => {
                     )}
 
                     {isAdmin && (
-                      <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                      <div className="mt-3 space-y-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                        <ActionButton
+                          icon={<Pencil className="h-4 w-4" />}
+                          title="Edytuj wniosek"
+                          description="Zmień rodzaj, termin lub uzasadnienie wniosku."
+                          onClick={openEdit}
+                          disabled={isReviewing}
+                          variant="neutral"
+                        />
                         <ActionButton
                           icon={<Trash2 className="h-4 w-4" />}
                           title="Usuń trwale"
@@ -650,6 +749,189 @@ const AbsenceDetail = () => {
           </div>
         )}
       </div>
+
+      {editOpen && editForm && request && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+          onClick={closeEdit}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-leave-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5 dark:border-gray-700">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#F7941D]">
+                  Edycja administracyjna
+                </p>
+                <h2 id="edit-leave-title" className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                  Edytuj wniosek
+                </h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Status wniosku i dane jego rozpatrzenia pozostaną bez zmian.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={isSavingEdit}
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-gray-700 dark:hover:text-white"
+                aria-label="Zamknij edycję"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-5 p-5">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Typ nieobecności
+                </label>
+                <select
+                  value={editForm.leave_type}
+                  onChange={event => setEditForm(current => current && ({
+                    ...current,
+                    leave_type: event.target.value as LeaveType,
+                  }))}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  {(Object.keys(leaveTypeConfig) as LeaveType[])
+                    .filter(type => type !== 'occasional_hourly' || editForm.leave_type === 'occasional_hourly')
+                    .map(type => (
+                      <option key={type} value={type}>
+                        {leaveTypeConfig[type].label}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {editForm.leave_type === 'occasional_hourly' ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Dzień
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.start_date}
+                      onChange={event => setEditForm(current => current && ({ ...current, start_date: event.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Od</label>
+                    <input
+                      type="time"
+                      value={editForm.start_time}
+                      onChange={event => setEditForm(current => current && ({ ...current, start_time: event.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Do</label>
+                    <input
+                      type="time"
+                      value={editForm.end_time}
+                      onChange={event => setEditForm(current => current && ({ ...current, end_time: event.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                      required
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editForm.one_day}
+                      onChange={event => setEditForm(current => current && ({
+                        ...current,
+                        one_day: event.target.checked,
+                        end_date: event.target.checked ? current.start_date : current.end_date,
+                      }))}
+                      className="h-4 w-4 rounded border-gray-300 text-[#F7941D] focus:ring-[#F7941D] dark:border-gray-600 dark:bg-gray-700"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Nieobecność 1-dniowa</span>
+                  </label>
+
+                  <div className={`grid grid-cols-1 gap-4 ${editForm.one_day ? '' : 'sm:grid-cols-2'}`}>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {editForm.one_day ? 'Data nieobecności' : 'Data początkowa'}
+                      </label>
+                      <input
+                        type="date"
+                        value={editForm.start_date}
+                        max={!editForm.one_day && editForm.end_date ? editForm.end_date : undefined}
+                        onChange={event => setEditForm(current => current && ({
+                          ...current,
+                          start_date: event.target.value,
+                          end_date: current.one_day ? event.target.value : current.end_date,
+                        }))}
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                        required
+                      />
+                    </div>
+                    {!editForm.one_day && (
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Data końcowa
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.end_date}
+                          min={editForm.start_date || undefined}
+                          onChange={event => setEditForm(current => current && ({ ...current, end_date: event.target.value }))}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Powód (opcjonalnie)
+                </label>
+                <textarea
+                  value={editForm.reason}
+                  onChange={event => setEditForm(current => current && ({ ...current, reason: event.target.value }))}
+                  rows={4}
+                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  placeholder="Wpisz powód nieobecności"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-gray-100 pt-5 dark:border-gray-700 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  disabled={isSavingEdit}
+                  className="h-10 rounded-lg border border-gray-200 px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  Anuluj
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Zapisz zmiany
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={deleteOpen}

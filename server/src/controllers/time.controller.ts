@@ -37,6 +37,12 @@ function clientIp(req: Request): string | undefined {
   return fwd || req.ip || req.socket?.remoteAddress || undefined;
 }
 
+function parseDateOnly(value: unknown): Date | null {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
+}
+
 export class TimeController {
   // ===== TIME ENTRIES =====
 
@@ -470,6 +476,54 @@ export class TimeController {
       res.status(201).json({ success: true, data: comment });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message || 'Failed to add comment' });
+    }
+  }
+
+  /**
+   * Update a leave request (admin only)
+   * PUT /api/time/leave/:id
+   */
+  async updateLeaveRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { leaveType, startDate, endDate, reason, startTime, endTime } = req.body;
+
+      if (!leaveType || !startDate || !endDate) {
+        res.status(400).json({
+          success: false,
+          message: 'Typ oraz termin nieobecności są wymagane',
+        });
+        return;
+      }
+
+      const parsedStartDate = parseDateOnly(startDate);
+      const parsedEndDate = parseDateOnly(endDate);
+      if (!parsedStartDate || !parsedEndDate) {
+        res.status(400).json({ success: false, message: 'Podaj prawidłowy termin nieobecności' });
+        return;
+      }
+
+      const leaveRequest = await timeService.updateLeaveRequest(
+        id,
+        leaveType as LeaveType,
+        parsedStartDate,
+        parsedEndDate,
+        reason,
+        startTime,
+        endTime,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Wniosek został zaktualizowany',
+        data: leaveRequest,
+      });
+    } catch (error: unknown) {
+      console.error('Update leave request error:', error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Nie udało się zaktualizować wniosku',
+      });
     }
   }
 

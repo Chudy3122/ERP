@@ -11,6 +11,7 @@ import type {
   ReviewLeaveRequest,
   DayStatus,
   ManualEntryRequest,
+  UpdateLeaveRequest,
 } from '../types/time.types';
 
 // ===== TIME ENTRIES =====
@@ -174,6 +175,17 @@ export const deleteTimeEntry = async (entryId: string): Promise<void> => {
  */
 export const createLeaveRequest = async (data: CreateLeaveRequest): Promise<LeaveRequest> => {
   const response = await apiClient.post('/time/leave', data);
+  return response.data.data;
+};
+
+/**
+ * Update an existing leave request (admin only)
+ */
+export const updateLeaveRequest = async (
+  requestId: string,
+  data: UpdateLeaveRequest
+): Promise<LeaveRequest> => {
+  const response = await apiClient.put(`/time/leave/${requestId}`, data);
   return response.data.data;
 };
 
