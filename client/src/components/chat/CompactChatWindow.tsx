@@ -1,4 +1,4 @@
-import { formatUserName } from '../../utils/userSorting';
+import { formatUserName, DELETED_USER_LABEL } from '../../utils/userSorting';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -44,17 +44,16 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
     }
   }, [messages]);
 
-  const getOtherMember = () => {
-    if (!activeChannel?.members) return undefined;
-    return activeChannel.members.find(m => m.user_id !== currentUser?.id) ?? activeChannel.members[0];
-  };
+  // The counterpart = the member that isn't me. No fallback to members[0] (me):
+  // if there's no other member, the account was deleted.
+  const getOtherMember = () => activeChannel?.members?.find(m => m.user_id !== currentUser?.id);
 
   const getChannelName = (): string => {
     if (!activeChannel) return '';
     if (activeChannel.type === 'direct') {
       const other = getOtherMember();
       if (other?.user) return formatUserName(other.user);
-      return activeChannel.name ?? t('chat.unnamed');
+      return DELETED_USER_LABEL;
     }
     return activeChannel.name ?? t('chat.unnamed');
   };

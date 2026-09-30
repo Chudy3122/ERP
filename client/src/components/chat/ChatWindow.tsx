@@ -1,7 +1,8 @@
-import { formatUserName } from '../../utils/userSorting';
+import { formatUserName, DELETED_USER_LABEL } from '../../utils/userSorting';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Message from './Message';
 import MessageInput from './MessageInput';
 import { getFileUrl } from '../../api/axios-config';
@@ -20,6 +21,10 @@ const ChatWindow: React.FC = () => {
     deleteMessage,
     sendTypingIndicator,
   } = useChatContext();
+  const { user } = useAuth();
+
+  // Counterpart of a direct chat = the member that isn't me (never members[0]).
+  const getOtherMember = () => activeChannel?.members?.find((m) => m.user_id !== user?.id);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -33,13 +38,11 @@ const ChatWindow: React.FC = () => {
 
   const getChannelName = (): string => {
     if (!activeChannel) return '';
-    if (activeChannel.name) return activeChannel.name;
-    if (activeChannel.type === 'direct' && activeChannel.members && activeChannel.members.length > 0) {
-      const otherMember = activeChannel.members[0];
-      return otherMember.user
-        ? formatUserName(otherMember.user)
-        : t('chat:unnamed');
+    if (activeChannel.type === 'direct') {
+      const other = getOtherMember();
+      return other?.user ? formatUserName(other.user) : DELETED_USER_LABEL;
     }
+    if (activeChannel.name) return activeChannel.name;
     return t('chat:unnamed');
   };
 
@@ -76,22 +79,20 @@ const ChatWindow: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Channel Avatar for direct messages */}
-            {activeChannel.type === 'direct' && activeChannel.members && activeChannel.members[0]?.user && (
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
-                {activeChannel.members[0].user.avatar_url ? (
-                  <img
-                    src={getFileUrl(activeChannel.members[0].user.avatar_url) || ''}
-                    alt=""
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-sm">
-                    {activeChannel.members[0].user.first_name[0]}
-                    {activeChannel.members[0].user.last_name[0]}
-                  </span>
-                )}
-              </div>
-            )}
+            {activeChannel.type === 'direct' && (() => {
+              const other = getOtherMember();
+              return (
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden text-blue-700 font-semibold">
+                  {other?.user?.avatar_url ? (
+                    <img src={getFileUrl(other.user.avatar_url) || ''} alt="" className="w-full h-full rounded-full object-cover" />
+                  ) : other?.user ? (
+                    <span className="text-sm">{other.user.first_name[0]}{other.user.last_name[0]}</span>
+                  ) : (
+                    <span className="text-sm">?</span>
+                  )}
+                </div>
+              );
+            })()}
             <div>
               <h2 className="text-lg font-semibold text-white">{getChannelName()}</h2>
               <p className="text-sm text-blue-100">{getChannelDescription()}</p>

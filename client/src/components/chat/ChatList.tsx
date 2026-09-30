@@ -1,4 +1,4 @@
-import { formatUserName } from '../../utils/userSorting';
+import { formatUserName, DELETED_USER_LABEL } from '../../utils/userSorting';
 import React, { useEffect, useState } from 'react';
 import { useChatContext } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,14 +41,17 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
     }
   };
 
+  // The counterpart in a direct chat = the member that isn't me (never members[0],
+  // which may be me once the other account is deleted).
+  const getOtherMember = (channel: Channel) =>
+    channel.members?.find(m => m.user_id !== user?.id);
+
   const getChannelName = (channel: Channel): string => {
-    if (channel.name) return channel.name;
-    if (channel.type === 'direct' && channel.members && channel.members.length > 0) {
-      const otherMember = channel.members[0];
-      return otherMember.user
-        ? formatUserName(otherMember.user)
-        : 'Nieznany użytkownik';
+    if (channel.type === 'direct') {
+      const other = getOtherMember(channel);
+      return other?.user ? formatUserName(other.user) : DELETED_USER_LABEL;
     }
+    if (channel.name) return channel.name;
     return 'Bez nazwy';
   };
 
@@ -156,7 +159,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectChannel }) => {
       <div className="flex-1 overflow-y-auto">
         {channels.map((channel) => {
           const isActive = activeChannel?.id === channel.id;
-          const otherMember = channel.type === 'direct' ? channel.members?.[0] : undefined;
+          const otherMember = channel.type === 'direct' ? getOtherMember(channel) : undefined;
 
           return (
             <div key={channel.id} className="relative group">

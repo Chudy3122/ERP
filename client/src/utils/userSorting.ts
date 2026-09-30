@@ -7,6 +7,9 @@ interface UserName {
   id?: string;
 }
 
+/** Shown wherever a direct chat's counterpart no longer exists (account deleted). */
+export const DELETED_USER_LABEL = 'Użytkownik usunięty';
+
 const nameCollator = new Intl.Collator('pl', { sensitivity: 'base', numeric: true });
 
 export const formatUserName = (user?: UserName | null, fallback = ''): string =>

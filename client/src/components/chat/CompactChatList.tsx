@@ -1,4 +1,4 @@
-import { formatUserName } from '../../utils/userSorting';
+import { formatUserName, DELETED_USER_LABEL } from '../../utils/userSorting';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../../contexts/ChatContext';
@@ -58,16 +58,15 @@ const CompactChatList: React.FC<CompactChatListProps> = ({ onNewConversation }) 
     setContextMenu({ channelId, x: e.clientX, y: e.clientY });
   };
 
-  const getOtherMember = (channel: Channel) => {
-    if (!channel.members) return undefined;
-    return channel.members.find(m => m.user_id !== user?.id) ?? channel.members[0];
-  };
+  // The counterpart in a direct chat = the member that isn't me. Never fall back
+  // to members[0] (that's me) — if there's no other member, they were deleted.
+  const getOtherMember = (channel: Channel) => channel.members?.find(m => m.user_id !== user?.id);
 
   const getChannelName = (channel: Channel): string => {
     if (channel.type === 'direct') {
       const other = getOtherMember(channel);
       if (other?.user) return formatUserName(other.user);
-      return channel.name ?? t('chat.unnamed');
+      return DELETED_USER_LABEL;
     }
     return channel.name ?? t('chat.unnamed');
   };
