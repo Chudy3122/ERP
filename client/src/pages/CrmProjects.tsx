@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import ProjectSummary from '../components/crm/ProjectSummary';
 import * as api from '../api/crmProject.api';
 import type { CrmProjectRecord, CrmParticipant } from '../api/crmProject.api';
 import * as projectApi from '../api/project.api';
@@ -259,6 +260,7 @@ export default function CrmProjects() {
 
                   {open && (
                     <div className="border-t border-gray-100 dark:border-gray-700">
+                      {count > 0 && <ProjectSummary participants={r.participants} />}
                       {count === 0 ? (
                         <p className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">Brak uczestników — dodaj ręcznie lub wgraj CSV.</p>
                       ) : (
