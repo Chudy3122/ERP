@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Users, CalendarCheck, Cake, UserRound } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Users, CalendarCheck, Cake, UserRound, BarChart3, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CrmParticipant } from '../../api/crmProject.api';
 
 const ORANGE = '#F7941D';
@@ -55,6 +55,7 @@ function Tile({ icon, label, value, sub }: { icon: React.ReactNode; label: strin
 
 /** Auto-generated summary + proportions for a project's participants. */
 export default function ProjectSummary({ participants }: { participants: CrmParticipant[] }) {
+  const [open, setOpen] = useState(true);
   const s = useMemo(() => {
     const total = participants.length;
     let women = 0, men = 0, otherG = 0, completed = 0;
@@ -83,7 +84,19 @@ export default function ProjectSummary({ participants }: { participants: CrmPart
   if (s.total === 0) return null;
 
   return (
-    <div className="space-y-3 border-b border-gray-100 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-gray-900/20">
+    <div className="border-b border-gray-100 bg-gray-50/60 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/20">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-[#F7941D] dark:text-gray-400"
+      >
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <BarChart3 className="h-4 w-4" />
+        Podsumowanie
+        {!open && <span className="font-normal normal-case text-gray-400">· {s.total} uczestników</span>}
+      </button>
+
+      {open && (
+      <div className="mt-3 space-y-3">
       {/* Stat tiles */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile icon={<Users className="h-4 w-4" />} label="Uczestnicy" value={String(s.total)} />
@@ -121,6 +134,8 @@ export default function ProjectSummary({ participants }: { participants: CrmPart
         <Breakdown title="Wykształcenie" rows={s.education} total={s.total} limit={6} />
         <Breakdown title="Miejscowości" rows={s.cities} total={s.total} limit={6} />
       </div>
+      </div>
+      )}
     </div>
   );
 }
