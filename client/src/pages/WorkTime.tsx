@@ -579,14 +579,18 @@ export default function WorkTime() {
   const [showStartManual, setShowStartManual] = useState(false);
   const [managerUsers, setManagerUsers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyPageSize, setHistoryPageSize] = useState<10 | 30 | 50>(10);
+  const [historyPageSize, setHistoryPageSize] = useSessionState<10 | 30 | 50>(
+    `${viewKey}:historyPageSize`, 10, value => value === 10 || value === 30 || value === 50,
+  );
   const [historyDateFilter, setHistoryDateFilter] = useSessionState<HistoryDateFilter>(
     `${viewKey}:historyRange`, 'all', value => typeof value === 'string' && ['all', 'week', 'month', 'selectedMonth'].includes(value),
   );
   const [historySelectedMonth, setHistorySelectedMonth] = useSessionState(
     `${viewKey}:historyMonth`, currentMonthKey, isMonthFilter,
   );
-  const [historyTypeFilter, setHistoryTypeFilter] = useState<HistoryTypeFilter>('all');
+  const [historyTypeFilter, setHistoryTypeFilter] = useSessionState<HistoryTypeFilter>(
+    `${viewKey}:historyType`, 'all', value => typeof value === 'string' && ['all', 'manual', 'active'].includes(value),
+  );
   const [editNotesEntry, setEditNotesEntry] = useState<TimeEntry | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
@@ -613,7 +617,9 @@ export default function WorkTime() {
   const [attendanceRange, setAttendanceRange] = useSessionState<AttendanceRange>(
     `${viewKey}:attendanceRange`, 'week', value => typeof value === 'string' && ['week', '2weeks', '4weeks'].includes(value),
   );
-  const [attendanceSort, setAttendanceSort] = useState<AttendanceSort>('last_name');
+  const [attendanceSort, setAttendanceSort] = useSessionState<AttendanceSort>(
+    `${viewKey}:attendanceSort`, 'last_name', value => typeof value === 'string' && ['first_name', 'last_name'].includes(value),
+  );
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   // All-entries tab (admin/kadry): edit everyone's work time
@@ -622,13 +628,21 @@ export default function WorkTime() {
   const [allLoading, setAllLoading] = useState(false);
   const [allFrom, setAllFrom] = useSessionState(`${viewKey}:allFrom`, monthStartStr, isDateFilter);
   const [allTo, setAllTo] = useSessionState(`${viewKey}:allTo`, todayStr, isDateFilter);
-  const [allSearch, setAllSearch] = useState('');
+  const [allSearch, setAllSearch] = useSessionState(`${viewKey}:allSearch`, '', value => typeof value === 'string');
   const [summaryUserId, setSummaryUserId] = useState('');
-  const [allTypeFilter, setAllTypeFilter] = useState<'all' | 'auto' | 'manual'>('all');
-  const [allStatusFilter, setAllStatusFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
-  const [allSort, setAllSort] = useState<'date_desc' | 'date_asc' | 'name' | 'duration_desc'>('date_desc');
+  const [allTypeFilter, setAllTypeFilter] = useSessionState<'all' | 'auto' | 'manual'>(
+    `${viewKey}:allType`, 'all', value => typeof value === 'string' && ['all', 'auto', 'manual'].includes(value),
+  );
+  const [allStatusFilter, setAllStatusFilter] = useSessionState<'all' | 'in_progress' | 'completed'>(
+    `${viewKey}:allStatus`, 'all', value => typeof value === 'string' && ['all', 'in_progress', 'completed'].includes(value),
+  );
+  const [allSort, setAllSort] = useSessionState<'date_desc' | 'date_asc' | 'name' | 'duration_desc'>(
+    `${viewKey}:allSort`, 'date_desc', value => typeof value === 'string' && ['date_desc', 'date_asc', 'name', 'duration_desc'].includes(value),
+  );
   const [allPage, setAllPage] = useState(1);
-  const [allPageSize, setAllPageSize] = useState<10 | 30 | 50>(30);
+  const [allPageSize, setAllPageSize] = useSessionState<10 | 30 | 50>(
+    `${viewKey}:allPageSize`, 30, value => value === 10 || value === 30 || value === 50,
+  );
 
   const resetHistoryFilters = () => {
     setHistoryDateFilter('all');
