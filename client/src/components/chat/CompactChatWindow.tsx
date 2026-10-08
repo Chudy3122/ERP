@@ -5,8 +5,10 @@ import { useChatContext } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import Message from './Message';
 import MessageInput from './MessageInput';
-import { ArrowLeft, Users } from 'lucide-react';
+import ChannelSettingsModal from './ChannelSettingsModal';
+import { ArrowLeft, Users, Settings } from 'lucide-react';
 import { getFileUrl } from '../../api/axios-config';
+import { getChatUsers } from '../../api/chat.api';
 import type { User } from '../../types/auth.types';
 
 const isUser = (value: User | undefined): value is User => Boolean(value);
@@ -28,10 +30,21 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
     sendTypingIndicator,
     setActiveChannel,
     getUserStatus,
+    addChannelMembers,
+    removeChannelMember,
+    deleteChannelById,
+    renameChannel,
   } = useChatContext();
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+
+  // Load the directory once so group settings can add members.
+  useEffect(() => {
+    getChatUsers().then(setAvailableUsers).catch(() => setAvailableUsers([]));
+  }, []);
 
   // Reset avatar error when channel changes
   useEffect(() => {
@@ -156,6 +169,18 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
             );
           })()}
         </div>
+
+        {/* Group settings — add/remove members, rename, delete */}
+        {activeChannel.type !== 'direct' && (
+          <button
+            onClick={() => setShowSettings(true)}
+            title="Ustawienia grupy"
+            aria-label="Ustawienia grupy"
+            className="shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Messages Container */}
@@ -201,6 +226,18 @@ const CompactChatWindow: React.FC<CompactChatWindowProps> = ({ onBack }) => {
         onTyping={sendTypingIndicator}
         placeholder="Napisz wiadomość…"
         compact
+      />
+
+      <ChannelSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        channel={activeChannel}
+        currentUserId={currentUser?.id || ''}
+        availableUsers={availableUsers}
+        onAddMembers={addChannelMembers}
+        onRemoveMember={removeChannelMember}
+        onDeleteChannel={async (id) => { await deleteChannelById(id); setShowSettings(false); setActiveChannel(null); }}
+        onRenameChannel={renameChannel}
       />
     </div>
   );
