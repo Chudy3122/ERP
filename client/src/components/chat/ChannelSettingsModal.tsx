@@ -210,8 +210,8 @@ const ChannelSettingsModal: React.FC<ChannelSettingsModalProps> = ({
                 </div>
               )}
 
-              {/* Add Members Section */}
-              {isAdmin && nonMembers.length > 0 && (
+              {/* Add Members Section — any member can add people */}
+              {nonMembers.length > 0 && (
                 <div className="bg-blue-50 rounded-md p-4">
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">Dodaj członków</h3>
                   <div className="space-y-2 max-h-48 overflow-y-auto mb-3">

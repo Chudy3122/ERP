@@ -296,25 +296,33 @@ export class ChatService {
    * Add members to channel
    */
   async addChannelMembers(channelId: string, userId: string, memberIds: string[]) {
-    // Verify user is admin of channel
+    // Any member of the channel can add other people (not only its creator/admin).
     const membership = await this.channelMemberRepository.findOne({
       where: { channel_id: channelId, user_id: userId },
     });
 
-    if (!membership || membership.role !== ChannelMemberRole.ADMIN) {
-      throw new Error('Only channel admins can add members');
+    if (!membership) {
+      throw new Error('Not a member of this channel');
     }
 
-    // Add members
-    const memberships = memberIds.map(memberId =>
-      this.channelMemberRepository.create({
-        channel_id: channelId,
-        user_id: memberId,
-        role: ChannelMemberRole.MEMBER,
-      })
-    );
+    // Skip anyone already in the channel so a double-add can't hit the unique constraint.
+    const existing = await this.channelMemberRepository.find({
+      where: { channel_id: channelId },
+      select: ['user_id'],
+    });
+    const existingIds = new Set(existing.map(m => m.user_id));
+    const toAdd = memberIds.filter(id => !existingIds.has(id));
 
-    await this.channelMemberRepository.save(memberships);
+    if (toAdd.length > 0) {
+      const memberships = toAdd.map(memberId =>
+        this.channelMemberRepository.create({
+          channel_id: channelId,
+          user_id: memberId,
+          role: ChannelMemberRole.MEMBER,
+        })
+      );
+      await this.channelMemberRepository.save(memberships);
+    }
 
     // Return updated channel with members
     const updatedChannel = await this.channelRepository.findOne({
