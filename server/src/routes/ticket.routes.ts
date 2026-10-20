@@ -31,6 +31,11 @@ router.put('/:id/status', ticketController.updateTicketStatus.bind(ticketControl
 // Ticket comments
 router.post('/:id/comments', ticketController.addTicketComment.bind(ticketController));
 router.get('/:id/comments', ticketController.getTicketComments.bind(ticketController));
+router.delete(
+  '/:id/comments/:commentId',
+  requireRole([UserRole.ADMIN]),
+  ticketController.deleteTicketComment.bind(ticketController)
+);
 
 // Ticket attachments
 router.post('/:id/attachments', upload.array('files', 10) as any, ticketController.uploadAttachments.bind(ticketController));

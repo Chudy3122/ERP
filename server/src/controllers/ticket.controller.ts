@@ -196,6 +196,24 @@ export class TicketController {
   }
 
   /**
+   * Delete a ticket comment (admin only)
+   * DELETE /api/tickets/:id/comments/:commentId
+   */
+  async deleteTicketComment(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, commentId } = req.params;
+      const userId = req.user!.userId;
+
+      await ticketService.deleteTicketComment(id, commentId, userId);
+      res.status(204).send();
+    } catch (error: unknown) {
+      res.status(400).json({
+        message: error instanceof Error ? error.message : 'Nie udało się usunąć komentarza',
+      });
+    }
+  }
+
+  /**
    * Get ticket statistics
    * GET /api/tickets/statistics
    */

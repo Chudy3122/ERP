@@ -400,6 +400,39 @@ export class TicketService {
   }
 
   /**
+   * Permanently delete a comment from a ticket. Authorization is enforced by
+   * the route; matching both IDs prevents deleting a comment through another ticket.
+   */
+  async deleteTicketComment(ticketId: string, commentId: string, userId: string): Promise<void> {
+    const comment = await this.ticketCommentRepository.findOne({
+      where: { id: commentId, ticket_id: ticketId },
+    });
+    if (!comment) throw new Error('Komentarz nie został znaleziony w tym zgłoszeniu');
+
+    const [ticket, user] = await Promise.all([
+      this.getTicketById(ticketId),
+      this.userRepository.findOne({ where: { id: userId } }),
+    ]);
+
+    await this.ticketCommentRepository.remove(comment);
+
+    if (user) {
+      try {
+        await activityService.logActivity(
+          userId,
+          'deleted_ticket_comment',
+          'ticket',
+          ticketId,
+          `${user.first_name} ${user.last_name} usunął komentarz ze zgłoszenia "${ticket.ticket_number}"`,
+          { deleted_comment_id: commentId }
+        );
+      } catch (error) {
+        console.error('Ticket comment deletion activity error:', error);
+      }
+    }
+  }
+
+  /**
    * Get ticket statistics
    */
   async getTicketStatistics(): Promise<any> {

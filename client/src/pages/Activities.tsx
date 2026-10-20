@@ -153,6 +153,8 @@ const getTicketActivityDescription = (activity: ActivityLog) => {
       return `${actor} przypisał zgłoszenie ${quotedTicketName}`;
     case 'added_ticket_comment':
       return `${actor} dodał komentarz do zgłoszenia ${quotedTicketName}`;
+    case 'deleted_ticket_comment':
+      return `${actor} usunął komentarz ze zgłoszenia ${quotedTicketName}`;
     case 'uploaded_ticket_attachment':
       return `${actor} dodał załącznik do zgłoszenia ${quotedTicketName}`;
     case 'deleted_ticket_attachment':
