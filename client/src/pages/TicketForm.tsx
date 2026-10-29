@@ -77,6 +77,8 @@ const TicketForm = () => {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<TicketComment | null>(null);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
 
   // Attachments
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
@@ -109,6 +111,7 @@ const TicketForm = () => {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'kierownik';
+  const canDeleteComments = user?.role === 'admin';
   const fieldClass =
     'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
   const textareaClass =
@@ -344,6 +347,24 @@ const TicketForm = () => {
     }
   };
 
+  const handleDeleteComment = async () => {
+    if (!id || !commentToDelete || !canDeleteComments) return;
+
+    try {
+      setIsDeletingComment(true);
+      await ticketApi.deleteTicketComment(id, commentToDelete.id);
+      setComments(current => current.filter(comment => comment.id !== commentToDelete.id));
+      setCommentToDelete(null);
+    } catch (error: unknown) {
+      console.error('Failed to delete comment:', error);
+      const message = (error as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setError(message || 'Nie udało się usunąć komentarza');
+    } finally {
+      setIsDeletingComment(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -459,6 +480,69 @@ const TicketForm = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const requesterAttachments = attachments.filter(
+    attachment => !attachment.uploaded_by || attachment.uploaded_by === ticket?.created_by,
+  );
+  const operatorAttachments = attachments.filter(
+    attachment => Boolean(attachment.uploaded_by) && attachment.uploaded_by !== ticket?.created_by,
+  );
+
+  const getAttachmentUploaderName = (attachment: TicketAttachment) => {
+    if (attachment.uploader) return formatUserName(attachment.uploader);
+    if (attachment.uploaded_by === user?.id) return formatUserName(user);
+    return '';
+  };
+
+  const renderAttachment = (attachment: TicketAttachment) => {
+    const FileIcon = getFileIcon(attachment.file_type);
+    const isDeleting = isDeletingAttachment === attachment.id;
+    const uploaderName = getAttachmentUploaderName(attachment);
+
+    return (
+      <div
+        key={attachment.id}
+        className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:bg-[#F7941D]/10"
+      >
+        <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+          <FileIcon className="h-5 w-5 text-gray-500 dark:text-gray-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+            {attachment.original_name}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {formatFileSize(Number(attachment.file_size))} • {formatDate(attachment.created_at)}
+            {uploaderName && <> • {uploaderName}</>}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+          <a
+            href={getFileUrl(attachment.file_url) || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
+            title="Pobierz"
+          >
+            <Download className="h-4 w-4" />
+          </a>
+          <button
+            type="button"
+            onClick={() => handleDeleteAttachment(attachment.id)}
+            disabled={isDeleting}
+            className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+            title="Usuń"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -868,57 +952,54 @@ const TicketForm = () => {
                 </h3>
               </div>
 
-              {/* Existing attachments */}
-              {attachments.length > 0 && (
-                <div className="p-4 space-y-2 border-b border-gray-100 dark:border-gray-700">
-                  {attachments.map((attachment) => {
-                    const FileIcon = getFileIcon(attachment.file_type);
-                    const isDeleting = isDeletingAttachment === attachment.id;
-                    return (
-                      <div
-                        key={attachment.id}
-                        className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 transition-colors hover:border-[#F7941D]/30 hover:bg-[#F7941D]/5 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:bg-[#F7941D]/10"
-                      >
-                        <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
-                          <FileIcon className="h-5 w-5 text-gray-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {attachment.original_name}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatFileSize(Number(attachment.file_size))} • {formatDate(attachment.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                          <a
-                            href={getFileUrl(attachment.file_url) || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-600"
-                            title="Pobierz"
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAttachment(attachment.id)}
-                            disabled={isDeleting}
-                            className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Usuń"
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Existing attachments split by author */}
+              <div className="grid gap-4 border-b border-gray-100 p-4 dark:border-gray-700 lg:grid-cols-2">
+                <section className="overflow-hidden rounded-xl border border-blue-100 bg-blue-50/40 dark:border-blue-900/40 dark:bg-blue-950/10">
+                  <div className="flex items-center justify-between gap-3 border-b border-blue-100 px-4 py-3 dark:border-blue-900/40">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <User className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-300" />
+                      <h4 className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                        Pliki od zgłaszającego
+                      </h4>
+                    </div>
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/50 dark:text-blue-200">
+                      {requesterAttachments.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 p-3">
+                    {requesterAttachments.length > 0 ? (
+                      requesterAttachments.map(renderAttachment)
+                    ) : (
+                      <p className="py-5 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Zgłaszający nie dodał plików.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="overflow-hidden rounded-xl border border-orange-100 bg-orange-50/40 dark:border-orange-900/40 dark:bg-orange-950/10">
+                  <div className="flex items-center justify-between gap-3 border-b border-orange-100 px-4 py-3 dark:border-orange-900/40">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <LifeBuoy className="h-4 w-4 shrink-0 text-[#F7941D] dark:text-orange-300" />
+                      <h4 className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                        Pliki od operatora
+                      </h4>
+                    </div>
+                    <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-900/50 dark:text-orange-200">
+                      {operatorAttachments.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 p-3">
+                    {operatorAttachments.length > 0 ? (
+                      operatorAttachments.map(renderAttachment)
+                    ) : (
+                      <p className="py-5 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Operator nie dodał plików.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              </div>
 
               {/* Pending files */}
               {pendingFiles.length > 0 && (
@@ -1034,6 +1115,17 @@ const TicketForm = () => {
                               <span className="rounded-full bg-[#F7941D]/10 px-2 py-0.5 text-xs font-semibold text-[#F7941D]">
                                 Wewnętrzny
                               </span>
+                            )}
+                            {canDeleteComments && (
+                              <button
+                                type="button"
+                                onClick={() => setCommentToDelete(comment)}
+                                className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-500 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                                title="Usuń komentarz"
+                                aria-label="Usuń komentarz"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             )}
                           </div>
                           <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300"><Linkify text={comment.content} /></p>
@@ -1319,6 +1411,52 @@ const TicketForm = () => {
                 ) : (
                   'Usuń'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comment Delete Confirmation Modal */}
+      {commentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center gap-3 border-b border-gray-100 p-5 dark:border-gray-700">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-950 dark:text-white">Usuń komentarz</h3>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  Operacja dostępna wyłącznie dla Administratora
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3 p-5">
+              <p className="text-sm leading-6 text-gray-600 dark:text-gray-300">
+                Czy na pewno chcesz trwale usunąć ten komentarz?
+              </p>
+              <div className="max-h-28 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+                {commentToDelete.content}
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/60">
+              <button
+                type="button"
+                onClick={() => setCommentToDelete(null)}
+                disabled={isDeletingComment}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteComment}
+                disabled={isDeletingComment}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeletingComment && <Loader2 className="h-4 w-4 animate-spin" />}
+                Usuń komentarz
               </button>
             </div>
           </div>

@@ -69,6 +69,10 @@ export const getTicketComments = async (ticketId: string, includeInternal: boole
   return response.data;
 };
 
+export const deleteTicketComment = async (ticketId: string, commentId: string): Promise<void> => {
+  await client.delete(`/tickets/${ticketId}/comments/${commentId}`);
+};
+
 export const getTicketStatistics = async (): Promise<TicketStatistics> => {
   const response = await client.get('/tickets/statistics');
   return response.data;
