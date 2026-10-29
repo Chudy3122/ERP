@@ -22,6 +22,7 @@ import Tasks from '../pages/Tasks';
 import TaskForm from '../pages/TaskForm';
 import Tickets from '../pages/Tickets';
 import TicketForm from '../pages/TicketForm';
+import RemoteSupport from '../pages/RemoteSupport';
 import Absences from '../pages/Absences';
 import AbsenceDetail from '../pages/AbsenceDetail';
 import Employees from '../pages/Employees';
@@ -207,6 +208,14 @@ const AppRoutes = () => {
         element={
           <PrivateRoute>
             <Tickets />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/remote-support"
+        element={
+          <PrivateRoute>
+            <RemoteSupport />
           </PrivateRoute>
         }
       />

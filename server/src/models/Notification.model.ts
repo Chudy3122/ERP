@@ -48,6 +48,7 @@ export enum NotificationType {
   // Tickets / helpdesk
   TICKET_NEW = 'ticket_new',
   TICKET_COMMENT = 'ticket_comment',
+  REMOTE_SUPPORT_REQUEST = 'remote_support_request',
   // Boss calendar
   BOSS_CALENDAR_NEW = 'boss_calendar_new',
   BOSS_CALENDAR_UPDATE = 'boss_calendar_update',

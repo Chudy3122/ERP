@@ -33,6 +33,7 @@ import personalTaskRoutes from './personalTask.routes';
 import personalCalendarRoutes from './personalCalendar.routes';
 import fleetRoutes from './fleet.routes';
 import gameRoutes from './game.routes';
+import remoteSupportRoutes from './remoteSupport.routes';
 // import employeeRoutes from './employee.routes';
 
 const router = Router();
@@ -134,6 +135,9 @@ router.use('/personal-calendar', personalCalendarRoutes);
 
 router.use('/fleet', fleetRoutes);
 router.use('/games', gameRoutes);
+
+// Remote support (Pomoc Zdalna)
+router.use('/remote-support', remoteSupportRoutes);
 
 // Employee routes (temporarily disabled - needs model updates)
 // router.use('/employees', employeeRoutes);

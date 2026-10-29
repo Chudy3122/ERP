@@ -104,6 +104,7 @@ import {
   PanelLeftOpen,
   LayoutTemplate,
   Target,
+  Monitor,
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -370,6 +371,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     { type: 'divider' },
     { type: 'header', name: t('nav.tickets') },
     { name: 'Zgłoszenia', href: canViewAllTickets ? '/tickets?tab=all' : '/tickets?tab=my', icon: AlertCircle },
+    { name: 'Pomoc Zdalna', href: '/remote-support', icon: Monitor },
 
     { type: 'divider' },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
