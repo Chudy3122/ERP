@@ -8,6 +8,7 @@ import * as userApi from '../api/user.api';
 import type { AdminUser } from '../types/admin.types';
 import { BossCalendarEntry, CreateEntryPayload, EntryType } from '../types/boss-calendar.types';
 import { findMeetingConflict, getConflictDate } from '../utils/calendarConflicts';
+import { getPolishHoliday } from '../utils/polishHolidays';
 import {
   AlignLeft,
   BarChart3,
@@ -18,6 +19,7 @@ import {
   ChevronRight,
   Clock3,
   Edit3,
+  Flag,
   Home,
   Loader2,
   MapPin,
@@ -610,6 +612,11 @@ export default function BossCalendar() {
     day: '2-digit',
     month: 'long',
   });
+  const selectedDayHoliday = getPolishHoliday(selectedDay);
+  const weekHolidayCount = weekDays.reduce(
+    (count, day) => count + (getPolishHoliday(formatDate(day)) ? 1 : 0),
+    0
+  );
 
   const summarize = (list: BossCalendarEntry[]) => {
     const meetings = list.filter((e) => e.type === 'meeting');
@@ -702,6 +709,12 @@ export default function BossCalendar() {
               <h2 className="mt-1 text-lg font-bold capitalize text-gray-950 dark:text-white">
                 {selectedDayLabel}
               </h2>
+              {selectedDayHoliday && (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+                  <Flag className="h-3.5 w-3.5" />
+                  {selectedDayHoliday.name} · dzień ustawowo wolny
+                </div>
+              )}
             </div>
             <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-5">
               <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
@@ -780,6 +793,10 @@ export default function BossCalendar() {
                 <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
                 Urlop szefa
               </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 dark:bg-gray-900/40">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                Święto ustawowe
+              </span>
             </div>
           </div>
 
@@ -793,7 +810,7 @@ export default function BossCalendar() {
               </div>
             ) : (
               <div className="min-w-[900px]">
-                {entries.length === 0 && bossLeaves.length === 0 && (
+                {entries.length === 0 && bossLeaves.length === 0 && weekHolidayCount === 0 && (
                   <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
                     Brak wpisów w tym tygodniu. {canEdit ? 'Kliknij w wybrany dzień w siatce albo użyj przycisku „Dodaj wpis”.' : 'Po dodaniu wpisów pojawią się w siatce kalendarza.'}
                   </div>
@@ -809,32 +826,52 @@ export default function BossCalendar() {
                   <div className="border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40" />
                   {weekDays.map((day, index) => {
                     const dayStr = formatDate(day);
+                    const isSunday = day.getDay() === 0;
                     const isToday = dayStr === todayStr;
                     const isSelected = dayStr === selectedDay;
                     const dayEntriesCount = entriesByDay(dayStr).length;
                     const dayBossLeaves = bossLeavesByDay(dayStr);
+                    const dayHoliday = getPolishHoliday(dayStr);
                     return (
                       <button
                         type="button"
                         key={index}
                         onClick={() => setSelectedDay(dayStr)}
                         className={`border-r border-gray-200 py-3 text-center transition-colors last:border-r-0 dark:border-gray-700 ${
-                          isSelected
+                          isSunday
+                            ? `bg-red-50/70 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/30 ${isSelected ? 'ring-2 ring-inset ring-[#F7941D]/40' : ''}`
+                            : isSelected
                             ? 'bg-[#F7941D]/15 ring-2 ring-inset ring-[#F7941D]/40 dark:bg-[#F7941D]/15'
                             : isToday
                               ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10'
-                              : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/60'
+                              : dayHoliday
+                                ? 'bg-red-50/70 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/30'
+                                : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/60'
                         }`}
                       >
                         <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                           {DAYS_PL[index]}
                         </div>
-                        <div className={`mt-0.5 text-lg font-semibold ${isToday ? 'text-[#F7941D]' : 'text-gray-950 dark:text-white'}`}>
+                        <div className={`mt-0.5 text-lg font-semibold ${dayHoliday ? 'text-red-600 dark:text-red-300' : isToday ? 'text-[#F7941D]' : 'text-gray-950 dark:text-white'}`}>
                           {day.getDate()}
                         </div>
                         {dayEntriesCount > 0 && (
                           <div className="mt-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500">
                             {dayEntriesCount} wpis{dayEntriesCount === 1 ? '' : 'y'}
+                          </div>
+                        )}
+                        {dayHoliday && (
+                          <div
+                            className="mx-2 mt-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-left text-[10px] font-semibold text-red-700 shadow-sm dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
+                            title={`${dayHoliday.name} - dzień ustawowo wolny od pracy`}
+                          >
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <Flag className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{dayHoliday.name}</span>
+                            </div>
+                            <span className="mt-0.5 block truncate text-[9px] text-red-600 dark:text-red-300">
+                              dzień ustawowo wolny
+                            </span>
                           </div>
                         )}
                         {dayBossLeaves.length > 0 && (
@@ -882,23 +919,29 @@ export default function BossCalendar() {
 
                   {weekDays.map((day, dayIndex) => {
                     const dayStr = formatDate(day);
+                    const isSunday = day.getDay() === 0;
                     const isToday = dayStr === todayStr;
                     const isSelected = dayStr === selectedDay;
                     const dayEntries = entriesByDay(dayStr);
                     const dayBossLeaves = bossLeavesByDay(dayStr);
                     const hasBossLeave = dayBossLeaves.length > 0;
+                    const dayHoliday = getPolishHoliday(dayStr);
 
                     return (
                       <div
                         key={dayIndex}
                         className={`relative border-r border-gray-200 last:border-r-0 dark:border-gray-700 ${
-                          isSelected
+                          isSunday
+                            ? 'bg-red-50/40 dark:bg-red-950/10'
+                            : isSelected
                             ? 'bg-[#F7941D]/10 dark:bg-[#F7941D]/10'
                             : isToday
                               ? 'bg-[#F7941D]/5 dark:bg-[#F7941D]/5'
-                              : hasBossLeave
-                                ? 'bg-sky-50/50 dark:bg-sky-900/10'
-                              : 'bg-white dark:bg-gray-800'
+                              : dayHoliday
+                                ? 'bg-red-50/40 dark:bg-red-950/10'
+                                : hasBossLeave
+                                  ? 'bg-sky-50/50 dark:bg-sky-900/10'
+                                  : 'bg-white dark:bg-gray-800'
                         }`}
                         style={{ height: SLOT_PX * (HOUR_END - HOUR_START) }}
                         onClick={() => setSelectedDay(dayStr)}
