@@ -1,11 +1,12 @@
 import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { getPolishHoliday } from '../utils/polishHolidays';
 import { isDateFilter, isMonthFilter, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
 import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import { Pause, Play, Square, Clock, Users, Calendar, PlusCircle, X, Pencil, Loader2, Trash2, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Pause, Play, Square, Clock, Users, Calendar, Flag, PlusCircle, X, Pencil, Loader2, Trash2, Smartphone, Monitor, Tablet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as timeApi from '../api/time.api';
 import * as userApi from '../api/user.api';
@@ -1874,6 +1875,7 @@ export default function WorkTime() {
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Zakończona zmiana</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Brak wpisu</div>
             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700" /> Weekend</div>
+            <div className="flex items-center gap-1.5"><Flag className="h-3.5 w-3.5 text-red-600 dark:text-red-300" /> Święto ustawowe</div>
           </div>
 
           {loadingAttendance ? (
@@ -1903,9 +1905,13 @@ export default function WorkTime() {
                         const { day, date: dateLabel } = formatDateHeader(date);
                         const isToday = date === todayStr();
                         const isWeekend = isWeekendDate(date);
+                        const holiday = getPolishHoliday(getDateKey(date));
+                        const isRedDay = Boolean(holiday) || new Date(`${getDateKey(date)}T00:00:00`).getDay() === 0;
                         return (
                           <th key={date} className={`min-w-[118px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider ${
-                            isToday
+                            isRedDay
+                              ? 'bg-red-50/70 text-red-600 dark:bg-red-950/20 dark:text-red-300'
+                              : isToday
                               ? 'bg-orange-50 text-[#F7941D] dark:bg-orange-900/20 dark:text-orange-300'
                               : isWeekend
                                 ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
@@ -1913,6 +1919,15 @@ export default function WorkTime() {
                           }`}>
                             <div>{day}</div>
                             <div className="font-normal normal-case">{dateLabel}</div>
+                            {holiday && (
+                              <div
+                                className="mx-auto mt-2 w-[96px] rounded-lg border border-red-200 bg-red-50 px-1.5 py-1 text-[10px] font-semibold normal-case tracking-normal text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
+                                title={`${holiday.name} - dzień ustawowo wolny od pracy`}
+                              >
+                                <Flag className="mx-auto mb-1 h-3 w-3" />
+                                <span className="block whitespace-normal break-words leading-snug">{holiday.name}</span>
+                              </div>
+                            )}
                           </th>
                         );
                       })}
@@ -1946,6 +1961,8 @@ export default function WorkTime() {
                           const isWorking = isAttendanceDayWorking(day, u.id);
                           const isToday = day.date === todayStr();
                           const isWeekend = isWeekendDate(day.date);
+                          const isRedDay = Boolean(getPolishHoliday(getDateKey(day.date)))
+                            || new Date(`${getDateKey(day.date)}T00:00:00`).getDay() === 0;
                           const displayClockIn = isToday && u.id === user?.id && currentEntry
                             ? currentEntry.clock_in
                             : day.clock_in;
@@ -1959,7 +1976,9 @@ export default function WorkTime() {
                             <td
                               key={day.date}
                               className={`px-3 py-2 text-center ${
-                                isToday
+                                isRedDay
+                                  ? 'bg-red-50/40 dark:bg-red-950/10'
+                                  : isToday
                                   ? 'bg-orange-50/50 dark:bg-orange-900/10'
                                   : isWeekend
                                     ? 'bg-gray-50/80 dark:bg-gray-900/30'

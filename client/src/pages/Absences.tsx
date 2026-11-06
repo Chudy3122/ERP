@@ -1,4 +1,5 @@
 import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
+import { getPolishHoliday } from '../utils/polishHolidays';
 import { isDateFilter, useSessionDate, useSessionState } from '../hooks/useSessionState';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,7 @@ import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import {
   Calendar,
   CalendarDays,
+  Flag,
   Plus,
   X,
   Clock,
@@ -2520,6 +2522,12 @@ const Absences = () => {
                   {label}
                 </div>
               ))}
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded border border-red-200 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                  <Flag className="h-4 w-4" />
+                </span>
+                Święto ustawowe
+              </div>
               <span className="hidden h-5 w-px bg-gray-200 dark:bg-gray-700 sm:inline-block" />
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 Notka w komórce pokazuje status wniosku: oczekuje, zatwierdzone, odrzucone albo anulowane.
@@ -2559,16 +2567,22 @@ const Absences = () => {
                         {visibleAvailability.map(day => {
                           const isWeekend = isWeekendDate(day.date);
                           const isToday = day.date === todayCalendarDate;
+                          const holiday = getPolishHoliday(getDateKey(day.date));
+                          const isRedDay = Boolean(holiday) || new Date(`${getDateKey(day.date)}T00:00:00`).getDay() === 0;
 
                           return (
                             <th
                               key={day.date}
                               className={`px-2 py-3 text-center text-xs font-medium uppercase tracking-wider ${
-                                isToday
-                                  ? 'min-w-[110px] border-x border-[#F7941D]/30 bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300'
+                                isWeekend && !isToday ? 'min-w-[64px]' : 'min-w-[110px]'
+                              } ${isToday ? 'border-x border-[#F7941D]/30' : ''} ${
+                                isRedDay
+                                  ? 'bg-red-50/70 text-red-600 dark:bg-red-950/20 dark:text-red-300'
+                                  : isToday
+                                  ? 'bg-[#F7941D]/10 text-[#F7941D] dark:bg-[#F7941D]/15 dark:text-orange-300'
                                   : isWeekend
-                                  ? 'min-w-[64px] bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                                  : 'min-w-[110px] text-gray-500 dark:text-gray-300'
+                                  ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                                  : 'text-gray-500 dark:text-gray-300'
                               }`}
                             >
                               <span className={isWeekend && !isToday ? 'block text-[10px]' : ''}>
@@ -2578,6 +2592,15 @@ const Absences = () => {
                                 <span className="mt-1 block text-[10px] font-bold normal-case tracking-normal">
                                   Dziś
                                 </span>
+                              )}
+                              {holiday && (
+                                <div
+                                  className={`mx-auto mt-2 rounded-lg border border-red-200 bg-red-50 px-1.5 py-1 text-[10px] font-semibold normal-case tracking-normal text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200 ${isWeekend && !isToday ? 'w-[48px]' : 'w-[104px]'}`}
+                                  title={`${holiday.name} - dzień ustawowo wolny od pracy`}
+                                >
+                                  <Flag className="mx-auto mb-1 h-3 w-3" />
+                                  <span className="block whitespace-normal break-words leading-snug">{holiday.name}</span>
+                                </div>
                               )}
                             </th>
                           );
@@ -2601,18 +2624,25 @@ const Absences = () => {
                             {visibleAvailability.map(day => {
                               const isWeekend = isWeekendDate(day.date);
                               const isToday = day.date === todayCalendarDate;
+                              const isRedDay = Boolean(getPolishHoliday(getDateKey(day.date)))
+                                || new Date(`${getDateKey(day.date)}T00:00:00`).getDay() === 0;
+                              const dayCellClassName = `${isToday ? 'border-x border-[#F7941D]/20' : ''} ${
+                                isWeekend && !isToday ? 'px-1 py-2' : 'px-3 py-3'
+                              } ${
+                                isRedDay
+                                  ? 'bg-red-50/40 dark:bg-red-950/10'
+                                  : isToday
+                                    ? 'bg-[#F7941D]/5 dark:bg-[#F7941D]/10'
+                                    : isWeekend
+                                      ? 'bg-gray-50 dark:bg-gray-900/30'
+                                      : ''
+                              }`;
                               const du = day.users.find(x => x.id === u.id);
                               if (!du)
                                 return (
                                   <td
                                     key={day.date}
-                                    className={`text-center text-gray-400 ${
-                                      isToday
-                                        ? 'border-x border-[#F7941D]/20 bg-[#F7941D]/5 px-3 py-3 dark:bg-[#F7941D]/10'
-                                        : isWeekend
-                                          ? 'bg-gray-50 px-1 py-2 dark:bg-gray-900/30'
-                                          : 'px-3 py-3'
-                                    }`}
+                                    className={`text-center text-gray-400 ${dayCellClassName}`}
                                   >
                                     —
                                   </td>
@@ -2629,11 +2659,7 @@ const Absences = () => {
                                 return (
                                   <td
                                     key={day.date}
-                                    className={`text-center text-gray-400 ${
-                                      isToday
-                                        ? 'border-x border-[#F7941D]/20 bg-[#F7941D]/5 px-3 py-3 dark:bg-[#F7941D]/10'
-                                        : 'bg-gray-50 px-1 py-2 dark:bg-gray-900/30'
-                                    }`}
+                                    className={`text-center text-gray-400 ${dayCellClassName}`}
                                   >
                                     -
                                   </td>
@@ -2675,13 +2701,7 @@ const Absences = () => {
                               return (
                                 <td
                                   key={day.date}
-                                  className={`text-center ${
-                                    isToday
-                                      ? 'border-x border-[#F7941D]/20 bg-[#F7941D]/5 px-3 py-3 dark:bg-[#F7941D]/10'
-                                      : isWeekend
-                                        ? 'bg-gray-50 px-1 py-2 dark:bg-gray-900/30'
-                                        : 'px-3 py-3'
-                                  }`}
+                                  className={`text-center ${dayCellClassName}`}
                                 >
                                   <div
                                     className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-semibold ${
