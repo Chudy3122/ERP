@@ -9,6 +9,7 @@ import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import {
   Calendar,
   CalendarDays,
+  ChevronDown,
   Flag,
   Plus,
   X,
@@ -252,6 +253,7 @@ const Absences = () => {
   const navigate = useNavigate();
   const calendarTopScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarTableScrollRef = useRef<HTMLDivElement | null>(null);
+  const reportTypesRef = useRef<HTMLDetailsElement | null>(null);
   const canManageLeavePlans = ['admin', 'kadry'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
   const canViewAllAbsences = ['admin', 'kadry'].includes(user?.role || '');
@@ -293,7 +295,7 @@ const Absences = () => {
   const [reportUserId, setReportUserId] = useSessionState(`${viewKey}:reportUser`, '', value => typeof value === 'string');
   const [reportDateFrom, setReportDateFrom] = useSessionState(`${viewKey}:reportFrom`, () => getMonthDateRange(new Date()).start, isDateFilter);
   const [reportDateTo, setReportDateTo] = useSessionState(`${viewKey}:reportTo`, () => getMonthDateRange(new Date()).end, isDateFilter);
-  const [reportLeaveType, setReportLeaveType] = useState<'all' | LeaveType>('all');
+  const [reportLeaveTypes, setReportLeaveTypes] = useState<'all' | LeaveType[]>('all');
   const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatusFilter>('active');
   const [reportIncludeReason, setReportIncludeReason] = useState(true);
   const [allRequests, setAllRequests] = useState<LeaveRequest[]>([]);
@@ -353,6 +355,18 @@ const Absences = () => {
   const isHourlyForm = formData.leave_type === 'occasional_hourly';
   const [formUserId, setFormUserId] = useState('');
   const [directoryUsers, setDirectoryUsers] = useState<{ id: string; first_name: string; last_name: string; email: string }[]>([]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: PointerEvent) => {
+      const dropdown = reportTypesRef.current;
+      if (dropdown && event.target instanceof Node && !dropdown.contains(event.target)) {
+        dropdown.open = false;
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsideClick);
+    return () => document.removeEventListener('pointerdown', handleOutsideClick);
+  }, []);
 
   const saveRequestListState = (scrollY = window.scrollY) => {
     const state: RequestListState = {
@@ -949,6 +963,24 @@ const Absences = () => {
 
   const reportLeaveTypeOptions = (Object.entries(leaveTypeConfig) as [LeaveType, typeof leaveTypeConfig[LeaveType]][])
     .filter(([type]) => type !== 'occasional_hourly');
+  const selectedReportLeaveTypes = reportLeaveTypeOptions.filter(
+    ([type]) => reportLeaveTypes === 'all' || reportLeaveTypes.includes(type)
+  );
+  const reportLeaveTypesLabel = reportLeaveTypes === 'all'
+    ? 'Wszystkie rodzaje'
+    : selectedReportLeaveTypes.map(([, config]) => config.label).join(', ') || 'Brak wybranych rodzajów';
+  const reportLeaveTypesButtonLabel = reportLeaveTypes === 'all' || selectedReportLeaveTypes.length <= 1
+    ? reportLeaveTypesLabel
+    : `Wybrano rodzajów: ${selectedReportLeaveTypes.length}`;
+  const toggleReportLeaveType = (type: LeaveType) => {
+    setReportLeaveTypes(current => {
+      const selected = current === 'all' ? reportLeaveTypeOptions.map(([value]) => value) : current;
+      const next = selected.includes(type)
+        ? selected.filter(value => value !== type)
+        : [...selected, type];
+      return next.length === reportLeaveTypeOptions.length ? 'all' : next;
+    });
+  };
   const selectedReportUser = directoryUsers.find(u => u.id === reportUserId);
   const reportEmployeeName = selectedReportUser
     ? formatUserName(selectedReportUser)
@@ -966,7 +998,8 @@ const Absences = () => {
   const filteredReportRequests = allRequests
     .filter(request => {
       if (!reportUserId || request.user_id !== reportUserId) return false;
-      if (reportLeaveType !== 'all' && request.leave_type !== reportLeaveType) return false;
+      const requestType = request.leave_type === 'occasional_hourly' ? 'occasional' : request.leave_type;
+      if (reportLeaveTypes !== 'all' && !reportLeaveTypes.includes(requestType as LeaveType)) return false;
       if (reportStatusFilter === 'active' && !['pending', 'approved'].includes(request.status)) return false;
       if (reportStatusFilter !== 'active' && reportStatusFilter !== 'all' && request.status !== reportStatusFilter) return false;
 
@@ -994,7 +1027,8 @@ const Absences = () => {
     setReportUserId('');
     setReportDateFrom(range.start);
     setReportDateTo(range.end);
-    setReportLeaveType('all');
+    setReportLeaveTypes('all');
+    if (reportTypesRef.current) reportTypesRef.current.open = false;
     setReportStatusFilter('active');
     setReportIncludeReason(true);
   };
@@ -1041,9 +1075,10 @@ const Absences = () => {
       return;
     }
 
-    const typeLabel = reportLeaveType === 'all'
-      ? 'Wszystkie rodzaje'
-      : leaveTypeConfig[reportLeaveType]?.label || reportLeaveType;
+    if (selectedReportLeaveTypes.length === 0) {
+      toast.error('Wybierz co najmniej jeden rodzaj nieobecności.');
+      return;
+    }
     const generatedAt = new Date().toLocaleString('pl-PL');
 
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -1102,22 +1137,29 @@ const Absences = () => {
       drawHeader();
     };
 
-    const drawSummaryBox = (x: number, width: number, label: string, value: string, subValue?: string) => {
+    const getSummaryLines = (value: string, width: number, fontSize: number) => {
+      doc.setFont('helvetica', fontSize === 9 ? 'bold' : 'normal');
+      doc.setFontSize(fontSize);
+      return doc.splitTextToSize(toPdfText(value), width - 6) as string[];
+    };
+    const drawSummaryBox = (x: number, width: number, label: string, value: string, height: number, subValue?: string) => {
+      const valueLines = getSummaryLines(value, width, 9);
+      const subValueLines = subValue ? getSummaryLines(subValue, width, 7) : [];
       doc.setDrawColor(229, 231, 235);
       doc.setFillColor(249, 250, 251);
-      doc.roundedRect(x, y, width, 18, 2, 2, 'FD');
+      doc.roundedRect(x, y, width, height, 2, 2, 'FD');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       setText([107, 114, 128]);
       doc.text(toPdfText(label.toUpperCase()), x + 3, y + 5);
       doc.setFontSize(9);
       setText([17, 24, 39]);
-      doc.text(doc.splitTextToSize(toPdfText(value), width - 6), x + 3, y + 10);
+      doc.text(valueLines, x + 3, y + 10);
       if (subValue) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
         setText([107, 114, 128]);
-        doc.text(doc.splitTextToSize(toPdfText(subValue), width - 6), x + 3, y + 15);
+        doc.text(subValueLines, x + 3, y + 10 + valueLines.length * 4 + 1);
       }
     };
 
@@ -1159,22 +1201,30 @@ const Absences = () => {
 
     const summaryGap = 3;
     const summaryWidths = [78, 53, 50, 38, 42];
+    const summaryHeight = Math.max(
+      18,
+      10 + getSummaryLines(reportLeaveTypesLabel, summaryWidths[2], 9).length * 4
+        + getSummaryLines(reportStatusLabel, summaryWidths[2], 7).length * 3 + 2,
+      10 + getSummaryLines(reportEmployeeName, summaryWidths[0], 9).length * 4
+        + getSummaryLines(selectedReportUser.email || '', summaryWidths[0], 7).length * 3 + 2
+    );
     let summaryX = margin;
-    drawSummaryBox(summaryX, summaryWidths[0], 'Pracownik', reportEmployeeName, selectedReportUser.email || '');
+    drawSummaryBox(summaryX, summaryWidths[0], 'Pracownik', reportEmployeeName, summaryHeight, selectedReportUser.email || '');
     summaryX += summaryWidths[0] + summaryGap;
-    drawSummaryBox(summaryX, summaryWidths[1], 'Zakres', `${reportDateFrom || 'od początku'} - ${reportDateTo || 'bez końca'}`);
+    drawSummaryBox(summaryX, summaryWidths[1], 'Zakres', `${reportDateFrom || 'od początku'} - ${reportDateTo || 'bez końca'}`, summaryHeight);
     summaryX += summaryWidths[1] + summaryGap;
-    drawSummaryBox(summaryX, summaryWidths[2], 'Rodzaj', typeLabel, reportStatusLabel);
+    drawSummaryBox(summaryX, summaryWidths[2], 'Rodzaje', reportLeaveTypesLabel, summaryHeight, reportStatusLabel);
     summaryX += summaryWidths[2] + summaryGap;
-    drawSummaryBox(summaryX, summaryWidths[3], 'Wnioski', String(filteredReportRequests.length));
+    drawSummaryBox(summaryX, summaryWidths[3], 'Wnioski', String(filteredReportRequests.length), summaryHeight);
     summaryX += summaryWidths[3] + summaryGap;
     drawSummaryBox(
       summaryX,
       summaryWidths[4],
       'Razem',
-      `${formatDaysLabel(reportTotalDays)}${reportTotalHours > 0 ? ` / ${formatHoursMinutes(reportTotalHours)}` : ''}`
+      `${formatDaysLabel(reportTotalDays)}${reportTotalHours > 0 ? ` / ${formatHoursMinutes(reportTotalHours)}` : ''}`,
+      summaryHeight
     );
-    y += 25;
+    y += summaryHeight + 7;
 
     let columns = drawTableHeader();
     const tableRows = filteredReportRequests.length > 0
@@ -1871,7 +1921,7 @@ const Absences = () => {
         {/* Monthly report tab (admin / kadry) */}
         {activeTab === 'report' && canViewAllAbsences && (
           <>
-          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
+          <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm shadow-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/20">
             <div className="border-b border-gray-100 p-4 dark:border-gray-700">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -1881,7 +1931,7 @@ const Absences = () => {
                   </div>
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white">Raport złożonych wniosków</h2>
                   <p className="mt-1 max-w-3xl text-sm text-gray-500 dark:text-gray-400">
-                    Wybierz pracownika, zakres terminu oraz rodzaj nieobecności. Raport zostanie pobrany na komputer jako plik PDF.
+                    Wybierz pracownika, zakres terminu oraz rodzaje nieobecności. Raport zostanie pobrany na komputer jako plik PDF.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1892,7 +1942,7 @@ const Absences = () => {
                   <button
                     type="button"
                     onClick={handleDownloadLeaveReport}
-                    disabled={!reportUserId || allLoading}
+                    disabled={!reportUserId || allLoading || selectedReportLeaveTypes.length === 0}
                     className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e6830f] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Printer className="h-4 w-4" />
@@ -1935,17 +1985,55 @@ const Absences = () => {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rodzaj nieobecności</label>
-                <select
-                  value={reportLeaveType}
-                  onChange={e => setReportLeaveType(e.target.value as 'all' | LeaveType)}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                <label id="report-leave-types-label" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rodzaje nieobecności</label>
+                <details
+                  ref={reportTypesRef}
+                  className="relative"
+                  onKeyDown={event => {
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      event.currentTarget.open = false;
+                      event.currentTarget.querySelector('summary')?.focus();
+                    }
+                  }}
+                  onBlur={event => {
+                    if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
                 >
-                  <option value="all">Wszystkie rodzaje</option>
-                  {reportLeaveTypeOptions.map(([type, config]) => (
-                    <option key={type} value={type}>{config.label}</option>
-                  ))}
-                </select>
+                  <summary
+                    aria-labelledby="report-leave-types-label report-leave-types-value"
+                    className="flex h-10 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white [&::-webkit-details-marker]:hidden"
+                    title={reportLeaveTypesLabel}
+                  >
+                    <span id="report-leave-types-value" className="min-w-0 truncate">{reportLeaveTypesButtonLabel}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+                  </summary>
+                  <fieldset className="absolute left-0 top-full z-30 mt-1 w-80 max-w-[calc(100vw-3rem)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
+                    <legend className="sr-only">Rodzaje nieobecności w raporcie</legend>
+                    <div className="flex items-center justify-between gap-2 border-b border-gray-100 p-2 dark:border-gray-700">
+                      <button type="button" onClick={() => setReportLeaveTypes('all')} className="rounded px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F7941D] dark:text-gray-200 dark:hover:bg-gray-700">Zaznacz wszystkie</button>
+                      <button type="button" onClick={() => setReportLeaveTypes([])} className="rounded px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F7941D] dark:text-gray-300 dark:hover:bg-gray-700">Wyczyść</button>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto p-1">
+                      {reportLeaveTypeOptions.map(([type, config]) => (
+                        <label key={type} className="flex cursor-pointer items-start gap-2.5 rounded px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={reportLeaveTypes === 'all' || reportLeaveTypes.includes(type)}
+                            onChange={() => toggleReportLeaveType(type)}
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-[#F7941D] focus:ring-[#F7941D] dark:border-gray-600"
+                          />
+                          <span className="min-w-0 break-words">{config.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </details>
+                {selectedReportLeaveTypes.length === 0 && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-300">Wybierz co najmniej jeden rodzaj nieobecności.</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status wniosku</label>
@@ -1998,9 +2086,11 @@ const Absences = () => {
                 <div className="flex flex-wrap gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportEmployeeName}</span>
                   <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportDateFrom || 'od początku'} - {reportDateTo || 'bez końca'}</span>
-                  <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">
-                    {reportLeaveType === 'all' ? 'Wszystkie rodzaje' : leaveTypeConfig[reportLeaveType]?.label}
-                  </span>
+                  {reportLeaveTypes === 'all' || selectedReportLeaveTypes.length === 0 ? (
+                    <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportLeaveTypesLabel}</span>
+                  ) : selectedReportLeaveTypes.map(([type, config]) => (
+                    <span key={type} className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{config.label}</span>
+                  ))}
                   <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">{reportStatusLabel}</span>
                   <span className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700">
                     {reportIncludeReason ? 'Z opisem' : 'Bez opisu'}
