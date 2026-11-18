@@ -107,6 +107,11 @@ export interface TimeStats {
 }
 
 export interface LeaveBalance {
+  pendingDays?: number;
+  pendingRemoteDays?: number;
+  carriedOverRemaining?: number;
+  annualRemaining?: number;
+  carryoverSourceYear?: number | null;
   annualLeave: number;
   carriedOver: number;
   total: number;
@@ -125,6 +130,13 @@ export interface LeaveBalance {
 }
 
 export interface LeaveOverviewRow {
+  isYearPlan?: boolean;
+  planSaved?: boolean;
+  carryoverSourceYear?: number | null;
+  carriedOverEstimated?: boolean;
+  isActive?: boolean;
+  pendingDays?: number;
+  pendingRemoteDays?: number;
   id: string;
   firstName: string;
   lastName: string;
@@ -146,6 +158,22 @@ export interface LeaveOverviewRow {
   remoteUsedRequests: number;
   remoteUsed: number;
   remoteAvailable: number;
+}
+
+export interface LeaveYearOpeningPreview {
+  year: number;
+  sourceYear: number;
+  status: 'draft' | 'approved' | 'opened';
+  fingerprint: string;
+  rows: LeaveOverviewRow[];
+  missingPlans: number;
+  employees: number;
+  projectedCarryover: number;
+  pendingPreviousYearDays: number;
+  approvedAt: string | null;
+  openedAt: string | null;
+  canConfirm: boolean;
+  isDue: boolean;
 }
 
 export interface ClockInRequest {

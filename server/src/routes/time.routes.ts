@@ -99,6 +99,26 @@ const LEAVE_MANAGER_ROLES = [UserRole.ADMIN, UserRole.KIEROWNIK, UserRole.KADRY,
 // Leave plan management (yearly limits + carry-over) — admin + kadry (ksiegowosc)
 const LEAVE_PLAN_ROLES = [UserRole.ADMIN, UserRole.KADRY];
 router.get(
+  '/leave/year-opening',
+  roleMiddleware(LEAVE_PLAN_ROLES),
+  timeController.getLeaveYearOpening.bind(timeController)
+);
+router.post(
+  '/leave/year-opening/confirm',
+  roleMiddleware(LEAVE_PLAN_ROLES),
+  timeController.confirmLeaveYearOpening.bind(timeController)
+);
+router.get(
+  '/leave/year-plans',
+  roleMiddleware(LEAVE_PLAN_ROLES),
+  timeController.getLeaveYearPlans.bind(timeController)
+);
+router.put(
+  '/leave/year-plans/:userId',
+  roleMiddleware(LEAVE_PLAN_ROLES),
+  timeController.saveLeaveYearPlan.bind(timeController)
+);
+router.get(
   '/leave/overview',
   roleMiddleware(LEAVE_PLAN_ROLES),
   timeController.getLeaveOverview.bind(timeController)

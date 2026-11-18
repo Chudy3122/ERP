@@ -1,9 +1,10 @@
 import { compareUsersByLastName, formatUserName } from '../utils/userSorting';
 import { getPolishHoliday } from '../utils/polishHolidays';
 import { isDateFilter, useSessionDate, useSessionState } from '../hooks/useSessionState';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
+import { isAxiosError } from 'axios';
 import MainLayout from '../components/layout/MainLayout';
 import ResetFiltersButton from '../components/common/ResetFiltersButton';
 import {
@@ -27,6 +28,8 @@ import {
   Stethoscope,
   FileText,
   Printer,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,7 +37,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import * as timeApi from '../api/time.api';
 import * as calendarApi from '../api/calendar.api';
 import * as userApi from '../api/user.api';
-import type { LeaveRequest, LeaveBalance, LeaveOverviewRow } from '../types/time.types';
+import type { LeaveRequest, LeaveBalance, LeaveOverviewRow, LeaveYearOpeningPreview } from '../types/time.types';
 import type { TeamAvailability } from '../api/calendar.api';
 
 type LeaveType =
@@ -254,6 +257,19 @@ const Absences = () => {
   const calendarTopScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarTableScrollRef = useRef<HTMLDivElement | null>(null);
   const reportTypesRef = useRef<HTMLDetailsElement | null>(null);
+  const managementLoadIdRef = useRef(0);
+  const currentLeaveYear = Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw', year: 'numeric',
+  }).format(new Date()));
+  const [managementYear, setManagementYear] = useSessionState(
+    `${viewKey}:managementYear`, currentLeaveYear,
+    value => typeof value === 'number' && Number.isInteger(value) && value >= 2026 && value <= currentLeaveYear + 1
+  );
+  const [managementOpening, setManagementOpening] = useState<LeaveYearOpeningPreview | null>(null);
+  const [showOpeningConfirm, setShowOpeningConfirm] = useState(false);
+  const [isConfirmingOpening, setIsConfirmingOpening] = useState(false);
+  const isFutureLeavePlan = managementYear >= 2027 && managementOpening?.status !== 'opened';
+  const isHistoricalLeaveYear = managementYear < currentLeaveYear && !isFutureLeavePlan;
   const canManageLeavePlans = ['admin', 'kadry'].includes(user?.role || '');
   const canReviewLeave = ['admin', 'kierownik', 'kadry', 'szef'].includes(user?.role || '');
   const canViewAllAbsences = ['admin', 'kadry'].includes(user?.role || '');
@@ -286,6 +302,7 @@ const Absences = () => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [pendingRequests, setPendingRequests] = useState<LeaveRequest[]>([]);
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
+  const [balanceError, setBalanceError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<AbsenceTab>(() => {
@@ -356,6 +373,31 @@ const Absences = () => {
   const [formUserId, setFormUserId] = useState('');
   const [directoryUsers, setDirectoryUsers] = useState<{ id: string; first_name: string; last_name: string; email: string }[]>([]);
 
+  const loadLeaveOverview = useCallback(async () => {
+    const loadId = ++managementLoadIdRef.current;
+    try {
+      setIsManagementLoading(true);
+      setManagementError('');
+      const opening = managementYear >= 2027 ? await timeApi.getLeaveYearOpening(managementYear) : null;
+      const rows = opening ? opening.rows : await timeApi.getLeaveOverview(managementYear);
+      if (loadId !== managementLoadIdRef.current) return;
+      setManagementOpening(opening);
+      setOverviewRows(rows);
+      setCarriedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.carriedOver)])));
+      setAnnualDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.annualLeave)])));
+      setUsedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.usedBaseline)])));
+      setRemoteDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteAllowance)])));
+      setRemoteUsedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteUsedBaseline)])));
+      setEtatDrafts(Object.fromEntries(rows.map(r => [r.id, r.employmentFraction ?? ''])));
+    } catch (error) {
+      if (loadId !== managementLoadIdRef.current) return;
+      setManagementError(isAxiosError(error) ? error.response?.data?.message || 'Nie udało się pobrać planów urlopowych.' : 'Nie udało się pobrać planów urlopowych.');
+      setOverviewRows([]);
+    } finally {
+      if (loadId === managementLoadIdRef.current) setIsManagementLoading(false);
+    }
+  }, [managementYear]);
+
   useEffect(() => {
     const handleOutsideClick = (event: PointerEvent) => {
       const dropdown = reportTypesRef.current;
@@ -405,7 +447,8 @@ const Absences = () => {
     if (activeTab === 'management' && canManageLeavePlans) {
       loadLeaveOverview();
     }
-  }, [activeTab, canManageLeavePlans]);
+    return () => { managementLoadIdRef.current += 1; };
+  }, [activeTab, canManageLeavePlans, loadLeaveOverview]);
 
   useEffect(() => {
     if (activeTab === 'all' && canManageAbsences) {
@@ -471,26 +514,6 @@ const Absences = () => {
     requestDateTo,
   ]);
 
-  const loadLeaveOverview = async () => {
-    try {
-      setIsManagementLoading(true);
-      setManagementError('');
-      const rows = await timeApi.getLeaveOverview();
-      setOverviewRows(rows);
-      setCarriedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.carriedOver)])));
-      setAnnualDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.annualLeave)])));
-      setUsedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.usedBaseline)])));
-      setRemoteDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteAllowance)])));
-      setRemoteUsedDrafts(Object.fromEntries(rows.map(r => [r.id, String(r.remoteUsedBaseline)])));
-      setEtatDrafts(Object.fromEntries(rows.map(r => [r.id, r.employmentFraction ?? ''])));
-    } catch {
-      setManagementError('Nie udało się pobrać planów urlopowych.');
-      setOverviewRows([]);
-    } finally {
-      setIsManagementLoading(false);
-    }
-  };
-
   const handleAllocationDraftChange = (
     employeeId: string,
     field: 'carried' | 'annual' | 'used' | 'remote' | 'remoteUsed' | 'etat',
@@ -509,6 +532,7 @@ const Absences = () => {
   };
 
   const handleSaveAllocation = async (row: LeaveOverviewRow) => {
+    if (isManagementLoading || savingLeaveDaysUserId || isHistoricalLeaveYear || row.year !== managementYear) return;
     const carriedOverDays = Number(carriedDrafts[row.id]);
     const annualLeaveDays = Number(annualDrafts[row.id]);
     const usedLeaveDays = Number(usedDrafts[row.id]);
@@ -517,7 +541,8 @@ const Absences = () => {
     const employmentFraction = (etatDrafts[row.id] ?? '').trim();
 
     const invalid = (v: number) => !Number.isFinite(v) || v < 0 || v > 366;
-    if ([carriedOverDays, annualLeaveDays, usedLeaveDays, remoteWorkDays, usedRemoteDays].some(invalid)) {
+    if ([carriedOverDays, annualLeaveDays, usedLeaveDays, remoteWorkDays, usedRemoteDays].some(invalid)
+      || !annualDrafts[row.id]?.trim() || !remoteDrafts[row.id]?.trim()) {
       setManagementError('Podaj poprawne wartości z zakresu 0–366 dni.');
       setManagementSuccess('');
       return;
@@ -527,7 +552,16 @@ const Absences = () => {
       setSavingLeaveDaysUserId(row.id);
       setManagementError('');
       setManagementSuccess('');
+      if (isFutureLeavePlan) {
+        await timeApi.saveLeaveYearPlan(row.id, { year: managementYear, annualLeaveDays });
+        const opening = await timeApi.getLeaveYearOpening(managementYear);
+        setManagementOpening(opening);
+        setOverviewRows(opening.rows);
+        setManagementSuccess(`Zapisano plan na ${managementYear} rok dla ${formatUserName(row)}.`);
+        return;
+      }
       const saved = await timeApi.updateLeaveAllocation(row.id, {
+        year: row.year,
         annualLeaveDays, carriedOverDays, usedLeaveDays,
         remoteWorkDays, usedRemoteDays,
         employmentFraction: employmentFraction || null,
@@ -554,10 +588,34 @@ const Absences = () => {
         )
       );
       setManagementSuccess(`Zapisano plan dla ${formatUserName(row)}.`);
-    } catch {
-      setManagementError('Nie udało się zapisać planu urlopowego.');
+    } catch (error) {
+      setManagementError(isAxiosError(error) ? error.response?.data?.message || 'Nie udało się zapisać planu urlopowego.' : 'Nie udało się zapisać planu urlopowego.');
     } finally {
       setSavingLeaveDaysUserId(null);
+    }
+  };
+
+  const handleConfirmYearOpening = async () => {
+    if (!managementOpening || isConfirmingOpening) return;
+    try {
+      setIsConfirmingOpening(true);
+      setManagementError('');
+      const result = await timeApi.confirmLeaveYearOpening(managementOpening.year, managementOpening.fingerprint);
+      setManagementOpening(result);
+      setOverviewRows(result.rows);
+      setManagementSuccess(result.status === 'opened'
+        ? `Otwarto rok ${result.year}. Bilans ${result.sourceYear} zachowano w historii.`
+        : `Przygotowanie ${result.year} zatwierdzone. Otwarcie nastąpi najwcześniej 1 stycznia ${result.year}.`);
+      setShowOpeningConfirm(false);
+      if (result.status === 'opened') {
+        await loadLeaveOverview();
+        await loadData();
+      }
+    } catch (error) {
+      setManagementError(isAxiosError(error) ? error.response?.data?.message || 'Nie udało się zatwierdzić otwarcia.' : 'Nie udało się zatwierdzić otwarcia.');
+      setShowOpeningConfirm(false);
+    } finally {
+      setIsConfirmingOpening(false);
     }
   };
 
@@ -712,7 +770,12 @@ const Absences = () => {
       setIsLoading(true);
       const [requests, leaveBalance] = await Promise.all([
         timeApi.getUserLeaveRequests(),
-        timeApi.getUserLeaveBalance(),
+        timeApi.getUserLeaveBalance()
+          .then(value => { setBalanceError(''); return value; })
+          .catch((error: unknown) => {
+            setBalanceError(isAxiosError(error) ? error.response?.data?.message || 'Nie udało się pobrać salda urlopu.' : 'Nie udało się pobrać salda urlopu.');
+            return null;
+          }),
       ]);
       setLeaveRequests(requests);
       setBalance(leaveBalance);
@@ -1295,22 +1358,28 @@ const Absences = () => {
     .filter(request => request.status === 'pending' && request.leave_type === 'remote_work')
     .reduce((sum, request) => sum + Number(request.total_days || 0), 0);
   const remainingAfterPending = balance
-    ? Math.max(0, balance.remaining - pendingDeductingLeaveDays)
+    ? Math.max(0, balance.remaining - (balance.pendingDays ?? pendingDeductingLeaveDays))
     : undefined;
   const remoteRemainingAfterPending = balance
-    ? Math.max(0, balance.remoteRemaining - pendingRemoteWorkDays)
+    ? Math.max(0, balance.remoteRemaining - (balance.pendingRemoteDays ?? pendingRemoteWorkDays))
     : undefined;
 
   const balanceCards = [
     {
-      label: 'Przysługujące dni urlopu',
-      value: fmtD(balance?.total),
-      hint: balance
-        ? `${fmtHrs(balance.total)} · ${fmtD(balance.annualLeave)} na rok + ${fmtD(balance.carriedOver)} przen.`
-        : undefined,
+      label: `Urlop bieżący ${balance?.year || currentLeaveYear}`,
+      value: fmtD(balance?.annualLeave),
+      hint: balance ? fmtHrs(balance.annualLeave) : undefined,
       icon: <Calendar className="h-5 w-5 text-blue-600" />,
       iconBg: 'bg-blue-50 dark:bg-blue-900/30',
       valueColor: 'text-blue-600',
+    },
+    {
+      label: 'Urlop zaległy',
+      value: fmtD(balance?.carriedOver),
+      hint: balance ? `${fmtHrs(balance.carriedOver)} · ${balance.carryoverSourceYear ? `bilans ${balance.carryoverSourceYear}` : 'z poprzednich lat'}` : undefined,
+      icon: <CalendarDays className="h-5 w-5 text-amber-600" />,
+      iconBg: 'bg-amber-50 dark:bg-amber-900/30',
+      valueColor: 'text-amber-600',
     },
     {
       label: 'Wykorzystane dni',
@@ -1323,7 +1392,9 @@ const Absences = () => {
     {
       label: 'Pozostało dni',
       value: fmtD(balance?.remaining),
-      hint: balance ? fmtHrs(balance.remaining) : undefined,
+      hint: balance?.annualRemaining != null
+        ? `Bieżący: ${fmtD(balance.annualRemaining)} · zaległy: ${fmtD(balance.carriedOverRemaining)}`
+        : balance ? fmtHrs(balance.remaining) : undefined,
       subHint: balance
         ? `Po uwzględnieniu oczekujących: ${fmtD(remainingAfterPending)} dni (${fmtHrs(remainingAfterPending)})`
         : undefined,
@@ -1417,6 +1488,10 @@ const Absences = () => {
   }, [activeTab, isLoading, paginatedRequests.length]);
 
   const normalizedManagementSearch = managementSearch.trim().toLowerCase();
+  const unsavedManagementPlans = isFutureLeavePlan ? overviewRows.filter(row =>
+    !annualDrafts[row.id]?.trim() || !remoteDrafts[row.id]?.trim()
+    || Number(annualDrafts[row.id]) !== row.annualLeave || Number(remoteDrafts[row.id]) !== row.remoteAllowance
+  ).length : 0;
   const filteredManagementUsers = overviewRows.filter(row => {
     if (!normalizedManagementSearch) return true;
 
@@ -1510,8 +1585,11 @@ const Absences = () => {
         </div>
 
         {/* Balance Cards */}
+        {balanceError && (
+          <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">{balanceError}</p>
+        )}
         {balance && (
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {balanceCards.map(card => (
               <div
                 key={card.label}
@@ -2336,26 +2414,105 @@ const Absences = () => {
                     Plany urlopowe
                   </p>
                   <h2 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
-                    Zarządzanie urlopami
+                    {isFutureLeavePlan ? `Plan urlopowy ${managementYear}` : isHistoricalLeaveYear ? `Historia urlopów ${managementYear}` : `Zarządzanie urlopami ${managementYear}`}
                   </h2>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Wszystkie pola edytowalne ręcznie (etat, przeniesione, limit, wykorzystane,
-                    praca zdalna) — ułatwia migrację z poprzedniego systemu. „Wykorzystane" to
-                    baza startowa; nowe zatwierdzone wnioski dodają się do niej. Wartości w dniach,
-                    godziny liczone z etatu (godz./dzień).
+                    {isFutureLeavePlan
+                      ? `Plan na ${managementYear}. Urlop zaległy z ${managementYear - 1} jest szacunkiem do rozliczenia roku.`
+                      : isHistoricalLeaveYear ? 'Zachowany bilans roczny. Późniejsze zmiany statusów wniosków są uwzględniane w rozliczeniu zaległości.'
+                      : 'Urlop bieżący i zaległy stanowią osobne części puli. Wykorzystanie sprzed ERP jest doliczane do zatwierdzonych wniosków.'}
                   </p>
                 </div>
-                <div className="relative w-full sm:w-80">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="search"
-                    value={managementSearch}
-                    onChange={event => setManagementSearch(event.target.value)}
-                    placeholder="Szukaj pracownika..."
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                  />
+                <div className="flex w-full flex-wrap items-end gap-2 lg:w-auto">
+                  <div>
+                    <label htmlFor="leave-management-year" className="mb-1 block text-xs font-semibold text-gray-500 dark:text-gray-400">Rok</label>
+                    <select
+                      id="leave-management-year"
+                      value={managementYear}
+                      disabled={Boolean(savingLeaveDaysUserId) || isConfirmingOpening}
+                      onChange={event => {
+                        managementLoadIdRef.current += 1;
+                        setOverviewRows([]);
+                        setIsManagementLoading(true);
+                        setManagementSuccess('');
+                        setManagementError('');
+                        setManagementOpening(null);
+                        setManagementYear(Number(event.target.value));
+                      }}
+                      className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    >
+                      {Array.from({ length: currentLeaveYear - 2026 + 2 }, (_, index) => 2026 + index).map(year => (
+                        <option key={year} value={year}>{year} · {year > currentLeaveYear ? 'plan' : year === currentLeaveYear ? 'bieżący' : 'historia'}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadLeaveOverview}
+                    disabled={isManagementLoading || Boolean(savingLeaveDaysUserId) || isConfirmingOpening}
+                    title="Odśwież salda i plany urlopowe"
+                    aria-label="Odśwież salda i plany urlopowe"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isManagementLoading ? 'animate-spin' : ''}`} />
+                  </button>
+                  <div className="relative min-w-[200px] flex-1 sm:w-64">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="search"
+                      value={managementSearch}
+                      onChange={event => setManagementSearch(event.target.value)}
+                      placeholder="Szukaj pracownika..."
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
+
+              {managementOpening && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                  <div className="min-w-0 text-sm text-gray-600 dark:text-gray-300">
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {managementOpening.status === 'opened'
+                        ? `Rok ${managementYear} otwarty`
+                        : managementOpening.status === 'approved'
+                          ? `Otwarcie ${managementYear} zatwierdzone na 1 stycznia`
+                          : `Przygotowanie otwarcia ${managementYear}`}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      {managementOpening.status === 'opened'
+                        ? `Urlop zaległy pochodzi z bilansu ${managementOpening.sourceYear}.`
+                        : `Aktywni pracownicy: ${managementOpening.employees}. Brak zapisanych planów: ${managementOpening.missingPlans}. Zaległości na dziś: ${fmtD(managementOpening.projectedCarryover)} dni.`}
+                    </p>
+                    {managementOpening.pendingPreviousYearDays > 0 && (
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                        Oczekujące wnioski z {managementOpening.sourceYear}: {fmtD(managementOpening.pendingPreviousYearDays)} dni.
+                        {' '}{managementOpening.status === 'opened'
+                          ? 'Zaległości przeliczą się po ich rozpatrzeniu.'
+                          : 'Nie blokują otwarcia roku. Zaległości przeliczą się po ich rozpatrzeniu.'}
+                      </p>
+                    )}
+                    {managementOpening.approvedAt && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Zatwierdzono: {new Date(managementOpening.approvedAt).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}
+                        {managementOpening.openedAt && ` · Otwarto: ${new Date(managementOpening.openedAt).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`}
+                      </p>
+                    )}
+                    {unsavedManagementPlans > 0 && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Niezapisane zmiany: {unsavedManagementPlans}.</p>}
+                  </div>
+                  {managementOpening.status !== 'opened' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOpeningConfirm(true)}
+                      disabled={!managementOpening.canConfirm || managementOpening.status === 'approved' || unsavedManagementPlans > 0 || isManagementLoading || Boolean(savingLeaveDaysUserId) || isConfirmingOpening}
+                      className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {managementOpening.status === 'approved' ? 'Przygotowanie zatwierdzone' : `Zatwierdź przygotowanie ${managementYear}`}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {(managementError || managementSuccess) && (
                 <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
@@ -2379,10 +2536,10 @@ const Absences = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Pracownik</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dział / stanowisko</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Etat</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Przeniesione</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">W tym roku</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Wykorzystane</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Dostępne</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300">Urlop zaległy{isFutureLeavePlan && <span className="mt-1 block text-[10px] normal-case">z {managementYear - 1} · szacunek</span>}</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Urlop bieżący {managementYear}</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">{isFutureLeavePlan ? `Zatwierdzone ${managementYear}` : managementYear === 2026 ? 'Wykorzystane przed ERP' : 'Korekta wykorzystania'}</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">{isFutureLeavePlan ? 'Przewidywane dostępne' : 'Dostępne łącznie'}</th>
                       <th className="border-l border-gray-200 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:border-gray-700 dark:text-purple-400">Zdalna w roku</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Zdalna wykorz.</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Zdalna dost.</th>
@@ -2410,11 +2567,11 @@ const Absences = () => {
                       filteredManagementUsers.map(row => {
                         const isSaving = savingLeaveDaysUserId === row.id;
                         const hpdRow = row.hoursPerDay || 8;
-                        const carried = Number(carriedDrafts[row.id]);
+                        const carried = isFutureLeavePlan ? row.carriedOver : Number(carriedDrafts[row.id]);
                         const annual = Number(annualDrafts[row.id]);
-                        const used = Number(usedDrafts[row.id]);
+                        const used = isFutureLeavePlan ? 0 : Number(usedDrafts[row.id]);
                         const remote = Number(remoteDrafts[row.id]);
-                        const remoteUsedV = Number(remoteUsedDrafts[row.id]);
+                        const remoteUsedV = isFutureLeavePlan ? 0 : Number(remoteUsedDrafts[row.id]);
                         const liveAvailable =
                           [carried, annual, used].every(Number.isFinite)
                             ? Math.max(0, carried + annual - (used + row.usedRequests))
@@ -2425,7 +2582,7 @@ const Absences = () => {
                             : row.remoteAvailable;
                         const hrs = (d: number) => `${Math.round(d * hpdRow)} h`;
                         const inputCls =
-                          'h-10 w-16 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+                          'h-10 w-16 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-semibold text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-400';
 
                         return (
                           <tr key={row.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -2434,6 +2591,11 @@ const Absences = () => {
                                 {formatUserName(row)}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">{row.email}</div>
+                              {isFutureLeavePlan && (
+                                <div className={`mt-1 text-xs font-semibold ${row.planSaved ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
+                                  {row.planSaved ? `Plan ${row.year} zapisany` : 'Limit do weryfikacji'}
+                                </div>
+                              )}
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
                               <div>{row.department || 'Brak działu'}</div>
@@ -2445,17 +2607,21 @@ const Absences = () => {
                                 value={etatDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'etat', e.target.value)}
                                 placeholder="np. 1"
+                                disabled={isFutureLeavePlan || isHistoricalLeaveYear || isSaving}
                                 className="h-10 w-14 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm text-gray-900 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                               />
                               <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">{hpdRow}h/dzień</div>
                             </td>
                             <td className="px-3 py-4 text-center">
-                              <input
+                              {isFutureLeavePlan ? (
+                                <div className="text-sm font-semibold text-amber-600 dark:text-amber-300">{fmtD(row.carriedOver)}</div>
+                              ) : <input
                                 type="number" step="any" min={0} max={366}
                                 value={carriedDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'carried', e.target.value)}
                                 className={inputCls}
-                              />
+                                disabled={isSaving || isHistoricalLeaveYear}
+                              />}
                             </td>
                             <td className="px-3 py-4 text-center">
                               <input
@@ -2463,16 +2629,20 @@ const Absences = () => {
                                 value={annualDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'annual', e.target.value)}
                                 className={inputCls}
+                                disabled={isSaving || isHistoricalLeaveYear}
                               />
                             </td>
                             <td className="px-3 py-4 text-center">
-                              <input
+                              {isFutureLeavePlan ? (
+                                <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{fmtD(row.usedRequests)}</div>
+                              ) : <input
                                 type="number" step="any" min={0} max={366}
                                 value={usedDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'used', e.target.value)}
                                 className={inputCls}
-                              />
-                              {row.usedRequests > 0 && (
+                                disabled={isSaving || isHistoricalLeaveYear}
+                              />}
+                              {!isFutureLeavePlan && row.usedRequests > 0 && (
                                 <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">+{fmtD(row.usedRequests)} z wniosków</div>
                               )}
                             </td>
@@ -2481,26 +2651,32 @@ const Absences = () => {
                               <div className="text-[10px] text-gray-400 dark:text-gray-500">{hrs(liveAvailable)}</div>
                             </td>
                             <td className="border-l border-gray-100 px-3 py-4 text-center dark:border-gray-700">
-                              <input
+                              {isFutureLeavePlan ? (
+                                <div className="text-sm font-semibold text-purple-600 dark:text-purple-300">{fmtD(row.remoteAllowance)}</div>
+                              ) : <input
                                 type="number" step="any" min={0} max={366}
                                 value={remoteDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'remote', e.target.value)}
                                 className={inputCls}
-                              />
+                                disabled={isSaving || isHistoricalLeaveYear}
+                              />}
                             </td>
                             <td className="px-3 py-4 text-center">
-                              <input
+                              {isFutureLeavePlan ? (
+                                <div className="text-sm font-semibold text-purple-600 dark:text-purple-300">{fmtD(row.remoteUsedRequests)}</div>
+                              ) : <input
                                 type="number" step="any" min={0} max={366}
                                 value={remoteUsedDrafts[row.id] ?? ''}
                                 onChange={e => handleAllocationDraftChange(row.id, 'remoteUsed', e.target.value)}
                                 className={inputCls}
-                              />
-                              {row.remoteUsedRequests > 0 && (
+                                disabled={isSaving || isHistoricalLeaveYear}
+                              />}
+                              {!isFutureLeavePlan && row.remoteUsedRequests > 0 && (
                                 <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">+{fmtD(row.remoteUsedRequests)} z wniosków</div>
                               )}
-                              <div className="mt-0.5 text-[10px] font-semibold text-purple-500 dark:text-purple-300">
+                              {!isFutureLeavePlan && <div className="mt-0.5 text-[10px] font-semibold text-purple-500 dark:text-purple-300">
                                 Razem: {fmtD((Number.isFinite(remoteUsedV) ? remoteUsedV : row.remoteUsedBaseline) + row.remoteUsedRequests)}
-                              </div>
+                              </div>}
                             </td>
                             <td className="px-3 py-4 text-center">
                               <div className="text-sm font-bold text-purple-600 dark:text-purple-400">{fmtD(liveRemoteAvailable)}</div>
@@ -2510,11 +2686,11 @@ const Absences = () => {
                               <button
                                 type="button"
                                 onClick={() => handleSaveAllocation(row)}
-                                disabled={isSaving}
+                                disabled={Boolean(savingLeaveDaysUserId) || isManagementLoading || isHistoricalLeaveYear || isConfirmingOpening}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F7941D] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#e08317] disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                Zapisz
+                                {isFutureLeavePlan ? 'Zapisz plan' : 'Zapisz'}
                               </button>
                             </td>
                           </tr>
@@ -3144,6 +3320,18 @@ const Absences = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showOpeningConfirm && Boolean(managementOpening)}
+        onClose={() => { if (!isConfirmingOpening) setShowOpeningConfirm(false); }}
+        onConfirm={handleConfirmYearOpening}
+        title={`Zatwierdź przygotowanie ${managementYear}`}
+        message={`Zatwierdzasz wyłącznie zapisane limity na ${managementYear}, nie wnioski urlopowe. Otwarcie nastąpi najwcześniej 1 stycznia ${managementYear}. Oczekujące wnioski z ${managementYear - 1} nie blokują otwarcia; po ich rozpatrzeniu zaległości zostaną przeliczone. Zatwierdzenie przygotowania nie zmienia teraz bieżących sald.`}
+        confirmText="Zatwierdź przygotowanie"
+        variant="info"
+        icon="info"
+        loading={isConfirmingOpening}
+      />
 
       <ConfirmDialog
         isOpen={cancelId !== null}

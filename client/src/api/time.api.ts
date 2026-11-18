@@ -5,6 +5,7 @@ import type {
   TimeStats,
   LeaveBalance,
   LeaveOverviewRow,
+  LeaveYearOpeningPreview,
   ClockInRequest,
   ClockOutRequest,
   CreateLeaveRequest,
@@ -268,12 +269,37 @@ export const getLeaveOverview = async (year?: number): Promise<LeaveOverviewRow[
   return response.data.data;
 };
 
+export const getLeaveYearPlans = async (year: number): Promise<LeaveOverviewRow[]> => {
+  const response = await apiClient.get('/time/leave/year-plans', { params: { year } });
+  return response.data.data;
+};
+
+export const saveLeaveYearPlan = async (
+  userId: string,
+  data: { year: number; annualLeaveDays: number }
+): Promise<void> => {
+  await apiClient.put(`/time/leave/year-plans/${userId}`, data);
+};
+
+export const getLeaveYearOpening = async (year: number): Promise<LeaveYearOpeningPreview> => {
+  const response = await apiClient.get('/time/leave/year-opening', { params: { year } });
+  return response.data.data;
+};
+
+export const confirmLeaveYearOpening = async (
+  year: number, fingerprint: string
+): Promise<LeaveYearOpeningPreview> => {
+  const response = await apiClient.post('/time/leave/year-opening/confirm', { year, fingerprint });
+  return response.data.data;
+};
+
 /**
  * Update a user's leave allocation (admin/kadry)
  */
 export const updateLeaveAllocation = async (
   userId: string,
   data: {
+    year: number;
     annualLeaveDays?: number;
     carriedOverDays?: number;
     usedLeaveDays?: number;

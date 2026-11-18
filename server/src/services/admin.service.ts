@@ -9,6 +9,8 @@ import { Message } from '../models/Message.model';
 import { Notification } from '../models/Notification.model';
 import { UserStatus, StatusType } from '../models/UserStatus.model';
 import * as bcrypt from 'bcrypt';
+import { getLeaveCalendarYear } from '../utils/leaveYearPlans';
+import { leaveYearOpeningService } from './leaveYearOpening.service';
 
 interface CreateUserData {
   email: string;
@@ -252,6 +254,9 @@ class AdminService {
 
     await this.userRepository.save(user);
 
+    if (data.annual_leave_days !== undefined && getLeaveCalendarYear() >= 2027) {
+      await leaveYearOpeningService.updateCurrentAllocation(userId, { annualLeaveDays: data.annual_leave_days });
+    }
     return this.getUserById(userId);
   }
 

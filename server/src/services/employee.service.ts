@@ -3,6 +3,8 @@ import { User } from '../models/User.model';
 import { TimeEntry } from '../models/TimeEntry.model';
 import { LeaveRequest } from '../models/LeaveRequest.model';
 import activityService from './activity.service';
+import { getLeaveCalendarYear } from '../utils/leaveYearPlans';
+import { leaveYearOpeningService } from './leaveYearOpening.service';
 
 interface UpdateEmployeeDto {
   employee_id?: string;
@@ -64,6 +66,10 @@ export class EmployeeService {
 
     Object.assign(employee, data);
     const updatedEmployee = await this.userRepository.save(employee);
+    if (data.annual_leave_days !== undefined && getLeaveCalendarYear() >= 2027) {
+      const allocation = await leaveYearOpeningService.updateCurrentAllocation(userId, { annualLeaveDays: data.annual_leave_days });
+      Object.assign(updatedEmployee, allocation);
+    }
 
     // Log activity
     const updater = await this.userRepository.findOne({ where: { id: updatedBy } });

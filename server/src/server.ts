@@ -55,10 +55,9 @@ const startServer = async () => {
     // ended manually by the user (or admin/kadry). Scheduler intentionally removed.
     const timeService = new TimeService();
 
-    // Leave rollover (Automat 1 stycznia) — idempotent: rolls over any missed
-    // year-boundary. Runs on boot and once a day so it fires after New Year.
+    // Otwarcie wyłącznie zatwierdzonego roku, najwcześniej 1 stycznia w Warszawie.
     await timeService.ensureLeaveRollover().catch(console.error);
-    setInterval(() => timeService.ensureLeaveRollover().catch(console.error), 24 * 60 * 60 * 1000);
+    setInterval(() => timeService.ensureLeaveRollover().catch(console.error), 60 * 1000);
 
     // Scheduled-meeting ringer (best-effort) — rings/notifies participants when a
     // meeting starts. Only fires while the server is awake (free tier may sleep).

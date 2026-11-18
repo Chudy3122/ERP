@@ -5,6 +5,9 @@ import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../
 import { WorkLog, WorkLogType } from '../models/WorkLog.model';
 import { LeaveRequestComment } from '../models/LeaveRequestComment.model';
 import { User } from '../models/User.model';
+import { getLeaveCalendarYear } from '../utils/leaveYearPlans';
+import { leaveYearOpeningService } from './leaveYearOpening.service';
+import { LEAVE_YEAR_LOCK } from '../utils/leaveYearAccounting';
 
 /** Parse an etat fraction like "1", "7/8", "3/4" → numeric (1, 0.875, 0.75). */
 function parseEmploymentFraction(s: string | null | undefined): number | null {
@@ -1045,7 +1048,15 @@ export class TimeService {
   /**
    * Get leave balance for user. Pool = carried-over (zaległy) + this year's entitlement.
    */
-  async getUserLeaveBalance(userId: string, year: number = new Date().getFullYear()) {
+  async getUserLeaveBalance(userId: string, year: number = getLeaveCalendarYear()) {
+    if (year !== 2026 || getLeaveCalendarYear() !== 2026) {
+      const row = (await leaveYearOpeningService.getBalances(year)).find(item => item.id === userId);
+      if (!row) throw new Error('Nie znaleziono pracownika.');
+      return {
+        ...row, total: row.annualLeave + row.carriedOver, remaining: row.available,
+        remoteRemaining: row.remoteAvailable,
+      };
+    }
     const user = await this.userRepository.findOne({ where: { id: userId } });
     const num = (v: any, d: number) => (v === null || v === undefined ? d : Number(v));
 
@@ -1084,7 +1095,10 @@ export class TimeService {
   /**
    * Leave plan overview for every user (management view).
    */
-  async getLeaveOverview(year: number = new Date().getFullYear()) {
+  async getLeaveOverview(year: number = getLeaveCalendarYear()) {
+    if (year !== 2026 || getLeaveCalendarYear() !== 2026) {
+      return leaveYearOpeningService.getBalances(year);
+    }
     const users = await this.userRepository.find({
       order: { first_name: 'ASC', last_name: 'ASC' },
     });
@@ -1130,6 +1144,14 @@ export class TimeService {
     });
   }
 
+  async getLeaveYearPlans(year: number) {
+    return (await leaveYearOpeningService.getPreview(year)).rows;
+  }
+
+  async saveLeaveYearPlan(userId: string, year: number, annualLeaveDays: unknown, actorId: string) {
+    return leaveYearOpeningService.savePlan(userId, year, annualLeaveDays, actorId);
+  }
+
   /**
    * Update a user's leave allocation (carried-over and/or this year's entitlement).
    */
@@ -1144,108 +1166,61 @@ export class TimeService {
       employmentFraction?: string | null;
       workingHoursPerDay?: number;
     },
+    expectedYear: number = getLeaveCalendarYear(),
   ): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) throw new Error('User not found');
+    if (getLeaveCalendarYear() >= 2027) {
+      return leaveYearOpeningService.updateCurrentAllocation(userId, data, expectedYear);
+    }
+    return AppDataSource.transaction(async manager => {
+      await manager.query('SELECT pg_advisory_xact_lock($1)', [LEAVE_YEAR_LOCK]);
+      if (expectedYear !== getLeaveCalendarYear()) throw new Error('Rok formularza zmienił się. Odśwież plany urlopowe.');
+      const repository = manager.getRepository(User);
+      const user = await repository.findOne({ where: { id: userId } });
+      if (!user) throw new Error('User not found');
 
-    const validate = (v: number, label: string) => {
-      if (!Number.isFinite(v) || v < 0 || v > 366) {
-        throw new Error(`${label} musi być liczbą z zakresu 0–366.`);
+      const validate = (v: number, label: string) => {
+        if (!Number.isFinite(v) || v < 0 || v > 366) {
+          throw new Error(`${label} musi być liczbą z zakresu 0–366.`);
+        }
+      };
+
+      if (data.annualLeaveDays !== undefined) {
+        validate(data.annualLeaveDays, 'Limit na ten rok');
+        user.annual_leave_days = data.annualLeaveDays;
       }
-    };
-
-    if (data.annualLeaveDays !== undefined) {
-      validate(data.annualLeaveDays, 'Limit na ten rok');
-      user.annual_leave_days = data.annualLeaveDays;
-    }
-    if (data.carriedOverDays !== undefined) {
-      validate(data.carriedOverDays, 'Dni przeniesione');
-      user.carried_over_days = data.carriedOverDays;
-    }
-    if (data.usedLeaveDays !== undefined) {
-      validate(data.usedLeaveDays, 'Wykorzystane dni');
-      user.used_leave_days = data.usedLeaveDays;
-    }
-    if (data.remoteWorkDays !== undefined) {
-      validate(data.remoteWorkDays, 'Dni pracy zdalnej');
-      user.remote_work_days = data.remoteWorkDays;
-    }
-    if (data.usedRemoteDays !== undefined) {
-      validate(data.usedRemoteDays, 'Wykorzystane dni zdalne');
-      user.used_remote_days = data.usedRemoteDays;
-    }
-    if (data.employmentFraction !== undefined) {
-      user.employment_fraction = data.employmentFraction || null;
-      // Derive daily hours from the fraction (8h × fraction) unless given explicitly
-      const frac = parseEmploymentFraction(data.employmentFraction);
-      if (data.workingHoursPerDay === undefined && frac !== null) {
-        user.working_hours_per_day = Math.round(8 * frac * 100) / 100;
+      if (data.carriedOverDays !== undefined) {
+        validate(data.carriedOverDays, 'Dni przeniesione');
+        user.carried_over_days = data.carriedOverDays;
       }
-    }
-    if (data.workingHoursPerDay !== undefined && Number.isFinite(data.workingHoursPerDay)) {
-      user.working_hours_per_day = data.workingHoursPerDay;
-    }
+      if (data.usedLeaveDays !== undefined) {
+        validate(data.usedLeaveDays, 'Wykorzystane dni');
+        user.used_leave_days = data.usedLeaveDays;
+      }
+      if (data.remoteWorkDays !== undefined) {
+        validate(data.remoteWorkDays, 'Dni pracy zdalnej');
+        user.remote_work_days = data.remoteWorkDays;
+      }
+      if (data.usedRemoteDays !== undefined) {
+        validate(data.usedRemoteDays, 'Wykorzystane dni zdalne');
+        user.used_remote_days = data.usedRemoteDays;
+      }
+      if (data.employmentFraction !== undefined) {
+        user.employment_fraction = data.employmentFraction || null;
+        const frac = parseEmploymentFraction(data.employmentFraction);
+        if (data.workingHoursPerDay === undefined && frac !== null) {
+          user.working_hours_per_day = Math.round(8 * frac * 100) / 100;
+        }
+      }
+      if (data.workingHoursPerDay !== undefined && Number.isFinite(data.workingHoursPerDay)) {
+        user.working_hours_per_day = data.workingHoursPerDay;
+      }
 
-    await this.userRepository.save(user);
-    return user;
+      await repository.save(user);
+      return user;
+    });
   }
 
-  // ----- Yearly rollover (Automat 1 stycznia) -----
-
-  private async getSetting(key: string): Promise<string | null> {
-    const rows = await AppDataSource.query(
-      `SELECT value FROM system_settings WHERE key = $1`,
-      [key],
-    );
-    return rows.length ? rows[0].value : null;
-  }
-
-  private async setSetting(key: string, value: string): Promise<void> {
-    await AppDataSource.query(
-      `INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, now())
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-      [key, value],
-    );
-  }
-
-  /**
-   * Close a single year: each user's unused days (carried + entitlement − used)
-   * become next year's carried-over balance. The yearly entitlement is left as-is.
-   */
-  private async runYearRollover(closingYear: number): Promise<void> {
-    const users = await this.userRepository.find();
-    const usedByUser = await this.getUsedDaysByUser(closingYear);
-
-    for (const u of users) {
-      const annual = u.annual_leave_days ?? 20;
-      const carried = u.carried_over_days ?? 0;
-      const used = usedByUser.get(u.id) ?? 0;
-      u.carried_over_days = Math.max(0, carried + annual - used);
-    }
-
-    if (users.length) await this.userRepository.save(users);
-    console.log(`📅 Leave rollover for ${closingYear} → ${closingYear + 1} done (${users.length} users)`);
-  }
-
-  /**
-   * Idempotent rollover guard. Runs any missed year-boundaries automatically.
-   * On first ever run it only records the current year (no historical rollover).
-   */
   async ensureLeaveRollover(): Promise<void> {
-    const currentYear = new Date().getFullYear();
-    const marker = await this.getSetting('leave_last_rollover_year');
-
-    if (marker === null) {
-      await this.setSetting('leave_last_rollover_year', String(currentYear));
-      return;
-    }
-
-    const lastYear = parseInt(marker, 10);
-    if (!Number.isFinite(lastYear) || currentYear <= lastYear) return;
-
-    for (let closingYear = lastYear; closingYear < currentYear; closingYear++) {
-      await this.runYearRollover(closingYear);
-    }
-    await this.setSetting('leave_last_rollover_year', String(currentYear));
+    await leaveYearOpeningService.ensureOpenings();
   }
 }

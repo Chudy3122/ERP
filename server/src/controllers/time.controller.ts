@@ -5,6 +5,8 @@ import notificationService from '../services/notification.service';
 import adminService from '../services/admin.service';
 import { AppDataSource } from '../config/database';
 import { User, UserRole } from '../models/User.model';
+import { getLeaveCalendarYear } from '../utils/leaveYearPlans';
+import { leaveYearOpeningService, LeaveYearNotOpenError } from '../services/leaveYearOpening.service';
 
 const timeService = new TimeService();
 
@@ -828,8 +830,7 @@ export class TimeController {
   async getUserLeaveBalance(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-
+      const year = req.query.year ? Number(req.query.year) : getLeaveCalendarYear();
       const balance = await timeService.getUserLeaveBalance(userId, year);
 
       res.status(200).json({
@@ -838,7 +839,7 @@ export class TimeController {
       });
     } catch (error: any) {
       console.error('Get leave balance error:', error);
-      res.status(500).json({
+      res.status(error instanceof LeaveYearNotOpenError ? 423 : 500).json({
         success: false,
         message: error.message || 'Failed to get leave balance',
       });
@@ -851,7 +852,7 @@ export class TimeController {
    */
   async getLeaveOverview(req: Request, res: Response): Promise<void> {
     try {
-      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+      const year = req.query.year ? Number(req.query.year) : getLeaveCalendarYear();
       const data = await timeService.getLeaveOverview(year);
       res.status(200).json({ success: true, data });
     } catch (error: any) {
@@ -871,6 +872,9 @@ export class TimeController {
         annualLeaveDays, carriedOverDays, usedLeaveDays,
         remoteWorkDays, usedRemoteDays, employmentFraction, workingHoursPerDay,
       } = req.body;
+      if (req.body.year !== getLeaveCalendarYear()) {
+        throw new Error('Rok formularza nie jest bieżącym rokiem. Odśwież plany urlopowe przed zapisem.');
+      }
       const numOrUndef = (v: any) => (v !== undefined && v !== null && v !== '' ? Number(v) : undefined);
       const user = await timeService.updateLeaveAllocation(userId, {
         annualLeaveDays: numOrUndef(annualLeaveDays),
@@ -880,7 +884,7 @@ export class TimeController {
         usedRemoteDays: numOrUndef(usedRemoteDays),
         employmentFraction: employmentFraction !== undefined ? employmentFraction : undefined,
         workingHoursPerDay: numOrUndef(workingHoursPerDay),
-      });
+      }, req.body.year);
       res.status(200).json({
         success: true,
         data: {
@@ -897,6 +901,48 @@ export class TimeController {
     } catch (error: any) {
       console.error('Update leave allocation error:', error);
       res.status(400).json({ success: false, message: error.message || 'Failed to update leave allocation' });
+    }
+  }
+
+  async getLeaveYearPlans(req: Request, res: Response): Promise<void> {
+    try {
+      const year = typeof req.query.year === 'string' && /^\d{4}$/.test(req.query.year)
+        ? Number(req.query.year) : NaN;
+      const data = await timeService.getLeaveYearPlans(year);
+      res.json({ success: true, data });
+    } catch (error: unknown) {
+      res.status(400).json({ success: false, message: error instanceof Error ? error.message : 'Nie udało się pobrać planów.' });
+    }
+  }
+
+  async saveLeaveYearPlan(req: Request, res: Response): Promise<void> {
+    try {
+      const { year, annualLeaveDays } = req.body;
+      const data = await timeService.saveLeaveYearPlan(
+        req.params.userId, year, annualLeaveDays, req.user!.userId
+      );
+      res.json({ success: true, data });
+    } catch (error: unknown) {
+      res.status(400).json({ success: false, message: error instanceof Error ? error.message : 'Nie udało się zapisać planu.' });
+    }
+  }
+
+  async getLeaveYearOpening(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await leaveYearOpeningService.getPreview(Number(req.query.year));
+      res.json({ success: true, data });
+    } catch (error: unknown) {
+      res.status(400).json({ success: false, message: error instanceof Error ? error.message : 'Nie udało się pobrać rozliczenia roku.' });
+    }
+  }
+
+  async confirmLeaveYearOpening(req: Request, res: Response): Promise<void> {
+    try {
+      if (typeof req.body.fingerprint !== 'string') throw new Error('Odśwież podgląd rozliczenia.');
+      const data = await leaveYearOpeningService.confirm(req.body.year, req.body.fingerprint, req.user!.userId);
+      res.json({ success: true, data });
+    } catch (error: unknown) {
+      res.status(400).json({ success: false, message: error instanceof Error ? error.message : 'Nie udało się zatwierdzić przygotowania roku.' });
     }
   }
 
