@@ -5,7 +5,7 @@ import { LeaveRequest, LeaveStatus, LeaveType, DEDUCTING_LEAVE_TYPES } from '../
 import { LeaveYearPlan } from '../models/LeaveYearPlan.model';
 import { LeaveYearBalance } from '../models/LeaveYearBalance.model';
 import { LeaveYearOpening } from '../models/LeaveYearOpening.model';
-import { ANNUAL_REMOTE_WORK_DAYS, buildLeaveYearPlan, getLeaveCalendarYear, validateLeavePlanAllowance } from '../utils/leaveYearPlans';
+import { ANNUAL_REMOTE_WORK_DAYS, DEFAULT_ANNUAL_LEAVE_PLAN_DAYS, buildLeaveYearPlan, getLeaveCalendarYear, validateLeavePlanAllowance } from '../utils/leaveYearPlans';
 import { FIRST_LEAVE_YEAR, getAnnualUsage, getOpeningFingerprint, leaveDateKey, LEAVE_YEAR_LOCK } from '../utils/leaveYearAccounting';
 
 const numberOr = (value: number | null | undefined, fallback = 0) => Number(value ?? fallback);
@@ -120,7 +120,7 @@ export class LeaveYearOpeningService {
       return {
         ...row,
         ...buildLeaveYearPlan({ year,
-          annualLeave: plan ? numberOr(plan.annual_leave_days) : row.annualLeave,
+          annualLeave: plan ? numberOr(plan.annual_leave_days) : DEFAULT_ANNUAL_LEAVE_PLAN_DAYS,
           previousRemaining: row.available, usedRequests: usage?.used ?? 0,
           remoteUsedRequests: usage?.remote ?? 0, planSaved: Boolean(plan),
         }),

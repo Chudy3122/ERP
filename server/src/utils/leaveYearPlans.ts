@@ -1,4 +1,5 @@
 export const ANNUAL_REMOTE_WORK_DAYS = 24;
+export const DEFAULT_ANNUAL_LEAVE_PLAN_DAYS = 26;
 
 export function getLeaveCalendarYear(date: Date = new Date()): number {
   return Number(new Intl.DateTimeFormat('en-GB', {

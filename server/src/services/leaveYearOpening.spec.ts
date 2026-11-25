@@ -102,6 +102,45 @@ function fixture(t: TestContext) {
   };
 }
 
+test('niezapisany plan proponuje każdemu 26 dni do weryfikacji bez zmiany puli bieżącego roku', async t => {
+  const f = fixture(t);
+  f.table(User)[0].annual_leave_days = 20;
+  f.table(User).push({ ...structuredClone(f.table(User)[0]), id: 'part-time',
+    annual_leave_days: 10, used_leave_days: 0,
+    employment_fraction: '1/2', working_hours_per_day: 4,
+  });
+  const originalUsers = structuredClone(f.table(User));
+  const preview = await f.service.getPreview(2027);
+  assert.equal(preview.rows.length, 2);
+  assert(preview.rows.every(row => row.annualLeave === 26 && !row.planSaved));
+  assert.equal(preview.missingPlans, 2);
+  assert.equal(preview.canConfirm, false);
+  const employee = preview.rows.find(row => row.id === 'employee')!;
+  assert.equal(employee.carriedOver, 5);
+  assert.equal(employee.available, 31);
+  assert.deepEqual(f.table(User), originalUsers);
+  assert.equal(f.writes(), 0);
+  assert.equal(f.table(LeaveYearPlan).length, 0);
+  assert.equal(f.table(LeaveYearBalance).length, 0);
+  assert.equal(f.table(LeaveYearOpening).length, 0);
+});
+
+test('domyślne 26 dni nie nadpisuje już zapisanych limitów, także limitu zerowego', async t => {
+  const f = fixture(t);
+  const originalUsers = structuredClone(f.table(User));
+  for (const limit of [20, 0]) {
+    await f.service.savePlan('employee', 2027, limit, 'hr-user');
+    const savedPlans = structuredClone(f.table(LeaveYearPlan));
+    const preview = await f.service.getPreview(2027);
+    assert.equal(preview.rows[0].annualLeave, limit);
+    assert.equal(preview.rows[0].planSaved, true);
+    assert.equal(preview.missingPlans, 0);
+    assert.deepEqual(f.table(LeaveYearPlan), savedPlans);
+  }
+  assert.deepEqual(f.table(User), originalUsers);
+  assert.equal(f.writes(), 0);
+});
+
 test('przed 1 stycznia podgląd, zapis i zatwierdzenie nie zmieniają żadnego salda 2026', async t => {
   const f = fixture(t);
   const original = structuredClone(f.table(User));

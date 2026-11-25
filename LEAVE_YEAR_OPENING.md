@@ -12,7 +12,8 @@
 - Zatwierdzone i oczekujące wnioski są rozliczane według dni nieobecności, nie daty złożenia.
 - Zapis planu nie zmienia pól pracownika ani obecnych sald.
 - Dostęp do odczytu i zapisu planów: Administrator i Kadry, kontrolowany przez backend.
-- Niezapisany limit jest propozycją z aktualnych ustawień pracownika i wymaga weryfikacji kadr.
+- Niezapisany plan proponuje każdemu 26 dni urlopu bieżącego, oznaczone jako limit do weryfikacji kadr. Nie jest to automatycznie zatwierdzony wymiar urlopu.
+- Propozycja nie zmienia bieżących pul ani limitów już zapisanych w planie danego roku.
 
 Nowa tabela: `leave_year_plans`, unikalny rekord `(user_id, year)`.
 Migracja: `1795000000000-CreateLeaveYearPlans.ts`.
