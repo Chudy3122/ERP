@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx",
+    "test:absence-reports": "node scripts/check-absence-reports.cjs",
     "format": "prettier --write \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
